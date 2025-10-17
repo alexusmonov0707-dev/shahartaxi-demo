@@ -28,8 +28,14 @@
       color: #007bff;
     }
 
+    .lang-select {
+      border: 1px solid #ccc;
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+    }
+
     main {
-      max-width: 800px;
+      max-width: 850px;
       margin: 2rem auto;
       background: #fff;
       border-radius: 16px;
@@ -45,8 +51,8 @@
 
     .search-box {
       display: flex;
-      gap: 1rem;
       flex-wrap: wrap;
+      gap: 1rem;
       justify-content: center;
     }
 
@@ -55,6 +61,7 @@
       border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 1rem;
+      min-width: 180px;
     }
 
     button {
@@ -90,10 +97,6 @@
       transform: scale(1.02);
     }
 
-    .ride-info {
-      flex: 1;
-    }
-
     .ride button {
       background: #28a745;
       padding: 0.6rem 1rem;
@@ -110,26 +113,46 @@
 <body>
   <header>
     <h1>ShaharTaxi</h1>
+    <select class="lang-select">
+      <option>O‘zbekcha</option>
+      <option>Русский</option>
+      <option>English</option>
+    </select>
   </header>
 
   <main>
     <h2>Yo‘nalish tanlang</h2>
-    <div class="search-box">
-      <select id="from">
-        <option value="">Qayerdan</option>
-        <option>Toshkent</option>
-        <option>Samarqand</option>
-        <option>Andijon</option>
-        <option>Buxoro</option>
-      </select>
 
-      <select id="to">
-        <option value="">Qayerga</option>
-        <option>Toshkent</option>
-        <option>Samarqand</option>
-        <option>Andijon</option>
-        <option>Buxoro</option>
-      </select>
+    <div class="search-box">
+      <!-- Qayerdan -->
+      <div>
+        <select id="fromRegion" onchange="updateDistricts('from')">
+          <option value="">Viloyat (qayerdan)</option>
+          <option>Toshkent</option>
+          <option>Andijon</option>
+          <option>Samarqand</option>
+          <option>Buxoro</option>
+        </select>
+
+        <select id="fromDistrict">
+          <option value="">Tuman</option>
+        </select>
+      </div>
+
+      <!-- Qayerga -->
+      <div>
+        <select id="toRegion" onchange="updateDistricts('to')">
+          <option value="">Viloyat (qayerga)</option>
+          <option>Toshkent</option>
+          <option>Andijon</option>
+          <option>Samarqand</option>
+          <option>Buxoro</option>
+        </select>
+
+        <select id="toDistrict">
+          <option value="">Tuman</option>
+        </select>
+      </div>
 
       <button onclick="searchRides()">Izlash</button>
     </div>
@@ -140,21 +163,49 @@
   <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
 
   <script>
+    const districts = {
+      "Toshkent": ["Yunusobod", "Chilonzor", "Olmazor", "Yakkasaroy"],
+      "Andijon": ["Asaka", "Baliqchi", "Jalaquduq", "Xonobod"],
+      "Samarqand": ["Urgut", "Ishtixon", "Kattaqo‘rg‘on", "Narpay"],
+      "Buxoro": ["G‘ijduvon", "Vobkent", "Qorako‘l", "Jondor"]
+    };
+
+    const rides = [
+      {fromRegion: "Toshkent", fromDistrict: "Yunusobod", toRegion: "Andijon", toDistrict: "Asaka", driver: "Bekzod", phone: "+99890 111 22 33", price: "180 000 so‘m"},
+      {fromRegion: "Andijon", fromDistrict: "Asaka", toRegion: "Toshkent", toDistrict: "Chilonzor", driver: "Javlon", phone: "+99893 222 11 00", price: "170 000 so‘m"},
+      {fromRegion: "Samarqand", fromDistrict: "Ishtixon", toRegion: "Buxoro", toDistrict: "Vobkent", driver: "Dilshod", phone: "+99895 888 22 11", price: "130 000 so‘m"},
+      {fromRegion: "Buxoro", fromDistrict: "Jondor", toRegion: "Samarqand", toDistrict: "Urgut", driver: "Rustam", phone: "+99891 555 44 33", price: "140 000 so‘m"}
+    ];
+
+    function updateDistricts(type) {
+      const regionSelect = document.getElementById(type + "Region");
+      const districtSelect = document.getElementById(type + "District");
+      const selectedRegion = regionSelect.value;
+      districtSelect.innerHTML = "<option value=''>Tuman</option>";
+      if (districts[selectedRegion]) {
+        districts[selectedRegion].forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d;
+          opt.textContent = d;
+          districtSelect.appendChild(opt);
+        });
+      }
+    }
+
     function searchRides() {
-      const from = document.getElementById("from").value;
-      const to = document.getElementById("to").value;
+      const fromRegion = document.getElementById("fromRegion").value;
+      const fromDistrict = document.getElementById("fromDistrict").value;
+      const toRegion = document.getElementById("toRegion").value;
+      const toDistrict = document.getElementById("toDistrict").value;
       const list = document.getElementById("rideList");
       list.innerHTML = "";
 
-      // localStorage'dan haydovchi e’lonlarini olish
-      const rides = JSON.parse(localStorage.getItem("driverAds")) || [];
-
-      // Agar ikkisi ham bo‘sh bo‘lsa — hammasini ko‘rsatamiz
-      const filtered = (from === "" && to === "") 
-        ? rides 
-        : rides.filter(r => 
-            (!from || r.from === from) && (!to || r.to === to)
-          );
+      const filtered = rides.filter(r =>
+        (!fromRegion || r.fromRegion === fromRegion) &&
+        (!fromDistrict || r.fromDistrict === fromDistrict) &&
+        (!toRegion || r.toRegion === toRegion) &&
+        (!toDistrict || r.toDistrict === toDistrict)
+      );
 
       if (filtered.length === 0) {
         list.innerHTML = "<p style='text-align:center;color:#777;'>Hech qanday e’lon topilmadi.</p>";
@@ -165,10 +216,10 @@
         const el = document.createElement("div");
         el.className = "ride";
         el.innerHTML = `
-          <div class="ride-info">
-            <strong>${r.from} → ${r.to}</strong><br>
-            Narx: ${r.price}<br>
-            📞 ${r.phone}
+          <div>
+            <strong>${r.fromRegion} (${r.fromDistrict}) → ${r.toRegion} (${r.toDistrict})</strong><br>
+            Haydovchi: ${r.driver}<br>
+            Narx: ${r.price}
           </div>
           <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
         `;
@@ -176,7 +227,6 @@
       });
     }
 
-    // Sayt ochilganda barcha e’lonlarni ko‘rsatish
     window.onload = searchRides;
   </script>
 </body>
