@@ -201,7 +201,7 @@
   const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
 
   // E’lonlar ro‘yxatini chiqarish uchun joyni topamiz
-  const rideList = document.querySelector(".ride-list");
+  const rideList = document.getElementById("rideList");
 
   if (driverAds.length === 0) {
     rideList.innerHTML = "<p>Hozircha haydovchilar e’loni mavjud emas.</p>";
