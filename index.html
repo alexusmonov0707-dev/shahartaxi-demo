@@ -3,35 +3,190 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi Demo</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>ShaharTaxi - Yo‘lovchi platformasi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      color: #222;
+    }
+
+    header {
+      background: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    header h1 {
+      margin: 0;
+      font-weight: 600;
+      color: #007bff;
+    }
+
+    .lang-select {
+      border: 1px solid #ccc;
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 2rem auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: #007bff;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-box {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    select, button {
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      border: none;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .rides {
+      margin-top: 2rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .ride {
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: transform 0.2s ease;
+    }
+
+    .ride:hover {
+      transform: scale(1.02);
+    }
+
+    .ride-info {
+      flex: 1;
+    }
+
+    .ride button {
+      background: #28a745;
+      padding: 0.6rem 1rem;
+    }
+
+    footer {
+      text-align: center;
+      color: white;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
   <header>
-    <h1>🚖 ShaharTaxi — Yo‘lovchi va Haydovchi platformasi</h1>
+    <h1>ShaharTaxi</h1>
+    <select class="lang-select">
+      <option>O‘zbekcha</option>
+      <option>Русский</option>
+      <option>English</option>
+    </select>
   </header>
 
-  <section class="form-section">
-    <h2>📝 E'lon berish</h2>
-    <form id="adForm">
-      <input type="text" id="name" placeholder="Ismingiz" />
-      <input type="text" id="phone" placeholder="Telefon raqamingiz" />
-      <input type="text" id="from" placeholder="Qayerdan" />
-      <input type="text" id="to" placeholder="Qayerga" />
-      <input type="number" id="price" placeholder="Narx (so'm)" />
-      <button type="submit">E'lonni joylash</button>
-    </form>
-  </section>
+  <main>
+    <h2>Yo‘nalish tanlang</h2>
+    <div class="search-box">
+      <select id="from">
+        <option value="">Qayerdan</option>
+        <option>Toshkent</option>
+        <option>Samarqand</option>
+        <option>Andijon</option>
+        <option>Buxoro</option>
+      </select>
 
-  <section class="list-section">
-    <h2>📋 E'lonlar ro‘yxati</h2>
-    <div id="adList"></div>
-  </section>
+      <select id="to">
+        <option value="">Qayerga</option>
+        <option>Toshkent</option>
+        <option>Samarqand</option>
+        <option>Andijon</option>
+        <option>Buxoro</option>
+      </select>
 
-  <footer>
-    <p>© 2025 ShaharTaxi Demo | Naqd / Karta orqali to‘lov</p>
-  </footer>
+      <button onclick="searchRides()">Izlash</button>
+    </div>
 
-  <script src="script.js"></script>
+    <div class="rides" id="rideList"></div>
+  </main>
+
+  <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
+
+  <script>
+    const rides = [
+      {from: "Toshkent", to: "Samarqand", driver: "Aziz", phone: "+99890 123 45 67", price: "150 000 so‘m"},
+      {from: "Buxoro", to: "Toshkent", driver: "Rustam", phone: "+99891 555 44 33", price: "200 000 so‘m"},
+      {from: "Andijon", to: "Namangan", driver: "Javlon", phone: "+99893 222 11 00", price: "50 000 so‘m"},
+      {from: "Toshkent", to: "Andijon", driver: "Bekzod", phone: "+99890 999 77 66", price: "180 000 so‘m"},
+    ];
+
+    function searchRides() {
+      const from = document.getElementById("from").value;
+      const to = document.getElementById("to").value;
+      const list = document.getElementById("rideList");
+      list.innerHTML = "";
+
+      const filtered = rides.filter(r => 
+        (!from || r.from === from) && (!to || r.to === to)
+      );
+
+      if (filtered.length === 0) {
+        list.innerHTML = "<p style='text-align:center;color:#777;'>Hech qanday e’lon topilmadi.</p>";
+        return;
+      }
+
+      filtered.forEach(r => {
+        const el = document.createElement("div");
+        el.className = "ride";
+        el.innerHTML = `
+          <div class="ride-info">
+            <strong>${r.from} → ${r.to}</strong><br>
+            Haydovchi: ${r.driver}<br>
+            Narx: ${r.price}
+          </div>
+          <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
+        `;
+        list.appendChild(el);
+      });
+    }
+  </script>
 </body>
 </html>
