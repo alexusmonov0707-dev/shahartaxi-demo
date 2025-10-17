@@ -28,12 +28,6 @@
       color: #007bff;
     }
 
-    .lang-select {
-      border: 1px solid #ccc;
-      padding: 0.4rem 0.6rem;
-      border-radius: 8px;
-    }
-
     main {
       max-width: 800px;
       margin: 2rem auto;
@@ -116,11 +110,6 @@
 <body>
   <header>
     <h1>ShaharTaxi</h1>
-    <select class="lang-select">
-      <option>O‘zbekcha</option>
-      <option>Русский</option>
-      <option>English</option>
-    </select>
   </header>
 
   <main>
@@ -151,22 +140,16 @@
   <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
 
   <script>
-    const rides = [
-      {from: "Toshkent", to: "Samarqand", driver: "Aziz", phone: "+99890 123 45 67", price: "150 000 so‘m"},
-      {from: "Buxoro", to: "Toshkent", driver: "Rustam", phone: "+99891 555 44 33", price: "200 000 so‘m"},
-      {from: "Andijon", to: "Namangan", driver: "Javlon", phone: "+99893 222 11 00", price: "50 000 so‘m"},
-      {from: "Toshkent", to: "Andijon", driver: "Bekzod", phone: "+99890 999 77 66", price: "180 000 so‘m"},
-      {from: "Samarqand", to: "Buxoro", driver: "Dilshod", phone: "+99895 888 22 11", price: "120 000 so‘m"},
-      {from: "Namangan", to: "Toshkent", driver: "Sherzod", phone: "+99897 333 44 55", price: "160 000 so‘m"}
-    ];
-
     function searchRides() {
       const from = document.getElementById("from").value;
       const to = document.getElementById("to").value;
       const list = document.getElementById("rideList");
       list.innerHTML = "";
 
-      // 🔧 Yangi qism — agar ikkisi ham bo‘sh bo‘lsa, barcha e’lonlar chiqadi
+      // localStorage'dan haydovchi e’lonlarini olish
+      const rides = JSON.parse(localStorage.getItem("driverAds")) || [];
+
+      // Agar ikkisi ham bo‘sh bo‘lsa — hammasini ko‘rsatamiz
       const filtered = (from === "" && to === "") 
         ? rides 
         : rides.filter(r => 
@@ -184,8 +167,8 @@
         el.innerHTML = `
           <div class="ride-info">
             <strong>${r.from} → ${r.to}</strong><br>
-            Haydovchi: ${r.driver}<br>
-            Narx: ${r.price}
+            Narx: ${r.price}<br>
+            📞 ${r.phone}
           </div>
           <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
         `;
@@ -193,27 +176,8 @@
       });
     }
 
-    // Sayt ochilganda avtomatik barcha e’lonlarni ko‘rsatish
+    // Sayt ochilganda barcha e’lonlarni ko‘rsatish
     window.onload = searchRides;
   </script>
-  <script>
-  // Haydovchi sahifasida saqlangan e’lonlarni olish
-  const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-
-  // E’lonlar ro‘yxatini chiqarish uchun joyni topamiz
-  const rideList = document.getElementById("rideList");
-
-  if (driverAds.length === 0) {
-    rideList.innerHTML = "<p>Hozircha haydovchilar e’loni mavjud emas.</p>";
-  } else {
-    rideList.innerHTML = driverAds.map(ad => `
-      <div class="ride-card">
-        <p><strong>${ad.from}</strong> ➡️ <strong>${ad.to}</strong></p>
-        <p>${ad.price} so‘m | 📞 ${ad.phone}</p>
-      </div>
-    `).join("");
-  }
-</script>
-
 </body>
 </html>
