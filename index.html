@@ -196,5 +196,24 @@
     // Sayt ochilganda avtomatik barcha e’lonlarni ko‘rsatish
     window.onload = searchRides;
   </script>
+  <script>
+  // Haydovchi sahifasida saqlangan e’lonlarni olish
+  const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+
+  // E’lonlar ro‘yxatini chiqarish uchun joyni topamiz
+  const rideList = document.querySelector(".ride-list");
+
+  if (driverAds.length === 0) {
+    rideList.innerHTML = "<p>Hozircha haydovchilar e’loni mavjud emas.</p>";
+  } else {
+    rideList.innerHTML = driverAds.map(ad => `
+      <div class="ride-card">
+        <p><strong>${ad.from}</strong> ➡️ <strong>${ad.to}</strong></p>
+        <p>${ad.price} so‘m | 📞 ${ad.phone}</p>
+      </div>
+    `).join("");
+  }
+</script>
+
 </body>
 </html>
