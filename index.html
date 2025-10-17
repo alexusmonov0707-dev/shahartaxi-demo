@@ -3,40 +3,35 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi</title>
+  <title>ShaharTaxi Demo</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <header>
-    <h1>🚕 ShaharTaxi</h1>
-    <p>O‘zbekiston bo‘ylab yo‘lovchi va haydovchilar uchun platforma</p>
+    <h1>🚖 ShaharTaxi — Yo‘lovchi va Haydovchi platformasi</h1>
   </header>
 
-  <main>
-    <section class="add-ride">
-      <h2>📝 E’lon qo‘shish</h2>
-      <form id="rideForm">
-        <label>Yo‘nalish:</label>
-        <input type="text" id="direction" placeholder="Masalan: Andijon → Toshkent" required>
+  <section class="form-section">
+    <h2>📝 E'lon berish</h2>
+    <form id="adForm">
+      <input type="text" id="name" placeholder="Ismingiz" />
+      <input type="text" id="phone" placeholder="Telefon raqamingiz" />
+      <input type="text" id="from" placeholder="Qayerdan" />
+      <input type="text" id="to" placeholder="Qayerga" />
+      <input type="number" id="price" placeholder="Narx (so'm)" />
+      <button type="submit">E'lonni joylash</button>
+    </form>
+  </section>
 
-        <label>Sana va vaqt:</label>
-        <input type="datetime-local" id="datetime" required>
-
-        <label>Narx (so‘m):</label>
-        <input type="number" id="price" placeholder="Narxni kiriting" required>
-
-        <label>Bo‘sh joylar soni:</label>
-        <input type="number" id="seats" placeholder="Masalan: 3" required>
-
-        <button type="submit">E’lonni joylashtirish</button>
-      </form>
-    </section>
-
-    <section class="ride-list">
-      <h2>📋 E’lonlar ro‘yxati</h2>
-      <div id="rides"></div>
-    </section>
-  </main>
+  <section class="list-section">
+    <h2>📋 E'lonlar ro‘yxati</h2>
+    <div id="adList"></div>
+  </section>
 
   <footer>
-    <p>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</p>
+    <p>© 2025 ShaharTaxi Demo | Naqd / Karta orqali to‘lov</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
