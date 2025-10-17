@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShaharTaxi - Yo‘lovchi e’loni</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #00c6ff, #007bff);
+      color: #222;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #fff;
+      padding: 1rem 2rem;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      color: #007bff;
+    }
+
+    main {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      color: #007bff;
+      margin-bottom: 1.5rem;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    select, input, button {
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    footer {
+      text-align: center;
+      color: white;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ShaharTaxi</h1>
+    <a href="index.html" style="text-decoration:none;color:#007bff;">⬅ Orqaga</a>
+  </header>
+
+  <main>
+    <h2>Yo‘lovchi e’lon joylash</h2>
+    <form id="passengerForm">
+      <select id="fromRegion" required onchange="updateDistricts('from')">
+        <option value="">Viloyat (qayerdan)</option>
+        <option>Toshkent</option>
+        <option>Andijon</option>
+        <option>Samarqand</option>
+        <option>Buxoro</option>
+      </select>
+
+      <select id="fromDistrict" required>
+        <option value="">Tuman (qayerdan)</option>
+      </select>
+
+      <select id="toRegion" required onchange="updateDistricts('to')">
+        <option value="">Viloyat (qayerga)</option>
+        <option>Toshkent</option>
+        <option>Andijon</option>
+        <option>Samarqand</option>
+        <option>Buxoro</option>
+      </select>
+
+      <select id="toDistrict" required>
+        <option value="">Tuman (qayerga)</option>
+      </select>
+
+      <input type="text" id="price" placeholder="Taklif narxi (so‘m)" required />
+      <input type="tel" id="phone" placeholder="Telefon raqamingiz" required />
+
+      <button type="submit">E’lonni joylash</button>
+    </form>
+  </main>
+
+  <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
+
+  <script>
+    const districts = {
+      "Toshkent": ["Yunusobod", "Chilonzor", "Olmazor", "Yakkasaroy"],
+      "Andijon": ["Asaka", "Baliqchi", "Jalaquduq", "Xonobod"],
+      "Samarqand": ["Urgut", "Ishtixon", "Kattaqo‘rg‘on", "Narpay"],
+      "Buxoro": ["G‘ijduvon", "Vobkent", "Qorako‘l", "Jondor"]
+    };
+
+    function updateDistricts(type) {
+      const regionSelect = document.getElementById(type + "Region");
+      const districtSelect = document.getElementById(type + "District");
+      const selectedRegion = regionSelect.value;
+      districtSelect.innerHTML = "<option value=''>Tuman</option>";
+      if (districts[selectedRegion]) {
+        districts[selectedRegion].forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d;
+          opt.textContent = d;
+          districtSelect.appendChild(opt);
+        });
+      }
+    }
+
+    document.getElementById("passengerForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const fromRegion = document.getElementById("fromRegion").value;
+      const fromDistrict = document.getElementById("fromDistrict").value;
+      const toRegion = document.getElementById("toRegion").value;
+      const toDistrict = document.getElementById("toDistrict").value;
+      const price = document.getElementById("price").value;
+      const phone = document.getElementById("phone").value;
+
+      const ad = { fromRegion, fromDistrict, toRegion, toDistrict, price, phone };
+      const existing = JSON.parse(localStorage.getItem("passengerAds")) || [];
+      existing.push(ad);
+      localStorage.setItem("passengerAds", JSON.stringify(existing));
+
+      alert("E’loningiz muvaffaqiyatli joylandi ✅");
+      this.reset();
+    });
+  </script>
+</body>
+</html>
