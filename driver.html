@@ -1,80 +1,160 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Haydovchi paneli – ShaharTaxi</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShaharTaxi - Haydovchi paneli</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+
+    header {
+      background: white;
+      padding: 1rem 2rem;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    main {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: #007bff;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    input, select, button {
+      display: block;
+      width: 100%;
+      padding: 0.8rem;
+      margin: 0.5rem 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .ride-list {
+      margin-top: 2rem;
+    }
+
+    .ride-card {
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+  </style>
 </head>
 <body>
   <header>
-    <h1>🚖 Haydovchi paneli</h1>
-    <a href="index.html" class="btn">⬅️ Yo‘lovchi sahifasiga qaytish</a>
+    <h1>ShaharTaxi - Haydovchi paneli</h1>
   </header>
 
-  <main class="driver-form">
+  <main>
     <h2>Yangi e’lon qo‘shish</h2>
-    <form id="driverForm">
-      <label>Qayerdan:</label>
-      <input type="text" id="from" placeholder="Masalan: Toshkent" required>
 
-      <label>Qayergacha:</label>
-      <input type="text" id="to" placeholder="Masalan: Andijon" required>
+    <select id="from">
+      <option value="">Qayerdan</option>
+      <option>Toshkent</option>
+      <option>Samarqand</option>
+      <option>Andijon</option>
+      <option>Buxoro</option>
+    </select>
 
-      <label>Narx (so‘m):</label>
-      <input type="number" id="price" placeholder="150000" required>
+    <select id="to">
+      <option value="">Qayerga</option>
+      <option>Toshkent</option>
+      <option>Samarqand</option>
+      <option>Andijon</option>
+      <option>Buxoro</option>
+    </select>
 
-      <label>Telefon raqam:</label>
-      <input type="tel" id="phone" placeholder="+99890 123 45 67" required>
+    <input type="text" id="price" placeholder="Narx (so‘mda)">
+    <input type="text" id="phone" placeholder="Telefon raqam (masalan, +99890 123 45 67)">
+    <button onclick="saveAd()">E’lon joylash</button>
 
-      <button type="submit" class="btn">E’lonni joylashtirish</button>
-    </form>
-
-    <h3>🧾 Sizning e’lonlaringiz</h3>
-    <div id="driverAds"></div>
+    <div class="ride-list"></div>
   </main>
 
   <script>
-    const form = document.getElementById("driverForm");
-    const adsDiv = document.getElementById("driverAds");
+    function saveAd() {
+      const from = document.getElementById("from").value;
+      const to = document.getElementById("to").value;
+      const price = document.getElementById("price").value;
+      const phone = document.getElementById("phone").value;
 
-    // Saqlangan e'lonlarni yuklash
-    const savedAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-    renderAds();
+      if (!from || !to || !price || !phone) {
+        alert("Iltimos, barcha maydonlarni to‘ldiring!");
+        return;
+      }
 
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const ad = {
-        from: form.from.value,
-        to: form.to.value,
-        price: form.price.value,
-        phone: form.phone.value,
-      };
-      savedAds.push(ad);
-      localStorage.setItem("driverAds", JSON.stringify(savedAds));
-      renderAds();
-      form.reset();
-      alert("E’lon muvaffaqiyatli joylashtirildi!");
-    });
+      // Yangi e’lon ma’lumotlari
+      const newAd = { from, to, price, phone };
 
-    function renderAds() {
-      adsDiv.innerHTML = "";
-      savedAds.forEach((ad, i) => {
-        adsDiv.innerHTML += `
-          <div class="ad-card">
-            <p><strong>${ad.from}</strong> ➡️ <strong>${ad.to}</strong></p>
-            <p>${ad.price} so‘m | 📞 ${ad.phone}</p>
-            <button onclick="deleteAd(${i})">❌ O‘chirish</button>
-          </div>
-        `;
-      });
+      // Eski e’lonlarni olish
+      const ads = JSON.parse(localStorage.getItem("driverAds")) || [];
+
+      // Yangi e’lonni qo‘shish
+      ads.push(newAd);
+
+      // LocalStorage ga yozish
+      localStorage.setItem("driverAds", JSON.stringify(ads));
+
+      alert("E’lon muvaffaqiyatli joylandi!");
+
+      // Formani tozalash
+      document.getElementById("from").value = "";
+      document.getElementById("to").value = "";
+      document.getElementById("price").value = "";
+      document.getElementById("phone").value = "";
+
+      showAds();
     }
 
-    function deleteAd(index) {
-      savedAds.splice(index, 1);
-      localStorage.setItem("driverAds", JSON.stringify(savedAds));
-      renderAds();
+    function showAds() {
+      const ads = JSON.parse(localStorage.getItem("driverAds")) || [];
+      const rideList = document.querySelector(".ride-list");
+
+      if (ads.length === 0) {
+        rideList.innerHTML = "<p>Hozircha e’lonlar mavjud emas.</p>";
+        return;
+      }
+
+      rideList.innerHTML = ads.map(ad => `
+        <div class="ride-card">
+          <p><strong>${ad.from}</strong> ➡️ <strong>${ad.to}</strong></p>
+          <p>${ad.price} so‘m | 📞 ${ad.phone}</p>
+        </div>
+      `).join("");
     }
+
+    window.onload = showAds;
   </script>
 </body>
 </html>
