@@ -3,166 +3,78 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Haydovchi paneli - ShaharTaxi</title>
+  <title>Haydovchi paneli – ShaharTaxi</title>
   <link rel="stylesheet" href="style.css" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
-      margin: 0;
-      padding: 0;
-    }
-
-    header {
-      background: #1e3a8a;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
-
-    .container {
-      max-width: 600px;
-      margin: 2rem auto;
-      background: white;
-      border-radius: 10px;
-      padding: 20px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    label {
-      display: block;
-      margin-top: 10px;
-      font-weight: bold;
-    }
-
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-
-    button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      margin-top: 15px;
-      cursor: pointer;
-      width: 100%;
-      font-size: 1rem;
-    }
-
-    button:hover {
-      background: #1e40af;
-    }
-
-    .ride-list {
-      margin-top: 20px;
-    }
-
-    .ride-item {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 10px;
-      margin-top: 10px;
-      background: #f9fafb;
-    }
-
-    a.back {
-      display: inline-block;
-      margin-top: 20px;
-      text-decoration: none;
-      color: #2563eb;
-    }
-  </style>
 </head>
 <body>
   <header>
-    <h1>Haydovchi paneli</h1>
+    <h1>🚖 Haydovchi paneli</h1>
+    <a href="index.html" class="btn">⬅️ Yo‘lovchi sahifasiga qaytish</a>
   </header>
 
-  <div class="container">
-    <h2>E’lon berish</h2>
+  <main class="driver-form">
+    <h2>Yangi e’lon qo‘shish</h2>
     <form id="driverForm">
       <label>Qayerdan:</label>
-      <select id="from">
-        <option value="Toshkent">Toshkent</option>
-        <option value="Andijon">Andijon</option>
-        <option value="Samarqand">Samarqand</option>
-        <option value="Farg‘ona">Farg‘ona</option>
-        <option value="Buxoro">Buxoro</option>
-      </select>
+      <input type="text" id="from" placeholder="Masalan: Toshkent" required>
 
       <label>Qayergacha:</label>
-      <select id="to">
-        <option value="Andijon">Andijon</option>
-        <option value="Toshkent">Toshkent</option>
-        <option value="Samarqand">Samarqand</option>
-        <option value="Farg‘ona">Farg‘ona</option>
-        <option value="Buxoro">Buxoro</option>
-      </select>
+      <input type="text" id="to" placeholder="Masalan: Andijon" required>
 
-      <label>Narx (so‘mda):</label>
-      <input type="number" id="price" placeholder="masalan: 150000" required />
+      <label>Narx (so‘m):</label>
+      <input type="number" id="price" placeholder="150000" required>
 
-      <label>Telefon raqamingiz:</label>
-      <input type="text" id="phone" placeholder="+99890 123 45 67" required />
+      <label>Telefon raqam:</label>
+      <input type="tel" id="phone" placeholder="+99890 123 45 67" required>
 
-      <button type="submit">E’lon qo‘shish</button>
+      <button type="submit" class="btn">E’lonni joylashtirish</button>
     </form>
 
-    <div class="ride-list" id="rideList"></div>
-
-    <a href="index.html" class="back">← Yo‘lovchi sahifasiga qaytish</a>
-  </div>
+    <h3>🧾 Sizning e’lonlaringiz</h3>
+    <div id="driverAds"></div>
+  </main>
 
   <script>
-    const form = document.getElementById('driverForm');
-    const rideList = document.getElementById('rideList');
+    const form = document.getElementById("driverForm");
+    const adsDiv = document.getElementById("driverAds");
 
-    function renderRides() {
-      const rides = JSON.parse(localStorage.getItem('driverRides')) || [];
-      rideList.innerHTML = '<h3>Sizning e’lonlaringiz:</h3>';
-      rides.forEach((r, i) => {
-        const div = document.createElement('div');
-        div.className = 'ride-item';
-        div.innerHTML = `
-          <b>${r.from} → ${r.to}</b><br>
-          Narx: ${r.price} so‘m<br>
-          Tel: ${r.phone}<br>
-          <button onclick="deleteRide(${i})">O‘chirish</button>
+    // Saqlangan e'lonlarni yuklash
+    const savedAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+    renderAds();
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ad = {
+        from: form.from.value,
+        to: form.to.value,
+        price: form.price.value,
+        phone: form.phone.value,
+      };
+      savedAds.push(ad);
+      localStorage.setItem("driverAds", JSON.stringify(savedAds));
+      renderAds();
+      form.reset();
+      alert("E’lon muvaffaqiyatli joylashtirildi!");
+    });
+
+    function renderAds() {
+      adsDiv.innerHTML = "";
+      savedAds.forEach((ad, i) => {
+        adsDiv.innerHTML += `
+          <div class="ad-card">
+            <p><strong>${ad.from}</strong> ➡️ <strong>${ad.to}</strong></p>
+            <p>${ad.price} so‘m | 📞 ${ad.phone}</p>
+            <button onclick="deleteAd(${i})">❌ O‘chirish</button>
+          </div>
         `;
-        rideList.appendChild(div);
       });
     }
 
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const newRide = {
-        from: from.value,
-        to: to.value,
-        price: price.value,
-        phone: phone.value
-      };
-      const rides = JSON.parse(localStorage.getItem('driverRides')) || [];
-      rides.push(newRide);
-      localStorage.setItem('driverRides', JSON.stringify(rides));
-      form.reset();
-      renderRides();
-      alert('E’lon qo‘shildi!');
-    });
-
-    function deleteRide(index) {
-      const rides = JSON.parse(localStorage.getItem('driverRides')) || [];
-      rides.splice(index, 1);
-      localStorage.setItem('driverRides', JSON.stringify(rides));
-      renderRides();
+    function deleteAd(index) {
+      savedAds.splice(index, 1);
+      localStorage.setItem("driverAds", JSON.stringify(savedAds));
+      renderAds();
     }
-
-    renderRides();
   </script>
 </body>
 </html>
