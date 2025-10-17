@@ -156,6 +156,8 @@
       {from: "Buxoro", to: "Toshkent", driver: "Rustam", phone: "+99891 555 44 33", price: "200 000 so‘m"},
       {from: "Andijon", to: "Namangan", driver: "Javlon", phone: "+99893 222 11 00", price: "50 000 so‘m"},
       {from: "Toshkent", to: "Andijon", driver: "Bekzod", phone: "+99890 999 77 66", price: "180 000 so‘m"},
+      {from: "Samarqand", to: "Buxoro", driver: "Dilshod", phone: "+99895 888 22 11", price: "120 000 so‘m"},
+      {from: "Namangan", to: "Toshkent", driver: "Sherzod", phone: "+99897 333 44 55", price: "160 000 so‘m"}
     ];
 
     function searchRides() {
@@ -164,9 +166,12 @@
       const list = document.getElementById("rideList");
       list.innerHTML = "";
 
-      const filtered = rides.filter(r => 
-        (!from || r.from === from) && (!to || r.to === to)
-      );
+      // 🔧 Yangi qism — agar ikkisi ham bo‘sh bo‘lsa, barcha e’lonlar chiqadi
+      const filtered = (from === "" && to === "") 
+        ? rides 
+        : rides.filter(r => 
+            (!from || r.from === from) && (!to || r.to === to)
+          );
 
       if (filtered.length === 0) {
         list.innerHTML = "<p style='text-align:center;color:#777;'>Hech qanday e’lon topilmadi.</p>";
@@ -187,6 +192,9 @@
         list.appendChild(el);
       });
     }
+
+    // Sayt ochilganda avtomatik barcha e’lonlarni ko‘rsatish
+    window.onload = searchRides;
   </script>
 </body>
 </html>
