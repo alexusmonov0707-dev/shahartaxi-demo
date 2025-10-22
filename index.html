@@ -3,137 +3,136 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi - Yo‘lovchi platformasi</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <title>ShaharTaxi — Bosh sahifa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      margin: 0;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #007bff, #00c6ff);
-      color: #222;
-    }
-
-    header {
-      background: white;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    header h1 {
+      background: #f2f6ff;
       margin: 0;
-      font-weight: 600;
-      color: #007bff;
+      padding: 0;
+      color: #333;
     }
-
-    main {
-      max-width: 850px;
-      margin: 2rem auto;
-      background: #fff;
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-    }
-
-    h2 {
-      color: #007bff;
+    header {
+      background: linear-gradient(90deg, #007bff, #00c6ff);
+      color: white;
+      padding: 1.2rem;
       text-align: center;
-      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      font-weight: 600;
     }
-
-    .rides {
-      margin-top: 2rem;
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .nav-btns {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    a.button {
+      background: #007bff;
+      color: white;
+      text-decoration: none;
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      transition: 0.2s;
+    }
+    a.button:hover {
+      background: #0056b3;
+    }
+    h2 {
+      border-left: 4px solid #007bff;
+      padding-left: 10px;
+      color: #007bff;
+    }
+    .ad-list {
       display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 1rem;
     }
-
-    .ride {
-      background: #f9f9f9;
+    .ad {
+      background: white;
       border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      line-height: 1.5;
     }
-
-    footer {
+    .ad .title {
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #007bff;
+    }
+    .ad .price {
+      font-weight: 600;
+      color: #28a745;
+    }
+    .empty {
       text-align: center;
-      color: white;
-      margin: 2rem 0;
-      font-size: 0.9rem;
+      color: #666;
+      font-style: italic;
+      margin: 1rem 0;
     }
-
-    .ride button {
-      background: #28a745;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .ride button:hover {
-      background: #218838;
-    }
-
   </style>
 </head>
 <body>
-  <header>
-    <h1>ShaharTaxi</h1>
-  </header>
-
+  <header>🚕 ShaharTaxi — Bosh sahifa</header>
   <main>
-    <h2>🧍‍♂️ Yo‘lovchilar va 🚗 Haydovchilar e’lonlari</h2>
-    <div id="rideList" class="rides"></div>
+    <div class="nav-btns">
+      <a href="driver.html" class="button">🚗 Haydovchi e’loni joylash</a>
+      <a href="passenger.html" class="button" style="background:#28a745;">🧍‍♂️ Yo‘lovchi e’loni joylash</a>
+    </div>
+
+    <section>
+      <h2>🚗 Haydovchi e’lonlari</h2>
+      <div id="driverList" class="ad-list"></div>
+    </section>
+
+    <section>
+      <h2>🧍‍♂️ Yo‘lovchi e’lonlari</h2>
+      <div id="passengerList" class="ad-list"></div>
+    </section>
   </main>
 
-  <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
-
   <script>
-    function loadAds() {
-      const list = document.getElementById("rideList");
-      list.innerHTML = "";
+    // Haydovchi e’lonlarini chiqarish
+    const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+    const driverList = document.getElementById('driverList');
+    if (driverAds.length === 0) {
+      driverList.innerHTML = "<p class='empty'>Hozircha haydovchi e’loni yo‘q</p>";
+    } else {
+      driverAds.reverse().forEach(ad => {
+        const div = document.createElement('div');
+        div.className = 'ad';
+        div.innerHTML = `
+          <div class="title">${ad.fromRegion} ${ad.fromDistrict} → ${ad.toRegion} ${ad.toDistrict}</div>
+          <div>Haydovchi: <b>${ad.driver}</b></div>
+          <div>📞 ${ad.phone}</div>
+          <div class="price">${ad.price} so‘m</div>
+        `;
+        driverList.appendChild(div);
+      });
+    }
 
-      // Haydovchi e’lonlarini olish
-      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-      if (driverAds.length > 0) {
-        const h3 = document.createElement("h3");
-        h3.textContent = "🚗 Haydovchilar e’lonlari";
-        h3.style.color = "#007bff";
-        list.appendChild(h3);
-
-        driverAds.forEach(r => {
-          const el = document.createElement("div");
-          el.className = "ride";
-          el.innerHTML = `
-            <div>
-              <strong>${r.fromRegion} (${r.fromDistrict}) → ${r.toRegion} (${r.toDistrict})</strong><br>
-              Narx: ${r.price} so‘m<br>
-              📞 ${r.phone}
-            </div>
-            <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
-          `;
-          list.appendChild(el);
-        });
-      }
-
-      // Yo‘lovchi e’lonlarini olish
-      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-      if (passengerAds.length > 0) {
-        const h3 = document.createElement("h3");
-        h3.textContent = "🧍‍♂️ Yo‘lovchilar e’lonlari";
-        h3.style.color = "#007bff";
-        h3.style.marginTop = "2rem";
-        list.appendChild(h3);
-
-        passengerAds.forEach(p => {
-          const el = document.createElement("div");
-          el.className = "ride";
-          el.innerHTML = `
-            <div>
-              <
-
+    // Yo‘lovchi e’lonlarini chiqarish
+    const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+    const passengerList = document.getElementById('passengerList');
+    if (passengerAds.length === 0) {
+      passengerList.innerHTML = "<p class='empty'>Hozircha yo‘lovchi e’loni yo‘q</p>";
+    } else {
+      passengerAds.reverse().forEach(ad => {
+        const div = document.createElement('div');
+        div.className = 'ad';
+        div.innerHTML = `
+          <div class="title">${ad.fromRegion} ${ad.fromDistrict} → ${ad.toRegion} ${ad.toDistrict}</div>
+          <div>📞 ${ad.phone}</div>
+          <div class="price">${ad.price} so‘m</div>
+        `;
+        passengerList.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
