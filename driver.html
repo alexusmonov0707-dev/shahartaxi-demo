@@ -37,94 +37,24 @@
     button:hover {
       background: #0056b3;
     }
+    h2 {
+      text-align: center;
+      color: #007bff;
+    }
   </style>
 </head>
 <body>
   <main>
     <h2>🚗 Haydovchi e’loni joylash</h2>
 
-    <select id="fromRegion">
+    <!-- Qayerdan -->
+    <select id="fromRegion" onchange="updateDistricts('from')">
       <option value="">Viloyat (qayerdan)</option>
-      <option>Toshkent</option>
-      <option>Andijon</option>
-      <option>Samarqand</option>
-      <option>Buxoro</option>
     </select>
-    <input id="fromDistrict" placeholder="Tuman (qayerdan)" />
-
-    <select id="toRegion">
-      <option value="">Viloyat (qayerga)</option>
-      <option>Toshkent</option>
-      <option>Andijon</option>
-      <option>Samarqand</option>
-      <option>Buxoro</option>
+    <select id="fromDistrict">
+      <option value="">Tuman (qayerdan)</option>
     </select>
-    <input id="toDistrict" placeholder="Tuman (qayerga)" />
 
-    <input id="driver" placeholder="Ismingiz" />
-    <input id="phone" placeholder="Telefon raqamingiz" />
-    <input id="price" placeholder="Narx (so‘m)" />
-
-    <button onclick="saveDriverAd()">E’lonni joylash</button>
-
-    <p id="msg" style="color:green;text-align:center;"></p>
-  </main>
-
-  <script>
-    function saveDriverAd() {
-      const ad = {
-        fromRegion: document.getElementById('fromRegion').value,
-        fromDistrict: document.getElementById('fromDistrict').value,
-        toRegion: document.getElementById('toRegion').value,
-        toDistrict: document.getElementById('toDistrict').value,
-        driver: document.getElementById('driver').value,
-        phone: document.getElementById('phone').value,
-        price: document.getElementById('price').value
-      };
-      const ads = JSON.parse(localStorage.getItem('driverAds')) || [];
-      ads.push(ad);
-      localStorage.setItem('driverAds', JSON.stringify(ads));
-      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
-      setTimeout(()=> location.href='index.html', 1500);
-    }
-  </script>
-  <script src="regions.js"></script>
-  <script src="regions.js"></script>
-<script>
-function loadRegions() {
-  // Hammasi uchun viloyatlarni chiqarish
-  const selects = ["fromRegion", "toRegion"];
-  selects.forEach(id => {
-    const select = document.getElementById(id);
-    Object.keys(regions).forEach(region => {
-      const opt = document.createElement("option");
-      opt.value = region;
-      opt.textContent = region;
-      select.appendChild(opt);
-    });
-  });
-}
-
-function updateDistricts(type) {
-  const regionSelect = document.getElementById(type + "Region");
-  const districtSelect = document.getElementById(type + "District");
-  const selectedRegion = regionSelect.value;
-  
-  districtSelect.innerHTML = "<option value=''>Tuman</option>";
-  if (regions[selectedRegion]) {
-    regions[selectedRegion].forEach(d => {
-      const opt = document.createElement("option");
-      opt.value = d;
-      opt.textContent = d;
-      districtSelect.appendChild(opt);
-    });
-  }
-}
-
-// Sahifa ochilganda viloyatlar yuklansin
-window.onload = loadRegions;
-</script>
-
-
-</body>
-</html>
+    <!-- Qayerga -->
+    <select id="toRegion" onchange="updateDistricts('to')">
+      <option value="">Viloyat
