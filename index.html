@@ -231,5 +231,41 @@
       searchRides();
     };
   </script>
+  <script>
+  // Yo‘lovchilar e’lonlarini chiqarish
+  function loadPassengerAds() {
+    const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
+    if (passengerAds.length === 0) return;
+
+    const list = document.getElementById("rideList");
+    const title = document.createElement("h3");
+    title.textContent = "🧍 Yo‘lovchilar e’lonlari";
+    title.style.textAlign = "center";
+    title.style.color = "#007bff";
+    title.style.marginTop = "3rem";
+    list.appendChild(title);
+
+    passengerAds.forEach(p => {
+      const el = document.createElement("div");
+      el.className = "ride";
+      el.innerHTML = `
+        <div>
+          <strong>${p.fromRegion} (${p.fromDistrict}) → ${p.toRegion} (${p.toDistrict})</strong><br>
+          Taklif narxi: ${p.price} so‘m<br>
+          Tel: ${p.phone}
+        </div>
+      `;
+      list.appendChild(el);
+    });
+  }
+
+  // mavjud funksiyalar ichida qo‘shamiz:
+  window.onload = () => {
+    loadRegions();
+    searchRides();
+    loadPassengerAds();
+  };
+</script>
+
 </body>
 </html>
