@@ -1,126 +1,90 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi - Yo‘lovchi e’loni</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yo‘lovchi e’loni - ShaharTaxi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      margin: 0;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #00c6ff, #007bff);
-      color: #222;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      margin: 0; padding: 0;
+      color: #333;
     }
-
     main {
-      max-width: 600px;
+      max-width: 500px;
       margin: 3rem auto;
       background: #fff;
       border-radius: 16px;
       padding: 2rem;
       box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
-
-    h2 {
-      text-align: center;
-      color: #007bff;
-      margin-bottom: 1.5rem;
-    }
-
-    label {
-      display: block;
-      margin-top: 1rem;
-      font-weight: 600;
-    }
-
-    select, input, button {
+    input, select, button {
       width: 100%;
+      margin-bottom: 1rem;
       padding: 0.8rem;
       border-radius: 8px;
       border: 1px solid #ccc;
-      margin-top: 0.5rem;
       font-size: 1rem;
     }
-
     button {
-      background: #007bff;
-      color: white;
+      background: #28a745;
+      color: #fff;
       border: none;
-      margin-top: 1.5rem;
       cursor: pointer;
-      transition: background 0.3s ease;
     }
-
     button:hover {
-      background: #0056b3;
-    }
-
-    .back {
-      display: inline-block;
-      margin-bottom: 1rem;
-      color: #007bff;
-      text-decoration: none;
+      background: #1e7e34;
     }
   </style>
 </head>
 <body>
   <main>
-    <a href="index.html" class="back">← Bosh sahifaga qaytish</a>
-    <h2>Yo‘lovchi e’loni qo‘shish</h2>
+    <h2>🧍‍♂️ Yo‘lovchi e’loni joylash</h2>
 
-    <form id="adForm">
-      <label>Qayerdan (viloyat)</label>
-      <select id="fromRegion" required>
-        <option value="">Tanlang</option>
-        <option>Toshkent</option>
-        <option>Andijon</option>
-        <option>Samarqand</option>
-        <option>Buxoro</option>
-      </select>
+    <select id="fromRegion">
+      <option value="">Viloyat (qayerdan)</option>
+      <option>Toshkent</option>
+      <option>Andijon</option>
+      <option>Samarqand</option>
+      <option>Buxoro</option>
+    </select>
+    <input id="fromDistrict" placeholder="Tuman (qayerdan)" />
 
-      <label>Qayerdan (tuman)</label>
-      <input type="text" id="fromDistrict" placeholder="Masalan: Asaka" required />
+    <select id="toRegion">
+      <option value="">Viloyat (qayerga)</option>
+      <option>Toshkent</option>
+      <option>Andijon</option>
+      <option>Samarqand</option>
+      <option>Buxoro</option>
+    </select>
+    <input id="toDistrict" placeholder="Tuman (qayerga)" />
 
-      <label>Qayerga (viloyat)</label>
-      <select id="toRegion" required>
-        <option value="">Tanlang</option>
-        <option>Toshkent</option>
-        <option>Andijon</option>
-        <option>Samarqand</option>
-        <option>Buxoro</option>
-      </select>
+    <input id="price" placeholder="Taklif narxi (so‘m)" />
+    <input id="phone" placeholder="Telefon raqamingiz" />
 
-      <label>Qayerga (tuman)</label>
-      <input type="text" id="toDistrict" placeholder="Masalan: Chilonzor" required />
+    <button onclick="savePassengerAd()">E’lonni joylash</button>
 
-      <label>Taklif narxi (so‘mda)</label>
-      <input type="number" id="price" placeholder="Masalan: 120000" required />
-
-      <label>Telefon raqamingiz</label>
-      <input type="tel" id="phone" placeholder="+99890 123 45 67" required />
-
-      <button type="submit">E’lonni joylash</button>
-    </form>
+    <p id="msg" style="color:green;text-align:center;"></p>
   </main>
 
   <script>
-  document.getElementById("adForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-    const ad = {
-      fromRegion: document.getElementById("fromRegion").value,
-      fromDistrict: document.getElementById("fromDistrict").value,
-      toRegion: document.getElementById("toRegion").value,
-      toDistrict: document.getElementById("toDistrict").value,
-      price: document.getElementById("price").value,
-      phone: document.getElementById("phone").value
-    };
-    const ads = JSON.parse(localStorage.getItem("passengerAds")) || [];
-    ads.push(ad);
-    localStorage.setItem("passengerAds", JSON.stringify(ads));
-    alert("✅ E’loningiz muvaffaqiyatli joylandi!");
-    window.location.href = "index.html";
-  });
+    function savePassengerAd() {
+      const ad = {
+        fromRegion: document.getElementById('fromRegion').value,
+        fromDistrict: document.getElementById('fromDistrict').value,
+        toRegion: document.getElementById('toRegion').value,
+        toDistrict: document.getElementById('toDistrict').value,
+        price: document.getElementById('price').value,
+        phone: document.getElementById('phone').value
+      };
+      const ads = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      ads.push(ad);
+      localStorage.setItem('passengerAds', JSON.stringify(ads));
+      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
+      setTimeout(()=> location.href='index.html', 1500);
+    }
   </script>
 </body>
 </html>
