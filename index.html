@@ -3,136 +3,233 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi — Bosh sahifa</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <title>ShaharTaxi - Yo‘lovchi platformasi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     body {
-      font-family: 'Inter', sans-serif;
-      background: #f2f6ff;
       margin: 0;
-      padding: 0;
-      color: #333;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      color: #222;
     }
+
     header {
-      background: linear-gradient(90deg, #007bff, #00c6ff);
-      color: white;
-      padding: 1.2rem;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: 600;
-    }
-    main {
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 1rem;
-    }
-    .nav-btns {
+      background: white;
+      padding: 1rem 2rem;
       display: flex;
-      justify-content: center;
-      gap: 1rem;
-      margin-bottom: 2rem;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    a.button {
+
+    header h1 {
+      margin: 0;
+      font-weight: 600;
+      color: #007bff;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: #007bff;
+      font-weight: 600;
+      margin-left: 1rem;
+      transition: color 0.3s;
+    }
+
+    nav a:hover {
+      color: #0056b3;
+    }
+
+    main {
+      max-width: 850px;
+      margin: 2rem auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: #007bff;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-box {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    select, button {
+      padding: 0.8rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      min-width: 180px;
+    }
+
+    button {
       background: #007bff;
       color: white;
-      text-decoration: none;
-      padding: 0.7rem 1.5rem;
-      border-radius: 8px;
-      transition: 0.2s;
+      cursor: pointer;
+      border: none;
+      transition: background 0.3s ease;
     }
-    a.button:hover {
+
+    button:hover {
       background: #0056b3;
     }
-    h2 {
-      border-left: 4px solid #007bff;
-      padding-left: 10px;
-      color: #007bff;
-    }
-    .ad-list {
+
+    .rides {
+      margin-top: 2rem;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 1rem;
     }
-    .ad {
-      background: white;
+
+    .ride {
+      background: #f9f9f9;
       border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
       padding: 1rem;
-      line-height: 1.5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: transform 0.2s ease;
     }
-    .ad .title {
-      font-weight: 600;
-      font-size: 1.1rem;
-      color: #007bff;
+
+    .ride:hover {
+      transform: scale(1.02);
     }
-    .ad .price {
-      font-weight: 600;
-      color: #28a745;
+
+    .ride button {
+      background: #28a745;
+      padding: 0.6rem 1rem;
     }
-    .empty {
+
+    footer {
       text-align: center;
-      color: #666;
-      font-style: italic;
-      margin: 1rem 0;
+      color: white;
+      margin: 2rem 0;
+      font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
-  <header>🚕 ShaharTaxi — Bosh sahifa</header>
+  <header>
+    <h1>ShaharTaxi</h1>
+    <nav>
+      <a href="driver.html">🚗 Haydovchi e’loni</a>
+      <a href="passenger.html">🧍 Yo‘lovchi e’loni</a>
+    </nav>
+  </header>
+
   <main>
-    <div class="nav-btns">
-      <a href="driver.html" class="button">🚗 Haydovchi e’loni joylash</a>
-      <a href="passenger.html" class="button" style="background:#28a745;">🧍‍♂️ Yo‘lovchi e’loni joylash</a>
+    <h2>Yo‘nalish tanlang</h2>
+
+    <div class="search-box">
+      <!-- Qayerdan -->
+      <div>
+        <select id="fromRegion" onchange="updateDistricts('from')">
+          <option value="">Viloyat (qayerdan)</option>
+        </select>
+        <select id="fromDistrict">
+          <option value="">Tuman</option>
+        </select>
+      </div>
+
+      <!-- Qayerga -->
+      <div>
+        <select id="toRegion" onchange="updateDistricts('to')">
+          <option value="">Viloyat (qayerga)</option>
+        </select>
+        <select id="toDistrict">
+          <option value="">Tuman</option>
+        </select>
+      </div>
+
+      <button onclick="searchRides()">Izlash</button>
     </div>
 
-    <section>
-      <h2>🚗 Haydovchi e’lonlari</h2>
-      <div id="driverList" class="ad-list"></div>
-    </section>
-
-    <section>
-      <h2>🧍‍♂️ Yo‘lovchi e’lonlari</h2>
-      <div id="passengerList" class="ad-list"></div>
-    </section>
+    <div class="rides" id="rideList"></div>
   </main>
 
+  <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
+
+  <script src="regions.js"></script>
+
   <script>
-    // Haydovchi e’lonlarini chiqarish
-    const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-    const driverList = document.getElementById('driverList');
-    if (driverAds.length === 0) {
-      driverList.innerHTML = "<p class='empty'>Hozircha haydovchi e’loni yo‘q</p>";
-    } else {
-      driverAds.reverse().forEach(ad => {
-        const div = document.createElement('div');
-        div.className = 'ad';
-        div.innerHTML = `
-          <div class="title">${ad.fromRegion} ${ad.fromDistrict} → ${ad.toRegion} ${ad.toDistrict}</div>
-          <div>Haydovchi: <b>${ad.driver}</b></div>
-          <div>📞 ${ad.phone}</div>
-          <div class="price">${ad.price} so‘m</div>
-        `;
-        driverList.appendChild(div);
+    function loadRegions() {
+      const selects = ["fromRegion", "toRegion"];
+      selects.forEach(id => {
+        const select = document.getElementById(id);
+        Object.keys(regions).forEach(region => {
+          const opt = document.createElement("option");
+          opt.value = region;
+          opt.textContent = region;
+          select.appendChild(opt);
+        });
       });
     }
 
-    // Yo‘lovchi e’lonlarini chiqarish
-    const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-    const passengerList = document.getElementById('passengerList');
-    if (passengerAds.length === 0) {
-      passengerList.innerHTML = "<p class='empty'>Hozircha yo‘lovchi e’loni yo‘q</p>";
-    } else {
-      passengerAds.reverse().forEach(ad => {
-        const div = document.createElement('div');
-        div.className = 'ad';
-        div.innerHTML = `
-          <div class="title">${ad.fromRegion} ${ad.fromDistrict} → ${ad.toRegion} ${ad.toDistrict}</div>
-          <div>📞 ${ad.phone}</div>
-          <div class="price">${ad.price} so‘m</div>
+    function updateDistricts(type) {
+      const regionSelect = document.getElementById(type + "Region");
+      const districtSelect = document.getElementById(type + "District");
+      const selectedRegion = regionSelect.value;
+      districtSelect.innerHTML = "<option value=''>Tuman</option>";
+      if (regions[selectedRegion]) {
+        regions[selectedRegion].forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d;
+          opt.textContent = d;
+          districtSelect.appendChild(opt);
+        });
+      }
+    }
+
+    function searchRides() {
+      const fromRegion = document.getElementById("fromRegion").value;
+      const fromDistrict = document.getElementById("fromDistrict").value;
+      const toRegion = document.getElementById("toRegion").value;
+      const toDistrict = document.getElementById("toDistrict").value;
+      const list = document.getElementById("rideList");
+      list.innerHTML = "";
+
+      // 🔹 Haydovchilar e’lonlarini localStorage’dan olish
+      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+
+      const filtered = driverAds.filter(r =>
+        (!fromRegion || r.fromRegion === fromRegion) &&
+        (!fromDistrict || r.fromDistrict === fromDistrict) &&
+        (!toRegion || r.toRegion === toRegion) &&
+        (!toDistrict || r.toDistrict === toDistrict)
+      );
+
+      if (filtered.length === 0) {
+        list.innerHTML = "<p style='text-align:center;color:#777;'>Hech qanday e’lon topilmadi.</p>";
+        return;
+      }
+
+      filtered.forEach(r => {
+        const el = document.createElement("div");
+        el.className = "ride";
+        el.innerHTML = `
+          <div>
+            <strong>${r.fromRegion} (${r.fromDistrict}) → ${r.toRegion} (${r.toDistrict})</strong><br>
+            Haydovchi: ${r.driver}<br>
+            Narx: ${r.price} so‘m
+          </div>
+          <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
         `;
-        passengerList.appendChild(div);
+        list.appendChild(el);
       });
     }
+
+    window.onload = () => {
+      loadRegions();
+      searchRides();
+    };
   </script>
 </body>
 </html>
