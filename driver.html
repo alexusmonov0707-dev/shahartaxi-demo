@@ -3,158 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShaharTaxi - Haydovchi paneli</title>
+  <title>Haydovchi e’loni - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0;
-      padding: 0;
-      color: #222;
+      margin: 0; padding: 0;
+      color: #333;
     }
-
-    header {
-      background: white;
-      padding: 1rem 2rem;
-      text-align: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
     main {
-      max-width: 600px;
-      margin: 2rem auto;
+      max-width: 500px;
+      margin: 3rem auto;
       background: #fff;
       border-radius: 16px;
       padding: 2rem;
       box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
-
-    h2 {
-      color: #007bff;
-      text-align: center;
-      margin-bottom: 1.5rem;
-    }
-
     input, select, button {
-      display: block;
       width: 100%;
+      margin-bottom: 1rem;
       padding: 0.8rem;
-      margin: 0.5rem 0;
       border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 1rem;
     }
-
     button {
       background: #007bff;
-      color: white;
+      color: #fff;
       border: none;
       cursor: pointer;
-      transition: background 0.3s ease;
     }
-
     button:hover {
       background: #0056b3;
-    }
-
-    .ride-list {
-      margin-top: 2rem;
-    }
-
-    .ride-card {
-      background: #f9f9f9;
-      border-radius: 12px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>ShaharTaxi - Haydovchi paneli</h1>
-  </header>
-
   <main>
-    <h2>Yangi e’lon qo‘shish</h2>
+    <h2>🚗 Haydovchi e’loni joylash</h2>
 
-    <select id="from">
-      <option value="">Qayerdan</option>
+    <select id="fromRegion">
+      <option value="">Viloyat (qayerdan)</option>
       <option>Toshkent</option>
-      <option>Samarqand</option>
       <option>Andijon</option>
+      <option>Samarqand</option>
       <option>Buxoro</option>
     </select>
+    <input id="fromDistrict" placeholder="Tuman (qayerdan)" />
 
-    <select id="to">
-      <option value="">Qayerga</option>
+    <select id="toRegion">
+      <option value="">Viloyat (qayerga)</option>
       <option>Toshkent</option>
-      <option>Samarqand</option>
       <option>Andijon</option>
+      <option>Samarqand</option>
       <option>Buxoro</option>
     </select>
+    <input id="toDistrict" placeholder="Tuman (qayerga)" />
 
-    <input type="text" id="price" placeholder="Narx (so‘mda)">
-    <input type="text" id="phone" placeholder="Telefon raqam (masalan, +99890 123 45 67)">
-    <button onclick="saveAd()">E’lon joylash</button>
+    <input id="driver" placeholder="Ismingiz" />
+    <input id="phone" placeholder="Telefon raqamingiz" />
+    <input id="price" placeholder="Narx (so‘m)" />
 
-    <div class="ride-list"></div>
+    <button onclick="saveDriverAd()">E’lonni joylash</button>
+
+    <p id="msg" style="color:green;text-align:center;"></p>
   </main>
 
   <script>
-    function saveAd() {
-      const from = document.getElementById("from").value;
-      const to = document.getElementById("to").value;
-      const price = document.getElementById("price").value;
-      const phone = document.getElementById("phone").value;
-
-      if (!from || !to || !price || !phone) {
-        alert("Iltimos, barcha maydonlarni to‘ldiring!");
-        return;
-      }
-
-      // Yangi e’lon ma’lumotlari
-      const newAd = { from, to, price, phone };
-
-      // Eski e’lonlarni olish
-      const ads = JSON.parse(localStorage.getItem("driverAds")) || [];
-
-      // Yangi e’lonni qo‘shish
-      ads.push(newAd);
-
-      // LocalStorage ga yozish
-      localStorage.setItem("driverAds", JSON.stringify(ads));
-
-      alert("E’lon muvaffaqiyatli joylandi!");
-
-      // Formani tozalash
-      document.getElementById("from").value = "";
-      document.getElementById("to").value = "";
-      document.getElementById("price").value = "";
-      document.getElementById("phone").value = "";
-
-      showAds();
+    function saveDriverAd() {
+      const ad = {
+        fromRegion: document.getElementById('fromRegion').value,
+        fromDistrict: document.getElementById('fromDistrict').value,
+        toRegion: document.getElementById('toRegion').value,
+        toDistrict: document.getElementById('toDistrict').value,
+        driver: document.getElementById('driver').value,
+        phone: document.getElementById('phone').value,
+        price: document.getElementById('price').value
+      };
+      const ads = JSON.parse(localStorage.getItem('driverAds')) || [];
+      ads.push(ad);
+      localStorage.setItem('driverAds', JSON.stringify(ads));
+      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
+      setTimeout(()=> location.href='index.html', 1500);
     }
-
-    function showAds() {
-      const ads = JSON.parse(localStorage.getItem("driverAds")) || [];
-      const rideList = document.querySelector(".ride-list");
-
-      if (ads.length === 0) {
-        rideList.innerHTML = "<p>Hozircha e’lonlar mavjud emas.</p>";
-        return;
-      }
-
-      rideList.innerHTML = ads.map(ad => `
-        <div class="ride-card">
-          <p><strong>${ad.from}</strong> ➡️ <strong>${ad.to}</strong></p>
-          <p>${ad.price} so‘m | 📞 ${ad.phone}</p>
-        </div>
-      `).join("");
-    }
-
-    window.onload = showAds;
   </script>
 </body>
 </html>
