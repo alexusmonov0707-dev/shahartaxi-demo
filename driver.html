@@ -33,6 +33,7 @@
       color: #fff;
       border: none;
       cursor: pointer;
+      font-weight: 600;
     }
     button:hover {
       background: #0056b3;
@@ -40,6 +41,7 @@
     h2 {
       text-align: center;
       color: #007bff;
+      margin-bottom: 1.5rem;
     }
   </style>
 </head>
@@ -57,4 +59,73 @@
 
     <!-- Qayerga -->
     <select id="toRegion" onchange="updateDistricts('to')">
-      <option value="">Viloyat
+      <option value="">Viloyat (qayerga)</option>
+    </select>
+    <select id="toDistrict">
+      <option value="">Tuman (qayerga)</option>
+    </select>
+
+    <input id="driver" placeholder="Ismingiz" />
+    <input id="phone" placeholder="Telefon raqamingiz" />
+    <input id="price" placeholder="Narx (so‘m)" />
+
+    <button onclick="saveDriverAd()">E’lonni joylash</button>
+    <p id="msg" style="color:green;text-align:center;"></p>
+  </main>
+
+  <!-- Viloyatlar va tumanlar -->
+  <script src="regions.js"></script>
+
+  <script>
+    function loadRegions() {
+      const selects = ["fromRegion", "toRegion"];
+      selects.forEach(id => {
+        const select = document.getElementById(id);
+        Object.keys(regions).forEach(region => {
+          const opt = document.createElement("option");
+          opt.value = region;
+          opt.textContent = region;
+          select.appendChild(opt);
+        });
+      });
+    }
+
+    function updateDistricts(type) {
+      const regionSelect = document.getElementById(type + "Region");
+      const districtSelect = document.getElementById(type + "District");
+      const selectedRegion = regionSelect.value;
+      districtSelect.innerHTML = "<option value=''>Tuman</option>";
+      if (regions[selectedRegion]) {
+        regions[selectedRegion].forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d;
+          opt.textContent = d;
+          districtSelect.appendChild(opt);
+        });
+      }
+    }
+
+    function saveDriverAd() {
+      const ad = {
+        fromRegion: document.getElementById('fromRegion').value,
+        fromDistrict: document.getElementById('fromDistrict').value,
+        toRegion: document.getElementById('toRegion').value,
+        toDistrict: document.getElementById('toDistrict').value,
+        driver: document.getElementById('driver').value,
+        phone: document.getElementById('phone').value,
+        price: document.getElementById('price').value
+      };
+
+      // Mahalliy saqlash
+      const ads = JSON.parse(localStorage.getItem('driverAds')) || [];
+      ads.push(ad);
+      localStorage.setItem('driverAds', JSON.stringify(ads));
+
+      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
+      setTimeout(() => location.href = 'index.html', 1500);
+    }
+
+    window.onload = loadRegions;
+  </script>
+</body>
+</html>
