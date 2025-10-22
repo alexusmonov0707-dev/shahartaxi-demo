@@ -89,6 +89,42 @@
     }
   </script>
   <script src="regions.js"></script>
+  <script src="regions.js"></script>
+<script>
+function loadRegions() {
+  // Hammasi uchun viloyatlarni chiqarish
+  const selects = ["fromRegion", "toRegion"];
+  selects.forEach(id => {
+    const select = document.getElementById(id);
+    Object.keys(regions).forEach(region => {
+      const opt = document.createElement("option");
+      opt.value = region;
+      opt.textContent = region;
+      select.appendChild(opt);
+    });
+  });
+}
+
+function updateDistricts(type) {
+  const regionSelect = document.getElementById(type + "Region");
+  const districtSelect = document.getElementById(type + "District");
+  const selectedRegion = regionSelect.value;
+  
+  districtSelect.innerHTML = "<option value=''>Tuman</option>";
+  if (regions[selectedRegion]) {
+    regions[selectedRegion].forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d;
+      opt.textContent = d;
+      districtSelect.appendChild(opt);
+    });
+  }
+}
+
+// Sahifa ochilganda viloyatlar yuklansin
+window.onload = loadRegions;
+</script>
+
 
 </body>
 </html>
