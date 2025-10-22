@@ -28,12 +28,6 @@
       color: #007bff;
     }
 
-    .lang-select {
-      border: 1px solid #ccc;
-      padding: 0.4rem 0.6rem;
-      border-radius: 8px;
-    }
-
     main {
       max-width: 850px;
       margin: 2rem auto;
@@ -47,33 +41,6 @@
       color: #007bff;
       text-align: center;
       margin-bottom: 1.5rem;
-    }
-
-    .search-box {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      justify-content: center;
-    }
-
-    select, button {
-      padding: 0.8rem 1rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-      min-width: 180px;
-    }
-
-    button {
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-      border: none;
-      transition: background 0.3s ease;
-    }
-
-    button:hover {
-      background: #0056b3;
     }
 
     .rides {
@@ -90,16 +57,6 @@
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      transition: transform 0.2s ease;
-    }
-
-    .ride:hover {
-      transform: scale(1.02);
-    }
-
-    .ride button {
-      background: #28a745;
-      padding: 0.6rem 1rem;
     }
 
     footer {
@@ -108,154 +65,75 @@
       margin: 2rem 0;
       font-size: 0.9rem;
     }
+
+    .ride button {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .ride button:hover {
+      background: #218838;
+    }
+
   </style>
 </head>
 <body>
   <header>
     <h1>ShaharTaxi</h1>
-    <select class="lang-select">
-      <option>O‘zbekcha</option>
-      <option>Русский</option>
-      <option>English</option>
-    </select>
   </header>
 
   <main>
-    <h2>Yo‘nalish tanlang</h2>
-
-    <div class="search-box">
-      <!-- Qayerdan -->
-      <div>
-        <select id="fromRegion" onchange="updateDistricts('from')">
-          <option value="">Viloyat (qayerdan)</option>
-          <option>Toshkent</option>
-          <option>Andijon</option>
-          <option>Samarqand</option>
-          <option>Buxoro</option>
-        </select>
-
-        <select id="fromDistrict">
-          <option value="">Tuman</option>
-        </select>
-      </div>
-
-      <!-- Qayerga -->
-      <div>
-        <select id="toRegion" onchange="updateDistricts('to')">
-          <option value="">Viloyat (qayerga)</option>
-          <option>Toshkent</option>
-          <option>Andijon</option>
-          <option>Samarqand</option>
-          <option>Buxoro</option>
-        </select>
-
-        <select id="toDistrict">
-          <option value="">Tuman</option>
-        </select>
-      </div>
-
-      <button onclick="searchRides()">Izlash</button>
-    </div>
-
-    <div class="rides" id="rideList"></div>
+    <h2>🧍‍♂️ Yo‘lovchilar va 🚗 Haydovchilar e’lonlari</h2>
+    <div id="rideList" class="rides"></div>
   </main>
 
   <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
 
   <script>
-    const districts = {
-      "Toshkent": ["Yunusobod", "Chilonzor", "Olmazor", "Yakkasaroy"],
-      "Andijon": ["Asaka", "Baliqchi", "Jalaquduq", "Xonobod"],
-      "Samarqand": ["Urgut", "Ishtixon", "Kattaqo‘rg‘on", "Narpay"],
-      "Buxoro": ["G‘ijduvon", "Vobkent", "Qorako‘l", "Jondor"]
-    };
-
-    const rides = [
-      {fromRegion: "Toshkent", fromDistrict: "Yunusobod", toRegion: "Andijon", toDistrict: "Asaka", driver: "Bekzod", phone: "+99890 111 22 33", price: "180 000 so‘m"},
-      {fromRegion: "Andijon", fromDistrict: "Asaka", toRegion: "Toshkent", toDistrict: "Chilonzor", driver: "Javlon", phone: "+99893 222 11 00", price: "170 000 so‘m"},
-      {fromRegion: "Samarqand", fromDistrict: "Ishtixon", toRegion: "Buxoro", toDistrict: "Vobkent", driver: "Dilshod", phone: "+99895 888 22 11", price: "130 000 so‘m"},
-      {fromRegion: "Buxoro", fromDistrict: "Jondor", toRegion: "Samarqand", toDistrict: "Urgut", driver: "Rustam", phone: "+99891 555 44 33", price: "140 000 so‘m"}
-    ];
-
-    function updateDistricts(type) {
-      const regionSelect = document.getElementById(type + "Region");
-      const districtSelect = document.getElementById(type + "District");
-      const selectedRegion = regionSelect.value;
-      districtSelect.innerHTML = "<option value=''>Tuman</option>";
-      if (districts[selectedRegion]) {
-        districts[selectedRegion].forEach(d => {
-          const opt = document.createElement("option");
-          opt.value = d;
-          opt.textContent = d;
-          districtSelect.appendChild(opt);
-        });
-      }
-    }
-
-    function searchRides() {
-      const fromRegion = document.getElementById("fromRegion").value;
-      const fromDistrict = document.getElementById("fromDistrict").value;
-      const toRegion = document.getElementById("toRegion").value;
-      const toDistrict = document.getElementById("toDistrict").value;
+    function loadAds() {
       const list = document.getElementById("rideList");
       list.innerHTML = "";
 
-      const filtered = rides.filter(r =>
-        (!fromRegion || r.fromRegion === fromRegion) &&
-        (!fromDistrict || r.fromDistrict === fromDistrict) &&
-        (!toRegion || r.toRegion === toRegion) &&
-        (!toDistrict || r.toDistrict === toDistrict)
-      );
+      // Haydovchi e’lonlarini olish
+      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+      if (driverAds.length > 0) {
+        const h3 = document.createElement("h3");
+        h3.textContent = "🚗 Haydovchilar e’lonlari";
+        h3.style.color = "#007bff";
+        list.appendChild(h3);
 
-      if (filtered.length === 0) {
-        list.innerHTML = "<p style='text-align:center;color:#777;'>Hech qanday e’lon topilmadi.</p>";
-        return;
+        driverAds.forEach(r => {
+          const el = document.createElement("div");
+          el.className = "ride";
+          el.innerHTML = `
+            <div>
+              <strong>${r.fromRegion} (${r.fromDistrict}) → ${r.toRegion} (${r.toDistrict})</strong><br>
+              Narx: ${r.price} so‘m<br>
+              📞 ${r.phone}
+            </div>
+            <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
+          `;
+          list.appendChild(el);
+        });
       }
 
-      filtered.forEach(r => {
-        const el = document.createElement("div");
-        el.className = "ride";
-        el.innerHTML = `
-          <div>
-            <strong>${r.fromRegion} (${r.fromDistrict}) → ${r.toRegion} (${r.toDistrict})</strong><br>
-            Haydovchi: ${r.driver}<br>
-            Narx: ${r.price}
-          </div>
-          <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
-        `;
-        list.appendChild(el);
-      });
-    }
+      // Yo‘lovchi e’lonlarini olish
+      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
+      if (passengerAds.length > 0) {
+        const h3 = document.createElement("h3");
+        h3.textContent = "🧍‍♂️ Yo‘lovchilar e’lonlari";
+        h3.style.color = "#007bff";
+        h3.style.marginTop = "2rem";
+        list.appendChild(h3);
 
-    window.onload = searchRides;
-  </script>
-  <script>
-  // Yo‘lovchilar e’lonlari
-  const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
+        passengerAds.forEach(p => {
+          const el = document.createElement("div");
+          el.className = "ride";
+          el.innerHTML = `
+            <div>
+              <
 
-  if (passengerAds.length > 0) {
-    const list = document.getElementById("rideList");
-    const title = document.createElement("h3");
-    title.textContent = "🧍‍♂️ Yo‘lovchilar e’lonlari";
-    title.style.textAlign = "center";
-    title.style.color = "#007bff";
-    title.style.marginTop = "3rem";
-    list.appendChild(title);
-
-    passengerAds.forEach(p => {
-      const el = document.createElement("div");
-      el.className = "ride";
-      el.innerHTML = `
-        <div class="ride-info">
-          <strong>${p.fromRegion} (${p.fromDistrict}) → ${p.toRegion} (${p.toDistrict})</strong><br>
-          Taklif narxi: ${p.price} so‘m<br>
-          Tel: ${p.phone}
-        </div>
-      `;
-      list.appendChild(el);
-    });
-  }
-</script>
-
-</body>
-</html>
