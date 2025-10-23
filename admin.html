@@ -8,133 +8,170 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: #f4f8fb;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #007bff;
-      color: white;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      margin: 0; padding: 0;
+      color: #333;
     }
     main {
       max-width: 900px;
       margin: 2rem auto;
-      background: white;
-      border-radius: 12px;
+      background: #fff;
+      border-radius: 16px;
       padding: 2rem;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
     h2 {
+      text-align: center;
       color: #007bff;
     }
-    .ad {
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      background: #fafafa;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.6rem;
+      text-align: center;
+    }
+    th {
+      background: #007bff;
+      color: #fff;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
     }
     button {
-      margin-right: 0.5rem;
       border: none;
-      padding: 0.5rem 1rem;
+      padding: 6px 10px;
       border-radius: 8px;
       cursor: pointer;
     }
-    .edit-btn { background: #ffc107; color: #fff; }
-    .delete-btn { background: #dc3545; color: #fff; }
-    .save-btn { background: #28a745; color: #fff; }
+    .edit-btn {
+      background: #ffc107;
+      color: #000;
+    }
+    .delete-btn {
+      background: #dc3545;
+      color: #fff;
+    }
+    .approve-btn {
+      background: #28a745;
+      color: #fff;
+    }
+    .rejected {
+      color: red;
+      font-weight: bold;
+    }
+    .approved {
+      color: green;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <script>
-    if (localStorage.getItem("isAdmin") !== "true") {
-      window.location.href = "admin-login.html";
-    }
-  </script>
-
-  <header>
-    <h1>🛠 Admin panel</h1>
-    <div>
-      <button onclick="location.href='admin-stat.html'">📊 Statistika</button>
-      <button onclick="logout()">🚪 Chiqish</button>
-    </div>
-  </header>
-
   <main>
-    <h2>Haydovchi e’lonlari</h2>
-    <div id="driverList"></div>
+    <h2>🛠 Admin panel</h2>
 
-    <h2>Yo‘lovchi e’lonlari</h2>
-    <div id="passengerList"></div>
+    <h3>🚗 Haydovchi e’lonlari</h3>
+    <table id="driverTable">
+      <tr>
+        <th>#</th>
+        <th>Yo‘nalish</th>
+        <th>Haydovchi</th>
+        <th>Telefon</th>
+        <th>Narx</th>
+        <th>Holat</th>
+        <th>Amallar</th>
+      </tr>
+    </table>
+
+    <h3>🧍 Yo‘lovchi e’lonlari</h3>
+    <table id="passengerTable">
+      <tr>
+        <th>#</th>
+        <th>Yo‘nalish</th>
+        <th>Telefon</th>
+        <th>Narx</th>
+        <th>Holat</th>
+        <th>Amallar</th>
+      </tr>
+    </table>
   </main>
 
   <script>
-    function logout() {
-      localStorage.removeItem("isAdmin");
-      window.location.href = "admin-login.html";
-    }
+    function loadAdminData() {
+      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const driverTable = document.getElementById('driverTable');
+      const passengerTable = document.getElementById('passengerTable');
 
-    function loadAds() {
-      const drivers = JSON.parse(localStorage.getItem("driverAds")) || [];
-      const passengers = JSON.parse(localStorage.getItem("passengerAds")) || [];
+      driverTable.innerHTML = `
+        <tr>
+          <th>#</th><th>Yo‘nalish</th><th>Haydovchi</th><th>Telefon</th>
+          <th>Narx</th><th>Holat</th><th>Amallar</th>
+        </tr>`;
+      passengerTable.innerHTML = `
+        <tr>
+          <th>#</th><th>Yo‘nalish</th><th>Telefon</th>
+          <th>Narx</th><th>Holat</th><th>Amallar</th>
+        </tr>`;
 
-      const driverList = document.getElementById("driverList");
-      const passengerList = document.getElementById("passengerList");
-      driverList.innerHTML = "";
-      passengerList.innerHTML = "";
-
+      // === Haydovchilar ===
       drivers.forEach((ad, i) => {
-        driverList.innerHTML += `
-          <div class="ad">
-            <p><strong>${ad.fromRegion}, ${ad.fromDistrict}</strong> ➡️ <strong>${ad.toRegion}, ${ad.toDistrict}</strong></p>
-            <p>📞 ${ad.phone}</p>
-            <p>💰 ${ad.price} so‘m</p>
-            <button class="edit-btn" onclick="editAd('driver', ${i})">✏️ Tahrirlash</button>
-            <button class="delete-btn" onclick="deleteAd('driver', ${i})">🗑 O‘chirish</button>
-          </div>`;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${ad.fromRegion} ${ad.fromDistrict} → ${ad.toRegion} ${ad.toDistrict}</td>
+          <td>${ad.driver}</td>
+          <td>${ad.phone}</td>
+          <td>${ad.price}</td>
+          <td class="${ad.status === 'approved' ? 'approved' : ad.status === 'rejected' ? 'rejected' : ''}">
+            ${ad.status === 'approved' ? '✅ Tasdiqlangan' : ad.status === 'rejected' ? '❌ Bekor qilingan' : '⏳ Kutilmoqda'}
+          </td>
+          <td>
+            <button class="approve-btn" onclick="approveAd('driverAds', ${i})">✅</button>
+            <button class="delete-btn" onclick="rejectAd('driverAds', ${i})">❌</button>
+          </td>
+        `;
+        driverTable.appendChild(row);
       });
 
+      // === Yo‘lovchilar ===
       passengers.forEach((ad, i) => {
-        passengerList.innerHTML += `
-          <div class="ad">
-            <p><strong>${ad.fromRegion}, ${ad.fromDistrict}</strong> ➡️ <strong>${ad.toRegion}, ${ad.toDistrict}</strong></p>
-            <p>📞 ${ad.phone}</p>
-            <p>💰 ${ad.price} so‘m</p>
-            <button class="edit-btn" onclick="editAd('passenger', ${i})">✏️ Tahrirlash</button>
-            <button class="delete-btn" onclick="deleteAd('passenger', ${i})">🗑 O‘chirish</button>
-          </div>`;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${ad.fromRegion} ${ad.fromDistrict} → ${ad.toRegion} ${ad.toDistrict}</td>
+          <td>${ad.phone}</td>
+          <td>${ad.price}</td>
+          <td class="${ad.status === 'approved' ? 'approved' : ad.status === 'rejected' ? 'rejected' : ''}">
+            ${ad.status === 'approved' ? '✅ Tasdiqlangan' : ad.status === 'rejected' ? '❌ Bekor qilingan' : '⏳ Kutilmoqda'}
+          </td>
+          <td>
+            <button class="approve-btn" onclick="approveAd('passengerAds', ${i})">✅</button>
+            <button class="delete-btn" onclick="rejectAd('passengerAds', ${i})">❌</button>
+          </td>
+        `;
+        passengerTable.appendChild(row);
       });
     }
 
-    function deleteAd(type, index) {
-      if (confirm("Haqiqatan o‘chirmoqchimisiz?")) {
-        const ads = JSON.parse(localStorage.getItem(type + "Ads")) || [];
-        ads.splice(index, 1);
-        localStorage.setItem(type + "Ads", JSON.stringify(ads));
-        loadAds();
-      }
+    function approveAd(type, index) {
+      const ads = JSON.parse(localStorage.getItem(type)) || [];
+      ads[index].status = 'approved';
+      localStorage.setItem(type, JSON.stringify(ads));
+      loadAdminData();
     }
 
-    function editAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type + "Ads")) || [];
-      const ad = ads[index];
-      const newPhone = prompt("Yangi telefon raqam:", ad.phone);
-      const newPrice = prompt("Yangi narx:", ad.price);
-      if (newPhone && newPrice) {
-        ad.phone = newPhone;
-        ad.price = newPrice;
-        ads[index] = ad;
-        localStorage.setItem(type + "Ads", JSON.stringify(ads));
-        loadAds();
-      }
+    function rejectAd(type, index) {
+      const ads = JSON.parse(localStorage.getItem(type)) || [];
+      ads[index].status = 'rejected';
+      localStorage.setItem(type, JSON.stringify(ads));
+      loadAdminData();
     }
 
-    loadAds();
+    window.onload = loadAdminData;
   </script>
 </body>
 </html>
