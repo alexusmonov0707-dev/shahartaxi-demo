@@ -74,6 +74,12 @@
       font-style: italic;
       margin-top: 1rem;
     }
+    .auto-refresh {
+      text-align: center;
+      color: gray;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -102,17 +108,17 @@
     </div>
 
     <div class="ad-list" id="adsContainer"></div>
+    <p class="auto-refresh">🔄 E’lonlar har 5 soniyada avtomatik yangilanadi</p>
   </main>
 
   <script>
     function loadAds() {
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const allAds = [
+      return [
         ...driverAds.map(a => ({ ...a, type: 'Haydovchi' })),
         ...passengerAds.map(a => ({ ...a, type: 'Yo‘lovchi' }))
       ];
-      return allAds;
     }
 
     function displayAds(ads) {
@@ -127,9 +133,9 @@
         div.className = 'ad-card';
         div.innerHTML = `
           <div class="ad-type">${ad.type}</div>
-          <div>📍 ${ad.fromRegion}, ${ad.fromDistrict} ➜ ${ad.toRegion}, ${ad.toDistrict}</div>
-          <div>💰 ${ad.price} so‘m</div>
-          <div>📞 ${ad.phone}</div>
+          <div>📍 ${ad.fromRegion || '-'}, ${ad.fromDistrict || '-'} ➜ ${ad.toRegion || '-'}, ${ad.toDistrict || '-'}</div>
+          <div>💰 ${ad.price || '-'} so‘m</div>
+          <div>📞 ${ad.phone || '-'}</div>
           <div>🗓️ ${ad.date || 'Sana ko‘rsatilmagan'}</div>
         `;
         container.appendChild(div);
@@ -157,6 +163,16 @@
       document.getElementById('maxPrice').value = '';
       displayAds(loadAds());
     }
+
+    // 🔁 Har 5 soniyada avtomatik yangilanish
+    setInterval(() => {
+      const region = document.getElementById('filterRegion').value;
+      if (region || document.getElementById('minPrice').value || document.getElementById('maxPrice').value) {
+        filterAds();
+      } else {
+        displayAds(loadAds());
+      }
+    }, 5000);
 
     // Sahifa yuklanganda e’lonlarni ko‘rsatish
     displayAds(loadAds());
