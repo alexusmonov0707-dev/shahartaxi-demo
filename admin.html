@@ -213,5 +213,11 @@
 
     window.onload = loadAds;
   </script>
+  <script>
+  if (localStorage.getItem("isAdmin") !== "true") {
+    location.href = "admin-login.html";
+  }
+</script>
+
 </body>
 </html>
