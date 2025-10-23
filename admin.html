@@ -3,221 +3,200 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin panel - ShaharTaxi</title>
+  <title>Admin Panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #007bff, #00c6ff);
+      background: #f5f7fa;
       margin: 0;
       padding: 0;
       color: #333;
     }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background: #007bff;
+      color: white;
+      border-radius: 0 0 12px 12px;
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    header button {
+      background: #fff;
+      color: #007bff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    header button:hover {
+      background: #e8f0ff;
+    }
+
     main {
-      max-width: 1000px;
+      max-width: 800px;
       margin: 2rem auto;
       background: #fff;
       border-radius: 16px;
       padding: 2rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
     }
-    h1 {
+
+    h3 {
       text-align: center;
+      margin-bottom: 1.5rem;
       color: #007bff;
-      margin-bottom: 1rem;
     }
-    .stats {
-      display: flex;
-      justify-content: space-around;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      text-align: center;
-    }
-    .stat {
-      flex: 1;
-      min-width: 180px;
-      background: #f8f9fa;
-      padding: 1rem;
+
+    .ad {
+      border: 1px solid #ddd;
       border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
-    .stat h2 {
-      margin: 0;
-      color: #007bff;
-      font-size: 1.8rem;
-    }
-    .stat p {
-      margin: 0.3rem 0 0;
-      color: #555;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 0.8rem;
-      border-bottom: 1px solid #ddd;
-      text-align: center;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    button {
-      border: none;
-      background: none;
-      cursor: pointer;
-      font-size: 1.1rem;
-    }
-    button:hover {
-      opacity: 0.7;
-    }
-    .filter-box {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 1rem;
+      padding: 1rem;
       margin-bottom: 1rem;
+      background: #fafafa;
     }
-    .filter-box input, .filter-box select {
-      padding: 0.7rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
+
+    .ad strong {
+      color: #007bff;
+    }
+
+    .buttons {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    button.edit, button.delete {
       flex: 1;
+      padding: 0.5rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button.edit {
+      background: #ffc107;
+      color: #fff;
+    }
+
+    button.delete {
+      background: #dc3545;
+      color: #fff;
+    }
+
+    button.edit:hover {
+      background: #e0a800;
+    }
+
+    button.delete:hover {
+      background: #c82333;
     }
   </style>
 </head>
 <body>
+
+  <header>
+    <h2>🛠 Admin panel</h2>
+    <button onclick="logout()">Chiqish</button>
+  </header>
+
   <main>
-    <h1>🛠 ShaharTaxi - Admin Panel</h1>
-
-    <div class="stats" id="statsPanel">
-      <div class="stat">
-        <h2 id="totalCount">0</h2>
-        <p>Umumiy e’lonlar</p>
-      </div>
-      <div class="stat">
-        <h2 id="driverCount">0</h2>
-        <p>Haydovchi e’lonlari</p>
-      </div>
-      <div class="stat">
-        <h2 id="passengerCount">0</h2>
-        <p>Yo‘lovchi e’lonlari</p>
-      </div>
-      <div class="stat">
-        <h2 id="percentRatio">0%</h2>
-        <p>Haydovchi / Yo‘lovchi nisbati</p>
-      </div>
-    </div>
-
-    <div class="filter-box">
-      <input type="text" id="searchBox" placeholder="🔍 Qidirish (manzil yoki telefon)">
-      <select id="filterType">
-        <option value="all">Barchasi</option>
-        <option value="Haydovchi">Faqat haydovchilar</option>
-        <option value="Yo‘lovchi">Faqat yo‘lovchilar</option>
-      </select>
-    </div>
-
-    <table id="adsTable">
-      <thead>
-        <tr>
-          <th>Turi</th>
-          <th>Qayerdan</th>
-          <th>Qayerga</th>
-          <th>Telefon</th>
-          <th>Narx</th>
-          <th>Amallar</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <h3>🚗 Barcha e’lonlar</h3>
+    <div id="adsList"></div>
   </main>
 
   <script>
-    function loadStats() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const total = driverAds.length + passengerAds.length;
-
-      document.getElementById('totalCount').innerText = total;
-      document.getElementById('driverCount').innerText = driverAds.length;
-      document.getElementById('passengerCount').innerText = passengerAds.length;
-
-      const ratio = passengerAds.length > 0
-        ? Math.round((driverAds.length / passengerAds.length) * 100)
-        : 0;
-      document.getElementById('percentRatio').innerText = ratio + "%";
+    // 🔐 Login tekshiruvi
+    if (!localStorage.getItem("isAdmin")) {
+      location.href = "admin-login.html";
     }
 
-    function loadAds() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const tbody = document.querySelector('#adsTable tbody');
-      tbody.innerHTML = '';
+    // 🔓 Chiqish funksiyasi
+    function logout() {
+      localStorage.removeItem("isAdmin");
+      location.href = "admin-login.html";
+    }
 
-      const filterType = document.getElementById('filterType')?.value || 'all';
-      const searchTerm = document.getElementById('searchBox')?.value.toLowerCase() || '';
+    // 🧾 E’lonlarni yuklash
+    const adsList = document.getElementById("adsList");
 
-      function addRow(ad, type, index) {
-        if (filterType !== 'all' && filterType !== type) return;
-        const text = `${ad.fromRegion} ${ad.fromDistrict} ${ad.toRegion} ${ad.toDistrict} ${ad.phone}`.toLowerCase();
-        if (!text.includes(searchTerm)) return;
+    const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+    const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
 
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${type}</td>
-          <td>${ad.fromRegion} (${ad.fromDistrict})</td>
-          <td>${ad.toRegion} (${ad.toDistrict})</td>
-          <td>${ad.phone}</td>
-          <td>${ad.price}</td>
-          <td>
-            <button onclick="openEditModal('${type}', ${index})">✏️</button>
-            <button onclick="deleteAd('${type}', ${index})">🗑</button>
-          </td>
-        `;
-        tbody.appendChild(row);
+    const allAds = [
+      ...driverAds.map(ad => ({ ...ad, type: "Haydovchi" })),
+      ...passengerAds.map(ad => ({ ...ad, type: "Yo‘lovchi" }))
+    ];
+
+    function renderAds() {
+      adsList.innerHTML = "";
+      if (allAds.length === 0) {
+        adsList.innerHTML = "<p style='text-align:center;color:#777;'>Hozircha e’lonlar mavjud emas.</p>";
+        return;
       }
 
-      driverAds.forEach((ad, i) => addRow(ad, 'Haydovchi', i));
-      passengerAds.forEach((ad, i) => addRow(ad, 'Yo‘lovchi', i));
-
-      loadStats();
+      allAds.forEach((ad, index) => {
+        const div = document.createElement("div");
+        div.className = "ad";
+        div.innerHTML = `
+          <p><strong>${ad.type}</strong> e’loni</p>
+          <p>🛣 <b>${ad.fromRegion || "?"}</b> (${ad.fromDistrict || "-"}) → <b>${ad.toRegion || "?"}</b> (${ad.toDistrict || "-"})</p>
+          <p>📞 ${ad.phone}</p>
+          <p>💰 ${ad.price ? ad.price + " so‘m" : "—"}</p>
+          <div class="buttons">
+            <button class="edit" onclick="editAd(${index}, '${ad.type}')">✏️ Tahrirlash</button>
+            <button class="delete" onclick="deleteAd(${index}, '${ad.type}')">🗑 O‘chirish</button>
+          </div>
+        `;
+        adsList.appendChild(div);
+      });
     }
 
-    function deleteAd(type, index) {
-      if (!confirm("Rostdan ham o‘chirmoqchimisiz?")) return;
-      const key = type === 'Haydovchi' ? 'driverAds' : 'passengerAds';
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      ads.splice(index, 1);
-      localStorage.setItem(key, JSON.stringify(ads));
-      loadAds();
-    }
+    // ✏️ Tahrirlash funksiyasi
+    function editAd(index, type) {
+      const ads = type === "Haydovchi"
+        ? JSON.parse(localStorage.getItem("driverAds")) || []
+        : JSON.parse(localStorage.getItem("passengerAds")) || [];
 
-    function openEditModal(type, index) {
-      const key = type === 'Haydovchi' ? 'driverAds' : 'passengerAds';
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
       const ad = ads[index];
-      const newPhone = prompt("Telefon raqamini o‘zgartiring:", ad.phone);
-      const newPrice = prompt("Narxni o‘zgartiring:", ad.price);
-      if (newPhone !== null) ad.phone = newPhone;
-      if (newPrice !== null) ad.price = newPrice;
+      const newPhone = prompt("Yangi telefon raqam:", ad.phone);
+      const newPrice = prompt("Yangi narx (so‘m):", ad.price);
+
+      if (newPhone) ad.phone = newPhone;
+      if (newPrice) ad.price = newPrice;
+
       ads[index] = ad;
-      localStorage.setItem(key, JSON.stringify(ads));
-      loadAds();
+      localStorage.setItem(type === "Haydovchi" ? "driverAds" : "passengerAds", JSON.stringify(ads));
+      location.reload();
     }
 
-    document.getElementById('searchBox').addEventListener('input', loadAds);
-    document.getElementById('filterType').addEventListener('change', loadAds);
+    // 🗑 O‘chirish funksiyasi
+    function deleteAd(index, type) {
+      const confirmDelete = confirm("Ushbu e’loni o‘chirmoqchimisiz?");
+      if (!confirmDelete) return;
 
-    window.onload = loadAds;
+      const ads = type === "Haydovchi"
+        ? JSON.parse(localStorage.getItem("driverAds")) || []
+        : JSON.parse(localStorage.getItem("passengerAds")) || [];
+
+      ads.splice(index, 1);
+      localStorage.setItem(type === "Haydovchi" ? "driverAds" : "passengerAds", JSON.stringify(ads));
+      location.reload();
+    }
+
+    renderAds();
   </script>
-  <script>
-  if (localStorage.getItem("isAdmin") !== "true") {
-    location.href = "admin-login.html";
-  }
-</script>
 
 </body>
 </html>
