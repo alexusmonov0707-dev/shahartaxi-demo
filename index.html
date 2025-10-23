@@ -28,12 +28,6 @@
       color: #007bff;
     }
 
-    .lang-select {
-      border: 1px solid #ccc;
-      padding: 0.4rem 0.6rem;
-      border-radius: 8px;
-    }
-
     main {
       max-width: 850px;
       margin: 2rem auto;
@@ -43,10 +37,9 @@
       box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
 
-    h2 {
+    h2, h3 {
       color: #007bff;
       text-align: center;
-      margin-bottom: 1.5rem;
     }
 
     .search-box {
@@ -76,10 +69,6 @@
       background: #0056b3;
     }
 
-    .ads-section {
-      margin-top: 2rem;
-    }
-
     .rides {
       margin-top: 1rem;
       display: grid;
@@ -90,44 +79,32 @@
       background: #f9f9f9;
       border-radius: 12px;
       padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-      transition: transform 0.2s ease;
     }
 
-    .ride:hover {
-      transform: scale(1.02);
+    .actions {
+      margin-top: 0.5rem;
     }
 
-    .ride button {
-      background: #28a745;
-      padding: 0.6rem 1rem;
+    .edit-btn {
+      background: #ffc107;
+      margin-right: 0.5rem;
+    }
+
+    .delete-btn {
+      background: #dc3545;
     }
 
     footer {
       text-align: center;
       color: white;
       margin: 2rem 0;
-      font-size: 0.9rem;
-    }
-
-    h3 {
-      color: #007bff;
-      text-align: center;
-      margin-top: 2rem;
     }
   </style>
 </head>
 <body>
   <header>
     <h1>ShaharTaxi</h1>
-    <select class="lang-select">
-      <option>O‘zbekcha</option>
-      <option>Русский</option>
-      <option>English</option>
-    </select>
   </header>
 
   <main>
@@ -155,13 +132,11 @@
       <button onclick="searchAds()">Izlash</button>
     </div>
 
-    <div class="ads-section">
-      <h3>🚗 Haydovchilar e’lonlari</h3>
-      <div class="rides" id="driverList"></div>
+    <h3>🚗 Haydovchilar e’lonlari</h3>
+    <div id="driverList" class="rides"></div>
 
-      <h3>🧍 Yo‘lovchilar e’lonlari</h3>
-      <div class="rides" id="passengerList"></div>
-    </div>
+    <h3>🧍 Yo‘lovchilar e’lonlari</h3>
+    <div id="passengerList" class="rides"></div>
   </main>
 
   <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
@@ -169,8 +144,7 @@
   <script src="regions.js"></script>
   <script>
     function loadRegions() {
-      const selects = ["fromRegion", "toRegion"];
-      selects.forEach(id => {
+      ["fromRegion", "toRegion"].forEach(id => {
         const select = document.getElementById(id);
         Object.keys(regions).forEach(region => {
           const opt = document.createElement("option");
@@ -199,28 +173,31 @@
     function renderAds() {
       const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
       const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-
       const driverList = document.getElementById("driverList");
       const passengerList = document.getElementById("passengerList");
 
       driverList.innerHTML = "";
       passengerList.innerHTML = "";
 
-      driverAds.forEach(r => {
+      driverAds.forEach((r, i) => {
         const el = document.createElement("div");
         el.className = "ride";
         el.innerHTML = `
           <div>
             <strong>${r.fromRegion} (${r.fromDistrict}) → ${r.toRegion} (${r.toDistrict})</strong><br>
-            Haydovchi: ${r.driver}<br>
-            Narx: ${r.price} so‘m
+            Haydovchi: ${r.driver || "Noma’lum"}<br>
+            Narx: ${r.price || "Kelishilgan"} so‘m<br>
+            Tel: ${r.phone}
           </div>
-          <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
+          <div class="actions">
+            <button class="edit-btn" onclick="editAd('driver', ${i})">✏️ Tahrirlash</button>
+            <button class="delete-btn" onclick="deleteAd('driver', ${i})">🗑️ O‘chirish</button>
+          </div>
         `;
         driverList.appendChild(el);
       });
 
-      passengerAds.forEach(p => {
+      passengerAds.forEach((p, i) => {
         const el = document.createElement("div");
         el.className = "ride";
         el.innerHTML = `
@@ -229,9 +206,35 @@
             Taklif narxi: ${p.price} so‘m<br>
             Tel: ${p.phone}
           </div>
+          <div class="actions">
+            <button class="edit-btn" onclick="editAd('passenger', ${i})">✏️ Tahrirlash</button>
+            <button class="delete-btn" onclick="deleteAd('passenger', ${i})">🗑️ O‘chirish</button>
+          </div>
         `;
         passengerList.appendChild(el);
       });
+    }
+
+    function deleteAd(type, index) {
+      if (!confirm("Rostdan ham o‘chirmoqchimisiz?")) return;
+      const key = type === 'driver' ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      ads.splice(index, 1);
+      localStorage.setItem(key, JSON.stringify(ads));
+      renderAds();
+    }
+
+    function editAd(type, index) {
+      const key = type === 'driver' ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const ad = ads[index];
+      const newPrice = prompt("Yangi narxni kiriting:", ad.price);
+      if (newPrice !== null) {
+        ad.price = newPrice;
+        ads[index] = ad;
+        localStorage.setItem(key, JSON.stringify(ads));
+        renderAds();
+      }
     }
 
     function searchAds() {
@@ -239,13 +242,10 @@
       const fromDistrict = document.getElementById("fromDistrict").value;
       const toRegion = document.getElementById("toRegion").value;
       const toDistrict = document.getElementById("toDistrict").value;
-
       const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
       const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-
       const driverList = document.getElementById("driverList");
       const passengerList = document.getElementById("passengerList");
-
       driverList.innerHTML = "";
       passengerList.innerHTML = "";
 
@@ -269,27 +269,26 @@
       if (filteredPassengers.length === 0)
         passengerList.innerHTML = "<p style='text-align:center;color:#777;'>Yo‘lovchi e’loni topilmadi.</p>";
 
-      filteredDrivers.forEach(r => {
+      filteredDrivers.forEach((r, i) => {
         const el = document.createElement("div");
         el.className = "ride";
         el.innerHTML = `
           <div>
             <strong>${r.fromRegion} (${r.fromDistrict}) → ${r.toRegion} (${r.toDistrict})</strong><br>
-            Haydovchi: ${r.driver}<br>
-            Narx: ${r.price} so‘m
+            Narx: ${r.price} so‘m<br>
+            Tel: ${r.phone}
           </div>
-          <button onclick="alert('Haydovchi bilan bog‘laning: ${r.phone}')">Bog‘lanish</button>
         `;
         driverList.appendChild(el);
       });
 
-      filteredPassengers.forEach(p => {
+      filteredPassengers.forEach((p, i) => {
         const el = document.createElement("div");
         el.className = "ride";
         el.innerHTML = `
           <div>
             <strong>${p.fromRegion} (${p.fromDistrict}) → ${p.toRegion} (${p.toDistrict})</strong><br>
-            Taklif narxi: ${p.price} so‘m<br>
+            Taklif: ${p.price} so‘m<br>
             Tel: ${p.phone}
           </div>
         `;
