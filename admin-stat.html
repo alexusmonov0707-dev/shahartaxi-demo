@@ -5,217 +5,69 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Statistika - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: #f1f5f9;
+      background: #f0f6fb;
       margin: 0;
       padding: 0;
-      color: #333;
     }
     header {
+      background: #007bff;
+      color: white;
+      padding: 1rem 2rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1rem;
-      background: #007bff;
-      color: white;
-      border-radius: 0 0 12px 12px;
-    }
-    header h2 {
-      margin: 0;
-      font-size: 1.3rem;
-    }
-    header a {
-      background: #fff;
-      color: #007bff;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
     }
     main {
-      max-width: 900px;
+      max-width: 800px;
       margin: 2rem auto;
-      background: #fff;
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-    }
-    h3 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      color: #007bff;
-    }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
-      text-align: center;
-    }
-    .card {
-      background: #f8fafc;
+      background: white;
       border-radius: 12px;
-      padding: 1rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      padding: 2rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    .card h4 {
-      margin: 0;
+    h2 {
       color: #007bff;
-    }
-    .charts {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-      margin-top: 2rem;
-    }
-    canvas {
-      width: 100% !important;
-      height: 300px !important;
-    }
-    .export-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 1rem;
-      margin-top: 2rem;
-    }
-    .export-buttons button {
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 0.7rem 1.5rem;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .export-buttons button:hover {
-      background: #0056b3;
     }
   </style>
 </head>
 <body>
+  <script>
+    if (localStorage.getItem("isAdmin") !== "true") {
+      window.location.href = "admin-login.html";
+    }
+  </script>
+
   <header>
-    <h2>📈 Statistika paneli</h2>
-    <a href="admin.html">⬅️ Orqaga</a>
+    <h1>📊 Statistika</h1>
+    <button onclick="logout()">🚪 Chiqish</button>
   </header>
+
   <main>
-    <h3>ShaharTaxi umumiy statistikasi</h3>
-
-    <div class="stats">
-      <div class="card">
-        <h4 id="totalAds">0</h4>
-        <p>Umumiy e’lonlar</p>
-      </div>
-      <div class="card">
-        <h4 id="driverAdsCount">0</h4>
-        <p>Haydovchi e’lonlari</p>
-      </div>
-      <div class="card">
-        <h4 id="passengerAdsCount">0</h4>
-        <p>Yo‘lovchi e’lonlari</p>
-      </div>
-      <div class="card">
-        <h4 id="todayAds">0</h4>
-        <p>Bugun joylanganlar</p>
-      </div>
-    </div>
-
-    <div class="charts">
-      <div>
-        <h3>🧍 Haydovchi va yo‘lovchi nisbati</h3>
-        <canvas id="typeChart"></canvas>
-      </div>
-      <div>
-        <h3>🏙 Viloyatlar faolligi</h3>
-        <canvas id="regionChart"></canvas>
-      </div>
-    </div>
-
-    <div class="export-buttons">
-      <button onclick="downloadPDF()">🧾 PDF yuklab olish</button>
-      <button onclick="downloadExcel()">📊 Excel yuklab olish</button>
-    </div>
+    <h2>Umumiy ma’lumotlar</h2>
+    <p id="driverCount"></p>
+    <p id="passengerCount"></p>
+    <p id="totalCount"></p>
   </main>
 
   <script>
-    const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-    const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-    const allAds = [...driverAds, ...passengerAds];
-
-    document.getElementById("totalAds").innerText = allAds.length;
-    document.getElementById("driverAdsCount").innerText = driverAds.length;
-    document.getElementById("passengerAdsCount").innerText = passengerAds.length;
-
-    const today = new Date().toISOString().split("T")[0];
-    const todayCount = allAds.filter(ad => ad.date && ad.date.startsWith(today)).length;
-    document.getElementById("todayAds").innerText = todayCount;
-
-    const regionStats = {};
-    allAds.forEach(ad => {
-      if (ad.fromRegion) {
-        regionStats[ad.fromRegion] = (regionStats[ad.fromRegion] || 0) + 1;
-      }
-    });
-
-    new Chart(document.getElementById("typeChart"), {
-      type: "pie",
-      data: {
-        labels: ["Haydovchi", "Yo‘lovchi"],
-        datasets: [{
-          data: [driverAds.length, passengerAds.length],
-          backgroundColor: ["#007bff", "#00c6ff"]
-        }]
-      },
-      options: { plugins: { legend: { position: "bottom" } } }
-    });
-
-    new Chart(document.getElementById("regionChart"), {
-      type: "bar",
-      data: {
-        labels: Object.keys(regionStats),
-        datasets: [{
-          label: "E’lonlar soni",
-          data: Object.values(regionStats),
-          backgroundColor: "#007bff"
-        }]
-      },
-      options: { scales: { y: { beginAtZero: true } } }
-    });
-
-    // 📄 PDF yuklab olish
-    function downloadPDF() {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.text("ShaharTaxi Statistika Hisoboti", 10, 10);
-      doc.text(`Umumiy e’lonlar: ${allAds.length}`, 10, 20);
-      doc.text(`Haydovchi e’lonlari: ${driverAds.length}`, 10, 30);
-      doc.text(`Yo‘lovchi e’lonlari: ${passengerAds.length}`, 10, 40);
-      doc.text(`Bugun joylanganlar: ${todayCount}`, 10, 50);
-      doc.save("ShaharTaxi_Statistika.pdf");
+    function logout() {
+      localStorage.removeItem("isAdmin");
+      window.location.href = "admin-login.html";
     }
 
-    // 📊 Excel yuklab olish
-    function downloadExcel() {
-      const data = [
-        ["Turi", "Qayerdan (Viloyat)", "Qayerdan (Tuman)", "Qayerga (Viloyat)", "Qayerga (Tuman)", "Telefon", "Narx"]
-      ];
-      allAds.forEach(ad => {
-        data.push([
-          ad.driver ? "Haydovchi" : "Yo‘lovchi",
-          ad.fromRegion || "", ad.fromDistrict || "",
-          ad.toRegion || "", ad.toDistrict || "",
-          ad.phone || "", ad.price || ""
-        ]);
-      });
-      const worksheet = XLSX.utils.aoa_to_sheet(data);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Statistika");
-      XLSX.writeFile(workbook, "ShaharTaxi_Statistika.xlsx");
+    function showStats() {
+      const drivers = JSON.parse(localStorage.getItem("driverAds")) || [];
+      const passengers = JSON.parse(localStorage.getItem("passengerAds")) || [];
+      document.getElementById("driverCount").innerText = `🚗 Haydovchi e’lonlari: ${drivers.length} ta`;
+      document.getElementById("passengerCount").innerText = `🧍 Yo‘lovchi e’lonlari: ${passengers.length} ta`;
+      document.getElementById("totalCount").innerText = `📦 Jami e’lonlar: ${drivers.length + passengers.length} ta`;
     }
+
+    showStats();
   </script>
 </body>
 </html>
+
