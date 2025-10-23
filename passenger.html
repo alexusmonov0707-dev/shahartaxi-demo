@@ -9,7 +9,8 @@
     body {
       font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #00c6ff, #007bff);
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
       color: #333;
     }
     main {
@@ -37,81 +38,45 @@
     button:hover {
       background: #0056b3;
     }
+    h2 {
+      text-align: center;
+      color: #007bff;
+    }
   </style>
 </head>
 <body>
   <main>
     <h2>🧍 Yo‘lovchi e’loni joylash</h2>
 
-    <select id="fromRegion" onchange="updateDistricts('from')">
-      <option value="">Viloyat (qayerdan)</option>
-    </select>
-    <select id="fromDistrict">
-      <option value="">Tuman (qayerdan)</option>
-    </select>
-
-    <select id="toRegion" onchange="updateDistricts('to')">
-      <option value="">Viloyat (qayerga)</option>
-    </select>
-    <select id="toDistrict">
-      <option value="">Tuman (qayerga)</option>
-    </select>
-
-    <input id="phone" placeholder="Telefon raqamingiz" />
-    <input id="price" placeholder="Taklif narxi (so‘m)" />
-
+    <input id="fromRegion" placeholder="Qayerdan (viloyat)">
+    <input id="fromDistrict" placeholder="Qayerdan (tuman)">
+    <input id="toRegion" placeholder="Qayerga (viloyat)">
+    <input id="toDistrict" placeholder="Qayerga (tuman)">
+    <input id="price" placeholder="Taklif narxi (so‘m)">
+    <input id="phone" placeholder="Telefon raqam">
     <button onclick="savePassengerAd()">E’lonni joylash</button>
-
-    <p id="msg" style="color:green;text-align:center;"></p>
   </main>
 
-  <script src="regions.js"></script>
   <script>
-    function loadRegions() {
-      const selects = ["fromRegion", "toRegion"];
-      selects.forEach(id => {
-        const select = document.getElementById(id);
-        Object.keys(regions).forEach(region => {
-          const opt = document.createElement("option");
-          opt.value = region;
-          opt.textContent = region;
-          select.appendChild(opt);
-        });
-      });
-    }
-
-    function updateDistricts(type) {
-      const regionSelect = document.getElementById(type + "Region");
-      const districtSelect = document.getElementById(type + "District");
-      const selectedRegion = regionSelect.value;
-      districtSelect.innerHTML = "<option value=''>Tuman</option>";
-      if (regions[selectedRegion]) {
-        regions[selectedRegion].forEach(d => {
-          const opt = document.createElement("option");
-          opt.value = d;
-          opt.textContent = d;
-          districtSelect.appendChild(opt);
-        });
-      }
-    }
-
     function savePassengerAd() {
       const ad = {
         fromRegion: document.getElementById('fromRegion').value,
         fromDistrict: document.getElementById('fromDistrict').value,
         toRegion: document.getElementById('toRegion').value,
         toDistrict: document.getElementById('toDistrict').value,
+        price: document.getElementById('price').value,
         phone: document.getElementById('phone').value,
-        price: document.getElementById('price').value
+        type: 'passenger',
+        date: new Date().toISOString()
       };
+
       const ads = JSON.parse(localStorage.getItem('passengerAds')) || [];
       ads.push(ad);
       localStorage.setItem('passengerAds', JSON.stringify(ads));
-      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
-      setTimeout(()=> location.href='index.html', 1500);
-    }
 
-    window.onload = loadRegions;
+      alert('✅ Yo‘lovchi e’loni muvaffaqiyatli joylandi!');
+      window.location.href = "index.html";
+    }
   </script>
 </body>
 </html>
