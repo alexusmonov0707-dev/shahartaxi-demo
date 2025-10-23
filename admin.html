@@ -3,18 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - ShaharTaxi</title>
+  <title>Admin panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #00c6ff, #007bff);
-      margin: 0;
-      padding: 0;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      margin: 0; padding: 0;
       color: #333;
     }
     main {
-      max-width: 700px;
+      max-width: 800px;
       margin: 3rem auto;
       background: #fff;
       border-radius: 16px;
@@ -25,147 +24,114 @@
       text-align: center;
       color: #007bff;
     }
-    button {
-      border: none;
-      border-radius: 8px;
-      padding: 10px 16px;
-      margin: 5px;
-      cursor: pointer;
-      font-weight: 600;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
     }
-    #btn-passengers {
-      background: #00bcd4;
-      color: #fff;
-    }
-    #btn-drivers {
-      background: #4caf50;
-      color: #fff;
-    }
-    button:hover {
-      opacity: 0.9;
-    }
-    .ad-box {
+    th, td {
       border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 12px;
-      margin-bottom: 12px;
-      background: #f9f9f9;
-      position: relative;
+      padding: 0.8rem;
+      text-align: center;
     }
-    .delete-btn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #dc3545;
-      color: #fff;
+    th {
+      background: #007bff;
+      color: white;
+    }
+    button {
+      padding: 0.4rem 0.8rem;
       border: none;
-      padding: 5px 10px;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .delete-btn:hover {
-      background: #b02a37;
-    }
-    .logout-btn {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: #dc3545;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 8px;
-      cursor: pointer;
       font-weight: 600;
     }
+    .edit-btn { background: #ffc107; color: #000; }
+    .delete-btn { background: #dc3545; color: #fff; }
+    .save-btn { background: #28a745; color: #fff; }
+    .cancel-btn { background: #6c757d; color: #fff; }
   </style>
 </head>
 <body>
-
   <main>
-    <h2>🛠️ ShaharTaxi Admin Panel</h2>
-
-    <div style="text-align:center; margin-bottom:1rem;">
-      <button onclick="showSection('passengers')" id="btn-passengers">🧍 Yo‘lovchilar</button>
-      <button onclick="showSection('drivers')" id="btn-drivers">🚗 Haydovchilar</button>
-    </div>
-
-    <div id="passengerSection">
-      <h3>🧍 Yo‘lovchilar e’lonlari</h3>
-      <div id="passengerList"></div>
-    </div>
-
-    <div id="driverSection" style="display:none;">
-      <h3>🚗 Haydovchilar e’lonlari</h3>
-      <div id="driverList"></div>
-    </div>
+    <h2>🛠 Admin panel</h2>
+    <table id="adsTable">
+      <thead>
+        <tr>
+          <th>Turi</th>
+          <th>Qayerdan</th>
+          <th>Qayerga</th>
+          <th>Telefon</th>
+          <th>Narx</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </main>
 
-  <button class="logout-btn" onclick="logout()">🚪 Chiqish</button>
-
   <script>
-    // --- Login tekshiruvi ---
-    if (localStorage.getItem("adminLoggedIn") !== "true") {
-      window.location.href = "login.html";
-    }
-
-    // --- Chiqish funksiyasi ---
-    function logout() {
-      localStorage.removeItem("adminLoggedIn");
-      window.location.href = "login.html";
-    }
-
-    // --- Bo‘limlar orasida almashish ---
-    function showSection(type) {
-      document.getElementById('passengerSection').style.display = type === 'passengers' ? 'block' : 'none';
-      document.getElementById('driverSection').style.display = type === 'drivers' ? 'block' : 'none';
-    }
-
-    // --- E’lonlarni yuklash ---
     function loadAds() {
-      const passengers = JSON.parse(localStorage.getItem("passengerAds")) || [];
-      const drivers = JSON.parse(localStorage.getItem("driverAds")) || [];
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const tbody = document.querySelector('#adsTable tbody');
+      tbody.innerHTML = '';
 
-      const passengerList = document.getElementById("passengerList");
-      const driverList = document.getElementById("driverList");
+      function addRow(ad, type, index) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${type}</td>
+          <td>${ad.fromRegion} (${ad.fromDistrict})</td>
+          <td>${ad.toRegion} (${ad.toDistrict})</td>
+          <td>${ad.phone}</td>
+          <td>${ad.price}</td>
+          <td>
+            <button class="edit-btn" onclick="editAd('${type}', ${index})">✏️ Tahrirlash</button>
+            <button class="delete-btn" onclick="deleteAd('${type}', ${index})">🗑 O‘chirish</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      }
 
-      passengerList.innerHTML = passengers.length ? "" : "<p>🧍 Yo‘lovchi e’lonlari yo‘q.</p>";
-      driverList.innerHTML = drivers.length ? "" : "<p>🚗 Haydovchi e’lonlari yo‘q.</p>";
-
-      passengers.forEach((ad, i) => {
-        passengerList.innerHTML += `
-          <div class="ad-box">
-            <strong>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</strong><br>
-            📞 ${ad.phone} <br>
-            💸 ${ad.price} so‘m
-            <button class="delete-btn" onclick="deleteAd('passengerAds', ${i})">🗑️</button>
-          </div>`;
-      });
-
-      drivers.forEach((ad, i) => {
-        driverList.innerHTML += `
-          <div class="ad-box">
-            <strong>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</strong><br>
-            📞 ${ad.phone} <br>
-            💸 ${ad.price} so‘m
-            <button class="delete-btn" onclick="deleteAd('driverAds', ${i})">🗑️</button>
-          </div>`;
-      });
+      driverAds.forEach((ad, i) => addRow(ad, 'Haydovchi', i));
+      passengerAds.forEach((ad, i) => addRow(ad, 'Yo‘lovchi', i));
     }
 
-    // --- O‘chirish funksiyasi ---
     function deleteAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type)) || [];
-      if (confirm("Ushbu e’lonni o‘chirmoqchimisiz?")) {
-        ads.splice(index, 1);
-        localStorage.setItem(type, JSON.stringify(ads));
+      if (!confirm("Haqiqatan ham o‘chirmoqchimisiz?")) return;
+      const key = type === 'Haydovchi' ? 'driverAds' : 'passengerAds';
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      ads.splice(index, 1);
+      localStorage.setItem(key, JSON.stringify(ads));
+      loadAds();
+    }
+
+    function editAd(type, index) {
+      const key = type === 'Haydovchi' ? 'driverAds' : 'passengerAds';
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const ad = ads[index];
+
+      const newFromRegion = prompt("Qayerdan viloyat:", ad.fromRegion);
+      const newFromDistrict = prompt("Qayerdan tuman:", ad.fromDistrict);
+      const newToRegion = prompt("Qayerga viloyat:", ad.toRegion);
+      const newToDistrict = prompt("Qayerga tuman:", ad.toDistrict);
+      const newPhone = prompt("Telefon:", ad.phone);
+      const newPrice = prompt("Narx:", ad.price);
+
+      if (newFromRegion && newToRegion) {
+        ad.fromRegion = newFromRegion;
+        ad.fromDistrict = newFromDistrict;
+        ad.toRegion = newToRegion;
+        ad.toDistrict = newToDistrict;
+        ad.phone = newPhone;
+        ad.price = newPrice;
+        ads[index] = ad;
+        localStorage.setItem(key, JSON.stringify(ads));
         loadAds();
       }
     }
 
     window.onload = loadAds;
   </script>
-
 </body>
 </html>
+
