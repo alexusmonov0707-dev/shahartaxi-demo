@@ -3,27 +3,55 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShaharTaxi - E’lonlar</title>
+  <title>ShaharTaxi — E’lonlar</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0;
-      padding: 0;
+      background: linear-gradient(135deg, #00c6ff, #007bff);
+      margin: 0; padding: 0;
       color: #333;
     }
+    header {
+      text-align: center;
+      background: white;
+      padding: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    header h1 {
+      color: #007bff;
+    }
     main {
-      max-width: 800px;
+      max-width: 900px;
       margin: 2rem auto;
       background: #fff;
-      border-radius: 16px;
       padding: 2rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-    h2, h3 {
-      text-align: center;
-      color: #007bff;
+    .filters {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    select, input {
+      padding: 0.6rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      flex: 1;
+      font-size: 1rem;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
     }
     .ad-list {
       display: grid;
@@ -31,170 +59,107 @@
     }
     .ad-card {
       border: 1px solid #ddd;
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 1rem;
       background: #f9f9f9;
     }
-    .filter {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 1.5rem;
-      flex-wrap: wrap;
+    .ad-type {
+      font-weight: 600;
+      color: #007bff;
+      margin-bottom: 0.5rem;
     }
-    select, button {
-      padding: 0.6rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-    button {
-      background: #007bff;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
+    .no-ads {
+      text-align: center;
+      color: gray;
+      font-style: italic;
+      margin-top: 1rem;
     }
   </style>
 </head>
 <body>
-  <main>
-    <h2>🚖 ShaharTaxi — Haydovchi va Yo‘lovchi e’lonlari</h2>
-
-    <div class="filter">
-      <select id="filterFrom">
-        <option value="">Qayerdan (viloyat)</option>
-      </select>
-      <select id="filterTo">
-        <option value="">Qayerga (viloyat)</option>
-      </select>
-      <button onclick="filterAds()">🔍 Izlash</button>
-      <button onclick="resetFilter()">♻️ Tozalash</button>
-    </div>
-
-    <h3>🚗 Haydovchilar</h3>
-    <div id="driverList" class="ad-list"></div>
-
-    <h3>🧍 Yo‘lovchilar</h3>
-    <div id="passengerList" class="ad-list"></div>
-
-    <div style="text-align:center;margin-top:2rem;">
-      <a href="driver.html"><button>🚘 Haydovchi e’loni joylash</button></a>
+  <header>
+    <h1>🚖 ShaharTaxi e’lonlari</h1>
+    <div style="margin-top:1rem;">
+      <a href="driver.html"><button>🚗 Haydovchi e’loni joylash</button></a>
       <a href="passenger.html"><button>🧍 Yo‘lovchi e’loni joylash</button></a>
-      <a href="admin.html"><button>⚙️ Admin panel</button></a>
+      <a href="admin.html"><button>🛠️ Admin panel</button></a>
     </div>
+  </header>
+
+  <main>
+    <div class="filters">
+      <select id="filterRegion">
+        <option value="">Viloyat</option>
+        <option value="Toshkent">Toshkent</option>
+        <option value="Andijon">Andijon</option>
+        <option value="Farg‘ona">Farg‘ona</option>
+        <option value="Namangan">Namangan</option>
+      </select>
+      <input type="number" id="minPrice" placeholder="Min narx (so‘m)">
+      <input type="number" id="maxPrice" placeholder="Max narx (so‘m)">
+      <button onclick="filterAds()">🔍 Qidirish</button>
+      <button onclick="resetFilters()">♻️ Tozalash</button>
+    </div>
+
+    <div class="ad-list" id="adsContainer"></div>
   </main>
 
-  <script src="regions.js"></script>
   <script>
-    function loadRegionsToFilter() {
-      const from = document.getElementById('filterFrom');
-      const to = document.getElementById('filterTo');
-      Object.keys(regions).forEach(r => {
-        const opt1 = document.createElement('option');
-        opt1.value = r; opt1.textContent = r;
-        from.appendChild(opt1);
-
-        const opt2 = document.createElement('option');
-        opt2.value = r; opt2.textContent = r;
-        to.appendChild(opt2);
-      });
+    function loadAds() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [
+        ...driverAds.map(a => ({ ...a, type: 'Haydovchi' })),
+        ...passengerAds.map(a => ({ ...a, type: 'Yo‘lovchi' }))
+      ];
+      return allAds;
     }
 
-    function renderAds() {
-      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-
-      const driverList = document.getElementById('driverList');
-      const passengerList = document.getElementById('passengerList');
-
-      driverList.innerHTML = "";
-      passengerList.innerHTML = "";
-
-      drivers.forEach(ad => {
+    function displayAds(ads) {
+      const container = document.getElementById('adsContainer');
+      container.innerHTML = '';
+      if (ads.length === 0) {
+        container.innerHTML = '<p class="no-ads">E’lonlar topilmadi 😔</p>';
+        return;
+      }
+      ads.forEach(ad => {
         const div = document.createElement('div');
-        div.className = "ad-card";
+        div.className = 'ad-card';
         div.innerHTML = `
-          <strong>${ad.fromRegion}, ${ad.fromDistrict}</strong> ➜ 
-          <strong>${ad.toRegion}, ${ad.toDistrict}</strong><br>
-          👤 ${ad.driver}<br>
-          📞 ${ad.phone}<br>
-          💰 ${ad.price} so‘m
+          <div class="ad-type">${ad.type}</div>
+          <div>📍 ${ad.fromRegion}, ${ad.fromDistrict} ➜ ${ad.toRegion}, ${ad.toDistrict}</div>
+          <div>💰 ${ad.price} so‘m</div>
+          <div>📞 ${ad.phone}</div>
+          <div>🗓️ ${ad.date || 'Sana ko‘rsatilmagan'}</div>
         `;
-        driverList.appendChild(div);
-      });
-
-      passengers.forEach(ad => {
-        const div = document.createElement('div');
-        div.className = "ad-card";
-        div.innerHTML = `
-          <strong>${ad.fromRegion}, ${ad.fromDistrict}</strong> ➜ 
-          <strong>${ad.toRegion}, ${ad.toDistrict}</strong><br>
-          📞 ${ad.phone}<br>
-          💰 Taklif: ${ad.price} so‘m
-        `;
-        passengerList.appendChild(div);
+        container.appendChild(div);
       });
     }
 
     function filterAds() {
-      const from = document.getElementById('filterFrom').value;
-      const to = document.getElementById('filterTo').value;
-      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const region = document.getElementById('filterRegion').value;
+      const min = parseInt(document.getElementById('minPrice').value) || 0;
+      const max = parseInt(document.getElementById('maxPrice').value) || Infinity;
 
-      const driverList = document.getElementById('driverList');
-      const passengerList = document.getElementById('passengerList');
-
-      driverList.innerHTML = "";
-      passengerList.innerHTML = "";
-
-      const filteredDrivers = drivers.filter(ad => 
-        (!from || ad.fromRegion === from) &&
-        (!to || ad.toRegion === to)
-      );
-      const filteredPassengers = passengers.filter(ad => 
-        (!from || ad.fromRegion === from) &&
-        (!to || ad.toRegion === to)
-      );
-
-      filteredDrivers.forEach(ad => {
-        const div = document.createElement('div');
-        div.className = "ad-card";
-        div.innerHTML = `
-          <strong>${ad.fromRegion}, ${ad.fromDistrict}</strong> ➜ 
-          <strong>${ad.toRegion}, ${ad.toDistrict}</strong><br>
-          👤 ${ad.driver}<br>
-          📞 ${ad.phone}<br>
-          💰 ${ad.price} so‘m
-        `;
-        driverList.appendChild(div);
+      const allAds = loadAds();
+      const filtered = allAds.filter(ad => {
+        const price = parseInt(ad.price) || 0;
+        const regionMatch = !region || ad.fromRegion === region || ad.toRegion === region;
+        return regionMatch && price >= min && price <= max;
       });
 
-      filteredPassengers.forEach(ad => {
-        const div = document.createElement('div');
-        div.className = "ad-card";
-        div.innerHTML = `
-          <strong>${ad.fromRegion}, ${ad.fromDistrict}</strong> ➜ 
-          <strong>${ad.toRegion}, ${ad.toDistrict}</strong><br>
-          📞 ${ad.phone}<br>
-          💰 Taklif: ${ad.price} so‘m
-        `;
-        passengerList.appendChild(div);
-      });
+      displayAds(filtered);
     }
 
-    function resetFilter() {
-      document.getElementById('filterFrom').value = "";
-      document.getElementById('filterTo').value = "";
-      renderAds();
+    function resetFilters() {
+      document.getElementById('filterRegion').value = '';
+      document.getElementById('minPrice').value = '';
+      document.getElementById('maxPrice').value = '';
+      displayAds(loadAds());
     }
 
-    window.onload = () => {
-      loadRegionsToFilter();
-      renderAds();
-    };
+    // Sahifa yuklanganda e’lonlarni ko‘rsatish
+    displayAds(loadAds());
   </script>
 </body>
 </html>
