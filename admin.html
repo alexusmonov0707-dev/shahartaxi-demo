@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin panel - ShaharTaxi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      color: #222;
+    }
+    main {
+      max-width: 900px;
+      margin: 3rem auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #007bff;
+    }
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .tab {
+      background: #e9ecef;
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .tab.active {
+      background: #007bff;
+      color: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.7rem;
+      text-align: center;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    button {
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 0.8rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .edit {
+      background: #ffc107;
+      color: #000;
+    }
+    .delete {
+      background: #dc3545;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>⚙️ ShaharTaxi Admin panel</h1>
+
+    <div class="tabs">
+      <div class="tab active" id="driversTab" onclick="showTab('drivers')">Haydovchilar</div>
+      <div class="tab" id="passengersTab" onclick="showTab('passengers')">Yo‘lovchilar</div>
+    </div>
+
+    <div id="driversSection">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Yo‘nalish</th>
+            <th>Haydovchi</th>
+            <th>Telefon</th>
+            <th>Narx</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody id="driversTable"></tbody>
+      </table>
+    </div>
+
+    <div id="passengersSection" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Yo‘nalish</th>
+            <th>Telefon</th>
+            <th>Taklif narxi</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody id="passengersTable"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    function showTab(tab) {
+      document.getElementById('driversTab').classList.remove('active');
+      document.getElementById('passengersTab').classList.remove('active');
+      document.getElementById('driversSection').style.display = 'none';
+      document.getElementById('passengersSection').style.display = 'none';
+
+      if (tab === 'drivers') {
+        document.getElementById('driversTab').classList.add('active');
+        document.getElementById('driversSection').style.display = 'block';
+      } else {
+        document.getElementById('passengersTab').classList.add('active');
+        document.getElementById('passengersSection').style.display = 'block';
+      }
+    }
+
+    function loadData() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+
+      const dTable = document.getElementById('driversTable');
+      const pTable = document.getElementById('passengersTable');
+      dTable.innerHTML = "";
+      pTable.innerHTML = "";
+
+      driverAds.forEach((d, i) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${i+1}</td>
+          <td>${d.fromRegion} (${d.fromDistrict}) → ${d.toRegion} (${d.toDistrict})</td>
+          <td>${d.driver || "Noma’lum"}</td>
+          <td>${d.phone}</td>
+          <td>${d.price || "-"}</td>
+          <td>
+            <button class="edit" onclick="editAd('driver', ${i})">✏️</button>
+            <button class="delete" onclick="deleteAd('driver', ${i})">🗑️</button>
+          </td>
+        `;
+        dTable.appendChild(row);
+      });
+
+      passengerAds.forEach((p, i) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${i+1}</td>
+          <td>${p.fromRegion} (${p.fromDistrict}) → ${p.toRegion} (${p.toDistrict})</td>
+          <td>${p.phone}</td>
+          <td>${p.price || "-"}</td>
+          <td>
+            <button class="edit" onclick="editAd('passenger', ${i})">✏️</button>
+            <button class="delete" onclick="deleteAd('passenger', ${i})">🗑️</button>
+          </td>
+        `;
+        pTable.appendChild(row);
+      });
+    }
+
+    function deleteAd(type, index) {
+      if (!confirm("Haqiqatan ham o‘chirmoqchimisiz?")) return;
+      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      ads.splice(index, 1);
+      localStorage.setItem(key, JSON.stringify(ads));
+      loadData();
+    }
+
+    function editAd(type, index) {
+      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const ad = ads[index];
+      const newPrice = prompt("Yangi narxni kiriting:", ad.price);
+      if (newPrice !== null) {
+        ad.price = newPrice;
+        ads[index] = ad;
+        localStorage.setItem(key, JSON.stringify(ads));
+        loadData();
+      }
+    }
+
+    window.onload = loadData;
+  </script>
+</body>
+</html>
