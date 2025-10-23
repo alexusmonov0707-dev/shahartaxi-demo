@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Statistika - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -36,7 +37,7 @@
       font-weight: 600;
     }
     main {
-      max-width: 800px;
+      max-width: 900px;
       margin: 2rem auto;
       background: #fff;
       border-radius: 16px;
@@ -64,22 +65,15 @@
       margin: 0;
       color: #007bff;
     }
-    .top-regions {
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
       margin-top: 2rem;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 0.8rem;
-      text-align: center;
-    }
-    th {
-      background: #007bff;
-      color: white;
+    canvas {
+      width: 100% !important;
+      height: 300px !important;
     }
   </style>
 </head>
@@ -110,17 +104,15 @@
       </div>
     </div>
 
-    <div class="top-regions">
-      <h3>🏙 Eng faol viloyatlar</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Viloyat</th>
-            <th>E’lonlar soni</th>
-          </tr>
-        </thead>
-        <tbody id="regionStats"></tbody>
-      </table>
+    <div class="charts">
+      <div>
+        <h3>🧍 Haydovchi va yo‘lovchi nisbati</h3>
+        <canvas id="typeChart"></canvas>
+      </div>
+      <div>
+        <h3>🏙 Viloyatlar faolligi</h3>
+        <canvas id="regionChart"></canvas>
+      </div>
     </div>
   </main>
 
@@ -129,6 +121,7 @@
     const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
     const allAds = [...driverAds, ...passengerAds];
 
+    // Statistika sonlarini chiqarish
     document.getElementById("totalAds").innerText = allAds.length;
     document.getElementById("driverAdsCount").innerText = driverAds.length;
     document.getElementById("passengerAdsCount").innerText = passengerAds.length;
@@ -137,6 +130,7 @@
     const todayCount = allAds.filter(ad => ad.date && ad.date.startsWith(today)).length;
     document.getElementById("todayAds").innerText = todayCount;
 
+    // Viloyatlar statistikasi
     const regionStats = {};
     allAds.forEach(ad => {
       if (ad.fromRegion) {
@@ -144,11 +138,39 @@
       }
     });
 
-    const tbody = document.getElementById("regionStats");
-    Object.entries(regionStats).forEach(([region, count]) => {
-      const row = document.createElement("tr");
-      row.innerHTML = `<td>${region}</td><td>${count}</td>`;
-      tbody.appendChild(row);
+    // Pie chart — haydovchi va yo‘lovchi
+    new Chart(document.getElementById("typeChart"), {
+      type: "pie",
+      data: {
+        labels: ["Haydovchi", "Yo‘lovchi"],
+        datasets: [{
+          data: [driverAds.length, passengerAds.length],
+          backgroundColor: ["#007bff", "#00c6ff"]
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: "bottom" }
+        }
+      }
+    });
+
+    // Bar chart — viloyatlar
+    new Chart(document.getElementById("regionChart"), {
+      type: "bar",
+      data: {
+        labels: Object.keys(regionStats),
+        datasets: [{
+          label: "E’lonlar soni",
+          data: Object.values(regionStats),
+          backgroundColor: "#007bff"
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
     });
   </script>
 </body>
