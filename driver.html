@@ -9,8 +9,7 @@
     body {
       font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       color: #333;
     }
     main {
@@ -48,35 +47,80 @@
   <main>
     <h2>🚗 Haydovchi e’loni joylash</h2>
 
-    <input id="fromRegion" placeholder="Qayerdan (viloyat)">
-    <input id="fromDistrict" placeholder="Qayerdan (tuman)">
-    <input id="toRegion" placeholder="Qayerga (viloyat)">
-    <input id="toDistrict" placeholder="Qayerga (tuman)">
-    <input id="price" placeholder="Narx (so‘m)">
-    <input id="phone" placeholder="Telefon raqam">
+    <!-- Qayerdan -->
+    <select id="fromRegion" onchange="updateDistricts('from')">
+      <option value="">Viloyat (qayerdan)</option>
+    </select>
+    <select id="fromDistrict">
+      <option value="">Tuman (qayerdan)</option>
+    </select>
+
+    <!-- Qayerga -->
+    <select id="toRegion" onchange="updateDistricts('to')">
+      <option value="">Viloyat (qayerga)</option>
+    </select>
+    <select id="toDistrict">
+      <option value="">Tuman (qayerga)</option>
+    </select>
+
+    <input type="text" id="phone" placeholder="Telefon raqam">
+    <input type="number" id="price" placeholder="Yo‘l haqi (so‘m)">
     <button onclick="saveDriverAd()">E’lonni joylash</button>
   </main>
 
   <script>
+    const regions = {
+      "Toshkent": ["Chilonzor", "Yunusobod", "Mirzo Ulug‘bek", "Bektemir"],
+      "Andijon": ["Asaka", "Shahrixon", "Andijon sh."],
+      "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Farg‘ona sh."],
+      "Namangan": ["Chortoq", "Pop", "Namangan sh."]
+    };
+
+    function populateRegions() {
+      const from = document.getElementById('fromRegion');
+      const to = document.getElementById('toRegion');
+      Object.keys(regions).forEach(region => {
+        from.innerHTML += `<option value="${region}">${region}</option>`;
+        to.innerHTML += `<option value="${region}">${region}</option>`;
+      });
+    }
+
+    function updateDistricts(type) {
+      const region = document.getElementById(type + 'Region').value;
+      const districtSelect = document.getElementById(type + 'District');
+      districtSelect.innerHTML = '<option value="">Tuman tanlang</option>';
+      if (regions[region]) {
+        regions[region].forEach(d => {
+          districtSelect.innerHTML += `<option value="${d}">${d}</option>`;
+        });
+      }
+    }
+
     function saveDriverAd() {
       const ad = {
         fromRegion: document.getElementById('fromRegion').value,
         fromDistrict: document.getElementById('fromDistrict').value,
         toRegion: document.getElementById('toRegion').value,
         toDistrict: document.getElementById('toDistrict').value,
-        price: document.getElementById('price').value,
         phone: document.getElementById('phone').value,
-        type: 'driver',
-        date: new Date().toISOString()
+        price: document.getElementById('price').value,
+        date: new Date().toISOString().split("T")[0] // ✅ sana qo‘shildi
       };
 
-      const ads = JSON.parse(localStorage.getItem('driverAds')) || [];
-      ads.push(ad);
-      localStorage.setItem('driverAds', JSON.stringify(ads));
+      if (!ad.fromRegion || !ad.toRegion || !ad.phone || !ad.price) {
+        alert("Iltimos, barcha maydonlarni to‘ldiring!");
+        return;
+      }
 
-      alert('✅ Haydovchi e’loni muvaffaqiyatli joylandi!');
+      const ads = JSON.parse(localStorage.getItem("driverAds")) || [];
+      ads.push(ad);
+      localStorage.setItem("driverAds", JSON.stringify(ads));
+
+      alert("E’lon muvaffaqiyatli joylandi!");
       window.location.href = "index.html";
     }
+
+    populateRegions();
   </script>
 </body>
 </html>
