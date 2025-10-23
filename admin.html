@@ -164,5 +164,22 @@
 
     window.onload = loadAds;
   </script>
+  <script>
+  // Admin login tekshiruvi
+  if (localStorage.getItem("adminLoggedIn") !== "true") {
+    window.location.href = "login.html";
+  }
+
+  // Chiqish tugmasi
+  const logoutBtn = document.createElement("button");
+  logoutBtn.textContent = "🚪 Chiqish";
+  logoutBtn.style = "position:fixed; top:20px; right:20px; background:#dc3545; color:white; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;";
+  logoutBtn.onclick = () => {
+    localStorage.removeItem("adminLoggedIn");
+    window.location.href = "login.html";
+  };
+  document.body.appendChild(logoutBtn);
+</script>
+
 </body>
 </html>
