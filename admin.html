@@ -9,82 +9,73 @@
     body {
       font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
       color: #333;
     }
     main {
-      max-width: 900px;
-      margin: 3rem auto;
+      max-width: 1000px;
+      margin: 2rem auto;
       background: #fff;
       border-radius: 16px;
       padding: 2rem;
       box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
-    h2 {
+    h1 {
       text-align: center;
       color: #007bff;
+      margin-bottom: 1.5rem;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
     }
     th, td {
-      border: 1px solid #ddd;
       padding: 0.8rem;
+      border-bottom: 1px solid #ddd;
       text-align: center;
     }
     th {
-      background: #007bff;
-      color: white;
+      background-color: #f2f2f2;
     }
     button {
-      padding: 0.4rem 0.8rem;
       border: none;
-      border-radius: 6px;
+      background: none;
       cursor: pointer;
-      font-weight: 600;
+      font-size: 1.1rem;
     }
-    .edit-btn { background: #ffc107; color: #000; }
-    .delete-btn { background: #dc3545; color: #fff; }
-    .save-btn { background: #28a745; color: #fff; }
-    .cancel-btn { background: #6c757d; color: #fff; }
-
-    /* Modal oynasi */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      justify-content: center;
-      align-items: center;
+    button:hover {
+      opacity: 0.7;
     }
-    .modal-content {
-      background: #fff;
-      padding: 2rem;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 400px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-    }
-    .modal-content input {
-      width: 100%;
-      padding: 0.8rem;
-      margin-bottom: 1rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    .modal-actions {
+    .filter-box {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .filter-box input, .filter-box select {
+      padding: 0.7rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      flex: 1;
     }
   </style>
 </head>
 <body>
   <main>
-    <h2>🛠 Admin panel</h2>
+    <h1>🛠 ShaharTaxi - Admin Panel</h1>
+
+    <div class="filter-box">
+      <input type="text" id="searchBox" placeholder="🔍 Qidirish (manzil yoki telefon)">
+      <select id="filterType">
+        <option value="all">Barchasi</option>
+        <option value="Haydovchi">Faqat haydovchilar</option>
+        <option value="Yo‘lovchi">Faqat yo‘lovchilar</option>
+      </select>
+    </div>
+
     <table id="adsTable">
       <thead>
         <tr>
@@ -100,34 +91,21 @@
     </table>
   </main>
 
-  <!-- Modal oynasi -->
-  <div class="modal" id="editModal">
-    <div class="modal-content">
-      <h3 style="text-align:center; color:#007bff;">✏️ E’lonni tahrirlash</h3>
-      <input id="editFromRegion" placeholder="Viloyat (qayerdan)">
-      <input id="editFromDistrict" placeholder="Tuman (qayerdan)">
-      <input id="editToRegion" placeholder="Viloyat (qayerga)">
-      <input id="editToDistrict" placeholder="Tuman (qayerga)">
-      <input id="editPhone" placeholder="Telefon raqami">
-      <input id="editPrice" placeholder="Narx (so‘m)">
-      <div class="modal-actions">
-        <button class="save-btn" onclick="saveEdit()">💾 Saqlash</button>
-        <button class="cancel-btn" onclick="closeModal()">Bekor qilish</button>
-      </div>
-    </div>
-  </div>
-
   <script>
-    let currentType = '';
-    let currentIndex = -1;
-
     function loadAds() {
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       const tbody = document.querySelector('#adsTable tbody');
       tbody.innerHTML = '';
 
+      const filterType = document.getElementById('filterType')?.value || 'all';
+      const searchTerm = document.getElementById('searchBox')?.value.toLowerCase() || '';
+
       function addRow(ad, type, index) {
+        if (filterType !== 'all' && filterType !== type) return;
+        const text = `${ad.fromRegion} ${ad.fromDistrict} ${ad.toRegion} ${ad.toDistrict} ${ad.phone}`.toLowerCase();
+        if (!text.includes(searchTerm)) return;
+
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${type}</td>
@@ -136,8 +114,8 @@
           <td>${ad.phone}</td>
           <td>${ad.price}</td>
           <td>
-            <button class="edit-btn" onclick="openEditModal('${type}', ${index})">✏️</button>
-            <button class="delete-btn" onclick="deleteAd('${type}', ${index})">🗑</button>
+            <button onclick="openEditModal('${type}', ${index})">✏️</button>
+            <button onclick="deleteAd('${type}', ${index})">🗑</button>
           </td>
         `;
         tbody.appendChild(row);
@@ -148,7 +126,7 @@
     }
 
     function deleteAd(type, index) {
-      if (!confirm("Haqiqatan ham o‘chirmoqchimisiz?")) return;
+      if (!confirm("Rostdan ham o‘chirmoqchimisiz?")) return;
       const key = type === 'Haydovchi' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
       ads.splice(index, 1);
@@ -157,45 +135,23 @@
     }
 
     function openEditModal(type, index) {
-      currentType = type;
-      currentIndex = index;
       const key = type === 'Haydovchi' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
       const ad = ads[index];
-
-      document.getElementById('editFromRegion').value = ad.fromRegion;
-      document.getElementById('editFromDistrict').value = ad.fromDistrict;
-      document.getElementById('editToRegion').value = ad.toRegion;
-      document.getElementById('editToDistrict').value = ad.toDistrict;
-      document.getElementById('editPhone').value = ad.phone;
-      document.getElementById('editPrice').value = ad.price;
-
-      document.getElementById('editModal').style.display = 'flex';
-    }
-
-    function closeModal() {
-      document.getElementById('editModal').style.display = 'none';
-    }
-
-    function saveEdit() {
-      const key = currentType === 'Haydovchi' ? 'driverAds' : 'passengerAds';
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads[currentIndex];
-
-      ad.fromRegion = document.getElementById('editFromRegion').value;
-      ad.fromDistrict = document.getElementById('editFromDistrict').value;
-      ad.toRegion = document.getElementById('editToRegion').value;
-      ad.toDistrict = document.getElementById('editToDistrict').value;
-      ad.phone = document.getElementById('editPhone').value;
-      ad.price = document.getElementById('editPrice').value;
-
-      ads[currentIndex] = ad;
+      const newPhone = prompt("Telefon raqamini o‘zgartiring:", ad.phone);
+      const newPrice = prompt("Narxni o‘zgartiring:", ad.price);
+      if (newPhone !== null) ad.phone = newPhone;
+      if (newPrice !== null) ad.price = newPrice;
+      ads[index] = ad;
       localStorage.setItem(key, JSON.stringify(ads));
-      closeModal();
       loadAds();
     }
+
+    document.getElementById('searchBox').addEventListener('input', loadAds);
+    document.getElementById('filterType').addEventListener('change', loadAds);
 
     window.onload = loadAds;
   </script>
 </body>
 </html>
+
