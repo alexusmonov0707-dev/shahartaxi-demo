@@ -3,175 +3,143 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin panel - ShaharTaxi</title>
+  <title>Admin Panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0; padding: 0;
-      color: #333;
+      background: linear-gradient(135deg, #141E30, #243B55);
+      color: #fff;
+      margin: 0;
+      padding: 0;
     }
     main {
       max-width: 900px;
       margin: 2rem auto;
       background: #fff;
+      color: #333;
       border-radius: 16px;
       padding: 2rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     }
     h2 {
       text-align: center;
       color: #007bff;
     }
-    table {
+    input {
       width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 0.6rem;
-      text-align: center;
-    }
-    th {
-      background: #007bff;
-      color: #fff;
-    }
-    tr:nth-child(even) {
-      background: #f9f9f9;
+      padding: 0.8rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 1rem;
+      font-size: 1rem;
     }
     button {
+      background: #007bff;
       border: none;
-      padding: 6px 10px;
+      padding: 10px 20px;
       border-radius: 8px;
+      color: white;
+      font-size: 1rem;
       cursor: pointer;
     }
-    .edit-btn {
-      background: #ffc107;
-      color: #000;
+    button:hover {
+      background: #0056b3;
     }
-    .delete-btn {
-      background: #dc3545;
-      color: #fff;
-    }
-    .approve-btn {
-      background: #28a745;
-      color: #fff;
-    }
-    .rejected {
-      color: red;
-      font-weight: bold;
+    .ad-card {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      background: #f8f9fa;
     }
     .approved {
-      color: green;
-      font-weight: bold;
+      border-left: 6px solid #28a745;
     }
+    .pending {
+      border-left: 6px solid #ffc107;
+    }
+    .rejected {
+      border-left: 6px solid #dc3545;
+    }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <main>
-    <h2>🛠 Admin panel</h2>
+    <h2>🔐 Admin Panel</h2>
 
-    <h3>🚗 Haydovchi e’lonlari</h3>
-    <table id="driverTable">
-      <tr>
-        <th>#</th>
-        <th>Yo‘nalish</th>
-        <th>Haydovchi</th>
-        <th>Telefon</th>
-        <th>Narx</th>
-        <th>Holat</th>
-        <th>Amallar</th>
-      </tr>
-    </table>
+    <!-- Parol oynasi -->
+    <div id="loginSection">
+      <p>Admin parolini kiriting:</p>
+      <input type="password" id="adminPassword" placeholder="Parol">
+      <button onclick="checkPassword()">Kirish</button>
+      <p id="errorMsg" style="color:red;"></p>
+    </div>
 
-    <h3>🧍 Yo‘lovchi e’lonlari</h3>
-    <table id="passengerTable">
-      <tr>
-        <th>#</th>
-        <th>Yo‘nalish</th>
-        <th>Telefon</th>
-        <th>Narx</th>
-        <th>Holat</th>
-        <th>Amallar</th>
-      </tr>
-    </table>
+    <!-- Asosiy panel -->
+    <div id="adminPanel" class="hidden">
+      <h3>🚗 Haydovchi e’lonlari</h3>
+      <div id="driverList"></div>
+
+      <h3>🧍 Yo‘lovchi e’lonlari</h3>
+      <div id="passengerList"></div>
+    </div>
   </main>
 
   <script>
-    function loadAdminData() {
+    const ADMIN_PASSWORD = "12345"; // 🔑 Admin parol (istalgancha o‘zgartirish mumkin)
+
+    function checkPassword() {
+      const input = document.getElementById("adminPassword").value;
+      const error = document.getElementById("errorMsg");
+      if (input === ADMIN_PASSWORD) {
+        document.getElementById("loginSection").classList.add("hidden");
+        document.getElementById("adminPanel").classList.remove("hidden");
+        loadAds();
+      } else {
+        error.innerText = "❌ Parol noto‘g‘ri!";
+      }
+    }
+
+    function loadAds() {
       const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const driverTable = document.getElementById('driverTable');
-      const passengerTable = document.getElementById('passengerTable');
+      showAds('driverList', drivers, 'driverAds');
+      showAds('passengerList', passengers, 'passengerAds');
+    }
 
-      driverTable.innerHTML = `
-        <tr>
-          <th>#</th><th>Yo‘nalish</th><th>Haydovchi</th><th>Telefon</th>
-          <th>Narx</th><th>Holat</th><th>Amallar</th>
-        </tr>`;
-      passengerTable.innerHTML = `
-        <tr>
-          <th>#</th><th>Yo‘nalish</th><th>Telefon</th>
-          <th>Narx</th><th>Holat</th><th>Amallar</th>
-        </tr>`;
+    function showAds(containerId, ads, storageKey) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = "";
 
-      // === Haydovchilar ===
-      drivers.forEach((ad, i) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${i + 1}</td>
-          <td>${ad.fromRegion} ${ad.fromDistrict} → ${ad.toRegion} ${ad.toDistrict}</td>
-          <td>${ad.driver}</td>
-          <td>${ad.phone}</td>
-          <td>${ad.price}</td>
-          <td class="${ad.status === 'approved' ? 'approved' : ad.status === 'rejected' ? 'rejected' : ''}">
-            ${ad.status === 'approved' ? '✅ Tasdiqlangan' : ad.status === 'rejected' ? '❌ Bekor qilingan' : '⏳ Kutilmoqda'}
-          </td>
-          <td>
-            <button class="approve-btn" onclick="approveAd('driverAds', ${i})">✅</button>
-            <button class="delete-btn" onclick="rejectAd('driverAds', ${i})">❌</button>
-          </td>
+      if (ads.length === 0) {
+        container.innerHTML = "<p>Hozircha e’lonlar yo‘q.</p>";
+        return;
+      }
+
+      ads.forEach((ad, index) => {
+        const div = document.createElement('div');
+        div.className = `ad-card ${ad.status || 'pending'}`;
+        div.innerHTML = `
+          <strong>${ad.fromRegion} ${ad.fromDistrict}</strong> → 
+          <strong>${ad.toRegion} ${ad.toDistrict}</strong><br>
+          📞 ${ad.phone} <br>
+          💰 ${ad.price} so‘m<br>
+          <p>Holat: <b>${ad.status || "kutilmoqda"}</b></p>
+          <button onclick="updateStatus('${storageKey}', ${index}, 'approved')">✅ Tasdiqlash</button>
+          <button onclick="updateStatus('${storageKey}', ${index}, 'rejected')">❌ Bekor qilish</button>
         `;
-        driverTable.appendChild(row);
-      });
-
-      // === Yo‘lovchilar ===
-      passengers.forEach((ad, i) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${i + 1}</td>
-          <td>${ad.fromRegion} ${ad.fromDistrict} → ${ad.toRegion} ${ad.toDistrict}</td>
-          <td>${ad.phone}</td>
-          <td>${ad.price}</td>
-          <td class="${ad.status === 'approved' ? 'approved' : ad.status === 'rejected' ? 'rejected' : ''}">
-            ${ad.status === 'approved' ? '✅ Tasdiqlangan' : ad.status === 'rejected' ? '❌ Bekor qilingan' : '⏳ Kutilmoqda'}
-          </td>
-          <td>
-            <button class="approve-btn" onclick="approveAd('passengerAds', ${i})">✅</button>
-            <button class="delete-btn" onclick="rejectAd('passengerAds', ${i})">❌</button>
-          </td>
-        `;
-        passengerTable.appendChild(row);
+        container.appendChild(div);
       });
     }
 
-    function approveAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type)) || [];
-      ads[index].status = 'approved';
-      localStorage.setItem(type, JSON.stringify(ads));
-      loadAdminData();
+    function updateStatus(storageKey, index, status) {
+      const ads = JSON.parse(localStorage.getItem(storageKey)) || [];
+      ads[index].status = status;
+      localStorage.setItem(storageKey, JSON.stringify(ads));
+      loadAds();
     }
-
-    function rejectAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type)) || [];
-      ads[index].status = 'rejected';
-      localStorage.setItem(type, JSON.stringify(ads));
-      loadAdminData();
-    }
-
-    window.onload = loadAdminData;
   </script>
 </body>
 </html>
