@@ -50,6 +50,22 @@
       padding: 12px;
       margin-bottom: 12px;
       background: #f9f9f9;
+      position: relative;
+    }
+    .delete-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #dc3545;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .delete-btn:hover {
+      background: #b02a37;
     }
     .logout-btn {
       position: fixed;
@@ -117,24 +133,35 @@
       passengerList.innerHTML = passengers.length ? "" : "<p>🧍 Yo‘lovchi e’lonlari yo‘q.</p>";
       driverList.innerHTML = drivers.length ? "" : "<p>🚗 Haydovchi e’lonlari yo‘q.</p>";
 
-      passengers.forEach((ad) => {
+      passengers.forEach((ad, i) => {
         passengerList.innerHTML += `
           <div class="ad-box">
             <strong>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</strong><br>
             📞 ${ad.phone} <br>
             💸 ${ad.price} so‘m
+            <button class="delete-btn" onclick="deleteAd('passengerAds', ${i})">🗑️</button>
           </div>`;
       });
 
-      drivers.forEach((ad) => {
+      drivers.forEach((ad, i) => {
         driverList.innerHTML += `
           <div class="ad-box">
             <strong>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</strong><br>
             📞 ${ad.phone} <br>
-            🚗 ${ad.car || 'Avtomobil ma’lumoti yo‘q'} <br>
             💸 ${ad.price} so‘m
+            <button class="delete-btn" onclick="deleteAd('driverAds', ${i})">🗑️</button>
           </div>`;
       });
+    }
+
+    // --- O‘chirish funksiyasi ---
+    function deleteAd(type, index) {
+      const ads = JSON.parse(localStorage.getItem(type)) || [];
+      if (confirm("Ushbu e’lonni o‘chirmoqchimisiz?")) {
+        ads.splice(index, 1);
+        localStorage.setItem(type, JSON.stringify(ads));
+        loadAds();
+      }
     }
 
     window.onload = loadAds;
