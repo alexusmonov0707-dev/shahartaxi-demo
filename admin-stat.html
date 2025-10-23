@@ -6,6 +6,8 @@
   <title>Statistika - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -75,6 +77,24 @@
       width: 100% !important;
       height: 300px !important;
     }
+    .export-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+    .export-buttons button {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.5rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .export-buttons button:hover {
+      background: #0056b3;
+    }
   </style>
 </head>
 <body>
@@ -114,6 +134,11 @@
         <canvas id="regionChart"></canvas>
       </div>
     </div>
+
+    <div class="export-buttons">
+      <button onclick="downloadPDF()">🧾 PDF yuklab olish</button>
+      <button onclick="downloadExcel()">📊 Excel yuklab olish</button>
+    </div>
   </main>
 
   <script>
@@ -121,7 +146,6 @@
     const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
     const allAds = [...driverAds, ...passengerAds];
 
-    // Statistika sonlarini chiqarish
     document.getElementById("totalAds").innerText = allAds.length;
     document.getElementById("driverAdsCount").innerText = driverAds.length;
     document.getElementById("passengerAdsCount").innerText = passengerAds.length;
@@ -130,7 +154,6 @@
     const todayCount = allAds.filter(ad => ad.date && ad.date.startsWith(today)).length;
     document.getElementById("todayAds").innerText = todayCount;
 
-    // Viloyatlar statistikasi
     const regionStats = {};
     allAds.forEach(ad => {
       if (ad.fromRegion) {
@@ -138,7 +161,6 @@
       }
     });
 
-    // Pie chart — haydovchi va yo‘lovchi
     new Chart(document.getElementById("typeChart"), {
       type: "pie",
       data: {
@@ -148,14 +170,9 @@
           backgroundColor: ["#007bff", "#00c6ff"]
         }]
       },
-      options: {
-        plugins: {
-          legend: { position: "bottom" }
-        }
-      }
+      options: { plugins: { legend: { position: "bottom" } } }
     });
 
-    // Bar chart — viloyatlar
     new Chart(document.getElementById("regionChart"), {
       type: "bar",
       data: {
@@ -166,12 +183,39 @@
           backgroundColor: "#007bff"
         }]
       },
-      options: {
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
+      options: { scales: { y: { beginAtZero: true } } }
     });
+
+    // 📄 PDF yuklab olish
+    function downloadPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("ShaharTaxi Statistika Hisoboti", 10, 10);
+      doc.text(`Umumiy e’lonlar: ${allAds.length}`, 10, 20);
+      doc.text(`Haydovchi e’lonlari: ${driverAds.length}`, 10, 30);
+      doc.text(`Yo‘lovchi e’lonlari: ${passengerAds.length}`, 10, 40);
+      doc.text(`Bugun joylanganlar: ${todayCount}`, 10, 50);
+      doc.save("ShaharTaxi_Statistika.pdf");
+    }
+
+    // 📊 Excel yuklab olish
+    function downloadExcel() {
+      const data = [
+        ["Turi", "Qayerdan (Viloyat)", "Qayerdan (Tuman)", "Qayerga (Viloyat)", "Qayerga (Tuman)", "Telefon", "Narx"]
+      ];
+      allAds.forEach(ad => {
+        data.push([
+          ad.driver ? "Haydovchi" : "Yo‘lovchi",
+          ad.fromRegion || "", ad.fromDistrict || "",
+          ad.toRegion || "", ad.toDistrict || "",
+          ad.phone || "", ad.price || ""
+        ]);
+      });
+      const worksheet = XLSX.utils.aoa_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Statistika");
+      XLSX.writeFile(workbook, "ShaharTaxi_Statistika.xlsx");
+    }
   </script>
 </body>
 </html>
