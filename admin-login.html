@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin kirish - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
@@ -10,50 +10,49 @@
       font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #007bff, #00c6ff);
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       height: 100vh;
       margin: 0;
-      color: #333;
     }
     .login-box {
-      background: #fff;
+      background: white;
       padding: 2rem;
       border-radius: 16px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-      width: 90%;
-      max-width: 400px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      width: 320px;
       text-align: center;
     }
     h2 {
       color: #007bff;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
     }
     input {
       width: 100%;
       padding: 0.8rem;
-      margin-bottom: 1rem;
-      border: 1px solid #ccc;
       border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 1rem;
       font-size: 1rem;
     }
     button {
       width: 100%;
       padding: 0.8rem;
+      border-radius: 8px;
       background: #007bff;
       color: white;
       border: none;
-      border-radius: 8px;
       cursor: pointer;
+      font-weight: 600;
       font-size: 1rem;
     }
     button:hover {
       background: #0056b3;
     }
-    p {
+    .error {
       color: red;
-      font-weight: 600;
       margin-top: 0.5rem;
+      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -61,22 +60,19 @@
   <div class="login-box">
     <h2>🔐 Admin kirish</h2>
     <input type="password" id="password" placeholder="Parolni kiriting">
-    <button onclick="checkPassword()">Kirish</button>
-    <p id="msg"></p>
+    <button onclick="login()">Kirish</button>
+    <div class="error" id="error"></div>
   </div>
 
   <script>
-    const ADMIN_PASSWORD = "shahar123"; // 🔑 Parol shu yerda belgilanadi
-
-    function checkPassword() {
+    const ADMIN_PASSWORD = "12345"; // 🔒 Parolni xohlagancha o‘zgartir
+    function login() {
       const entered = document.getElementById("password").value;
-      const msg = document.getElementById("msg");
-
       if (entered === ADMIN_PASSWORD) {
         localStorage.setItem("isAdmin", "true");
-        location.href = "admin.html";
+        window.location.href = "admin.html";
       } else {
-        msg.innerText = "❌ Noto‘g‘ri parol!";
+        document.getElementById("error").innerText = "❌ Noto‘g‘ri parol!";
       }
     }
   </script>
