@@ -3,112 +3,230 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi - Haydovchi e’lonlari</title>
+  <title>ShaharTaxi - Yo‘lovchi platformasi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     body {
+      margin: 0;
       font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0;
-      padding: 0;
-      color: #333;
+      color: #222;
     }
+
     header {
-      text-align: center;
-      padding: 1.5rem;
-      color: #fff;
+      background: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
+
+    header h1 {
+      margin: 0;
+      font-weight: 600;
+      color: #007bff;
+    }
+
+    .lang-select {
+      border: 1px solid #ccc;
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+    }
+
     main {
-      max-width: 600px;
-      margin: 1rem auto;
+      max-width: 850px;
+      margin: 2rem auto;
       background: #fff;
       border-radius: 16px;
       padding: 2rem;
       box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
+
+    h2 {
+      color: #007bff;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-box {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      justify-content: center;
+    }
+
     select, button {
-      width: 100%;
-      margin-bottom: 1rem;
-      padding: 0.8rem;
+      padding: 0.8rem 1rem;
       border-radius: 8px;
       border: 1px solid #ccc;
       font-size: 1rem;
+      min-width: 180px;
     }
+
     button {
       background: #007bff;
-      color: #fff;
-      border: none;
+      color: white;
       cursor: pointer;
-      font-weight: 600;
+      border: none;
+      transition: background 0.3s ease;
     }
+
     button:hover {
       background: #0056b3;
     }
+
+    .rides {
+      margin-top: 2rem;
+      display: grid;
+      gap: 1rem;
+    }
+
     .ride {
-      border: 1px solid #eee;
+      background: #f9f9f9;
       border-radius: 12px;
       padding: 1rem;
-      margin-bottom: 1rem;
-      background: #f9f9f9;
       display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: transform 0.2s ease;
     }
-    .ride strong {
-      color: #007bff;
+
+    .ride:hover {
+      transform: scale(1.02);
     }
-    .buttons {
-      display: flex;
-      gap: 0.5rem;
-    }
-    .buttons a {
-      flex: 1;
-      text-align: center;
+
+    .ride button {
+      background: #28a745;
       padding: 0.6rem 1rem;
-      border-radius: 8px;
-      color: #fff;
-      text-decoration: none;
-      font-weight: 600;
     }
-    .call-btn { background: #28a745; }
-    .tg-btn { background: #0088cc; }
+
+    footer {
+      text-align: center;
+      color: white;
+      margin: 2rem 0;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>🚖 ShaharTaxi</h1>
-    <p>Haydovchi e’lonlari ro‘yxati</p>
+    <h1>ShaharTaxi</h1>
+    <select class="lang-select">
+      <option>O‘zbekcha</option>
+      <option>Русский</option>
+      <option>English</option>
+    </select>
   </header>
 
   <main>
-    <h2>🔍 E’lonlarni qidirish</h2>
+    <h2>Yo‘nalish tanlang</h2>
 
-    <!-- Qayerdan -->
-    <select id="fromRegion" onchange="updateDistricts('from')">
-      <option value="">Viloyat (qayerdan)</option>
-    </select>
-    <select id="fromDistrict">
-      <option value="">Tuman (qayerdan)</option>
-    </select>
+    <div class="search-box">
+      <!-- Qayerdan -->
+      <div>
+        <select id="fromRegion" onchange="updateDistricts('from')">
+          <option value="">Viloyat (qayerdan)</option>
+          <option>Toshkent</option>
+          <option>Andijon</option>
+          <option>Samarqand</option>
+          <option>Buxoro</option>
+        </select>
 
-    <!-- Qayerga -->
-    <select id="toRegion" onchange="updateDistricts('to')">
-      <option value="">Viloyat (qayerga)</option>
-    </select>
-    <select id="toDistrict">
-      <option value="">Tuman (qayerga)</option>
-    </select>
+        <select id="fromDistrict">
+          <option value="">Tuman</option>
+        </select>
+      </div>
 
-    <button onclick="searchRides()">Qidirish</button>
+      <!-- Qayerga -->
+      <div>
+        <select id="toRegion" onchange="updateDistricts('to')">
+          <option value="">Viloyat (qayerga)</option>
+          <option>Toshkent</option>
+          <option>Andijon</option>
+          <option>Samarqand</option>
+          <option>Buxoro</option>
+        </select>
 
-    <h3>🚗 E’lonlar:</h3>
-    <div id="rideList"></div>
+        <select id="toDistrict">
+          <option value="">Tuman</option>
+        </select>
+      </div>
+
+      <button onclick="searchRides()">Izlash</button>
+    </div>
+
+    <div class="rides" id="rideList"></div>
   </main>
+
+  <footer>© 2025 ShaharTaxi. Barcha huquqlar himoyalangan.</footer>
 
   <script>
     const districts = {
       "Toshkent": ["Yunusobod", "Chilonzor", "Olmazor", "Yakkasaroy"],
       "Andijon": ["Asaka", "Baliqchi", "Jalaquduq", "Xonobod"],
-      "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Rishton", "Buvayda"],
-      "Namangan": ["Namangan sh.", "Pop", "Chortoq", "Kosonsoy"],
-      "Samarqand": ["Urgut", "Ishtixon", "Kattaq]()
+      "Samarqand": ["Urgut", "Ishtixon", "Kattaqo‘rg‘on", "Narpay"],
+      "Buxoro": ["G‘ijduvon", "Vobkent", "Qorako‘l", "Jondor"]
+    };
+
+    function updateDistricts(type) {
+      const regionSelect = document.getElementById(type + "Region");
+      const districtSelect = document.getElementById(type + "District");
+      const selectedRegion = regionSelect.value;
+      districtSelect.innerHTML = "<option value=''>Tuman</option>";
+      if (districts[selectedRegion]) {
+        districts[selectedRegion].forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d;
+          opt.textContent = d;
+          districtSelect.appendChild(opt);
+        });
+      }
+    }
+
+    function searchRides() {
+      const fromRegion = document.getElementById("fromRegion").value;
+      const fromDistrict = document.getElementById("fromDistrict").value;
+      const toRegion = document.getElementById("toRegion").value;
+      const toDistrict = document.getElementById("toDistrict").value;
+      const list = document.getElementById("rideList");
+      list.innerHTML = "";
+
+      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
+
+      const allRides = [...driverAds, ...passengerAds];
+
+      const filtered = allRides.filter(r =>
+        (!fromRegion || r.fromRegion === fromRegion) &&
+        (!fromDistrict || r.fromDistrict === fromDistrict) &&
+        (!toRegion || r.toRegion === toRegion) &&
+        (!toDistrict || r.toDistrict === toDistrict)
+      );
+
+      if (filtered.length === 0) {
+        list.innerHTML = "<p style='text-align:center;color:#777;'>Hech qanday e’lon topilmadi.</p>";
+        return;
+      }
+
+      filtered.forEach(r => {
+        const el = document.createElement("div");
+        el.className = "ride";
+        el.innerHTML = `
+          <div>
+            <strong>${r.fromRegion} (${r.fromDistrict}) → ${r.toRegion} (${r.toDistrict})</strong><br>
+            ${r.driver ? `Haydovchi: ${r.driver}<br>` : ""}
+            Narx: ${r.price} so‘m
+          </div>
+          <button onclick="alert('Bog‘lanish: ${r.phone}')">Bog‘lanish</button>
+        `;
+        list.appendChild(el);
+      });
+    }
+
+    // Sahifa ochilganda barcha e’lonlarni ko‘rsatish
+    window.onload = searchRides;
+  </script>
+</body>
+</html>
