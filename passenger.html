@@ -8,9 +8,8 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #00c6ff, #007bff);
-      margin: 0;
-      padding: 0;
+      background: linear-gradient(135deg, #28a745, #00d478);
+      margin: 0; padding: 0;
       color: #333;
     }
     main {
@@ -30,17 +29,17 @@
       font-size: 1rem;
     }
     button {
-      background: #007bff;
+      background: #28a745;
       color: #fff;
       border: none;
       cursor: pointer;
     }
     button:hover {
-      background: #0056b3;
+      background: #1e7e34;
     }
     h2 {
       text-align: center;
-      color: #007bff;
+      color: #28a745;
     }
   </style>
 </head>
@@ -48,35 +47,78 @@
   <main>
     <h2>🧍 Yo‘lovchi e’loni joylash</h2>
 
-    <input id="fromRegion" placeholder="Qayerdan (viloyat)">
-    <input id="fromDistrict" placeholder="Qayerdan (tuman)">
-    <input id="toRegion" placeholder="Qayerga (viloyat)">
-    <input id="toDistrict" placeholder="Qayerga (tuman)">
-    <input id="price" placeholder="Taklif narxi (so‘m)">
-    <input id="phone" placeholder="Telefon raqam">
+    <select id="fromRegion" onchange="updateDistricts('from')">
+      <option value="">Viloyat (qayerdan)</option>
+    </select>
+    <select id="fromDistrict">
+      <option value="">Tuman (qayerdan)</option>
+    </select>
+
+    <select id="toRegion" onchange="updateDistricts('to')">
+      <option value="">Viloyat (qayerga)</option>
+    </select>
+    <select id="toDistrict">
+      <option value="">Tuman (qayerga)</option>
+    </select>
+
+    <input type="text" id="phone" placeholder="Telefon raqam">
+    <input type="number" id="price" placeholder="Yo‘l haqi (so‘m)">
     <button onclick="savePassengerAd()">E’lonni joylash</button>
   </main>
 
   <script>
+    const regions = {
+      "Toshkent": ["Chilonzor", "Yunusobod", "Mirzo Ulug‘bek", "Bektemir"],
+      "Andijon": ["Asaka", "Shahrixon", "Andijon sh."],
+      "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Farg‘ona sh."],
+      "Namangan": ["Chortoq", "Pop", "Namangan sh."]
+    };
+
+    function populateRegions() {
+      const from = document.getElementById('fromRegion');
+      const to = document.getElementById('toRegion');
+      Object.keys(regions).forEach(region => {
+        from.innerHTML += `<option value="${region}">${region}</option>`;
+        to.innerHTML += `<option value="${region}">${region}</option>`;
+      });
+    }
+
+    function updateDistricts(type) {
+      const region = document.getElementById(type + 'Region').value;
+      const districtSelect = document.getElementById(type + 'District');
+      districtSelect.innerHTML = '<option value="">Tuman tanlang</option>';
+      if (regions[region]) {
+        regions[region].forEach(d => {
+          districtSelect.innerHTML += `<option value="${d}">${d}</option>`;
+        });
+      }
+    }
+
     function savePassengerAd() {
       const ad = {
         fromRegion: document.getElementById('fromRegion').value,
         fromDistrict: document.getElementById('fromDistrict').value,
         toRegion: document.getElementById('toRegion').value,
         toDistrict: document.getElementById('toDistrict').value,
-        price: document.getElementById('price').value,
         phone: document.getElementById('phone').value,
-        type: 'passenger',
-        date: new Date().toISOString()
+        price: document.getElementById('price').value,
+        date: new Date().toISOString().split("T")[0] // ✅ sana qo‘shildi
       };
 
-      const ads = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      ads.push(ad);
-      localStorage.setItem('passengerAds', JSON.stringify(ads));
+      if (!ad.fromRegion || !ad.toRegion || !ad.phone || !ad.price) {
+        alert("Iltimos, barcha maydonlarni to‘ldiring!");
+        return;
+      }
 
-      alert('✅ Yo‘lovchi e’loni muvaffaqiyatli joylandi!');
+      const ads = JSON.parse(localStorage.getItem("passengerAds")) || [];
+      ads.push(ad);
+      localStorage.setItem("passengerAds", JSON.stringify(ads));
+
+      alert("E’lon muvaffaqiyatli joylandi!");
       window.location.href = "index.html";
     }
+
+    populateRegions();
   </script>
 </body>
 </html>
