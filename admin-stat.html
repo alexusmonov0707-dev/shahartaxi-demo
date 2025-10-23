@@ -8,7 +8,7 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: #f0f6fb;
+      background: #eef4fb;
       margin: 0;
       padding: 0;
     }
@@ -21,7 +21,7 @@
       align-items: center;
     }
     main {
-      max-width: 800px;
+      max-width: 850px;
       margin: 2rem auto;
       background: white;
       border-radius: 12px;
@@ -30,6 +30,28 @@
     }
     h2 {
       color: #007bff;
+      border-bottom: 2px solid #007bff33;
+      padding-bottom: 0.4rem;
+    }
+    .stat-box {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .card {
+      background: #f9fbfd;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .card h3 {
+      margin: 0;
+      color: #007bff;
+    }
+    .card p {
+      margin: 0.5rem 0 0 0;
+      color: #333;
     }
   </style>
 </head>
@@ -42,14 +64,28 @@
 
   <header>
     <h1>📊 Statistika</h1>
-    <button onclick="logout()">🚪 Chiqish</button>
+    <div>
+      <button onclick="window.location.href='admin.html'">⬅️ Orqaga</button>
+      <button onclick="logout()">🚪 Chiqish</button>
+    </div>
   </header>
 
   <main>
     <h2>Umumiy ma’lumotlar</h2>
-    <p id="driverCount"></p>
-    <p id="passengerCount"></p>
-    <p id="totalCount"></p>
+    <div class="stat-box">
+      <div class="card"><h3>🚗 Haydovchi e’lonlari</h3><p id="driverCount"></p></div>
+      <div class="card"><h3>🧍 Yo‘lovchi e’lonlari</h3><p id="passengerCount"></p></div>
+      <div class="card"><h3>📦 Jami e’lonlar</h3><p id="totalCount"></p></div>
+    </div>
+
+    <h2>📅 Faollik</h2>
+    <div class="stat-box">
+      <div class="card"><h3>Bugun qo‘shilgan e’lonlar</h3><p id="todayCount"></p></div>
+      <div class="card"><h3>O‘tgan oyda qo‘shilganlar</h3><p id="monthCount"></p></div>
+    </div>
+
+    <h2>📍 Eng faol yo‘nalishlar</h2>
+    <div id="popularRoutes"></div>
   </main>
 
   <script>
@@ -61,13 +97,38 @@
     function showStats() {
       const drivers = JSON.parse(localStorage.getItem("driverAds")) || [];
       const passengers = JSON.parse(localStorage.getItem("passengerAds")) || [];
-      document.getElementById("driverCount").innerText = `🚗 Haydovchi e’lonlari: ${drivers.length} ta`;
-      document.getElementById("passengerCount").innerText = `🧍 Yo‘lovchi e’lonlari: ${passengers.length} ta`;
-      document.getElementById("totalCount").innerText = `📦 Jami e’lonlar: ${drivers.length + passengers.length} ta`;
+
+      const all = [...drivers, ...passengers];
+
+      // Statistikalar
+      document.getElementById("driverCount").innerText = `${drivers.length} ta`;
+      document.getElementById("passengerCount").innerText = `${passengers.length} ta`;
+      document.getElementById("totalCount").innerText = `${all.length} ta`;
+
+      // Sana bo‘yicha hisoblash
+      const today = new Date().toISOString().split("T")[0];
+      const currentMonth = new Date().getMonth();
+      const todayAds = all.filter(ad => ad.date === today);
+      const monthAds = all.filter(ad => {
+        const d = new Date(ad.date);
+        return d.getMonth() === currentMonth;
+      });
+
+      document.getElementById("todayCount").innerText = `${todayAds.length} ta`;
+      document.getElementById("monthCount").innerText = `${monthAds.length} ta`;
+
+      // Eng faol yo‘nalishlarni topish
+      const routes = {};
+      all.forEach(ad => {
+        const route = `${ad.fromRegion} → ${ad.toRegion}`;
+        routes[route] = (routes[route] || 0) + 1;
+      });
+      const sortedRoutes = Object.entries(routes).sort((a,b) => b[1]-a[1]).slice(0,5);
+      const popular = sortedRoutes.map(([route, count]) => `<p>➡️ ${route} — ${count} ta</p>`).join("");
+      document.getElementById("popularRoutes").innerHTML = popular || "Ma’lumot yo‘q.";
     }
 
     showStats();
   </script>
 </body>
 </html>
-
