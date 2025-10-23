@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Statistikasi - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -14,7 +15,7 @@
       padding: 0;
     }
     main {
-      max-width: 800px;
+      max-width: 900px;
       margin: 3rem auto;
       background: #fff;
       color: #333;
@@ -31,7 +32,7 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 1rem;
-      margin-top: 2rem;
+      margin-top: 1rem;
     }
     .card {
       border-radius: 12px;
@@ -55,12 +56,16 @@
       cursor: pointer;
     }
     button:hover { background: #0056b3; }
+    canvas {
+      margin-top: 3rem;
+      max-width: 100%;
+    }
   </style>
 </head>
 <body>
   <main>
-    <h2>📊 Admin Statistikasi</h2>
-    <p>ShaharTaxi tizimidagi umumiy e’lonlar holati quyidagicha:</p>
+    <h2>📈 Admin Statistikasi</h2>
+    <p>ShaharTaxi tizimidagi e’lonlar holati quyidagicha:</p>
 
     <div class="stat-box">
       <div class="card total" id="totalAds">Umumiy: 0</div>
@@ -68,6 +73,8 @@
       <div class="card rejected" id="rejectedAds">Bekor qilingan: 0</div>
       <div class="card pending" id="pendingAds">Kutilayotgan: 0</div>
     </div>
+
+    <canvas id="adsChart" height="120"></canvas>
 
     <button onclick="window.location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
@@ -87,6 +94,28 @@
       document.getElementById('approvedAds').innerText = `Tasdiqlangan: ${approved}`;
       document.getElementById('rejectedAds').innerText = `Bekor qilingan: ${rejected}`;
       document.getElementById('pendingAds').innerText = `Kutilayotgan: ${pending}`;
+
+      // Chart.js diagrammasi
+      const ctx = document.getElementById('adsChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Tasdiqlangan', 'Bekor qilingan', 'Kutilayotgan'],
+          datasets: [{
+            data: [approved, rejected, pending],
+            backgroundColor: ['#28a745', '#dc3545', '#ffc107']
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' },
+            title: {
+              display: true,
+              text: 'E’lonlar statistikasi (foizlarda)'
+            }
+          }
+        }
+      });
     }
 
     countStats();
