@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Statistika - ShaharTaxi</title>
+  <title>Statistika - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -11,143 +11,88 @@
       font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #00c6ff, #007bff);
       margin: 0;
-      padding: 0;
       color: #333;
     }
     main {
       max-width: 900px;
-      margin: 2rem auto;
+      margin: 3rem auto;
       background: #fff;
       border-radius: 16px;
       padding: 2rem;
       box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
-    h2, h3 {
+    h2 {
       text-align: center;
-      color: #007bff;
-    }
-    .stat-box {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-    .card {
-      background: #f8f9fa;
-      padding: 1rem;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      text-align: center;
-    }
-    .card h3 {
-      color: #333;
-      margin-bottom: 0.5rem;
-    }
-    .card p {
-      font-size: 1.4rem;
-      color: #007bff;
-      font-weight: 600;
+      margin-bottom: 1rem;
     }
     canvas {
-      margin-top: 2rem;
+      margin: 2rem 0;
     }
     button {
-      display: block;
-      margin: 2rem auto 0;
       background: #007bff;
-      color: white;
+      color: #fff;
+      padding: 0.7rem 1.5rem;
       border: none;
-      padding: 0.8rem 1.5rem;
-      border-radius: 10px;
-      font-size: 1rem;
+      border-radius: 8px;
       cursor: pointer;
+      display: block;
+      margin: 1rem auto;
     }
     button:hover {
       background: #0056b3;
     }
+    .stats {
+      text-align: center;
+      font-size: 1.2rem;
+      margin-top: 1rem;
+    }
   </style>
 </head>
 <body>
-
   <main>
-    <h2>📊 ShaharTaxi - Admin statistikasi</h2>
+    <h2>📊 ShaharTaxi statistikasi</h2>
 
-    <div class="stat-box">
-      <div class="card">
-        <h3>Umumiy e’lonlar</h3>
-        <p id="totalAds">0</p>
-      </div>
-      <div class="card">
-        <h3>Tasdiqlanganlar</h3>
-        <p id="approvedAds">0</p>
-      </div>
-      <div class="card">
-        <h3>Kutilayotganlar</h3>
-        <p id="pendingAds">0</p>
-      </div>
-      <div class="card">
-        <h3>Yo‘lovchilar</h3>
-        <p id="passengerCount">0</p>
-      </div>
-      <div class="card">
-        <h3>Haydovchilar</h3>
-        <p id="driverCount">0</p>
-      </div>
+    <div class="stats">
+      <p>✅ Tasdiqlangan e’lonlar soni: <span id="totalCount">0</span></p>
+      <p>🚗 Haydovchilar: <span id="driverCount">0</span> ta</p>
+      <p>🧍 Yo‘lovchilar: <span id="passengerCount">0</span> ta</p>
     </div>
 
-    <canvas id="adTypeChart" height="120"></canvas>
-    <canvas id="approvalChart" height="120"></canvas>
+    <canvas id="adsChart" width="400" height="200"></canvas>
 
-    <button onclick="window.location.href='admin.html'">⬅️ Orqaga qaytish</button>
+    <button onclick="window.location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
 
   <script>
     function loadStats() {
-      const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const approvedAds = JSON.parse(localStorage.getItem('approvedAds')) || [];
+      const driverCount = approvedAds.filter(ad => ad.type === 'Haydovchi').length;
+      const passengerCount = approvedAds.filter(ad => ad.type === 'Yo‘lovchi').length;
 
-      const allAds = [...passengers, ...drivers];
+      document.getElementById('driverCount').innerText = driverCount;
+      document.getElementById('passengerCount').innerText = passengerCount;
+      document.getElementById('totalCount').innerText = approvedAds.length;
 
-      const total = allAds.length;
-      const approved = allAds.filter(a => a.approved).length;
-      const pending = total - approved;
-
-      document.getElementById('totalAds').innerText = total;
-      document.getElementById('approvedAds').innerText = approved;
-      document.getElementById('pendingAds').innerText = pending;
-      document.getElementById('passengerCount').innerText = passengers.length;
-      document.getElementById('driverCount').innerText = drivers.length;
-
-      renderAdTypeChart(passengers.length, drivers.length);
-      renderApprovalChart(approved, pending);
+      drawChart(driverCount, passengerCount);
     }
 
-    function renderAdTypeChart(passengerCount, driverCount) {
-      const ctx = document.getElementById('adTypeChart').getContext('2d');
+    function drawChart(driverCount, passengerCount) {
+      const ctx = document.getElementById('adsChart').getContext('2d');
       new Chart(ctx, {
-        type: 'bar',
+        type: 'doughnut',
         data: {
-          labels: ['Yo‘lovchi', 'Haydovchi'],
+          labels: ['Haydovchilar', 'Yo‘lovchilar'],
           datasets: [{
-            label: 'E’lonlar soni',
-            data: [passengerCount, driverCount],
-            backgroundColor: ['#007bff', '#28a745']
+            data: [driverCount, passengerCount],
+            backgroundColor: ['#007bff', '#00c6ff']
           }]
         },
-        options: { plugins: { legend: { display: false } } }
-      });
-    }
-
-    function renderApprovalChart(approved, pending) {
-      const ctx = document.getElementById('approvalChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: ['Tasdiqlangan', 'Kutilmoqda'],
-          datasets: [{
-            data: [approved, pending],
-            backgroundColor: ['#28a745', '#ffc107']
-          }]
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' },
+            title: { display: true, text: 'Tasdiqlangan e’lonlar taqsimoti' }
+          }
         }
       });
     }
