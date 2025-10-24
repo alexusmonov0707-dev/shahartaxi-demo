@@ -5,18 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #007bff, #00c6ff);
+      background: linear-gradient(135deg, #00c6ff, #007bff);
       margin: 0;
-      padding: 0;
       color: #333;
     }
     main {
       max-width: 900px;
-      margin: 2rem auto;
+      margin: 3rem auto;
       background: #fff;
       border-radius: 16px;
       padding: 2rem;
@@ -24,212 +22,152 @@
     }
     h2 {
       text-align: center;
-      color: #007bff;
+      margin-bottom: 1rem;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1.5rem;
+    .login-box {
+      text-align: center;
     }
-    th, td {
-      border: 1px solid #ddd;
+    input[type=password] {
       padding: 0.7rem;
-      text-align: center;
-    }
-    th {
-      background-color: #007bff;
-      color: white;
-    }
-    button {
-      padding: 0.4rem 0.8rem;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      color: white;
-      font-weight: 600;
-    }
-    .approve { background: #28a745; }
-    .edit { background: #ffc107; color: #333; }
-    .delete { background: #dc3545; }
-    .logout { background: #6c757d; float: right; margin-top: -2.2rem; }
-    .hidden { display: none; }
-
-    /* Login form */
-    #loginBox {
-      max-width: 350px;
-      margin: 10rem auto;
-      background: white;
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-      text-align: center;
-    }
-    #loginBox input {
-      width: 100%;
-      padding: 0.8rem;
-      margin-top: 1rem;
       border-radius: 8px;
       border: 1px solid #ccc;
-      font-size: 1rem;
+      width: 70%;
+      margin-bottom: 1rem;
     }
-    #loginBox button {
-      width: 100%;
-      margin-top: 1rem;
-      background: #007bff;
-      color: white;
+    button {
+      padding: 0.7rem 1.2rem;
       border: none;
-      padding: 0.8rem;
       border-radius: 8px;
-      font-size: 1rem;
+      background: #007bff;
+      color: #fff;
       cursor: pointer;
     }
-    #loginBox p { color: red; margin-top: 0.5rem; }
+    button:hover {
+      background: #0056b3;
+    }
+    .ad-card {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 1rem;
+      margin: 1rem 0;
+      background: #f9f9f9;
+    }
+    .ad-actions button {
+      margin-right: 0.5rem;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
+  <main>
+    <div id="loginSection" class="login-box">
+      <h2>🔑 Admin panelga kirish</h2>
+      <input type="password" id="adminPass" placeholder="Parolni kiriting" />
+      <br>
+      <button onclick="login()">Kirish</button>
+      <p id="loginMsg" style="color:red;"></p>
+    </div>
 
-  <!-- Login -->
-  <div id="loginBox">
-    <h2>🔐 Admin panelga kirish</h2>
-    <input type="password" id="adminPass" placeholder="Parolni kiriting">
-    <button onclick="checkLogin()">Kirish</button>
-    <p id="errorMsg"></p>
-  </div>
+    <div id="adminSection" style="display:none;">
+      <div class="topbar">
+        <h2>🧭 E’lonlar boshqaruvi</h2>
+        <button onclick="window.location.href='admin-stat.html'">📊 Statistikaga o‘tish</button>
+      </div>
 
-  <!-- Admin Panel -->
-  <main id="adminPanel" class="hidden">
-    <h2>🧑‍💼 ShaharTaxi Admin paneli</h2>
-    <button class="logout" onclick="logout()">Chiqish</button>
-
-    <h3>🧍 Yo‘lovchi e’lonlari</h3>
-    <table id="passengerTable">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Qayerdan</th>
-          <th>Qayerga</th>
-          <th>Tel</th>
-          <th>Narx</th>
-          <th>Holat</th>
-          <th>Amallar</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <h3>🚗 Haydovchi e’lonlari</h3>
-    <table id="driverTable">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Qayerdan</th>
-          <th>Qayerga</th>
-          <th>Tel</th>
-          <th>Narx</th>
-          <th>Holat</th>
-          <th>Amallar</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <h3>📊 Statistika</h3>
-    <canvas id="statChart" height="120"></canvas>
+      <div id="adsContainer"></div>
+    </div>
   </main>
 
   <script>
-    const ADMIN_PASSWORD = "admin123";
+    const ADMIN_PASSWORD = "12345"; // Parol (keyinchalik sozlamadan o‘zgartiriladi)
 
-    function checkLogin() {
-      const pass = document.getElementById("adminPass").value;
-      const errorMsg = document.getElementById("errorMsg");
-      if (pass === ADMIN_PASSWORD) {
-        localStorage.setItem("isAdminLoggedIn", "true");
-        showAdminPanel();
+    function login() {
+      const inputPass = document.getElementById('adminPass').value;
+      if (inputPass === ADMIN_PASSWORD) {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('adminSection').style.display = 'block';
+        loadAds();
       } else {
-        errorMsg.innerText = "❌ Noto‘g‘ri parol!";
+        document.getElementById('loginMsg').innerText = "❌ Noto‘g‘ri parol!";
       }
     }
 
-    function showAdminPanel() {
-      document.getElementById("loginBox").classList.add("hidden");
-      document.getElementById("adminPanel").classList.remove("hidden");
-      loadData();
-    }
+    function loadAds() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const adsContainer = document.getElementById('adsContainer');
+      adsContainer.innerHTML = '';
 
-    function logout() {
-      localStorage.removeItem("isAdminLoggedIn");
-      document.getElementById("adminPanel").classList.add("hidden");
-      document.getElementById("loginBox").classList.remove("hidden");
-    }
-
-    // Agar oldin login bo‘lgan bo‘lsa
-    window.onload = () => {
-      if (localStorage.getItem("isAdminLoggedIn") === "true") {
-        showAdminPanel();
+      if (driverAds.length === 0 && passengerAds.length === 0) {
+        adsContainer.innerHTML = "<p style='text-align:center;'>Hozircha e’lonlar yo‘q</p>";
+        return;
       }
-    };
 
-    function loadData() {
-      loadTable("passengerAds", "passengerTable");
-      loadTable("driverAds", "driverTable");
-      renderChart();
+      renderAds(driverAds, 'Haydovchi');
+      renderAds(passengerAds, 'Yo‘lovchi');
     }
 
-    function loadTable(key, tableId) {
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const tbody = document.querySelector(`#${tableId} tbody`);
-      tbody.innerHTML = "";
+    function renderAds(ads, type) {
+      const adsContainer = document.getElementById('adsContainer');
+      const title = document.createElement('h3');
+      title.textContent = `🚗 ${type} e’lonlari`;
+      adsContainer.appendChild(title);
 
       ads.forEach((ad, index) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td>${ad.fromRegion || "-"}, ${ad.fromDistrict || "-"}</td>
-          <td>${ad.toRegion || "-"}, ${ad.toDistrict || "-"}</td>
-          <td>${ad.phone}</td>
-          <td>${ad.price}</td>
-          <td>${ad.approved ? "✅ Tasdiqlangan" : "🕓 Kutilmoqda"}</td>
-          <td>
-            <button class="approve" onclick="approveAd('${key}', ${index})">Tasdiqlash</button>
-            <button class="delete" onclick="deleteAd('${key}', ${index})">O‘chirish</button>
-          </td>
+        const card = document.createElement('div');
+        card.className = 'ad-card';
+        card.innerHTML = `
+          <strong>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</strong><br>
+          ☎️ ${ad.phone}<br>
+          💰 ${ad.price} so‘m<br>
+          <small>${type}</small><br><br>
+          <div class="ad-actions">
+            <button onclick="editAd('${type}', ${index})">✏️ Tahrirlash</button>
+            <button onclick="deleteAd('${type}', ${index})">❌ Rad etish</button>
+            <button onclick="approveAd('${type}', ${index})">✅ Tasdiqlash</button>
+          </div>
         `;
-        tbody.appendChild(tr);
+        adsContainer.appendChild(card);
       });
     }
 
-    function approveAd(key, index) {
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      ads[index].approved = true;
-      localStorage.setItem(key, JSON.stringify(ads));
-      loadData();
+    function editAd(type, index) {
+      const ads = JSON.parse(localStorage.getItem(type === 'Haydovchi' ? 'driverAds' : 'passengerAds'));
+      const ad = ads[index];
+      const newPhone = prompt("Telefon raqam:", ad.phone);
+      const newPrice = prompt("Narx (so‘m):", ad.price);
+      if (newPhone && newPrice) {
+        ad.phone = newPhone;
+        ad.price = newPrice;
+        localStorage.setItem(type === 'Haydovchi' ? 'driverAds' : 'passengerAds', JSON.stringify(ads));
+        loadAds();
+      }
     }
 
-    function deleteAd(key, index) {
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      ads.splice(index, 1);
-      localStorage.setItem(key, JSON.stringify(ads));
-      loadData();
+    function deleteAd(type, index) {
+      if (confirm("E’lonni o‘chirmoqchimisiz?")) {
+        const key = type === 'Haydovchi' ? 'driverAds' : 'passengerAds';
+        const ads = JSON.parse(localStorage.getItem(key)) || [];
+        ads.splice(index, 1);
+        localStorage.setItem(key, JSON.stringify(ads));
+        loadAds();
+      }
     }
 
-    function renderChart() {
-      const passengerCount = (JSON.parse(localStorage.getItem('passengerAds')) || []).length;
-      const driverCount = (JSON.parse(localStorage.getItem('driverAds')) || []).length;
-
-      const ctx = document.getElementById('statChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ['Yo‘lovchi', 'Haydovchi'],
-          datasets: [{
-            label: 'E’lonlar soni',
-            data: [passengerCount, driverCount],
-            backgroundColor: ['#007bff', '#28a745']
-          }]
-        },
-        options: { responsive: true, plugins: { legend: { display: false } } }
-      });
+    function approveAd(type, index) {
+      const approvedKey = 'approvedAds';
+      const approvedAds = JSON.parse(localStorage.getItem(approvedKey)) || [];
+      const key = type === 'Haydovchi' ? 'driverAds' : 'passengerAds';
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const ad = ads[index];
+      approvedAds.push({...ad, type});
+      localStorage.setItem(approvedKey, JSON.stringify(approvedAds));
+      alert("✅ E’lon tasdiqlandi!");
     }
   </script>
 </body>
