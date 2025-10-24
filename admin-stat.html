@@ -9,7 +9,7 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      background: linear-gradient(135deg, #141E30, #243B55);
       color: #fff;
       margin: 0;
       padding: 0;
@@ -65,7 +65,7 @@
 <body>
   <main>
     <h2>📈 Admin Statistikasi</h2>
-    <p>ShaharTaxi tizimidagi e’lonlar holati quyidagicha:</p>
+    <p>ShaharTaxi tizimidagi e’lonlar holati quyidagicha (avtomatik yangilanadi):</p>
 
     <div class="stat-box">
       <div class="card total" id="totalAds">Umumiy: 0</div>
@@ -80,6 +80,8 @@
   </main>
 
   <script>
+    let chartInstance = null;
+
     function countStats() {
       const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
@@ -95,30 +97,39 @@
       document.getElementById('rejectedAds').innerText = `Bekor qilingan: ${rejected}`;
       document.getElementById('pendingAds').innerText = `Kutilayotgan: ${pending}`;
 
-      // Chart.js diagrammasi
-      const ctx = document.getElementById('adsChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Tasdiqlangan', 'Bekor qilingan', 'Kutilayotgan'],
-          datasets: [{
-            data: [approved, rejected, pending],
-            backgroundColor: ['#28a745', '#dc3545', '#ffc107']
-          }]
-        },
-        options: {
-          plugins: {
-            legend: { position: 'bottom' },
-            title: {
-              display: true,
-              text: 'E’lonlar statistikasi (foizlarda)'
-            }
-          }
-        }
-      });
+      const data = [approved, rejected, pending];
+      updateChart(data);
     }
 
+    function updateChart(data) {
+      const ctx = document.getElementById('adsChart').getContext('2d');
+
+      if (chartInstance) {
+        chartInstance.data.datasets[0].data = data;
+        chartInstance.update();
+      } else {
+        chartInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Tasdiqlangan', 'Bekor qilingan', 'Kutilayotgan'],
+            datasets: [{
+              data: data,
+              backgroundColor: ['#28a745', '#dc3545', '#ffc107']
+            }]
+          },
+          options: {
+            plugins: {
+              legend: { position: 'bottom' },
+              title: { display: true, text: 'E’lonlar statistikasi (real-time)' }
+            }
+          }
+        });
+      }
+    }
+
+    // 🔁 Har 2 soniyada avtomatik yangilansin
     countStats();
+    setInterval(countStats, 2000);
   </script>
 </body>
 </html>
