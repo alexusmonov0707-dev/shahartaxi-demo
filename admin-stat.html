@@ -3,133 +3,156 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Statistikasi - ShaharTaxi</title>
+  <title>Admin Statistika - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #141E30, #243B55);
-      color: #fff;
+      background: linear-gradient(135deg, #00c6ff, #007bff);
       margin: 0;
       padding: 0;
+      color: #333;
     }
     main {
       max-width: 900px;
-      margin: 3rem auto;
+      margin: 2rem auto;
       background: #fff;
-      color: #333;
       border-radius: 16px;
       padding: 2rem;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-      text-align: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
-    h2 {
+    h2, h3 {
+      text-align: center;
       color: #007bff;
-      margin-bottom: 1rem;
     }
     .stat-box {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
-      margin-top: 1rem;
+      margin-top: 1.5rem;
     }
     .card {
+      background: #f8f9fa;
+      padding: 1rem;
       border-radius: 12px;
-      padding: 1.5rem;
-      font-size: 1.2rem;
-      font-weight: 600;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
     }
-    .total { background: #007bff; color: white; }
-    .approved { background: #28a745; color: white; }
-    .rejected { background: #dc3545; color: white; }
-    .pending { background: #ffc107; color: black; }
-    button {
+    .card h3 {
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    .card p {
+      font-size: 1.4rem;
+      color: #007bff;
+      font-weight: 600;
+    }
+    canvas {
       margin-top: 2rem;
+    }
+    button {
+      display: block;
+      margin: 2rem auto 0;
       background: #007bff;
-      color: #fff;
+      color: white;
       border: none;
       padding: 0.8rem 1.5rem;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 1rem;
       cursor: pointer;
     }
-    button:hover { background: #0056b3; }
-    canvas {
-      margin-top: 3rem;
-      max-width: 100%;
+    button:hover {
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
+
   <main>
-    <h2>📈 Admin Statistikasi</h2>
-    <p>ShaharTaxi tizimidagi e’lonlar holati quyidagicha (avtomatik yangilanadi):</p>
+    <h2>📊 ShaharTaxi - Admin statistikasi</h2>
 
     <div class="stat-box">
-      <div class="card total" id="totalAds">Umumiy: 0</div>
-      <div class="card approved" id="approvedAds">Tasdiqlangan: 0</div>
-      <div class="card rejected" id="rejectedAds">Bekor qilingan: 0</div>
-      <div class="card pending" id="pendingAds">Kutilayotgan: 0</div>
+      <div class="card">
+        <h3>Umumiy e’lonlar</h3>
+        <p id="totalAds">0</p>
+      </div>
+      <div class="card">
+        <h3>Tasdiqlanganlar</h3>
+        <p id="approvedAds">0</p>
+      </div>
+      <div class="card">
+        <h3>Kutilayotganlar</h3>
+        <p id="pendingAds">0</p>
+      </div>
+      <div class="card">
+        <h3>Yo‘lovchilar</h3>
+        <p id="passengerCount">0</p>
+      </div>
+      <div class="card">
+        <h3>Haydovchilar</h3>
+        <p id="driverCount">0</p>
+      </div>
     </div>
 
-    <canvas id="adsChart" height="120"></canvas>
+    <canvas id="adTypeChart" height="120"></canvas>
+    <canvas id="approvalChart" height="120"></canvas>
 
-    <button onclick="window.location.href='admin.html'">⬅️ Admin panelga qaytish</button>
+    <button onclick="window.location.href='admin.html'">⬅️ Orqaga qaytish</button>
   </main>
 
   <script>
-    let chartInstance = null;
-
-    function countStats() {
-      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
+    function loadStats() {
       const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const allAds = [...drivers, ...passengers];
+      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
+
+      const allAds = [...passengers, ...drivers];
 
       const total = allAds.length;
-      const approved = allAds.filter(ad => ad.status === 'approved').length;
-      const rejected = allAds.filter(ad => ad.status === 'rejected').length;
-      const pending = allAds.filter(ad => !ad.status || ad.status === 'pending').length;
+      const approved = allAds.filter(a => a.approved).length;
+      const pending = total - approved;
 
-      document.getElementById('totalAds').innerText = `Umumiy: ${total}`;
-      document.getElementById('approvedAds').innerText = `Tasdiqlangan: ${approved}`;
-      document.getElementById('rejectedAds').innerText = `Bekor qilingan: ${rejected}`;
-      document.getElementById('pendingAds').innerText = `Kutilayotgan: ${pending}`;
+      document.getElementById('totalAds').innerText = total;
+      document.getElementById('approvedAds').innerText = approved;
+      document.getElementById('pendingAds').innerText = pending;
+      document.getElementById('passengerCount').innerText = passengers.length;
+      document.getElementById('driverCount').innerText = drivers.length;
 
-      const data = [approved, rejected, pending];
-      updateChart(data);
+      renderAdTypeChart(passengers.length, drivers.length);
+      renderApprovalChart(approved, pending);
     }
 
-    function updateChart(data) {
-      const ctx = document.getElementById('adsChart').getContext('2d');
-
-      if (chartInstance) {
-        chartInstance.data.datasets[0].data = data;
-        chartInstance.update();
-      } else {
-        chartInstance = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: ['Tasdiqlangan', 'Bekor qilingan', 'Kutilayotgan'],
-            datasets: [{
-              data: data,
-              backgroundColor: ['#28a745', '#dc3545', '#ffc107']
-            }]
-          },
-          options: {
-            plugins: {
-              legend: { position: 'bottom' },
-              title: { display: true, text: 'E’lonlar statistikasi (real-time)' }
-            }
-          }
-        });
-      }
+    function renderAdTypeChart(passengerCount, driverCount) {
+      const ctx = document.getElementById('adTypeChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Yo‘lovchi', 'Haydovchi'],
+          datasets: [{
+            label: 'E’lonlar soni',
+            data: [passengerCount, driverCount],
+            backgroundColor: ['#007bff', '#28a745']
+          }]
+        },
+        options: { plugins: { legend: { display: false } } }
+      });
     }
 
-    // 🔁 Har 2 soniyada avtomatik yangilansin
-    countStats();
-    setInterval(countStats, 2000);
+    function renderApprovalChart(approved, pending) {
+      const ctx = document.getElementById('approvalChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['Tasdiqlangan', 'Kutilmoqda'],
+          datasets: [{
+            data: [approved, pending],
+            backgroundColor: ['#28a745', '#ffc107']
+          }]
+        }
+      });
+    }
+
+    window.onload = loadStats;
   </script>
 </body>
 </html>
