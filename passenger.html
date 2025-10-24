@@ -8,8 +8,9 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #28a745, #00d478);
-      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #ff8c00, #ffcc70);
+      margin: 0;
+      padding: 0;
       color: #333;
     }
     main {
@@ -29,24 +30,26 @@
       font-size: 1rem;
     }
     button {
-      background: #28a745;
+      background: #ff8c00;
       color: #fff;
       border: none;
       cursor: pointer;
+      transition: 0.3s;
     }
     button:hover {
-      background: #1e7e34;
+      background: #e67300;
     }
     h2 {
       text-align: center;
-      color: #28a745;
+      color: #ff8c00;
     }
   </style>
 </head>
 <body>
   <main>
-    <h2>🧍 Yo‘lovchi e’loni joylash</h2>
+    <h2>🧳 Yo‘lovchi e’loni joylash</h2>
 
+    <!-- Qayerdan -->
     <select id="fromRegion" onchange="updateDistricts('from')">
       <option value="">Viloyat (qayerdan)</option>
     </select>
@@ -54,6 +57,7 @@
       <option value="">Tuman (qayerdan)</option>
     </select>
 
+    <!-- Qayerga -->
     <select id="toRegion" onchange="updateDistricts('to')">
       <option value="">Viloyat (qayerga)</option>
     </select>
@@ -61,64 +65,76 @@
       <option value="">Tuman (qayerga)</option>
     </select>
 
-    <input type="text" id="phone" placeholder="Telefon raqam">
-    <input type="number" id="price" placeholder="Yo‘l haqi (so‘m)">
+    <input id="name" placeholder="Ismingiz" />
+    <input id="phone" placeholder="Telefon raqamingiz" />
+    <input id="price" placeholder="Taklif narx (so‘m)" />
+
     <button onclick="savePassengerAd()">E’lonni joylash</button>
+
+    <p id="msg" style="color:green;text-align:center;"></p>
   </main>
 
+  <script src="regions.js"></script>
   <script>
-    const regions = {
-      "Toshkent": ["Chilonzor", "Yunusobod", "Mirzo Ulug‘bek", "Bektemir"],
-      "Andijon": ["Asaka", "Shahrixon", "Andijon sh."],
-      "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Farg‘ona sh."],
-      "Namangan": ["Chortoq", "Pop", "Namangan sh."]
-    };
-
-    function populateRegions() {
-      const from = document.getElementById('fromRegion');
-      const to = document.getElementById('toRegion');
-      Object.keys(regions).forEach(region => {
-        from.innerHTML += `<option value="${region}">${region}</option>`;
-        to.innerHTML += `<option value="${region}">${region}</option>`;
+    // ✅ Viloyatlar ro‘yxatini yuklash
+    function loadRegions() {
+      const selects = ["fromRegion", "toRegion"];
+      selects.forEach(id => {
+        const select = document.getElementById(id);
+        Object.keys(regions).forEach(region => {
+          const opt = document.createElement("option");
+          opt.value = region;
+          opt.textContent = region;
+          select.appendChild(opt);
+        });
       });
     }
 
+    // ✅ Tanlangan viloyatga qarab tumanlarni yangilash
     function updateDistricts(type) {
-      const region = document.getElementById(type + 'Region').value;
-      const districtSelect = document.getElementById(type + 'District');
-      districtSelect.innerHTML = '<option value="">Tuman tanlang</option>';
-      if (regions[region]) {
-        regions[region].forEach(d => {
-          districtSelect.innerHTML += `<option value="${d}">${d}</option>`;
+      const regionSelect = document.getElementById(type + "Region");
+      const districtSelect = document.getElementById(type + "District");
+      const selectedRegion = regionSelect.value;
+
+      districtSelect.innerHTML = "<option value=''>Tuman</option>";
+      if (regions[selectedRegion]) {
+        regions[selectedRegion].forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d;
+          opt.textContent = d;
+          districtSelect.appendChild(opt);
         });
       }
     }
 
+    // ✅ Yo‘lovchi e’lonini saqlash
     function savePassengerAd() {
       const ad = {
+        type: "passenger",
         fromRegion: document.getElementById('fromRegion').value,
         fromDistrict: document.getElementById('fromDistrict').value,
         toRegion: document.getElementById('toRegion').value,
         toDistrict: document.getElementById('toDistrict').value,
+        name: document.getElementById('name').value,
         phone: document.getElementById('phone').value,
         price: document.getElementById('price').value,
-        date: new Date().toISOString().split("T")[0] // ✅ sana qo‘shildi
+        date: new Date().toLocaleString()
       };
 
-      if (!ad.fromRegion || !ad.toRegion || !ad.phone || !ad.price) {
-        alert("Iltimos, barcha maydonlarni to‘ldiring!");
+      if (!ad.fromRegion || !ad.toRegion || !ad.phone) {
+        alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
         return;
       }
 
-      const ads = JSON.parse(localStorage.getItem("passengerAds")) || [];
+      const ads = JSON.parse(localStorage.getItem('passengerAds')) || [];
       ads.push(ad);
-      localStorage.setItem("passengerAds", JSON.stringify(ads));
+      localStorage.setItem('passengerAds', JSON.stringify(ads));
 
-      alert("E’lon muvaffaqiyatli joylandi!");
-      window.location.href = "index.html";
+      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
+      setTimeout(() => location.href = 'index.html', 1500);
     }
 
-    populateRegions();
+    window.onload = loadRegions;
   </script>
 </body>
 </html>
