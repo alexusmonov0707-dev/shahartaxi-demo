@@ -68,27 +68,44 @@
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
 
-      const allAds = [...driverAds, ...passengerAds];
       const adsList = document.getElementById("adsList");
       adsList.innerHTML = "";
 
-      if (allAds.length === 0) {
+      if (driverAds.length === 0 && passengerAds.length === 0) {
         adsList.innerHTML = "<p style='text-align:center;color:#888'>Hozircha e’lonlar yo‘q.</p>";
         return;
       }
 
-      allAds.forEach((ad, index) => {
+      // Haydovchilar
+      driverAds.forEach((ad, index) => {
         const div = document.createElement("div");
         div.className = "ad";
         div.innerHTML = `
-          <h3>${ad.type === "driver" ? "🚗 Haydovchi" : "🧳 Yo‘lovchi"} e’loni</h3>
+          <h3>🚗 Haydovchi e’loni</h3>
           <p><b>Yo‘nalish:</b> ${ad.fromRegion || ""} ${ad.fromDistrict || ""} ➝ ${ad.toRegion || ""} ${ad.toDistrict || ""}</p>
           <p><b>Telefon:</b> ${ad.phone}</p>
           <p><b>Narx:</b> ${ad.price || "—"} so‘m</p>
           <p><b>Holat:</b> ${ad.approved ? "✅ Tasdiqlangan" : "⏳ Kutilmoqda"}</p>
-          <button class="approve" onclick="approveAd('${ad.type}', ${index})">Tasdiqlash</button>
-          <button class="edit" onclick="editAd('${ad.type}', ${index})">Tahrirlash</button>
-          <button class="reject" onclick="rejectAd('${ad.type}', ${index})">Rad etish</button>
+          <button class="approve" onclick="approveAd('driver', ${index})">Tasdiqlash</button>
+          <button class="edit" onclick="editAd('driver', ${index})">Tahrirlash</button>
+          <button class="reject" onclick="rejectAd('driver', ${index})">Rad etish</button>
+        `;
+        adsList.appendChild(div);
+      });
+
+      // Yo‘lovchilar
+      passengerAds.forEach((ad, index) => {
+        const div = document.createElement("div");
+        div.className = "ad";
+        div.innerHTML = `
+          <h3>🧳 Yo‘lovchi e’loni</h3>
+          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ""} ${ad.fromDistrict || ""} ➝ ${ad.toRegion || ""} ${ad.toDistrict || ""}</p>
+          <p><b>Telefon:</b> ${ad.phone}</p>
+          <p><b>Narx:</b> ${ad.price || "—"} so‘m</p>
+          <p><b>Holat:</b> ${ad.approved ? "✅ Tasdiqlangan" : "⏳ Kutilmoqda"}</p>
+          <button class="approve" onclick="approveAd('passenger', ${index})">Tasdiqlash</button>
+          <button class="edit" onclick="editAd('passenger', ${index})">Tahrirlash</button>
+          <button class="reject" onclick="rejectAd('passenger', ${index})">Rad etish</button>
         `;
         adsList.appendChild(div);
       });
@@ -125,7 +142,7 @@
       loadAds();
     }
 
-    // ⏱ Har 5 soniyada yangilanish
+    // Har 5 soniyada avtomatik yangilanish
     setInterval(loadAds, 5000);
     window.onload = loadAds;
   </script>
