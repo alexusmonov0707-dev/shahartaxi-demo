@@ -8,138 +8,197 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #141E30, #243B55);
-      color: #fff;
       margin: 0;
-      padding: 0;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      color: #333;
+    }
+    header {
+      background: white;
+      padding: 1rem 2rem;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    header h1 {
+      margin: 0;
+      color: #007bff;
     }
     main {
       max-width: 900px;
       margin: 2rem auto;
       background: #fff;
-      color: #333;
-      border-radius: 16px;
       padding: 2rem;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
-    h2 {
-      text-align: center;
-      color: #007bff;
-    }
-    input {
+    table {
       width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
       padding: 0.8rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      margin-bottom: 1rem;
-      font-size: 1rem;
+      text-align: center;
+    }
+    th {
+      background: #007bff;
+      color: white;
     }
     button {
-      background: #007bff;
+      padding: 0.5rem 0.8rem;
       border: none;
-      padding: 10px 20px;
       border-radius: 8px;
-      color: white;
-      font-size: 1rem;
       cursor: pointer;
+      font-size: 0.9rem;
     }
-    button:hover {
-      background: #0056b3;
-    }
-    .ad-card {
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      padding: 1rem;
+    .approve { background: #28a745; color: white; }
+    .edit { background: #ffc107; color: black; }
+    .delete { background: #dc3545; color: white; }
+    .save { background: #17a2b8; color: white; }
+    .alert-box {
+      background: #ffeb3b;
+      color: #333;
+      text-align: center;
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-weight: 600;
+      display: none;
       margin-bottom: 1rem;
-      background: #f8f9fa;
     }
-    .approved {
-      border-left: 6px solid #28a745;
-    }
-    .pending {
-      border-left: 6px solid #ffc107;
-    }
-    .rejected {
-      border-left: 6px solid #dc3545;
-    }
-    .hidden { display: none; }
   </style>
 </head>
 <body>
+  <header>
+    <h1>🛠 Admin Panel - ShaharTaxi</h1>
+  </header>
+
   <main>
-    <h2>🔐 Admin Panel</h2>
+    <div id="alertBox" class="alert-box">🔔 Yangi e’lon qo‘shildi!</div>
 
-    <!-- Parol oynasi -->
-    <div id="loginSection">
-      <p>Admin parolini kiriting:</p>
-      <input type="password" id="adminPassword" placeholder="Parol">
-      <button onclick="checkPassword()">Kirish</button>
-      <p id="errorMsg" style="color:red;"></p>
-    </div>
+    <h2>🚗 Haydovchi e’lonlari</h2>
+    <table id="driverTable">
+      <tr>
+        <th>Yo‘nalish</th>
+        <th>Haydovchi</th>
+        <th>Telefon</th>
+        <th>Narx</th>
+        <th>Amallar</th>
+      </tr>
+    </table>
 
-    <!-- Asosiy panel -->
-    <div id="adminPanel" class="hidden">
-      <h3>🚗 Haydovchi e’lonlari</h3>
-      <div id="driverList"></div>
-
-      <h3>🧍 Yo‘lovchi e’lonlari</h3>
-      <div id="passengerList"></div>
-    </div>
+    <h2>🧍 Yo‘lovchi e’lonlari</h2>
+    <table id="passengerTable">
+      <tr>
+        <th>Yo‘nalish</th>
+        <th>Telefon</th>
+        <th>Narx</th>
+        <th>Amallar</th>
+      </tr>
+    </table>
   </main>
 
+  <!-- 🔊 Signal uchun audio -->
+  <audio id="newAdSound" src="https://www.soundjay.com/buttons/sounds/beep-07a.mp3" preload="auto"></audio>
+
   <script>
-    const ADMIN_PASSWORD = "12345"; // 🔑 Admin parol (istalgancha o‘zgartirish mumkin)
+    let previousDriverCount = 0;
+    let previousPassengerCount = 0;
 
-    function checkPassword() {
-      const input = document.getElementById("adminPassword").value;
-      const error = document.getElementById("errorMsg");
-      if (input === ADMIN_PASSWORD) {
-        document.getElementById("loginSection").classList.add("hidden");
-        document.getElementById("adminPanel").classList.remove("hidden");
-        loadAds();
-      } else {
-        error.innerText = "❌ Parol noto‘g‘ri!";
-      }
-    }
+    function loadData() {
+      const driverTable = document.getElementById("driverTable");
+      const passengerTable = document.getElementById("passengerTable");
+      const alertBox = document.getElementById("alertBox");
+      const sound = document.getElementById("newAdSound");
 
-    function loadAds() {
-      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      showAds('driverList', drivers, 'driverAds');
-      showAds('passengerList', passengers, 'passengerAds');
-    }
+      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
 
-    function showAds(containerId, ads, storageKey) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = "";
-
-      if (ads.length === 0) {
-        container.innerHTML = "<p>Hozircha e’lonlar yo‘q.</p>";
-        return;
+      // Agar yangi e’lon qo‘shilgan bo‘lsa signal berish
+      if (driverAds.length > previousDriverCount || passengerAds.length > previousPassengerCount) {
+        alertBox.style.display = "block";
+        sound.play();
+        setTimeout(() => alertBox.style.display = "none", 4000);
       }
 
-      ads.forEach((ad, index) => {
-        const div = document.createElement('div');
-        div.className = `ad-card ${ad.status || 'pending'}`;
-        div.innerHTML = `
-          <strong>${ad.fromRegion} ${ad.fromDistrict}</strong> → 
-          <strong>${ad.toRegion} ${ad.toDistrict}</strong><br>
-          📞 ${ad.phone} <br>
-          💰 ${ad.price} so‘m<br>
-          <p>Holat: <b>${ad.status || "kutilmoqda"}</b></p>
-          <button onclick="updateStatus('${storageKey}', ${index}, 'approved')">✅ Tasdiqlash</button>
-          <button onclick="updateStatus('${storageKey}', ${index}, 'rejected')">❌ Bekor qilish</button>
-        `;
-        container.appendChild(div);
+      previousDriverCount = driverAds.length;
+      previousPassengerCount = passengerAds.length;
+
+      driverTable.innerHTML = `
+        <tr>
+          <th>Yo‘nalish</th>
+          <th>Haydovchi</th>
+          <th>Telefon</th>
+          <th>Narx</th>
+          <th>Amallar</th>
+        </tr>`;
+
+      passengerTable.innerHTML = `
+        <tr>
+          <th>Yo‘nalish</th>
+          <th>Telefon</th>
+          <th>Narx</th>
+          <th>Amallar</th>
+        </tr>`;
+
+      driverAds.forEach((ad, i) => {
+        const row = driverTable.insertRow();
+        row.innerHTML = `
+          <td>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</td>
+          <td>${ad.driver}</td>
+          <td contenteditable="true">${ad.phone}</td>
+          <td contenteditable="true">${ad.price}</td>
+          <td>
+            <button class="approve" onclick="approveAd('driver', ${i})">✅</button>
+            <button class="edit" onclick="saveEdit('driver', ${i}, this)">💾</button>
+            <button class="delete" onclick="deleteAd('driver', ${i})">🗑️</button>
+          </td>`;
+      });
+
+      passengerAds.forEach((ad, i) => {
+        const row = passengerTable.insertRow();
+        row.innerHTML = `
+          <td>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</td>
+          <td contenteditable="true">${ad.phone}</td>
+          <td contenteditable="true">${ad.price}</td>
+          <td>
+            <button class="approve" onclick="approveAd('passenger', ${i})">✅</button>
+            <button class="edit" onclick="saveEdit('passenger', ${i}, this)">💾</button>
+            <button class="delete" onclick="deleteAd('passenger', ${i})">🗑️</button>
+          </td>`;
       });
     }
 
-    function updateStatus(storageKey, index, status) {
-      const ads = JSON.parse(localStorage.getItem(storageKey)) || [];
-      ads[index].status = status;
-      localStorage.setItem(storageKey, JSON.stringify(ads));
-      loadAds();
+    function saveEdit(type, index, btn) {
+      const table = type === 'driver' ? document.getElementById('driverTable') : document.getElementById('passengerTable');
+      const row = btn.closest('tr');
+      const cells = row.querySelectorAll('td');
+      const ads = JSON.parse(localStorage.getItem(type + 'Ads')) || [];
+
+      if (type === 'driver') {
+        ads[index].phone = cells[2].innerText;
+        ads[index].price = cells[3].innerText;
+      } else {
+        ads[index].phone = cells[1].innerText;
+        ads[index].price = cells[2].innerText;
+      }
+
+      localStorage.setItem(type + 'Ads', JSON.stringify(ads));
+      alert('✅ Ma’lumot yangilandi');
     }
+
+    function deleteAd(type, index) {
+      const ads = JSON.parse(localStorage.getItem(type + 'Ads')) || [];
+      ads.splice(index, 1);
+      localStorage.setItem(type + 'Ads', JSON.stringify(ads));
+      loadData();
+    }
+
+    function approveAd(type, index) {
+      alert("✅ E’lon tasdiqlandi!");
+    }
+
+    loadData();
+    setInterval(loadData, 2000); // Har 2 soniyada yangilanadi
   </script>
 </body>
 </html>
