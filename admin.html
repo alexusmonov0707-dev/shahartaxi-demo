@@ -3,202 +3,234 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - ShaharTaxi</title>
+  <title>Admin panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      margin: 0;
       background: linear-gradient(135deg, #007bff, #00c6ff);
-      color: #333;
-    }
-    header {
-      background: white;
-      padding: 1rem 2rem;
-      text-align: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    header h1 {
       margin: 0;
-      color: #007bff;
+      padding: 0;
+      color: #333;
     }
     main {
       max-width: 900px;
       margin: 2rem auto;
       background: #fff;
-      padding: 2rem;
       border-radius: 16px;
+      padding: 2rem;
       box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #007bff;
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 1rem;
+      margin-top: 1.5rem;
     }
     th, td {
       border: 1px solid #ddd;
-      padding: 0.8rem;
+      padding: 0.7rem;
       text-align: center;
     }
     th {
-      background: #007bff;
+      background-color: #007bff;
       color: white;
     }
     button {
-      padding: 0.5rem 0.8rem;
+      padding: 0.4rem 0.8rem;
       border: none;
-      border-radius: 8px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 0.9rem;
+      color: white;
+      font-weight: 600;
     }
-    .approve { background: #28a745; color: white; }
-    .edit { background: #ffc107; color: black; }
-    .delete { background: #dc3545; color: white; }
-    .save { background: #17a2b8; color: white; }
-    .alert-box {
-      background: #ffeb3b;
-      color: #333;
+    .approve { background: #28a745; }
+    .edit { background: #ffc107; color: #333; }
+    .delete { background: #dc3545; }
+    .logout { background: #6c757d; float: right; margin-top: -2.2rem; }
+    .hidden { display: none; }
+
+    /* Login form */
+    #loginBox {
+      max-width: 350px;
+      margin: 10rem auto;
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
       text-align: center;
+    }
+    #loginBox input {
+      width: 100%;
+      padding: 0.8rem;
+      margin-top: 1rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    #loginBox button {
+      width: 100%;
+      margin-top: 1rem;
+      background: #007bff;
+      color: white;
+      border: none;
       padding: 0.8rem;
       border-radius: 8px;
-      font-weight: 600;
-      display: none;
-      margin-bottom: 1rem;
+      font-size: 1rem;
+      cursor: pointer;
     }
+    #loginBox p { color: red; margin-top: 0.5rem; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🛠 Admin Panel - ShaharTaxi</h1>
-  </header>
 
-  <main>
-    <div id="alertBox" class="alert-box">🔔 Yangi e’lon qo‘shildi!</div>
+  <!-- Login -->
+  <div id="loginBox">
+    <h2>🔐 Admin panelga kirish</h2>
+    <input type="password" id="adminPass" placeholder="Parolni kiriting">
+    <button onclick="checkLogin()">Kirish</button>
+    <p id="errorMsg"></p>
+  </div>
 
-    <h2>🚗 Haydovchi e’lonlari</h2>
-    <table id="driverTable">
-      <tr>
-        <th>Yo‘nalish</th>
-        <th>Haydovchi</th>
-        <th>Telefon</th>
-        <th>Narx</th>
-        <th>Amallar</th>
-      </tr>
-    </table>
+  <!-- Admin Panel -->
+  <main id="adminPanel" class="hidden">
+    <h2>🧑‍💼 ShaharTaxi Admin paneli</h2>
+    <button class="logout" onclick="logout()">Chiqish</button>
 
-    <h2>🧍 Yo‘lovchi e’lonlari</h2>
+    <h3>🧍 Yo‘lovchi e’lonlari</h3>
     <table id="passengerTable">
-      <tr>
-        <th>Yo‘nalish</th>
-        <th>Telefon</th>
-        <th>Narx</th>
-        <th>Amallar</th>
-      </tr>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Qayerdan</th>
+          <th>Qayerga</th>
+          <th>Tel</th>
+          <th>Narx</th>
+          <th>Holat</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
     </table>
+
+    <h3>🚗 Haydovchi e’lonlari</h3>
+    <table id="driverTable">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Qayerdan</th>
+          <th>Qayerga</th>
+          <th>Tel</th>
+          <th>Narx</th>
+          <th>Holat</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <h3>📊 Statistika</h3>
+    <canvas id="statChart" height="120"></canvas>
   </main>
 
-  <!-- 🔊 Signal uchun audio -->
-  <audio id="newAdSound" src="https://www.soundjay.com/buttons/sounds/beep-07a.mp3" preload="auto"></audio>
-
   <script>
-    let previousDriverCount = 0;
-    let previousPassengerCount = 0;
+    const ADMIN_PASSWORD = "admin123";
 
-    function loadData() {
-      const driverTable = document.getElementById("driverTable");
-      const passengerTable = document.getElementById("passengerTable");
-      const alertBox = document.getElementById("alertBox");
-      const sound = document.getElementById("newAdSound");
-
-      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-
-      // Agar yangi e’lon qo‘shilgan bo‘lsa signal berish
-      if (driverAds.length > previousDriverCount || passengerAds.length > previousPassengerCount) {
-        alertBox.style.display = "block";
-        sound.play();
-        setTimeout(() => alertBox.style.display = "none", 4000);
-      }
-
-      previousDriverCount = driverAds.length;
-      previousPassengerCount = passengerAds.length;
-
-      driverTable.innerHTML = `
-        <tr>
-          <th>Yo‘nalish</th>
-          <th>Haydovchi</th>
-          <th>Telefon</th>
-          <th>Narx</th>
-          <th>Amallar</th>
-        </tr>`;
-
-      passengerTable.innerHTML = `
-        <tr>
-          <th>Yo‘nalish</th>
-          <th>Telefon</th>
-          <th>Narx</th>
-          <th>Amallar</th>
-        </tr>`;
-
-      driverAds.forEach((ad, i) => {
-        const row = driverTable.insertRow();
-        row.innerHTML = `
-          <td>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</td>
-          <td>${ad.driver}</td>
-          <td contenteditable="true">${ad.phone}</td>
-          <td contenteditable="true">${ad.price}</td>
-          <td>
-            <button class="approve" onclick="approveAd('driver', ${i})">✅</button>
-            <button class="edit" onclick="saveEdit('driver', ${i}, this)">💾</button>
-            <button class="delete" onclick="deleteAd('driver', ${i})">🗑️</button>
-          </td>`;
-      });
-
-      passengerAds.forEach((ad, i) => {
-        const row = passengerTable.insertRow();
-        row.innerHTML = `
-          <td>${ad.fromRegion} (${ad.fromDistrict}) → ${ad.toRegion} (${ad.toDistrict})</td>
-          <td contenteditable="true">${ad.phone}</td>
-          <td contenteditable="true">${ad.price}</td>
-          <td>
-            <button class="approve" onclick="approveAd('passenger', ${i})">✅</button>
-            <button class="edit" onclick="saveEdit('passenger', ${i}, this)">💾</button>
-            <button class="delete" onclick="deleteAd('passenger', ${i})">🗑️</button>
-          </td>`;
-      });
-    }
-
-    function saveEdit(type, index, btn) {
-      const table = type === 'driver' ? document.getElementById('driverTable') : document.getElementById('passengerTable');
-      const row = btn.closest('tr');
-      const cells = row.querySelectorAll('td');
-      const ads = JSON.parse(localStorage.getItem(type + 'Ads')) || [];
-
-      if (type === 'driver') {
-        ads[index].phone = cells[2].innerText;
-        ads[index].price = cells[3].innerText;
+    function checkLogin() {
+      const pass = document.getElementById("adminPass").value;
+      const errorMsg = document.getElementById("errorMsg");
+      if (pass === ADMIN_PASSWORD) {
+        localStorage.setItem("isAdminLoggedIn", "true");
+        showAdminPanel();
       } else {
-        ads[index].phone = cells[1].innerText;
-        ads[index].price = cells[2].innerText;
+        errorMsg.innerText = "❌ Noto‘g‘ri parol!";
       }
-
-      localStorage.setItem(type + 'Ads', JSON.stringify(ads));
-      alert('✅ Ma’lumot yangilandi');
     }
 
-    function deleteAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type + 'Ads')) || [];
-      ads.splice(index, 1);
-      localStorage.setItem(type + 'Ads', JSON.stringify(ads));
+    function showAdminPanel() {
+      document.getElementById("loginBox").classList.add("hidden");
+      document.getElementById("adminPanel").classList.remove("hidden");
       loadData();
     }
 
-    function approveAd(type, index) {
-      alert("✅ E’lon tasdiqlandi!");
+    function logout() {
+      localStorage.removeItem("isAdminLoggedIn");
+      document.getElementById("adminPanel").classList.add("hidden");
+      document.getElementById("loginBox").classList.remove("hidden");
     }
 
-    loadData();
-    setInterval(loadData, 2000); // Har 2 soniyada yangilanadi
+    // Agar oldin login bo‘lgan bo‘lsa
+    window.onload = () => {
+      if (localStorage.getItem("isAdminLoggedIn") === "true") {
+        showAdminPanel();
+      }
+    };
+
+    function loadData() {
+      loadTable("passengerAds", "passengerTable");
+      loadTable("driverAds", "driverTable");
+      renderChart();
+    }
+
+    function loadTable(key, tableId) {
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const tbody = document.querySelector(`#${tableId} tbody`);
+      tbody.innerHTML = "";
+
+      ads.forEach((ad, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${ad.fromRegion || "-"}, ${ad.fromDistrict || "-"}</td>
+          <td>${ad.toRegion || "-"}, ${ad.toDistrict || "-"}</td>
+          <td>${ad.phone}</td>
+          <td>${ad.price}</td>
+          <td>${ad.approved ? "✅ Tasdiqlangan" : "🕓 Kutilmoqda"}</td>
+          <td>
+            <button class="approve" onclick="approveAd('${key}', ${index})">Tasdiqlash</button>
+            <button class="delete" onclick="deleteAd('${key}', ${index})">O‘chirish</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function approveAd(key, index) {
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      ads[index].approved = true;
+      localStorage.setItem(key, JSON.stringify(ads));
+      loadData();
+    }
+
+    function deleteAd(key, index) {
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      ads.splice(index, 1);
+      localStorage.setItem(key, JSON.stringify(ads));
+      loadData();
+    }
+
+    function renderChart() {
+      const passengerCount = (JSON.parse(localStorage.getItem('passengerAds')) || []).length;
+      const driverCount = (JSON.parse(localStorage.getItem('driverAds')) || []).length;
+
+      const ctx = document.getElementById('statChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Yo‘lovchi', 'Haydovchi'],
+          datasets: [{
+            label: 'E’lonlar soni',
+            data: [passengerCount, driverCount],
+            backgroundColor: ['#007bff', '#28a745']
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
   </script>
 </body>
 </html>
