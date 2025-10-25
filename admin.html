@@ -42,6 +42,7 @@
     .approve { background: #28a745; color: white; }
     .reject { background: #dc3545; color: white; }
     .edit { background: #ffc107; }
+    .delete { background: #6c757d; color: white; }
   </style>
 </head>
 <body>
@@ -65,8 +66,9 @@
     function loadAds() {
       const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      allAds = [...drivers, ...passengers];
+      allAds = [...drivers.map(d => ({...d, type: 'driver'})), ...passengers.map(p => ({...p, type: 'passenger'}))];
       renderAds();
+      updateStats();
     }
 
     function renderAds() {
@@ -93,6 +95,7 @@
             <button class="approve" onclick="approveAd(${index})">Tasdiqlash</button>
             <button class="reject" onclick="rejectAd(${index})">Rad etish</button>
             <button class="edit" onclick="editAd(${index})">Tahrirlash</button>
+            <button class="delete" onclick="deleteAd(${index})">O‘chirish</button>
           </div>
         `;
         container.appendChild(div);
@@ -118,9 +121,16 @@
       saveAllAds();
     }
 
+    function deleteAd(index) {
+      if (confirm("Bu e’loni o‘chirmoqchimisiz?")) {
+        allAds.splice(index, 1);
+        saveAllAds();
+      }
+    }
+
     function saveAllAds() {
       const drivers = allAds.filter(ad => ad.type === 'driver');
-      const passengers = allAds.filter(ad => ad.type !== 'driver');
+      const passengers = allAds.filter(ad => ad.type === 'passenger');
       localStorage.setItem('driverAds', JSON.stringify(drivers));
       localStorage.setItem('passengerAds', JSON.stringify(passengers));
       renderAds();
@@ -135,12 +145,15 @@
     }
 
     function updateStats() {
-      localStorage.setItem('lastUpdate', new Date().toISOString());
+      const approved = allAds.filter(ad => ad.status === 'approved').length;
+      const rejected = allAds.filter(ad => ad.status === 'rejected').length;
+      const pending = allAds.filter(ad => !ad.status || ad.status === 'pending').length;
+
+      const stats = { approved, rejected, pending, total: allAds.length, updatedAt: new Date().toISOString() };
+      localStorage.setItem('adminStats', JSON.stringify(stats));
     }
 
-    // Har 5 soniyada avtomatik yangilanish
     setInterval(loadAds, 5000);
-
     loadAds();
   </script>
 </body>
