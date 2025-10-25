@@ -8,153 +8,146 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #00c6ff, #007bff);
+      background: #f4f6f8;
       margin: 0; padding: 0;
-      color: #333;
+    }
+    header {
+      background: #007bff;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
     }
     main {
       max-width: 900px;
-      margin: 2rem auto;
+      margin: 1rem auto;
       background: #fff;
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    h2 { text-align: center; margin-bottom: 1rem; }
-    .filters { text-align: center; margin-bottom: 1.5rem; }
-    .filters button {
-      margin: 0 5px; padding: 8px 16px;
-      border: none; border-radius: 8px;
-      background: #007bff; color: white;
-      cursor: pointer; font-weight: 600;
+    .ad {
+      border-bottom: 1px solid #ddd;
+      padding: 1rem 0;
     }
-    .filters button.active { background: #0056b3; }
-    .ad-card {
-      background: #f9f9f9;
-      padding: 1rem; border-radius: 12px;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    .ad:last-child {
+      border-bottom: none;
     }
-    .ad-actions button {
-      margin-right: 8px; padding: 6px 12px;
-      border: none; border-radius: 6px; cursor: pointer;
+    .actions button {
+      margin-right: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
-    .approve { background: #28a745; color: white; }
-    .reject { background: #dc3545; color: white; }
+    .approve { background: #28a745; color: #fff; }
+    .reject { background: #dc3545; color: #fff; }
     .edit { background: #ffc107; }
-    .delete { background: #6c757d; color: white; }
+    .delete { background: #6c757d; color: #fff; }
+    select {
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+    }
   </style>
 </head>
 <body>
+  <header>
+    <h1>🛠 Admin Panel - ShaharTaxi</h1>
+  </header>
   <main>
-    <h2>🛠 Admin Panel - ShaharTaxi</h2>
-    
-    <div class="filters">
-      <button class="active" onclick="filterAds('all')">Barchasi</button>
-      <button onclick="filterAds('pending')">Kutilayotgan</button>
-      <button onclick="filterAds('approved')">Tasdiqlangan</button>
-      <button onclick="filterAds('rejected')">Rad etilgan</button>
-    </div>
+    <h3>Filtrlash:</h3>
+    <select id="filter" onchange="renderAds()">
+      <option value="all">Barcha e’lonlar</option>
+      <option value="drivers">Haydovchilar</option>
+      <option value="passengers">Yo‘lovchilar</option>
+    </select>
 
-    <div id="adsContainer"></div>
+    <div id="ads"></div>
   </main>
 
   <script>
-    let allAds = [];
-    let currentFilter = 'all';
-
-    function loadAds() {
+    function getAds() {
       const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      allAds = [...drivers.map(d => ({...d, type: 'driver'})), ...passengers.map(p => ({...p, type: 'passenger'}))];
-      renderAds();
-      updateStats();
+      return { drivers, passengers };
     }
 
     function renderAds() {
-      const container = document.getElementById('adsContainer');
-      container.innerHTML = '';
-      const filtered = allAds.filter(ad => 
-        currentFilter === 'all' ? true : (ad.status || 'pending') === currentFilter
-      );
-      
-      if (filtered.length === 0) {
-        container.innerHTML = "<p style='text-align:center;color:gray;'>E’lonlar yo‘q</p>";
-        return;
-      }
+      const { drivers, passengers } = getAds();
+      const filter = document.getElementById("filter").value;
+      let ads = [];
 
-      filtered.forEach((ad, index) => {
-        const div = document.createElement('div');
-        div.className = 'ad-card';
+      if (filter === "drivers") ads = drivers.map(a => ({...a, type: 'driver'}));
+      else if (filter === "passengers") ads = passengers.map(a => ({...a, type: 'passenger'}));
+      else ads = [...drivers.map(a => ({...a, type: 'driver'})), ...passengers.map(a => ({...a, type: 'passenger'}))];
+
+      const container = document.getElementById("ads");
+      container.innerHTML = "";
+
+      ads.forEach((ad, index) => {
+        const div = document.createElement("div");
+        div.className = "ad";
         div.innerHTML = `
-          <strong>${ad.fromRegion || ''} → ${ad.toRegion || ''}</strong><br>
-          📍 ${ad.fromDistrict || ''} - ${ad.toDistrict || ''}<br>
-          ☎️ ${ad.phone || '-'}<br>
-          💰 ${ad.price || '-'} so‘m<br>
-          <div class="ad-actions">
-            <button class="approve" onclick="approveAd(${index})">Tasdiqlash</button>
-            <button class="reject" onclick="rejectAd(${index})">Rad etish</button>
-            <button class="edit" onclick="editAd(${index})">Tahrirlash</button>
-            <button class="delete" onclick="deleteAd(${index})">O‘chirish</button>
+          <p><strong>Turi:</strong> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
+          <p><strong>Yo‘nalish:</strong> ${ad.fromRegion || ''}, ${ad.fromDistrict || ''} ➜ ${ad.toRegion || ''}, ${ad.toDistrict || ''}</p>
+          <p><strong>Telefon:</strong> ${ad.phone || '-'}</p>
+          <p><strong>Narx:</strong> ${ad.price || '-'} so‘m</p>
+          <p><strong>🟢 Holat:</strong> ${getStatusText(ad.status)}</p>
+          <div class="actions">
+            <button class="approve" onclick="updateStatus('${ad.type}', ${index}, 'approved')">Tasdiqlash</button>
+            <button class="reject" onclick="updateStatus('${ad.type}', ${index}, 'rejected')">Rad etish</button>
+            <button class="edit" onclick="editAd('${ad.type}', ${index})">Tahrirlash</button>
+            <button class="delete" onclick="deleteAd('${ad.type}', ${index})">O‘chirish</button>
           </div>
         `;
         container.appendChild(div);
       });
     }
 
-    function approveAd(index) {
-      allAds[index].status = 'approved';
-      saveAllAds();
-    }
-
-    function rejectAd(index) {
-      allAds[index].status = 'rejected';
-      saveAllAds();
-    }
-
-    function editAd(index) {
-      const ad = allAds[index];
-      const newPhone = prompt("Telefon raqamni tahrirlang:", ad.phone);
-      const newPrice = prompt("Narxni tahrirlang:", ad.price);
-      if (newPhone) ad.phone = newPhone;
-      if (newPrice) ad.price = newPrice;
-      saveAllAds();
-    }
-
-    function deleteAd(index) {
-      if (confirm("Bu e’loni o‘chirmoqchimisiz?")) {
-        allAds.splice(index, 1);
-        saveAllAds();
+    function getStatusText(status) {
+      switch(status) {
+        case 'approved': return 'Tasdiqlangan ✅';
+        case 'rejected': return 'Rad etilgan ❌';
+        default: return 'Kutilmoqda ⏳';
       }
     }
 
-    function saveAllAds() {
-      const drivers = allAds.filter(ad => ad.type === 'driver');
-      const passengers = allAds.filter(ad => ad.type === 'passenger');
-      localStorage.setItem('driverAds', JSON.stringify(drivers));
-      localStorage.setItem('passengerAds', JSON.stringify(passengers));
+    function updateStatus(type, index, status) {
+      const ads = JSON.parse(localStorage.getItem(type === 'driver' ? 'driverAds' : 'passengerAds')) || [];
+      ads[index].status = status;
+      localStorage.setItem(type === 'driver' ? 'driverAds' : 'passengerAds', JSON.stringify(ads));
       renderAds();
       updateStats();
     }
 
-    function filterAds(type) {
-      currentFilter = type;
-      document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+    function editAd(type, index) {
+      const ads = JSON.parse(localStorage.getItem(type === 'driver' ? 'driverAds' : 'passengerAds')) || [];
+      const newPrice = prompt("Yangi narx:", ads[index].price);
+      const newPhone = prompt("Yangi telefon:", ads[index].phone);
+      if (newPrice !== null) ads[index].price = newPrice;
+      if (newPhone !== null) ads[index].phone = newPhone;
+      localStorage.setItem(type === 'driver' ? 'driverAds' : 'passengerAds', JSON.stringify(ads));
       renderAds();
     }
 
-    function updateStats() {
-      const approved = allAds.filter(ad => ad.status === 'approved').length;
-      const rejected = allAds.filter(ad => ad.status === 'rejected').length;
-      const pending = allAds.filter(ad => !ad.status || ad.status === 'pending').length;
-
-      const stats = { approved, rejected, pending, total: allAds.length, updatedAt: new Date().toISOString() };
-      localStorage.setItem('adminStats', JSON.stringify(stats));
+    function deleteAd(type, index) {
+      const ads = JSON.parse(localStorage.getItem(type === 'driver' ? 'driverAds' : 'passengerAds')) || [];
+      ads.splice(index, 1);
+      localStorage.setItem(type === 'driver' ? 'driverAds' : 'passengerAds', JSON.stringify(ads));
+      renderAds();
+      updateStats();
     }
 
-    setInterval(loadAds, 5000);
-    loadAds();
+    function updateStats() {
+      const all = getAds();
+      localStorage.setItem("stats", JSON.stringify({
+        drivers: all.drivers.length,
+        passengers: all.passengers.length,
+        approved: [...all.drivers, ...all.passengers].filter(a => a.status === 'approved').length
+      }));
+    }
+
+    setInterval(renderAds, 5000); // Avtomatik yangilanish
+    window.onload = renderAds;
   </script>
 </body>
 </html>
