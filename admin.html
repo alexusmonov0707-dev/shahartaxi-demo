@@ -1,206 +1,146 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin panel - ShaharTaxi</title>
+  <title>Admin Panel - ShaharTaxi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body{font-family:Inter,Arial,sans-serif;background:#f3f7fb;margin:0;padding:0}
-    header{background:#007bff;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
-    header h1{margin:0;font-size:18px}
-    .logout{background:#ff5252;border:none;color:#fff;padding:8px 12px;border-radius:8px;cursor:pointer}
-    main{max-width:1000px;margin:20px auto;padding:16px}
-    .panel{background:#fff;border-radius:10px;padding:14px;margin-bottom:18px;box-shadow:0 4px 12px rgba(0,0,0,0.06)}
-    .ad{border:1px solid #eee;padding:12px;border-radius:8px;margin-bottom:10px;background:#fafafa}
-    .meta{font-size:13px;color:#555;margin-bottom:6px}
-    .status{font-weight:700;margin-left:6px}
-    .controls button{margin-right:8px;padding:6px 10px;border-radius:6px;border:none;cursor:pointer;font-weight:600}
-    .approve{background:#28a745;color:#fff} .reject{background:#dc3545;color:#fff} .del{background:#6c757d;color:#fff} .edit{background:#ffc107}
-    .empty{color:#777;text-align:center;padding:12px}
-    .stats{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px}
-    .stat-card{background:#eef6ff;padding:10px;border-radius:8px;font-weight:700;color:#007bff}
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #00c6ff, #007bff);
+      margin: 0; padding: 0;
+      color: #333;
+    }
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+    h2 { text-align: center; margin-bottom: 1rem; }
+    .filters { text-align: center; margin-bottom: 1.5rem; }
+    .filters button {
+      margin: 0 5px; padding: 8px 16px;
+      border: none; border-radius: 8px;
+      background: #007bff; color: white;
+      cursor: pointer; font-weight: 600;
+    }
+    .filters button.active { background: #0056b3; }
+    .ad-card {
+      background: #f9f9f9;
+      padding: 1rem; border-radius: 12px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .ad-actions button {
+      margin-right: 8px; padding: 6px 12px;
+      border: none; border-radius: 6px; cursor: pointer;
+    }
+    .approve { background: #28a745; color: white; }
+    .reject { background: #dc3545; color: white; }
+    .edit { background: #ffc107; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🛠 ShaharTaxi — Admin Panel</h1>
-    <button class="logout" onclick="logout()">Chiqish</button>
-  </header>
-
   <main>
-    <div class="panel">
-      <div class="stats" id="statsArea">
-        <div class="stat-card">Haydovchilar: <span id="statDrivers">0</span></div>
-        <div class="stat-card">Yo‘lovchilar: <span id="statPassengers">0</span></div>
-        <div class="stat-card">Tasdiqlangan: <span id="statApproved">0</span></div>
-        <div class="stat-card">Rad etilgan: <span id="statRejected">0</span></div>
-      </div>
-      <small style="color:#666">E’lonlar holati: <span id="lastSync">—</span></small>
+    <h2>🛠 Admin Panel - ShaharTaxi</h2>
+    
+    <div class="filters">
+      <button class="active" onclick="filterAds('all')">Barchasi</button>
+      <button onclick="filterAds('pending')">Kutilayotgan</button>
+      <button onclick="filterAds('approved')">Tasdiqlangan</button>
+      <button onclick="filterAds('rejected')">Rad etilgan</button>
     </div>
 
-    <section class="panel">
-      <h2>🚗 Haydovchi e’lonlari</h2>
-      <div id="driverContainer"></div>
-    </section>
-
-    <section class="panel">
-      <h2>🧍 Yo‘lovchi e’lonlari</h2>
-      <div id="passengerContainer"></div>
-    </section>
+    <div id="adsContainer"></div>
   </main>
 
   <script>
-    // ===== AUTH CHECK (bir marta) =====
-    if (localStorage.getItem("isAdminLogged") !== "true") {
-      // AGAR admin ro'yxatdan o'tmagan bo'lsa — login sahifasiga o'tkazamiz
-      window.location.replace("admin-login.html");
-    }
+    let allAds = [];
+    let currentFilter = 'all';
 
-    // ===== Util: notify other pages (stat sync) =====
-    function notifyAll() {
-      // vaqtni yozamiz — boshqa oynalar storage event orqali yangilanadi
-      localStorage.setItem('lastUpdate', Date.now().toString());
-      document.getElementById('lastSync').innerText = new Date().toLocaleString();
-    }
-
-    // ===== Load and render ads =====
     function loadAds() {
       const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-
-      renderList('driverContainer', drivers, 'driver');
-      renderList('passengerContainer', passengers, 'passenger');
-      updateStats(drivers, passengers);
+      allAds = [...drivers, ...passengers];
+      renderAds();
     }
 
-    function renderList(containerId, arr, type) {
-      const container = document.getElementById(containerId);
+    function renderAds() {
+      const container = document.getElementById('adsContainer');
       container.innerHTML = '';
-      if (!arr.length) {
-        container.innerHTML = `<div class="empty">Hozircha e’lonlar yo‘q</div>`;
+      const filtered = allAds.filter(ad => 
+        currentFilter === 'all' ? true : (ad.status || 'pending') === currentFilter
+      );
+      
+      if (filtered.length === 0) {
+        container.innerHTML = "<p style='text-align:center;color:gray;'>E’lonlar yo‘q</p>";
         return;
       }
 
-      arr.forEach((ad, idx) => {
-        // ensure status exists (backward compat)
-        if (!ad.status) ad.status = "Kutilmoqda";
-
-        const statusColor = ad.status === "Tasdiqlandi" ? "#28a745" : (ad.status === "Rad etildi" ? "#dc3545" : "#777");
-        const wrapper = document.createElement('div');
-        wrapper.className = 'ad';
-
-        // display fields: driver name for driver type, otherwise show phone/name if exists
-        const who = (type === 'driver') ? (ad.driver || 'Nomaʼlum') : (ad.name || 'Yo‘lovchi');
-
-        wrapper.innerHTML = `
-          <div class="meta"><strong>${who}</strong> • ${ad.fromRegion || '-'} ${ad.fromDistrict || ''} → ${ad.toRegion || '-'} ${ad.toDistrict || ''}</div>
-          <div style="margin-bottom:6px">Tel: ${ad.phone || '—'} • Narx: ${ad.price || '—'} so'm
-            <span class="status" style="color:${statusColor};margin-left:10px">${ad.status}</span>
-          </div>
-          <div class="controls">
-            <button class="approve" onclick="approveAd('${type}', ${idx})">Tasdiqlash</button>
-            <button class="reject" onclick="rejectAd('${type}', ${idx})">Rad etish</button>
-            <button class="edit" onclick="editAd('${type}', ${idx})">Tahrirlash</button>
-            <button class="del" onclick="deleteAd('${type}', ${idx})">O‘chirish</button>
+      filtered.forEach((ad, index) => {
+        const div = document.createElement('div');
+        div.className = 'ad-card';
+        div.innerHTML = `
+          <strong>${ad.fromRegion || ''} → ${ad.toRegion || ''}</strong><br>
+          📍 ${ad.fromDistrict || ''} - ${ad.toDistrict || ''}<br>
+          ☎️ ${ad.phone || '-'}<br>
+          💰 ${ad.price || '-'} so‘m<br>
+          <div class="ad-actions">
+            <button class="approve" onclick="approveAd(${index})">Tasdiqlash</button>
+            <button class="reject" onclick="rejectAd(${index})">Rad etish</button>
+            <button class="edit" onclick="editAd(${index})">Tahrirlash</button>
           </div>
         `;
-        container.appendChild(wrapper);
+        container.appendChild(div);
       });
     }
 
-    // ===== Actions =====
-    function approveAd(type, index) {
-      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-      const arr = JSON.parse(localStorage.getItem(key)) || [];
-      if (!arr[index]) { alert('E’lon topilmadi'); return; }
-      arr[index].status = "Tasdiqlandi";
-      localStorage.setItem(key, JSON.stringify(arr));
-
-      // statistikani yangilash uchun ham localStorage saqlash
-      syncStats();
-      notifyAll();
-      loadAds(); // yangilash
+    function approveAd(index) {
+      allAds[index].status = 'approved';
+      saveAllAds();
     }
 
-    function rejectAd(type, index) {
-      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-      const arr = JSON.parse(localStorage.getItem(key)) || [];
-      if (!arr[index]) { alert('E’lon topilmadi'); return; }
-      arr[index].status = "Rad etildi";
-      localStorage.setItem(key, JSON.stringify(arr));
-      syncStats();
-      notifyAll();
-      loadAds();
+    function rejectAd(index) {
+      allAds[index].status = 'rejected';
+      saveAllAds();
     }
 
-    function editAd(type, index) {
-      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-      const arr = JSON.parse(localStorage.getItem(key)) || [];
-      if (!arr[index]) { alert('E’lon topilmadi'); return; }
-      const ad = arr[index];
-
-      const newPhone = prompt('Telefon raqam:', ad.phone || '');
-      if (newPhone === null) return; // bekor
-      const newPrice = prompt('Narx (so‘m):', ad.price || '');
-      if (newPrice === null) return;
-
-      ad.phone = newPhone;
-      ad.price = newPrice;
-      arr[index] = ad;
-      localStorage.setItem(key, JSON.stringify(arr));
-      notifyAll();
-      loadAds();
+    function editAd(index) {
+      const ad = allAds[index];
+      const newPhone = prompt("Telefon raqamni tahrirlang:", ad.phone);
+      const newPrice = prompt("Narxni tahrirlang:", ad.price);
+      if (newPhone) ad.phone = newPhone;
+      if (newPrice) ad.price = newPrice;
+      saveAllAds();
     }
 
-    function deleteAd(type, index) {
-      if (!confirm('E’lonni butunlay oʻchirmoqchimisiz?')) return;
-      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-      const arr = JSON.parse(localStorage.getItem(key)) || [];
-      arr.splice(index, 1);
-      localStorage.setItem(key, JSON.stringify(arr));
-      syncStats();
-      notifyAll();
-      loadAds();
+    function saveAllAds() {
+      const drivers = allAds.filter(ad => ad.type === 'driver');
+      const passengers = allAds.filter(ad => ad.type !== 'driver');
+      localStorage.setItem('driverAds', JSON.stringify(drivers));
+      localStorage.setItem('passengerAds', JSON.stringify(passengers));
+      renderAds();
+      updateStats();
     }
 
-    // ===== Stats tracking (counts) =====
-    function syncStats() {
-      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const all = [...drivers, ...passengers];
-      const stats = {
-        drivers: drivers.length,
-        passengers: passengers.length,
-        approved: all.filter(a => a.status === "Tasdiqlandi").length,
-        rejected: all.filter(a => a.status === "Rad etildi").length,
-        updatedAt: new Date().toISOString()
-      };
-      localStorage.setItem('adminStats', JSON.stringify(stats));
+    function filterAds(type) {
+      currentFilter = type;
+      document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      renderAds();
     }
 
-    function updateStats(drivers, passengers) {
-      const all = [...drivers, ...passengers];
-      document.getElementById('statDrivers').innerText = drivers.length;
-      document.getElementById('statPassengers').innerText = passengers.length;
-      document.getElementById('statApproved').innerText = all.filter(a => a.status === "Tasdiqlandi").length;
-      document.getElementById('statRejected').innerText = all.filter(a => a.status === "Rad etildi").length;
-      const lu = localStorage.getItem('lastUpdate');
-      document.getElementById('lastSync').innerText = lu ? new Date(parseInt(lu)).toLocaleString() : '-';
+    function updateStats() {
+      localStorage.setItem('lastUpdate', new Date().toISOString());
     }
 
-    // ===== Auto-refresh and storage listener =====
-    // periodic backup refresh
+    // Har 5 soniyada avtomatik yangilanish
     setInterval(loadAds, 5000);
 
-    // If another tab updated storage, react immediately
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'driverAds' || e.key === 'passengerAds' || e.key === 'lastUpdate' || e.key === 'adminStats') {
-        loadAds();
-      }
-    });
-
-    // initial load
-    syncStats(); // ensure stats prepared
     loadAds();
   </script>
 </body>
