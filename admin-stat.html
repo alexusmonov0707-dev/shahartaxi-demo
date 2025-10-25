@@ -3,77 +3,92 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Statistika - ShaharTaxi</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <title>Statistika - ShaharTaxi Admin</title>
   <style>
-    body { font-family: 'Inter',sans-serif; background:#f7fbff; margin:0; }
-    header { background:#007bff; color:#fff; padding:1rem; text-align:center; font-weight:600; }
-    main { max-width:900px; margin:2rem auto; background:#fff; padding:1.5rem; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
-    .stats { display:flex; gap:1rem; justify-content:space-around; margin-bottom:1rem; }
-    .card { text-align:center; padding:0.8rem; border-radius:8px; background:#eef6ff; width:30%; }
-    canvas { max-width:100%; }
-    .small { color:#666; font-size:0.9rem; text-align:center; margin-top:0.6rem; }
+    body{font-family:Inter,Arial,sans-serif;background:#f3f7fb;margin:0;padding:0}
+    header{background:#007bff;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+    header h1{margin:0;font-size:18px}
+    main{max-width:900px;margin:20px auto;padding:16px}
+    .card{background:#fff;border-radius:12px;padding:18px;margin-bottom:20px;box-shadow:0 4px 10px rgba(0,0,0,0.08)}
+    .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;text-align:center}
+    .stat{background:#e7f1ff;padding:16px;border-radius:10px;font-weight:700;color:#007bff}
+    canvas{width:100%;max-height:300px}
   </style>
 </head>
 <body>
-  <header>📊 ShaharTaxi — Statistika</header>
+  <header>
+    <h1>📊 ShaharTaxi — Statistika</h1>
+    <a href="admin.html" style="color:#fff;text-decoration:none;font-weight:600;">⬅️ Orqaga</a>
+  </header>
+
   <main>
-    <div class="stats">
-      <div class="card"><div>Tasdiqlangan</div><h2 id="approvedCount">0</h2></div>
-      <div class="card"><div>Kutilmoqda</div><h2 id="pendingCount">0</h2></div>
-      <div class="card"><div>Jami</div><h2 id="totalCount">0</h2></div>
+    <div class="card">
+      <h2>Umumiy raqamlar</h2>
+      <div class="stat-grid">
+        <div class="stat">Haydovchilar: <span id="statDrivers">0</span></div>
+        <div class="stat">Yo‘lovchilar: <span id="statPassengers">0</span></div>
+        <div class="stat">Tasdiqlangan: <span id="statApproved">0</span></div>
+        <div class="stat">Rad etilgan: <span id="statRejected">0</span></div>
+      </div>
+      <p style="text-align:center;color:#555;margin-top:10px">
+        So‘nggi yangilanish: <span id="lastUpdate">—</span>
+      </p>
     </div>
 
-    <canvas id="adsChart"></canvas>
-    <p class="small">🔄 Sahifa avtomatik yangilanadi. (storage event + interval)</p>
-    <button style="display:block;margin:1rem auto;padding:0.5rem 1rem;border-radius:8px;border:none;background:#007bff;color:#fff;cursor:pointer;" onclick="window.close()">❎ Yopish</button>
+    <div class="card">
+      <h2>Grafik ko‘rinish</h2>
+      <canvas id="statsChart"></canvas>
+    </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    let chartInstance = null;
+    let chart;
 
-    function computeStatsAndRender() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const all = [...driverAds, ...passengerAds];
+    // Statlarni yangilash funksiyasi
+    function updateStats() {
+      const stats = JSON.parse(localStorage.getItem('adminStats')) || {};
+      const { drivers = 0, passengers = 0, approved = 0, rejected = 0, updatedAt } = stats;
 
-      const approved = all.filter(a => a.approved).length;
-      const pending = all.length - approved;
-      const total = all.length;
+      document.getElementById('statDrivers').innerText = drivers;
+      document.getElementById('statPassengers').innerText = passengers;
+      document.getElementById('statApproved').innerText = approved;
+      document.getElementById('statRejected').innerText = rejected;
+      document.getElementById('lastUpdate').innerText = updatedAt
+        ? new Date(updatedAt).toLocaleString()
+        : '—';
 
-      document.getElementById('approvedCount').innerText = approved;
-      document.getElementById('pendingCount').innerText = pending;
-      document.getElementById('totalCount').innerText = total;
+      const ctx = document.getElementById('statsChart').getContext('2d');
+      const data = [drivers, passengers, approved, rejected];
+      const labels = ['Haydovchilar', 'Yo‘lovchilar', 'Tasdiqlangan', 'Rad etilgan'];
 
-      const data = [approved, pending];
-      const ctx = document.getElementById('adsChart').getContext('2d');
-
-      if (chartInstance) {
-        chartInstance.data.datasets[0].data = data;
-        chartInstance.update();
-      } else {
-        chartInstance = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: ['Tasdiqlangan','Kutilmoqda'],
-            datasets: [{ data, backgroundColor: ['#28a745','#ffc107'] }]
-          },
-          options: { responsive:true, plugins:{ legend:{ position:'bottom' } } }
-        });
-      }
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'E’lonlar statistikasi',
+            data,
+            backgroundColor: ['#007bff','#00c6ff','#28a745','#dc3545']
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
     }
 
-    // Listen for storage events from other tabs (fast sync)
+    // admin.html dagi o‘zgarishlarni tinglash
     window.addEventListener('storage', (e) => {
-      if (e.key === 'lastUpdate' || e.key === 'driverAds' || e.key === 'passengerAds') {
-        computeStatsAndRender();
+      if (['adminStats','lastUpdate','driverAds','passengerAds'].includes(e.key)) {
+        updateStats();
       }
     });
 
-    // Fallback periodic update
-    computeStatsAndRender();
-    setInterval(computeStatsAndRender, 5000);
+    // Har 5 soniyada avtomatik yangilanish
+    setInterval(updateStats, 5000);
+
+    // Boshlang‘ich yuklash
+    updateStats();
   </script>
 </body>
 </html>
