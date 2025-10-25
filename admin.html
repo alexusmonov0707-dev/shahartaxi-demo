@@ -3,150 +3,119 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel - ShaharTaxi</title>
+  <title>Admin panel - ShaharTaxi</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f0f7ff;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
+      color: #333;
       margin: 0;
-      padding: 20px;
+      padding: 0;
     }
-    h2 { text-align: center; color: #007bff; }
-    .logout {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      background: #ff4757;
-      color: #fff;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 6px;
-      cursor: pointer;
+    main {
+      max-width: 900px;
+      margin: 2rem auto;
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
-    .logout:hover { background: #e84118; }
-
-    .section {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 25px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    h2 {
+      text-align: center;
+      color: #007bff;
     }
     .ad {
-      border-bottom: 1px solid #eee;
-      padding: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      background: #f9f9f9;
     }
-    .ad:last-child { border-bottom: none; }
-
-    .btn {
+    button {
+      margin-right: 10px;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
       border: none;
-      padding: 6px 10px;
-      border-radius: 5px;
       cursor: pointer;
-      margin-right: 5px;
     }
-    .approve { background: #28a745; color: white; }
-    .reject { background: #dc3545; color: white; }
-    .edit { background: #ffc107; color: black; }
+    .approve { background: #28a745; color: #fff; }
+    .reject { background: #dc3545; color: #fff; }
+    .edit { background: #ffc107; color: #000; }
   </style>
 </head>
 <body>
-  <button class="logout" onclick="logout()">Chiqish</button>
-  <h2>🛠 Admin Panel</h2>
-
-  <div class="section">
-    <h3>🚗 Haydovchi e’lonlari</h3>
-    <div id="driverAds"></div>
-  </div>
-
-  <div class="section">
-    <h3>🧍 Yo‘lovchi e’lonlari</h3>
-    <div id="passengerAds"></div>
-  </div>
+  <main>
+    <h2>🛠 Admin panel</h2>
+    <div id="adsContainer"></div>
+  </main>
 
   <script>
-    // Faqat login bo‘lgan admin kiradi
-    if (localStorage.getItem("isAdminLogged") !== "true") {
-      window.location.replace("admin-login.html");
-    }
-
-    function logout() {
-      localStorage.removeItem("isAdminLogged");
-      window.location.replace("admin-login.html");
-    }
-
-    function renderAds() {
-      const driverContainer = document.getElementById("driverAds");
-      const passengerContainer = document.getElementById("passengerAds");
-
+    function loadAds() {
       const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
       const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
 
-      driverContainer.innerHTML = driverAds.length ? "" : "<p>Haydovchi e’loni yo‘q</p>";
-      passengerContainer.innerHTML = passengerAds.length ? "" : "<p>Yo‘lovchi e’loni yo‘q</p>";
+      const container = document.getElementById("adsContainer");
+      container.innerHTML = "";
 
-      driverAds.forEach((ad, i) => {
-        driverContainer.innerHTML += `
-          <div class="ad">
-            <p><b>${ad.driver || "Noma’lum haydovchi"}</b> - ${ad.phone}</p>
-            <p>${ad.fromRegion} → ${ad.toRegion}</p>
-            <p>${ad.price || "Narx yo‘q"} so‘m</p>
-            <button class="btn approve" onclick="approveAd('driver', ${i})">Tasdiqlash</button>
-            <button class="btn reject" onclick="rejectAd('driver', ${i})">Rad etish</button>
-            <button class="btn edit" onclick="editAd('driver', ${i})">Tahrirlash</button>
-          </div>`;
-      });
+      if (driverAds.length === 0 && passengerAds.length === 0) {
+        container.innerHTML = "<p style='text-align:center;'>Hozircha e’lonlar yo‘q</p>";
+        return;
+      }
 
-      passengerAds.forEach((ad, i) => {
-        passengerContainer.innerHTML += `
-          <div class="ad">
-            <p>${ad.fromRegion} → ${ad.toRegion}</p>
-            <p>${ad.phone}</p>
-            <p>${ad.price || "Narx yo‘q"} so‘m</p>
-            <button class="btn approve" onclick="approveAd('passenger', ${i})">Tasdiqlash</button>
-            <button class="btn reject" onclick="rejectAd('passenger', ${i})">Rad etish</button>
-            <button class="btn edit" onclick="editAd('passenger', ${i})">Tahrirlash</button>
-          </div>`;
-      });
+      function renderAd(ad, index, type) {
+        const statusColor = ad.status === "Tasdiqlandi" ? "green" : ad.status === "Rad etildi" ? "red" : "gray";
+        const adDiv = document.createElement("div");
+        adDiv.className = "ad";
+        adDiv.innerHTML = `
+          <p><b>Turi:</b> ${type === "driver" ? "Haydovchi" : "Yo‘lovchi"}</p>
+          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ""} ${ad.fromDistrict || ""} → ${ad.toRegion || ""} ${ad.toDistrict || ""}</p>
+          <p><b>Telefon:</b> ${ad.phone || "-"}</p>
+          <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
+          <p><b>Status:</b> <span style="color:${statusColor}; font-weight:bold;">${ad.status || "Kutilmoqda"}</span></p>
+          <button class="approve" onclick="approveAd('${type}', ${index})">Tasdiqlash</button>
+          <button class="reject" onclick="rejectAd('${type}', ${index})">Rad etish</button>
+          <button class="edit" onclick="editAd('${type}', ${index})">Tahrirlash</button>
+        `;
+        container.appendChild(adDiv);
+      }
+
+      driverAds.forEach((ad, i) => renderAd(ad, i, "driver"));
+      passengerAds.forEach((ad, i) => renderAd(ad, i, "passenger"));
     }
 
     function approveAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type + "Ads")) || [];
-      const approvedAd = ads.splice(index, 1)[0];
-      localStorage.setItem(type + "Ads", JSON.stringify(ads));
-
-      let approvedList = JSON.parse(localStorage.getItem("approved_" + type + "Ads")) || [];
-      approvedList.push({ ...approvedAd, approvedAt: new Date().toISOString() });
-      localStorage.setItem("approved_" + type + "Ads", JSON.stringify(approvedList));
-
-      renderAds();
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      ads[index].status = "Tasdiqlandi";
+      localStorage.setItem(key, JSON.stringify(ads));
+      loadAds();
     }
 
     function rejectAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type + "Ads")) || [];
-      ads.splice(index, 1);
-      localStorage.setItem(type + "Ads", JSON.stringify(ads));
-      renderAds();
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      ads[index].status = "Rad etildi";
+      localStorage.setItem(key, JSON.stringify(ads));
+      loadAds();
     }
 
     function editAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type + "Ads")) || [];
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
       const ad = ads[index];
-      const newPhone = prompt("Telefon raqamini tahrirlang:", ad.phone || "");
-      const newPrice = prompt("Narxni tahrirlang (so‘m):", ad.price || "");
-      if (newPhone !== null && newPrice !== null) {
-        ad.phone = newPhone;
-        ad.price = newPrice;
-        ads[index] = ad;
-        localStorage.setItem(type + "Ads", JSON.stringify(ads));
-        renderAds();
-      }
+      const newPhone = prompt("Yangi telefon raqami:", ad.phone || "");
+      const newPrice = prompt("Yangi narx:", ad.price || "");
+      if (newPhone !== null) ad.phone = newPhone;
+      if (newPrice !== null) ad.price = newPrice;
+      localStorage.setItem(key, JSON.stringify(ads));
+      loadAds();
     }
 
-    // Avtomatik yangilanish har 5 soniyada
-    setInterval(renderAds, 5000);
+    // Har 5 soniyada avtomatik yangilanish
+    setInterval(loadAds, 5000);
 
-    renderAds();
+    // Dastlab yuklash
+    loadAds();
   </script>
 </body>
 </html>
