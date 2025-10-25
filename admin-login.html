@@ -6,11 +6,13 @@
   <title>Admin Kirish - ShaharTaxi</title>
   <style>
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: Arial, sans-serif;
       background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0; padding: 0;
-      display: flex; justify-content: center; align-items: center;
-      height: 100vh; color: #333;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
     }
     .login-box {
       background: #fff;
@@ -19,6 +21,10 @@
       box-shadow: 0 6px 20px rgba(0,0,0,0.1);
       width: 320px;
       text-align: center;
+    }
+    h2 {
+      color: #007bff;
+      margin-bottom: 1.5rem;
     }
     input {
       width: 100%;
@@ -41,31 +47,36 @@
     button:hover {
       background: #0056b3;
     }
-    .error {
+    p#error {
       color: red;
-      margin-top: 0.5rem;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
   <div class="login-box">
-    <h2>🔑 Admin panelga kirish</h2>
-    <input type="password" id="password" placeholder="Parolni kiriting">
-    <button onclick="checkLogin()">Kirish</button>
-    <p id="error" class="error"></p>
+    <h2>🔐 Admin panelga kirish</h2>
+    <input type="password" id="password" placeholder="Parolni kiriting" />
+    <button onclick="login()">Kirish</button>
+    <p id="error"></p>
   </div>
 
   <script>
-    function checkLogin() {
-      const pass = document.getElementById('password').value;
-      const correct = "shaharadmin"; // parol (keyinchalik oson o‘zgartiriladi)
-      
-      if(pass === correct) {
-        localStorage.setItem("isAdmin", "true");
-        window.location.href = "admin.html";
+    function login() {
+      const password = document.getElementById("password").value.trim();
+      if (password === "shahartaxi2024") {
+        localStorage.setItem("isAdminLogged", "true");
+        window.location.replace("admin.html");
       } else {
-        document.getElementById('error').innerText = "❌ Noto‘g‘ri parol!";
+        const error = document.getElementById("error");
+        error.innerText = "❌ Noto‘g‘ri parol! Qayta urinib ko‘ring.";
+        error.style.color = "red";
       }
+    }
+
+    // Agar allaqachon kirgan bo‘lsa, avtomatik yo‘naltirish
+    if (localStorage.getItem("isAdminLogged") === "true") {
+      window.location.replace("admin.html");
     }
   </script>
 </body>
