@@ -25,6 +25,29 @@
       border-radius: 10px;
       box-shadow: 0 3px 10px rgba(0,0,0,0.1);
     }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+      text-align: left;
+    }
+    .stat-box {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 1rem;
+      border: 1px solid #e1e1e1;
+    }
+    .stat-box h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: #333;
+    }
+    .stat-box p {
+      margin: 0.4rem 0 0;
+      font-size: 1.3rem;
+      font-weight: bold;
+    }
     canvas {
       max-width: 400px;
       margin-top: 2rem;
@@ -36,7 +59,7 @@
       padding: 0.6rem 1.2rem;
       border-radius: 8px;
       cursor: pointer;
-      margin-top: 1rem;
+      margin-top: 2rem;
     }
   </style>
 </head>
@@ -46,8 +69,33 @@
   </header>
 
   <main>
-    <h2>Holatlar nisbati</h2>
+    <h2>Umumiy ma’lumot</h2>
+    <div class="stats">
+      <div class="stat-box">
+        <h3>Haydovchi e’lonlar</h3>
+        <p id="driverCount">0</p>
+      </div>
+      <div class="stat-box">
+        <h3>Yo‘lovchi e’lonlar</h3>
+        <p id="passengerCount">0</p>
+      </div>
+      <div class="stat-box">
+        <h3>Tasdiqlangan</h3>
+        <p id="approvedCount">0</p>
+      </div>
+      <div class="stat-box">
+        <h3>Rad etilgan</h3>
+        <p id="rejectedCount">0</p>
+      </div>
+      <div class="stat-box">
+        <h3>Kutilmoqda</h3>
+        <p id="pendingCount">0</p>
+      </div>
+    </div>
+
+    <h2 style="margin-top: 2rem;">Holatlar nisbati</h2>
     <canvas id="statusChart"></canvas>
+
     <button onclick="location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
 
@@ -57,8 +105,21 @@
 
     function loadStats() {
       const stats = JSON.parse(localStorage.getItem('stats')) || {
-        approved: 0, rejected: 0, pending: 0
+        drivers: 0,
+        passengers: 0,
+        approved: 0,
+        rejected: 0,
+        pending: 0
       };
+
+      // Raqamli statistikani yangilaymiz
+      document.getElementById('driverCount').innerText = stats.drivers;
+      document.getElementById('passengerCount').innerText = stats.passengers;
+      document.getElementById('approvedCount').innerText = stats.approved;
+      document.getElementById('rejectedCount').innerText = stats.rejected;
+      document.getElementById('pendingCount').innerText = stats.pending;
+
+      // Chart uchun ma’lumotlar
       const data = [stats.approved, stats.rejected, stats.pending];
 
       if (chart) {
