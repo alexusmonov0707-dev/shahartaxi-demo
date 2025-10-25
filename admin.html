@@ -1,174 +1,53 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin panel - ShaharTaxi</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin tizimi - ShaharTaxi</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', sans-serif;
       background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0; padding: 0; color: #333;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; margin: 0;
     }
-    main {
-      max-width: 1000px;
-      margin: 2rem auto;
-      background: #fff;
+    .login-box {
+      background: white;
+      padding: 2rem;
       border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-    }
-    h1, h2 {
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
       text-align: center;
-      color: #007bff;
+      width: 320px;
     }
-    section {
-      margin-top: 2rem;
-    }
-    .ad {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      background: #f9f9f9;
+    input {
+      width: 100%; padding: 0.8rem; margin-bottom: 1rem;
+      border: 1px solid #ccc; border-radius: 8px;
     }
     button {
-      border: none;
-      padding: 0.4rem 0.8rem;
-      border-radius: 6px;
-      margin-right: 10px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .approve { background: #28a745; color: white; }
-    .reject { background: #dc3545; color: white; }
-    .edit { background: #ffc107; color: black; }
-    .status {
-      font-weight: bold;
-    }
-    .stats {
-      background: #eef6ff;
-      padding: 1rem;
-      border-radius: 10px;
-      margin-top: 1rem;
+      width: 100%; padding: 0.8rem;
+      background: #007bff; border: none; color: white;
+      border-radius: 8px; cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <main>
-    <h1>🛠 ShaharTaxi Admin Panel</h1>
-    <div class="stats" id="stats">
-      <h2>📊 Statistika</h2>
-      <p>Jami haydovchi e’lonlari: <span id="driverCount">0</span></p>
-      <p>Jami yo‘lovchi e’lonlari: <span id="passengerCount">0</span></p>
-      <p>Tasdiqlangan e’lonlar: <span id="approvedCount">0</span></p>
-      <p>Rad etilgan e’lonlar: <span id="rejectedCount">0</span></p>
-    </div>
-
-    <section>
-      <h2>🚗 Haydovchi e’lonlari</h2>
-      <div id="driverAds"></div>
-    </section>
-
-    <section>
-      <h2>🧍 Yo‘lovchi e’lonlari</h2>
-      <div id="passengerAds"></div>
-    </section>
-  </main>
+  <div class="login-box">
+    <h2>🔑 Admin tizimi</h2>
+    <input type="password" id="password" placeholder="Parolni kiriting" />
+    <button onclick="login()">Kirish</button>
+    <p id="msg" style="color:red;"></p>
+  </div>
 
   <script>
-    function loadAds() {
-      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-
-      renderAds("driverAds", driverAds, "driver");
-      renderAds("passengerAds", passengerAds, "passenger");
-      updateStats(driverAds, passengerAds);
-    }
-
-    function renderAds(containerId, ads, type) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = "";
-
-      if (ads.length === 0) {
-        container.innerHTML = "<p style='text-align:center;'>Hozircha e’lon yo‘q</p>";
-        return;
+    function login() {
+      const password = document.getElementById('password').value;
+      if (password === "shahartaxi2025") {
+        localStorage.setItem("adminLoggedIn", "true");
+        window.location.href = "admin.html";
+      } else {
+        document.getElementById("msg").innerText = "❌ Noto‘g‘ri parol!";
       }
-
-      ads.forEach((ad, i) => {
-        const color =
-          ad.status === "Tasdiqlandi" ? "green" :
-          ad.status === "Rad etildi" ? "red" : "gray";
-
-        const div = document.createElement("div");
-        div.className = "ad";
-        div.innerHTML = `
-          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ""} ${ad.fromDistrict || ""} → ${ad.toRegion || ""} ${ad.toDistrict || ""}</p>
-          <p><b>Telefon:</b> ${ad.phone || "-"}</p>
-          <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
-          <p><b>Status:</b> <span class="status" style="color:${color};">${ad.status || "Kutilmoqda"}</span></p>
-          <button class="approve" onclick="approveAd('${type}', ${i})">Tasdiqlash</button>
-          <button class="reject" onclick="rejectAd('${type}', ${i})">Rad etish</button>
-          <button class="edit" onclick="editAd('${type}', ${i})">Tahrirlash</button>
-        `;
-        container.appendChild(div);
-      });
     }
-
-    function approveAd(type, i) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      ads[i].status = "Tasdiqlandi";
-      localStorage.setItem(key, JSON.stringify(ads));
-      syncStats();
-      loadAds();
-    }
-
-    function rejectAd(type, i) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      ads[i].status = "Rad etildi";
-      localStorage.setItem(key, JSON.stringify(ads));
-      syncStats();
-      loadAds();
-    }
-
-    function editAd(type, i) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads[i];
-      const newPhone = prompt("Yangi telefon raqami:", ad.phone);
-      const newPrice = prompt("Yangi narx:", ad.price);
-      if (newPhone !== null) ad.phone = newPhone;
-      if (newPrice !== null) ad.price = newPrice;
-      localStorage.setItem(key, JSON.stringify(ads));
-      loadAds();
-    }
-
-    function updateStats(driverAds, passengerAds) {
-      const allAds = [...driverAds, ...passengerAds];
-      document.getElementById("driverCount").textContent = driverAds.length;
-      document.getElementById("passengerCount").textContent = passengerAds.length;
-      document.getElementById("approvedCount").textContent = allAds.filter(a => a.status === "Tasdiqlandi").length;
-      document.getElementById("rejectedCount").textContent = allAds.filter(a => a.status === "Rad etildi").length;
-    }
-
-    // Avtomatik admin-stat.html bilan bog‘lanish (statistikani uzatadi)
-    function syncStats() {
-      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-      const stats = {
-        driverCount: driverAds.length,
-        passengerCount: passengerAds.length,
-        approved: [...driverAds, ...passengerAds].filter(a => a.status === "Tasdiqlandi").length,
-        rejected: [...driverAds, ...passengerAds].filter(a => a.status === "Rad etildi").length
-      };
-      localStorage.setItem("adminStats", JSON.stringify(stats));
-    }
-
-    // 5 soniyada avtomatik yangilanish
-    setInterval(loadAds, 5000);
-    loadAds();
   </script>
 </body>
 </html>
