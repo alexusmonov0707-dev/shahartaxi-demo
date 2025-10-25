@@ -8,14 +8,14 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: #f5f6fa;
+      background: #f4f6f9;
       margin: 0; padding: 0;
     }
     header {
       background: #007bff;
       color: white;
-      text-align: center;
       padding: 1rem;
+      text-align: center;
     }
     main {
       max-width: 1000px;
@@ -54,15 +54,12 @@
     .reject { background: #dc3545; }
     .edit { background: #ffc107; color: black; }
     .delete { background: #6c757d; }
-    .status {
-      font-weight: 600;
-      margin-top: 4px;
-    }
+    .status { font-weight: bold; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🛠 Admin Panel - ShaharTaxi</h1>
+    <h1>🛠 ShaharTaxi - Admin Panel</h1>
   </header>
 
   <main>
@@ -75,10 +72,12 @@
 
       <select id="statusFilter" onchange="renderAds()">
         <option value="all">Barcha holatlar</option>
-        <option value="pending">Kutilmoqda ⏳</option>
-        <option value="approved">Tasdiqlangan ✅</option>
-        <option value="rejected">Rad etilgan ❌</option>
+        <option value="pending">Kutilmoqda</option>
+        <option value="approved">Tasdiqlangan</option>
+        <option value="rejected">Rad etilgan</option>
       </select>
+
+      <button onclick="goToStats()">📊 Statistika</button>
     </div>
 
     <div id="ads"></div>
@@ -87,50 +86,45 @@
   <script>
     function getAds() {
       return {
-        driver: JSON.parse(localStorage.getItem("driverAds")) || [],
-        passenger: JSON.parse(localStorage.getItem("passengerAds")) || []
+        driver: JSON.parse(localStorage.getItem('driverAds')) || [],
+        passenger: JSON.parse(localStorage.getItem('passengerAds')) || []
       };
     }
 
     function getStatusText(status) {
-      switch (status) {
-        case "approved": return "Tasdiqlangan ✅";
-        case "rejected": return "Rad etilgan ❌";
-        default: return "Kutilmoqda ⏳";
-      }
+      if (status === 'approved') return '✅ Tasdiqlangan';
+      if (status === 'rejected') return '❌ Rad etilgan';
+      return '⏳ Kutilmoqda';
     }
 
     function renderAds() {
       const { driver, passenger } = getAds();
-      const typeFilter = document.getElementById("typeFilter").value;
-      const statusFilter = document.getElementById("statusFilter").value;
+      const typeFilter = document.getElementById('typeFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
 
       let ads = [];
-      if (typeFilter === "driver") ads = driver.map(a => ({ ...a, type: "driver" }));
-      else if (typeFilter === "passenger") ads = passenger.map(a => ({ ...a, type: "passenger" }));
-      else ads = [
-        ...driver.map(a => ({ ...a, type: "driver" })),
-        ...passenger.map(a => ({ ...a, type: "passenger" }))
-      ];
+      if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
+      else if (typeFilter === 'passenger') ads = passenger.map(a => ({ ...a, type: 'passenger' }));
+      else ads = [...driver.map(a => ({ ...a, type: 'driver' })), ...passenger.map(a => ({ ...a, type: 'passenger' }))];
 
-      if (statusFilter !== "all") ads = ads.filter(a => (a.status || "pending") === statusFilter);
+      if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
 
-      const container = document.getElementById("ads");
-      container.innerHTML = "";
+      const container = document.getElementById('ads');
+      container.innerHTML = '';
 
       if (ads.length === 0) {
-        container.innerHTML = "<p>E’lonlar topilmadi.</p>";
+        container.innerHTML = '<p>E’lonlar topilmadi.</p>';
         return;
       }
 
       ads.forEach((ad, index) => {
-        const div = document.createElement("div");
-        div.className = "ad";
+        const div = document.createElement('div');
+        div.className = 'ad';
         div.innerHTML = `
-          <p><b>Turi:</b> ${ad.type === "driver" ? "Haydovchi" : "Yo‘lovchi"}</p>
+          <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
           <p><b>Yo‘nalish:</b> ${ad.fromRegion || ''}, ${ad.fromDistrict || ''} ➜ ${ad.toRegion || ''}, ${ad.toDistrict || ''}</p>
-          <p><b>Telefon:</b> ${ad.phone || '-'}</p>
-          <p><b>Narx:</b> ${ad.price || '-'} so‘m</p>
+          <p><b>Telefon:</b> ${ad.phone}</p>
+          <p><b>Narx:</b> ${ad.price} so‘m</p>
           <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
           <div class="actions">
             <button class="approve" onclick="updateStatus('${ad.type}', ${index}, 'approved')">Tasdiqlash</button>
@@ -144,7 +138,7 @@
     }
 
     function updateStatus(type, index, status) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
       ads[index].status = status;
       localStorage.setItem(key, JSON.stringify(ads));
@@ -153,18 +147,19 @@
     }
 
     function editAd(type, index) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const newPhone = prompt("Yangi telefon:", ads[index].phone);
-      const newPrice = prompt("Yangi narx:", ads[index].price);
+      const newPhone = prompt('Yangi telefon:', ads[index].phone);
+      const newPrice = prompt('Yangi narx:', ads[index].price);
       if (newPhone !== null) ads[index].phone = newPhone;
       if (newPrice !== null) ads[index].price = newPrice;
       localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
+      updateStats();
     }
 
     function deleteAd(type, index) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
       ads.splice(index, 1);
       localStorage.setItem(key, JSON.stringify(ads));
@@ -175,17 +170,30 @@
     function updateStats() {
       const { driver, passenger } = getAds();
       const all = [...driver, ...passenger];
-      localStorage.setItem("stats", JSON.stringify({
+      const stats = {
         drivers: driver.length,
         passengers: passenger.length,
-        approved: all.filter(a => a.status === "approved").length,
-        rejected: all.filter(a => a.status === "rejected").length,
-        pending: all.filter(a => !a.status || a.status === "pending").length
-      }));
+        approved: all.filter(a => a.status === 'approved').length,
+        rejected: all.filter(a => a.status === 'rejected').length,
+        pending: all.filter(a => !a.status || a.status === 'pending').length
+      };
+      localStorage.setItem('stats', JSON.stringify(stats));
     }
 
-    setInterval(renderAds, 5000); // Avtomatik yangilanish
-    window.onload = renderAds;
+    function goToStats() {
+      updateStats();
+      location.href = 'admin-stat.html';
+    }
+
+    setInterval(() => {
+      renderAds();
+      updateStats();
+    }, 5000);
+
+    window.onload = () => {
+      renderAds();
+      updateStats();
+    };
   </script>
 </body>
 </html>
