@@ -8,22 +8,32 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: #f4f6f8;
+      background: #f5f6fa;
       margin: 0; padding: 0;
     }
     header {
       background: #007bff;
-      color: #fff;
-      padding: 1rem;
+      color: white;
       text-align: center;
+      padding: 1rem;
     }
     main {
-      max-width: 900px;
+      max-width: 1000px;
       margin: 1rem auto;
-      background: #fff;
+      background: white;
+      border-radius: 10px;
       padding: 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+    select {
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
     .ad {
       border-bottom: 1px solid #ddd;
@@ -33,19 +43,20 @@
       border-bottom: none;
     }
     .actions button {
-      margin-right: 0.5rem;
-      padding: 0.5rem 1rem;
+      margin-right: 5px;
       border: none;
+      padding: 0.4rem 0.8rem;
       border-radius: 6px;
       cursor: pointer;
+      color: white;
     }
-    .approve { background: #28a745; color: #fff; }
-    .reject { background: #dc3545; color: #fff; }
-    .edit { background: #ffc107; }
-    .delete { background: #6c757d; color: #fff; }
-    select {
-      padding: 0.5rem;
-      margin-bottom: 1rem;
+    .approve { background: #28a745; }
+    .reject { background: #dc3545; }
+    .edit { background: #ffc107; color: black; }
+    .delete { background: #6c757d; }
+    .status {
+      font-weight: 600;
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -53,45 +64,74 @@
   <header>
     <h1>🛠 Admin Panel - ShaharTaxi</h1>
   </header>
+
   <main>
-    <h3>Filtrlash:</h3>
-    <select id="filter" onchange="renderAds()">
-      <option value="all">Barcha e’lonlar</option>
-      <option value="drivers">Haydovchilar</option>
-      <option value="passengers">Yo‘lovchilar</option>
-    </select>
+    <div class="filters">
+      <select id="typeFilter" onchange="renderAds()">
+        <option value="all">Barcha turlar</option>
+        <option value="driver">Haydovchilar</option>
+        <option value="passenger">Yo‘lovchilar</option>
+      </select>
+
+      <select id="statusFilter" onchange="renderAds()">
+        <option value="all">Barcha holatlar</option>
+        <option value="pending">Kutilmoqda ⏳</option>
+        <option value="approved">Tasdiqlangan ✅</option>
+        <option value="rejected">Rad etilgan ❌</option>
+      </select>
+    </div>
 
     <div id="ads"></div>
   </main>
 
   <script>
     function getAds() {
-      const drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      return { drivers, passengers };
+      return {
+        driver: JSON.parse(localStorage.getItem("driverAds")) || [],
+        passenger: JSON.parse(localStorage.getItem("passengerAds")) || []
+      };
+    }
+
+    function getStatusText(status) {
+      switch (status) {
+        case "approved": return "Tasdiqlangan ✅";
+        case "rejected": return "Rad etilgan ❌";
+        default: return "Kutilmoqda ⏳";
+      }
     }
 
     function renderAds() {
-      const { drivers, passengers } = getAds();
-      const filter = document.getElementById("filter").value;
-      let ads = [];
+      const { driver, passenger } = getAds();
+      const typeFilter = document.getElementById("typeFilter").value;
+      const statusFilter = document.getElementById("statusFilter").value;
 
-      if (filter === "drivers") ads = drivers.map(a => ({...a, type: 'driver'}));
-      else if (filter === "passengers") ads = passengers.map(a => ({...a, type: 'passenger'}));
-      else ads = [...drivers.map(a => ({...a, type: 'driver'})), ...passengers.map(a => ({...a, type: 'passenger'}))];
+      let ads = [];
+      if (typeFilter === "driver") ads = driver.map(a => ({ ...a, type: "driver" }));
+      else if (typeFilter === "passenger") ads = passenger.map(a => ({ ...a, type: "passenger" }));
+      else ads = [
+        ...driver.map(a => ({ ...a, type: "driver" })),
+        ...passenger.map(a => ({ ...a, type: "passenger" }))
+      ];
+
+      if (statusFilter !== "all") ads = ads.filter(a => (a.status || "pending") === statusFilter);
 
       const container = document.getElementById("ads");
       container.innerHTML = "";
+
+      if (ads.length === 0) {
+        container.innerHTML = "<p>E’lonlar topilmadi.</p>";
+        return;
+      }
 
       ads.forEach((ad, index) => {
         const div = document.createElement("div");
         div.className = "ad";
         div.innerHTML = `
-          <p><strong>Turi:</strong> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-          <p><strong>Yo‘nalish:</strong> ${ad.fromRegion || ''}, ${ad.fromDistrict || ''} ➜ ${ad.toRegion || ''}, ${ad.toDistrict || ''}</p>
-          <p><strong>Telefon:</strong> ${ad.phone || '-'}</p>
-          <p><strong>Narx:</strong> ${ad.price || '-'} so‘m</p>
-          <p><strong>🟢 Holat:</strong> ${getStatusText(ad.status)}</p>
+          <p><b>Turi:</b> ${ad.type === "driver" ? "Haydovchi" : "Yo‘lovchi"}</p>
+          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ''}, ${ad.fromDistrict || ''} ➜ ${ad.toRegion || ''}, ${ad.toDistrict || ''}</p>
+          <p><b>Telefon:</b> ${ad.phone || '-'}</p>
+          <p><b>Narx:</b> ${ad.price || '-'} so‘m</p>
+          <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
           <div class="actions">
             <button class="approve" onclick="updateStatus('${ad.type}', ${index}, 'approved')">Tasdiqlash</button>
             <button class="reject" onclick="updateStatus('${ad.type}', ${index}, 'rejected')">Rad etish</button>
@@ -103,46 +143,44 @@
       });
     }
 
-    function getStatusText(status) {
-      switch(status) {
-        case 'approved': return 'Tasdiqlangan ✅';
-        case 'rejected': return 'Rad etilgan ❌';
-        default: return 'Kutilmoqda ⏳';
-      }
-    }
-
     function updateStatus(type, index, status) {
-      const ads = JSON.parse(localStorage.getItem(type === 'driver' ? 'driverAds' : 'passengerAds')) || [];
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
       ads[index].status = status;
-      localStorage.setItem(type === 'driver' ? 'driverAds' : 'passengerAds', JSON.stringify(ads));
+      localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
     }
 
     function editAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type === 'driver' ? 'driverAds' : 'passengerAds')) || [];
-      const newPrice = prompt("Yangi narx:", ads[index].price);
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
       const newPhone = prompt("Yangi telefon:", ads[index].phone);
-      if (newPrice !== null) ads[index].price = newPrice;
+      const newPrice = prompt("Yangi narx:", ads[index].price);
       if (newPhone !== null) ads[index].phone = newPhone;
-      localStorage.setItem(type === 'driver' ? 'driverAds' : 'passengerAds', JSON.stringify(ads));
+      if (newPrice !== null) ads[index].price = newPrice;
+      localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
     }
 
     function deleteAd(type, index) {
-      const ads = JSON.parse(localStorage.getItem(type === 'driver' ? 'driverAds' : 'passengerAds')) || [];
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
       ads.splice(index, 1);
-      localStorage.setItem(type === 'driver' ? 'driverAds' : 'passengerAds', JSON.stringify(ads));
+      localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
     }
 
     function updateStats() {
-      const all = getAds();
+      const { driver, passenger } = getAds();
+      const all = [...driver, ...passenger];
       localStorage.setItem("stats", JSON.stringify({
-        drivers: all.drivers.length,
-        passengers: all.passengers.length,
-        approved: [...all.drivers, ...all.passengers].filter(a => a.status === 'approved').length
+        drivers: driver.length,
+        passengers: passenger.length,
+        approved: all.filter(a => a.status === "approved").length,
+        rejected: all.filter(a => a.status === "rejected").length,
+        pending: all.filter(a => !a.status || a.status === "pending").length
       }));
     }
 
