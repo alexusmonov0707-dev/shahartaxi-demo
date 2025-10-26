@@ -27,10 +27,12 @@
     }
     .filters {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       margin-bottom: 1rem;
+      align-items: center;
     }
-    select {
+    select, input {
       padding: 0.5rem;
       border-radius: 5px;
       border: 1px solid #ccc;
@@ -54,7 +56,23 @@
     .reject { background: #dc3545; }
     .edit { background: #ffc107; color: black; }
     .delete { background: #6c757d; }
+    .add { background: #17a2b8; }
     .status { font-weight: bold; }
+    .add-form {
+      display: none;
+      background: #f9f9f9;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .add-form input, .add-form select {
+      margin-bottom: 0.5rem;
+      width: 100%;
+    }
+    .add-form button {
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
@@ -77,7 +95,21 @@
         <option value="rejected">Rad etilgan</option>
       </select>
 
+      <button onclick="toggleAddForm()" class="add">➕ Yangi e’lon qo‘shish</button>
       <button onclick="goToStats()">📊 Statistika</button>
+    </div>
+
+    <div class="add-form" id="addForm">
+      <h3>➕ Yangi e’lon qo‘shish</h3>
+      <select id="newType">
+        <option value="driver">Haydovchi</option>
+        <option value="passenger">Yo‘lovchi</option>
+      </select>
+      <input type="text" id="newFrom" placeholder="Qayerdan (Viloyat, tuman)">
+      <input type="text" id="newTo" placeholder="Qayerga (Viloyat, tuman)">
+      <input type="text" id="newPhone" placeholder="Telefon raqam">
+      <input type="number" id="newPrice" placeholder="Narx (so‘m)">
+      <button class="add" onclick="addAd()">Qo‘shish</button>
     </div>
 
     <div id="ads"></div>
@@ -122,7 +154,7 @@
         div.className = 'ad';
         div.innerHTML = `
           <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ''}, ${ad.fromDistrict || ''} ➜ ${ad.toRegion || ''}, ${ad.toDistrict || ''}</p>
+          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ''} ➜ ${ad.toRegion || ''}</p>
           <p><b>Telefon:</b> ${ad.phone}</p>
           <p><b>Narx:</b> ${ad.price} so‘m</p>
           <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
@@ -165,6 +197,43 @@
       localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
+    }
+
+    // ✅ Yangi e’lon qo‘shish funksiyasi
+    function toggleAddForm() {
+      const form = document.getElementById('addForm');
+      form.style.display = form.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function addAd() {
+      const type = document.getElementById('newType').value;
+      const from = document.getElementById('newFrom').value;
+      const to = document.getElementById('newTo').value;
+      const phone = document.getElementById('newPhone').value;
+      const price = document.getElementById('newPrice').value;
+
+      if (!from || !to || !phone || !price) {
+        alert('Barcha maydonlarni to‘ldiring!');
+        return;
+      }
+
+      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+
+      ads.push({
+        fromRegion: from.split(',')[0]?.trim() || from,
+        toRegion: to.split(',')[0]?.trim() || to,
+        phone,
+        price,
+        status: 'pending'
+      });
+
+      localStorage.setItem(key, JSON.stringify(ads));
+      renderAds();
+      updateStats();
+
+      document.getElementById('addForm').reset;
+      alert('✅ E’lon muvaffaqiyatli qo‘shildi!');
     }
 
     function updateStats() {
