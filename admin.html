@@ -29,8 +29,9 @@
       display: flex;
       gap: 10px;
       margin-bottom: 1rem;
+      align-items: center;
     }
-    select {
+    select, input {
       padding: 0.5rem;
       border-radius: 5px;
       border: 1px solid #ccc;
@@ -51,6 +52,7 @@
     .reject { background: #dc3545; }
     .edit { background: #ffc107; color: black; }
     .delete { background: #6c757d; }
+    .add { background: #17a2b8; }
     .status { font-weight: bold; }
 
     /* Modal styling */
@@ -108,18 +110,19 @@
         <option value="rejected">Rad etilgan</option>
       </select>
 
+      <button class="add" onclick="openAdd()">➕ E’lon qo‘shish</button>
       <button onclick="goToStats()">📊 Statistika</button>
     </div>
 
     <div id="ads"></div>
   </main>
 
-  <!-- Modal -->
+  <!-- Edit Modal -->
   <div class="modal" id="editModal">
     <div class="modal-content">
       <h3>E’lonni tahrirlash</h3>
-      <input id="editFrom" placeholder="Qayerdan (viloyat/tuman)">
-      <input id="editTo" placeholder="Qayerga (viloyat/tuman)">
+      <input id="editFrom" placeholder="Qayerdan (viloyat, tuman)">
+      <input id="editTo" placeholder="Qayerga (viloyat, tuman)">
       <input id="editPhone" placeholder="Telefon raqami">
       <input id="editPrice" placeholder="Narx (so‘m)">
       <select id="editStatus">
@@ -130,6 +133,30 @@
       <div>
         <button class="save" onclick="saveEdit()">Saqlash</button>
         <button class="cancel" onclick="closeModal()">Bekor qilish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Modal -->
+  <div class="modal" id="addModal">
+    <div class="modal-content">
+      <h3>Yangi e’lon qo‘shish</h3>
+      <select id="addType">
+        <option value="driver">Haydovchi</option>
+        <option value="passenger">Yo‘lovchi</option>
+      </select>
+      <input id="addFrom" placeholder="Qayerdan (viloyat, tuman)">
+      <input id="addTo" placeholder="Qayerga (viloyat, tuman)">
+      <input id="addPhone" placeholder="Telefon raqami">
+      <input id="addPrice" placeholder="Narx (so‘m)">
+      <select id="addStatus">
+        <option value="pending">⏳ Kutilmoqda</option>
+        <option value="approved">✅ Tasdiqlangan</option>
+        <option value="rejected">❌ Rad etilgan</option>
+      </select>
+      <div>
+        <button class="save" onclick="saveNewAd()">Qo‘shish</button>
+        <button class="cancel" onclick="closeAdd()">Bekor qilish</button>
       </div>
     </div>
   </div>
@@ -210,7 +237,6 @@
       document.getElementById('editPhone').value = ad.phone;
       document.getElementById('editPrice').value = ad.price;
       document.getElementById('editStatus').value = ad.status || 'pending';
-
       document.getElementById('editModal').style.display = 'flex';
     }
 
@@ -236,6 +262,38 @@
 
       localStorage.setItem(key, JSON.stringify(ads));
       closeModal();
+      renderAds();
+      updateStats();
+    }
+
+    function openAdd() {
+      document.getElementById('addModal').style.display = 'flex';
+    }
+
+    function closeAdd() {
+      document.getElementById('addModal').style.display = 'none';
+    }
+
+    function saveNewAd() {
+      const type = document.getElementById('addType').value;
+      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+
+      const from = document.getElementById('addFrom').value.split(',');
+      const to = document.getElementById('addTo').value.split(',');
+
+      ads.push({
+        fromRegion: from[0]?.trim(),
+        fromDistrict: from[1]?.trim(),
+        toRegion: to[0]?.trim(),
+        toDistrict: to[1]?.trim(),
+        phone: document.getElementById('addPhone').value,
+        price: document.getElementById('addPrice').value,
+        status: document.getElementById('addStatus').value
+      });
+
+      localStorage.setItem(key, JSON.stringify(ads));
+      closeAdd();
       renderAds();
       updateStats();
     }
