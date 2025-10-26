@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
@@ -29,11 +29,13 @@
       display: flex;
       gap: 10px;
       margin-bottom: 1rem;
+      flex-wrap: wrap;
     }
-    select {
-      padding: 0.5rem;
-      border-radius: 5px;
+    select, button {
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
       border: 1px solid #ccc;
+      cursor: pointer;
     }
     .ad {
       border-bottom: 1px solid #ddd;
@@ -116,7 +118,7 @@
     <div id="ads"></div>
   </main>
 
-  <!-- Mini tahrirlash oynasi -->
+  <!-- Tahrirlash oynasi -->
   <div class="modal" id="editModal">
     <div class="modal-content">
       <h3>E’lonni tahrirlash</h3>
@@ -177,9 +179,9 @@
         div.className = 'ad';
         div.innerHTML = `
           <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-          <p><b>Yo‘nalish:</b> ${ad.from || ''} ➜ ${ad.to || ''}</p>
-          <p><b>Telefon:</b> ${ad.phone}</p>
-          <p><b>Narx:</b> ${ad.price} so‘m</p>
+          <p><b>Yo‘nalish:</b> ${ad.from || '—'} ➜ ${ad.to || '—'}</p>
+          <p><b>Telefon:</b> ${ad.phone || '—'}</p>
+          <p><b>Narx:</b> ${ad.price || '—'} so‘m</p>
           <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
           <div class="actions">
             <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
@@ -211,13 +213,11 @@
       if (!ad) return;
 
       currentEdit = { type, id };
-
       document.getElementById('editPhone').value = ad.phone || '';
       document.getElementById('editPrice').value = ad.price || '';
       document.getElementById('editFrom').value = ad.from || '';
       document.getElementById('editTo').value = ad.to || '';
       document.getElementById('editStatus').value = ad.status || 'pending';
-
       document.getElementById('editModal').style.display = 'flex';
     }
 
