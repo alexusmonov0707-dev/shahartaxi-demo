@@ -6,88 +6,21 @@
   <title>Admin Panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #f4f6f9;
-      margin: 0; padding: 0;
-    }
-    header {
-      background: #007bff;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
-    main {
-      max-width: 1000px;
-      margin: 1rem auto;
-      background: white;
-      border-radius: 10px;
-      padding: 1.5rem;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-    }
-    .filters {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 1rem;
-      align-items: center;
-    }
-    select, input {
-      padding: 0.5rem;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    .ad {
-      border-bottom: 1px solid #ddd;
-      padding: 1rem 0;
-    }
-    .actions button {
-      margin-right: 5px;
-      border: none;
-      padding: 0.4rem 0.8rem;
-      border-radius: 6px;
-      cursor: pointer;
-      color: white;
-    }
+    body { font-family: 'Inter', sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+    header { background: #007bff; color: white; padding: 1rem; text-align: center; }
+    main { max-width: 1000px; margin: 1rem auto; background: white; border-radius: 10px; padding: 1.5rem;
+           box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+    .filters { display: flex; gap: 10px; margin-bottom: 1rem; }
+    select, button { padding: 0.5rem; border-radius: 5px; border: 1px solid #ccc; }
+    .ad { border-bottom: 1px solid #ddd; padding: 1rem 0; }
+    .ad:last-child { border-bottom: none; }
+    .actions button { margin-right: 5px; border: none; padding: 0.4rem 0.8rem;
+                      border-radius: 6px; cursor: pointer; color: white; }
     .approve { background: #28a745; }
     .reject { background: #dc3545; }
     .edit { background: #ffc107; color: black; }
     .delete { background: #6c757d; }
-    .add { background: #17a2b8; }
     .status { font-weight: bold; }
-
-    /* Modal styling */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 400px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-    }
-    .modal-content input, .modal-content select {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 8px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    .modal-content button {
-      margin-right: 10px;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .save { background: #007bff; color: white; }
-    .cancel { background: #6c757d; color: white; }
   </style>
 </head>
 <body>
@@ -110,59 +43,17 @@
         <option value="rejected">Rad etilgan</option>
       </select>
 
-      <button class="add" onclick="openAdd()">➕ E’lon qo‘shish</button>
       <button onclick="goToStats()">📊 Statistika</button>
     </div>
 
     <div id="ads"></div>
   </main>
 
-  <!-- Edit Modal -->
-  <div class="modal" id="editModal">
-    <div class="modal-content">
-      <h3>E’lonni tahrirlash</h3>
-      <input id="editFrom" placeholder="Qayerdan (viloyat, tuman)">
-      <input id="editTo" placeholder="Qayerga (viloyat, tuman)">
-      <input id="editPhone" placeholder="Telefon raqami">
-      <input id="editPrice" placeholder="Narx (so‘m)">
-      <select id="editStatus">
-        <option value="pending">⏳ Kutilmoqda</option>
-        <option value="approved">✅ Tasdiqlangan</option>
-        <option value="rejected">❌ Rad etilgan</option>
-      </select>
-      <div>
-        <button class="save" onclick="saveEdit()">Saqlash</button>
-        <button class="cancel" onclick="closeModal()">Bekor qilish</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Modal -->
-  <div class="modal" id="addModal">
-    <div class="modal-content">
-      <h3>Yangi e’lon qo‘shish</h3>
-      <select id="addType">
-        <option value="driver">Haydovchi</option>
-        <option value="passenger">Yo‘lovchi</option>
-      </select>
-      <input id="addFrom" placeholder="Qayerdan (viloyat, tuman)">
-      <input id="addTo" placeholder="Qayerga (viloyat, tuman)">
-      <input id="addPhone" placeholder="Telefon raqami">
-      <input id="addPrice" placeholder="Narx (so‘m)">
-      <select id="addStatus">
-        <option value="pending">⏳ Kutilmoqda</option>
-        <option value="approved">✅ Tasdiqlangan</option>
-        <option value="rejected">❌ Rad etilgan</option>
-      </select>
-      <div>
-        <button class="save" onclick="saveNewAd()">Qo‘shish</button>
-        <button class="cancel" onclick="closeAdd()">Bekor qilish</button>
-      </div>
-    </div>
-  </div>
-
   <script>
-    let editData = { type: '', index: -1 };
+    // 🔐 Kirish nazorati
+    if (sessionStorage.getItem("isAdmin") !== "true") {
+      window.location.href = "admin-login.html";
+    }
 
     function getAds() {
       return {
@@ -181,8 +72,8 @@
       const { driver, passenger } = getAds();
       const typeFilter = document.getElementById('typeFilter').value;
       const statusFilter = document.getElementById('statusFilter').value;
-      let ads = [];
 
+      let ads = [];
       if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
       else if (typeFilter === 'passenger') ads = passenger.map(a => ({ ...a, type: 'passenger' }));
       else ads = [...driver.map(a => ({ ...a, type: 'driver' })), ...passenger.map(a => ({ ...a, type: 'passenger' }))];
@@ -197,7 +88,7 @@
         return;
       }
 
-      ads.forEach((ad, index) => {
+      ads.forEach(ad => {
         const div = document.createElement('div');
         div.className = 'ad';
         div.innerHTML = `
@@ -207,102 +98,46 @@
           <p><b>Narx:</b> ${ad.price} so‘m</p>
           <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
           <div class="actions">
-            <button class="approve" onclick="updateStatus('${ad.type}', ${index}, 'approved')">Tasdiqlash</button>
-            <button class="reject" onclick="updateStatus('${ad.type}', ${index}, 'rejected')">Rad etish</button>
-            <button class="edit" onclick="openEdit('${ad.type}', ${index})">Tahrirlash</button>
-            <button class="delete" onclick="deleteAd('${ad.type}', ${index})">O‘chirish</button>
+            <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
+            <button class="reject" onclick="updateStatus('${ad.type}', '${ad.id}', 'rejected')">Rad etish</button>
+            <button class="edit" onclick="editAd('${ad.type}', '${ad.id}')">Tahrirlash</button>
+            <button class="delete" onclick="deleteAd('${ad.type}', '${ad.id}')">O‘chirish</button>
           </div>
         `;
         container.appendChild(div);
       });
     }
 
-    function updateStatus(type, index, status) {
+    function updateStatus(type, id, status) {
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const index = ads.findIndex(a => a.id === id);
+      if (index === -1) return;
       ads[index].status = status;
       localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
     }
 
-    function openEdit(type, index) {
-      editData = { type, index };
+    function editAd(type, id) {
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads[index];
-
-      document.getElementById('editFrom').value = `${ad.fromRegion || ''}, ${ad.fromDistrict || ''}`;
-      document.getElementById('editTo').value = `${ad.toRegion || ''}, ${ad.toDistrict || ''}`;
-      document.getElementById('editPhone').value = ad.phone;
-      document.getElementById('editPrice').value = ad.price;
-      document.getElementById('editStatus').value = ad.status || 'pending';
-      document.getElementById('editModal').style.display = 'flex';
-    }
-
-    function closeModal() {
-      document.getElementById('editModal').style.display = 'none';
-    }
-
-    function saveEdit() {
-      const key = editData.type === 'driver' ? 'driverAds' : 'passengerAds';
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads[editData.index];
-
-      const from = document.getElementById('editFrom').value.split(',');
-      const to = document.getElementById('editTo').value.split(',');
-
-      ad.fromRegion = from[0]?.trim() || '';
-      ad.fromDistrict = from[1]?.trim() || '';
-      ad.toRegion = to[0]?.trim() || '';
-      ad.toDistrict = to[1]?.trim() || '';
-      ad.phone = document.getElementById('editPhone').value;
-      ad.price = document.getElementById('editPrice').value;
-      ad.status = document.getElementById('editStatus').value;
-
+      const ad = ads.find(a => a.id === id);
+      if (!ad) return;
+      const newPhone = prompt('Yangi telefon:', ad.phone);
+      const newPrice = prompt('Yangi narx:', ad.price);
+      if (newPhone !== null) ad.phone = newPhone;
+      if (newPrice !== null) ad.price = newPrice;
       localStorage.setItem(key, JSON.stringify(ads));
-      closeModal();
       renderAds();
       updateStats();
     }
 
-    function openAdd() {
-      document.getElementById('addModal').style.display = 'flex';
-    }
-
-    function closeAdd() {
-      document.getElementById('addModal').style.display = 'none';
-    }
-
-    function saveNewAd() {
-      const type = document.getElementById('addType').value;
+    function deleteAd(type, id) {
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-
-      const from = document.getElementById('addFrom').value.split(',');
-      const to = document.getElementById('addTo').value.split(',');
-
-      ads.push({
-        fromRegion: from[0]?.trim(),
-        fromDistrict: from[1]?.trim(),
-        toRegion: to[0]?.trim(),
-        toDistrict: to[1]?.trim(),
-        phone: document.getElementById('addPhone').value,
-        price: document.getElementById('addPrice').value,
-        status: document.getElementById('addStatus').value
-      });
-
-      localStorage.setItem(key, JSON.stringify(ads));
-      closeAdd();
-      renderAds();
-      updateStats();
-    }
-
-    function deleteAd(type, index) {
-      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      ads.splice(index, 1);
-      localStorage.setItem(key, JSON.stringify(ads));
+      const filtered = ads.filter(a => a.id !== id);
+      localStorage.setItem(key, JSON.stringify(filtered));
       renderAds();
       updateStats();
     }
