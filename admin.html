@@ -27,12 +27,10 @@
     }
     .filters {
       display: flex;
-      flex-wrap: wrap;
       gap: 10px;
       margin-bottom: 1rem;
-      align-items: center;
     }
-    select, input {
+    select {
       padding: 0.5rem;
       border-radius: 5px;
       border: 1px solid #ccc;
@@ -40,9 +38,6 @@
     .ad {
       border-bottom: 1px solid #ddd;
       padding: 1rem 0;
-    }
-    .ad:last-child {
-      border-bottom: none;
     }
     .actions button {
       margin-right: 5px;
@@ -56,23 +51,41 @@
     .reject { background: #dc3545; }
     .edit { background: #ffc107; color: black; }
     .delete { background: #6c757d; }
-    .add { background: #17a2b8; }
     .status { font-weight: bold; }
-    .add-form {
+
+    /* Modal styling */
+    .modal {
       display: none;
-      background: #f9f9f9;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
     }
-    .add-form input, .add-form select {
-      margin-bottom: 0.5rem;
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 400px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+    .modal-content input, .modal-content select {
       width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
-    .add-form button {
-      margin-top: 0.5rem;
+    .modal-content button {
+      margin-right: 10px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
+    .save { background: #007bff; color: white; }
+    .cancel { background: #6c757d; color: white; }
   </style>
 </head>
 <body>
@@ -95,27 +108,35 @@
         <option value="rejected">Rad etilgan</option>
       </select>
 
-      <button onclick="toggleAddForm()" class="add">➕ Yangi e’lon qo‘shish</button>
       <button onclick="goToStats()">📊 Statistika</button>
-    </div>
-
-    <div class="add-form" id="addForm">
-      <h3>➕ Yangi e’lon qo‘shish</h3>
-      <select id="newType">
-        <option value="driver">Haydovchi</option>
-        <option value="passenger">Yo‘lovchi</option>
-      </select>
-      <input type="text" id="newFrom" placeholder="Qayerdan (Viloyat, tuman)">
-      <input type="text" id="newTo" placeholder="Qayerga (Viloyat, tuman)">
-      <input type="text" id="newPhone" placeholder="Telefon raqam">
-      <input type="number" id="newPrice" placeholder="Narx (so‘m)">
-      <button class="add" onclick="addAd()">Qo‘shish</button>
     </div>
 
     <div id="ads"></div>
   </main>
 
+  <!-- Modal -->
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <h3>E’lonni tahrirlash</h3>
+      <input id="editFrom" placeholder="Qayerdan (viloyat/tuman)">
+      <input id="editTo" placeholder="Qayerga (viloyat/tuman)">
+      <input id="editPhone" placeholder="Telefon raqami">
+      <input id="editPrice" placeholder="Narx (so‘m)">
+      <select id="editStatus">
+        <option value="pending">⏳ Kutilmoqda</option>
+        <option value="approved">✅ Tasdiqlangan</option>
+        <option value="rejected">❌ Rad etilgan</option>
+      </select>
+      <div>
+        <button class="save" onclick="saveEdit()">Saqlash</button>
+        <button class="cancel" onclick="closeModal()">Bekor qilish</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    let editData = { type: '', index: -1 };
+
     function getAds() {
       return {
         driver: JSON.parse(localStorage.getItem('driverAds')) || [],
@@ -133,8 +154,8 @@
       const { driver, passenger } = getAds();
       const typeFilter = document.getElementById('typeFilter').value;
       const statusFilter = document.getElementById('statusFilter').value;
-
       let ads = [];
+
       if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
       else if (typeFilter === 'passenger') ads = passenger.map(a => ({ ...a, type: 'passenger' }));
       else ads = [...driver.map(a => ({ ...a, type: 'driver' })), ...passenger.map(a => ({ ...a, type: 'passenger' }))];
@@ -154,14 +175,14 @@
         div.className = 'ad';
         div.innerHTML = `
           <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ''} ➜ ${ad.toRegion || ''}</p>
+          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ''}, ${ad.fromDistrict || ''} ➜ ${ad.toRegion || ''}, ${ad.toDistrict || ''}</p>
           <p><b>Telefon:</b> ${ad.phone}</p>
           <p><b>Narx:</b> ${ad.price} so‘m</p>
           <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
           <div class="actions">
             <button class="approve" onclick="updateStatus('${ad.type}', ${index}, 'approved')">Tasdiqlash</button>
             <button class="reject" onclick="updateStatus('${ad.type}', ${index}, 'rejected')">Rad etish</button>
-            <button class="edit" onclick="editAd('${ad.type}', ${index})">Tahrirlash</button>
+            <button class="edit" onclick="openEdit('${ad.type}', ${index})">Tahrirlash</button>
             <button class="delete" onclick="deleteAd('${ad.type}', ${index})">O‘chirish</button>
           </div>
         `;
@@ -178,14 +199,43 @@
       updateStats();
     }
 
-    function editAd(type, index) {
+    function openEdit(type, index) {
+      editData = { type, index };
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const newPhone = prompt('Yangi telefon:', ads[index].phone);
-      const newPrice = prompt('Yangi narx:', ads[index].price);
-      if (newPhone !== null) ads[index].phone = newPhone;
-      if (newPrice !== null) ads[index].price = newPrice;
+      const ad = ads[index];
+
+      document.getElementById('editFrom').value = `${ad.fromRegion || ''}, ${ad.fromDistrict || ''}`;
+      document.getElementById('editTo').value = `${ad.toRegion || ''}, ${ad.toDistrict || ''}`;
+      document.getElementById('editPhone').value = ad.phone;
+      document.getElementById('editPrice').value = ad.price;
+      document.getElementById('editStatus').value = ad.status || 'pending';
+
+      document.getElementById('editModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').style.display = 'none';
+    }
+
+    function saveEdit() {
+      const key = editData.type === 'driver' ? 'driverAds' : 'passengerAds';
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const ad = ads[editData.index];
+
+      const from = document.getElementById('editFrom').value.split(',');
+      const to = document.getElementById('editTo').value.split(',');
+
+      ad.fromRegion = from[0]?.trim() || '';
+      ad.fromDistrict = from[1]?.trim() || '';
+      ad.toRegion = to[0]?.trim() || '';
+      ad.toDistrict = to[1]?.trim() || '';
+      ad.phone = document.getElementById('editPhone').value;
+      ad.price = document.getElementById('editPrice').value;
+      ad.status = document.getElementById('editStatus').value;
+
       localStorage.setItem(key, JSON.stringify(ads));
+      closeModal();
       renderAds();
       updateStats();
     }
@@ -197,43 +247,6 @@
       localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
-    }
-
-    // ✅ Yangi e’lon qo‘shish funksiyasi
-    function toggleAddForm() {
-      const form = document.getElementById('addForm');
-      form.style.display = form.style.display === 'block' ? 'none' : 'block';
-    }
-
-    function addAd() {
-      const type = document.getElementById('newType').value;
-      const from = document.getElementById('newFrom').value;
-      const to = document.getElementById('newTo').value;
-      const phone = document.getElementById('newPhone').value;
-      const price = document.getElementById('newPrice').value;
-
-      if (!from || !to || !phone || !price) {
-        alert('Barcha maydonlarni to‘ldiring!');
-        return;
-      }
-
-      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-
-      ads.push({
-        fromRegion: from.split(',')[0]?.trim() || from,
-        toRegion: to.split(',')[0]?.trim() || to,
-        phone,
-        price,
-        status: 'pending'
-      });
-
-      localStorage.setItem(key, JSON.stringify(ads));
-      renderAds();
-      updateStats();
-
-      document.getElementById('addForm').reset;
-      alert('✅ E’lon muvaffaqiyatli qo‘shildi!');
     }
 
     function updateStats() {
