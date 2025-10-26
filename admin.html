@@ -1,26 +1,66 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
-    header { background: #007bff; color: white; padding: 1rem; text-align: center; }
-    main { max-width: 1100px; margin: 1rem auto; background: white; border-radius: 10px;
-           padding: 1.5rem; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-    .filters, .add-form { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
-    select, button, input { padding: 0.5rem; border-radius: 5px; border: 1px solid #ccc; }
-    button { cursor: pointer; }
-    .ad { border-bottom: 1px solid #ddd; padding: 1rem 0; }
-    .ad:last-child { border-bottom: none; }
-    .actions button { margin-right: 5px; border: none; padding: 0.4rem 0.8rem;
-                      border-radius: 6px; cursor: pointer; color: white; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f4f6f9;
+      margin: 0; padding: 0;
+    }
+    header {
+      background: #007bff;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    main {
+      max-width: 1000px;
+      margin: 1rem auto;
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    select, button {
+      padding: 0.6rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .ad {
+      border-bottom: 1px solid #ddd;
+      padding: 1rem 0;
+    }
+    .ad:last-child {
+      border-bottom: none;
+    }
+    .actions button {
+      margin-right: 5px;
+      border: none;
+      padding: 0.5rem 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      color: white;
+    }
     .approve { background: #28a745; }
     .reject { background: #dc3545; }
     .edit { background: #ffc107; color: black; }
     .delete { background: #6c757d; }
+    .add-btn {
+      background: #17a2b8;
+      color: white;
+    }
     .status { font-weight: bold; }
   </style>
 </head>
@@ -30,7 +70,6 @@
   </header>
 
   <main>
-    <!-- Filter panel -->
     <div class="filters">
       <select id="typeFilter" onchange="renderAds()">
         <option value="all">Barcha turlar</option>
@@ -46,33 +85,17 @@
       </select>
 
       <button onclick="goToStats()">📊 Statistika</button>
-      <button onclick="logout()">🚪 Chiqish</button>
+      <button class="add-btn" onclick="addAd()">➕ E’lon qo‘shish</button>
     </div>
 
-    <!-- E'lon qo‘shish -->
-    <div class="add-form">
-      <select id="newType">
-        <option value="driver">Haydovchi</option>
-        <option value="passenger">Yo‘lovchi</option>
-      </select>
-      <input id="from" placeholder="Qayerdan" />
-      <input id="to" placeholder="Qayerga" />
-      <input id="phone" placeholder="Telefon raqami" />
-      <input id="price" type="number" placeholder="Narx (so‘m)" />
-      <button onclick="addAd()">➕ E’lon qo‘shish</button>
-    </div>
-
-    <!-- E'lonlar -->
     <div id="ads"></div>
   </main>
 
   <script>
-    // 🔐 Kirishni tekshirish
-    if (sessionStorage.getItem("isAdmin") !== "true") {
-      window.location.href = "admin-login.html";
+    if (localStorage.getItem("isAdmin") !== "true") {
+      location.href = "admin-login.html";
     }
 
-    // 🧠 Ma'lumot olish
     function getAds() {
       return {
         driver: JSON.parse(localStorage.getItem('driverAds')) || [],
@@ -80,14 +103,12 @@
       };
     }
 
-    // 📊 Status matni
     function getStatusText(status) {
       if (status === 'approved') return '✅ Tasdiqlangan';
       if (status === 'rejected') return '❌ Rad etilgan';
       return '⏳ Kutilmoqda';
     }
 
-    // 🖼️ E'lonlarni chiqarish
     function renderAds() {
       const { driver, passenger } = getAds();
       const typeFilter = document.getElementById('typeFilter').value;
@@ -108,96 +129,78 @@
         return;
       }
 
-      ads.forEach(ad => {
+      ads.forEach((ad, index) => {
         const div = document.createElement('div');
         div.className = 'ad';
         div.innerHTML = `
           <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-          <p><b>Yo‘nalish:</b> ${ad.from} ➜ ${ad.to}</p>
+          <p><b>Yo‘nalish:</b> ${ad.fromRegion || ''}, ${ad.fromDistrict || ''} ➜ ${ad.toRegion || ''}, ${ad.toDistrict || ''}</p>
           <p><b>Telefon:</b> ${ad.phone}</p>
           <p><b>Narx:</b> ${ad.price} so‘m</p>
           <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
           <div class="actions">
-            <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
-            <button class="reject" onclick="updateStatus('${ad.type}', '${ad.id}', 'rejected')">Rad etish</button>
-            <button class="edit" onclick="editAd('${ad.type}', '${ad.id}')">Tahrirlash</button>
-            <button class="delete" onclick="deleteAd('${ad.type}', '${ad.id}')">O‘chirish</button>
+            <button class="approve" onclick="updateStatus('${ad.type}', ${index}, 'approved')">Tasdiqlash</button>
+            <button class="reject" onclick="updateStatus('${ad.type}', ${index}, 'rejected')">Rad etish</button>
+            <button class="edit" onclick="editAd('${ad.type}', ${index})">Tahrirlash</button>
+            <button class="delete" onclick="deleteAd('${ad.type}', ${index})">O‘chirish</button>
           </div>
         `;
         container.appendChild(div);
       });
     }
 
-    // 🔁 Statusni o‘zgartirish
-    function updateStatus(type, id, status) {
+    function updateStatus(type, index, status) {
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const index = ads.findIndex(a => a.id === id);
-      if (index === -1) return;
       ads[index].status = status;
       localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
     }
 
-    // ✏️ E’lon tahrirlash
-    function editAd(type, id) {
+    function editAd(type, index) {
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads.find(a => a.id === id);
-      if (!ad) return;
-      const newFrom = prompt('Yangi qayerdan:', ad.from);
-      const newTo = prompt('Yangi qayerga:', ad.to);
-      const newPhone = prompt('Yangi telefon:', ad.phone);
-      const newPrice = prompt('Yangi narx:', ad.price);
-      if (newFrom) ad.from = newFrom;
-      if (newTo) ad.to = newTo;
-      if (newPhone) ad.phone = newPhone;
-      if (newPrice) ad.price = newPrice;
+      const newPhone = prompt('Yangi telefon:', ads[index].phone);
+      const newPrice = prompt('Yangi narx:', ads[index].price);
+      if (newPhone !== null) ads[index].phone = newPhone;
+      if (newPrice !== null) ads[index].price = newPrice;
       localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
     }
 
-    // 🗑️ E’lon o‘chirish
-    function deleteAd(type, id) {
+    function deleteAd(type, index) {
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const filtered = ads.filter(a => a.id !== id);
-      localStorage.setItem(key, JSON.stringify(filtered));
+      ads.splice(index, 1);
+      localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
     }
 
-    // ➕ E’lon qo‘shish
     function addAd() {
-      const type = document.getElementById('newType').value;
-      const from = document.getElementById('from').value.trim();
-      const to = document.getElementById('to').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const price = document.getElementById('price').value.trim();
+      const type = prompt("E’lon turi (driver yoki passenger):");
+      if (!type || (type !== "driver" && type !== "passenger")) return alert("❌ Noto‘g‘ri tur!");
 
-      if (!from || !to || !phone || !price) {
-        alert('❗ Barcha maydonlarni to‘ldiring!');
-        return;
-      }
+      const ad = {
+        fromRegion: prompt("Qayerdan (viloyat):"),
+        fromDistrict: prompt("Qayerdan (tuman):"),
+        toRegion: prompt("Qayerga (viloyat):"),
+        toDistrict: prompt("Qayerga (tuman):"),
+        phone: prompt("Telefon raqam:"),
+        price: prompt("Narx (so‘m):"),
+        status: "pending"
+      };
 
-      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+      const key = type === "driver" ? "driverAds" : "passengerAds";
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-
-      ads.push({
-        id: Date.now().toString(),
-        from, to, phone, price,
-        status: 'pending'
-      });
-
+      ads.push(ad);
       localStorage.setItem(key, JSON.stringify(ads));
       renderAds();
       updateStats();
-      alert('✅ E’lon muvaffaqiyatli qo‘shildi!');
     }
 
-    // 📈 Statistika yangilash
     function updateStats() {
       const { driver, passenger } = getAds();
       const all = [...driver, ...passenger];
@@ -211,25 +214,16 @@
       localStorage.setItem('stats', JSON.stringify(stats));
     }
 
-    // 📊 Statistika sahifasiga o‘tish
     function goToStats() {
       updateStats();
       location.href = 'admin-stat.html';
     }
 
-    // 🚪 Chiqish
-    function logout() {
-      sessionStorage.removeItem('isAdmin');
-      window.location.href = 'admin-login.html';
-    }
-
-    // ⏱️ Har 5 soniyada avtomatik yangilanish
     setInterval(() => {
       renderAds();
       updateStats();
     }, 5000);
 
-    // Boshlanishda yuklash
     window.onload = () => {
       renderAds();
       updateStats();
