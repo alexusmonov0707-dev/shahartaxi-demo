@@ -1,112 +1,169 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - E’lon qo‘shish</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E’lon qo‘shish - ShaharTaxi Admin</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: #f5f7fb;
-      margin: 0; padding: 0;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 0;
     }
     header {
       background: #007bff;
       color: white;
-      padding: 1rem;
       text-align: center;
+      padding: 1rem;
     }
     main {
-      max-width: 400px;
+      max-width: 600px;
       margin: 2rem auto;
       background: white;
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
     }
-    input, select, button {
-      width: 100%;
-      padding: 0.8rem;
+    h2 {
+      text-align: center;
+      color: #007bff;
       margin-bottom: 1rem;
-      border-radius: 8px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    input, select {
+      padding: 0.8rem;
       border: 1px solid #ccc;
+      border-radius: 8px;
       font-size: 1rem;
     }
     button {
+      padding: 0.8rem;
       background: #007bff;
       color: white;
       border: none;
+      border-radius: 8px;
+      font-size: 1rem;
       cursor: pointer;
+      transition: background 0.3s;
     }
     button:hover {
       background: #0056b3;
     }
-    p {
+    .success {
       text-align: center;
       color: green;
-      font-weight: bold;
+      font-weight: 600;
+      margin-top: 1rem;
+    }
+    .back-btn {
+      background: #6c757d;
+      margin-top: 0.5rem;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>➕ Admin - E’lon qo‘shish</h1>
+    <h1>➕ Yangi e’lon qo‘shish</h1>
   </header>
 
   <main>
-    <select id="type">
-      <option value="driver">Haydovchi</option>
-      <option value="passenger">Yo‘lovchi</option>
-    </select>
-
-    <input type="text" id="from" placeholder="Qayerdan">
-    <input type="text" id="to" placeholder="Qayerga">
-    <input type="text" id="phone" placeholder="Telefon raqam">
-    <input type="number" id="price" placeholder="Narx (so‘m)">
-    <button onclick="addAd()">E’lon qo‘shish</button>
-
-    <p id="message"></p>
-    <button onclick="location.href='admin.html'">⬅ Orqaga</button>
+    <h2>ShaharTaxi - Admin qo‘shuvi</h2>
+    <form id="addForm">
+      <select id="type" required>
+        <option value="">E’lon turi</option>
+        <option value="driver">Haydovchi</option>
+        <option value="passenger">Yo‘lovchi</option>
+      </select>
+      <input type="text" id="from" placeholder="Qayerdan" required>
+      <input type="text" id="to" placeholder="Qayerga" required>
+      <input type="text" id="phone" placeholder="Telefon raqami" required>
+      <input type="number" id="price" placeholder="Narx (so‘mda)" required>
+      <button type="submit">E’lon qo‘shish</button>
+      <button type="button" class="back-btn" onclick="goBack()">⬅ Orqaga</button>
+    </form>
+    <p id="message" class="success"></p>
   </main>
 
   <script>
-    function addAd() {
-      const type = document.getElementById('type').value;
-      const from = document.getElementById('from').value.trim();
-      const to = document.getElementById('to').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const price = document.getElementById('price').value.trim();
-      const msg = document.getElementById('message');
+    // 🔢 Unikal ID generator
+    function generateId() {
+      return 'ad-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    }
 
-      if (!from || !to || !phone || !price) {
-        msg.style.color = 'red';
-        msg.textContent = '❗ Barcha maydonlarni to‘ldiring.';
+    // 🟢 Formani yuborish
+    document.getElementById("addForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const type = document.getElementById("type").value;
+      const from = document.getElementById("from").value.trim();
+      const to = document.getElementById("to").value.trim();
+      const phone = document.getElementById("phone").value.trim();
+      const price = document.getElementById("price").value.trim();
+      const message = document.getElementById("message");
+
+      if (!type || !from || !to || !phone || !price) {
+        message.textContent = "⚠ Barcha maydonlarni to‘ldiring!";
+        message.style.color = "red";
         return;
       }
 
-      const newAd = {
-        id: type + '_' + Date.now(),
-        from, to, phone, price,
-        status: 'pending'
+      const ad = {
+        id: generateId(),
+        from,
+        to,
+        phone,
+        price,
+        status: "pending",
+        createdAt: new Date().toISOString()
       };
 
-      const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+      const key = type === "driver" ? "driverAds" : "passengerAds";
       const ads = JSON.parse(localStorage.getItem(key)) || [];
-      ads.push(newAd);
+      ads.push(ad);
       localStorage.setItem(key, JSON.stringify(ads));
 
-      msg.style.color = 'green';
-      msg.textContent = '✅ E’lon muvaffaqiyatli qo‘shildi!';
+      // 🔁 Statistikani yangilash
+      updateStats();
 
-      // Formani tozalaymiz
-      document.getElementById('from').value = '';
-      document.getElementById('to').value = '';
-      document.getElementById('phone').value = '';
-      document.getElementById('price').value = '';
+      // ✅ Xabar
+      message.textContent = "✅ E’lon qo‘shildi!";
+      message.style.color = "green";
 
-      // 1 sekunddan so‘ng admin panelga qaytish
-      setTimeout(() => location.href = 'admin.html', 1000);
+      // 🔄 Formani tozalash
+      document.getElementById("addForm").reset();
+
+      // 🕒 2 soniyadan keyin admin panelga qaytish
+      setTimeout(() => {
+        window.location.href = "admin.html";
+      }, 2000);
+    });
+
+    // 📊 Statistikani yangilash
+    function updateStats() {
+      const driver = JSON.parse(localStorage.getItem("driverAds")) || [];
+      const passenger = JSON.parse(localStorage.getItem("passengerAds")) || [];
+      const all = [...driver, ...passenger];
+
+      const stats = {
+        drivers: driver.length,
+        passengers: passenger.length,
+        approved: all.filter(a => a.status === "approved").length,
+        rejected: all.filter(a => a.status === "rejected").length,
+        pending: all.filter(a => !a.status || a.status === "pending").length
+      };
+
+      localStorage.setItem("stats", JSON.stringify(stats));
+    }
+
+    // 🔙 Orqaga
+    function goBack() {
+      window.location.href = "admin.html";
     }
   </script>
 </body>
