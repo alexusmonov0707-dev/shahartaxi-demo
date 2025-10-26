@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
@@ -40,7 +40,6 @@
     .ad {
       border-bottom: 1px solid #ddd;
       padding: 1rem 0;
-      position: relative;
     }
     .ad:last-child { border-bottom: none; }
     .actions button {
@@ -141,7 +140,20 @@
   <script>
     let currentEdit = { type: null, id: null };
 
+    // Har bir e’londa id bo‘lishini ta’minlaymiz
+    function ensureIds() {
+      const driver = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passenger = JSON.parse(localStorage.getItem('passengerAds')) || [];
+
+      driver.forEach(ad => { if (!ad.id) ad.id = 'drv_' + Date.now() + Math.random(); });
+      passenger.forEach(ad => { if (!ad.id) ad.id = 'psg_' + Date.now() + Math.random(); });
+
+      localStorage.setItem('driverAds', JSON.stringify(driver));
+      localStorage.setItem('passengerAds', JSON.stringify(passenger));
+    }
+
     function getAds() {
+      ensureIds();
       return {
         driver: JSON.parse(localStorage.getItem('driverAds')) || [],
         passenger: JSON.parse(localStorage.getItem('passengerAds')) || []
@@ -198,7 +210,7 @@
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
       const index = ads.findIndex(a => a.id === id);
-      if (index > -1) {
+      if (index !== -1) {
         ads[index].status = status;
         localStorage.setItem(key, JSON.stringify(ads));
       }
@@ -226,7 +238,7 @@
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
       const index = ads.findIndex(a => a.id === id);
-      if (index > -1) {
+      if (index !== -1) {
         ads[index].phone = document.getElementById('editPhone').value;
         ads[index].price = document.getElementById('editPrice').value;
         ads[index].from = document.getElementById('editFrom').value;
@@ -275,6 +287,7 @@
     }
 
     window.onload = () => {
+      ensureIds();
       renderAds();
       updateStats();
     };
