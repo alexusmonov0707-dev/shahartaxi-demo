@@ -109,22 +109,35 @@
 
     // ✅ Haydovchi e’lonini saqlash
     function saveDriverAd() {
-      const ad = {
-        type: "driver",
-        fromRegion: document.getElementById('fromRegion').value,
-        fromDistrict: document.getElementById('fromDistrict').value,
-        toRegion: document.getElementById('toRegion').value,
-        toDistrict: document.getElementById('toDistrict').value,
-        driver: document.getElementById('driver').value,
-        phone: document.getElementById('phone').value,
-        price: document.getElementById('price').value,
-        date: new Date().toLocaleString()
-      };
+      const fromRegion = document.getElementById('fromRegion').value;
+      const fromDistrict = document.getElementById('fromDistrict').value;
+      const toRegion = document.getElementById('toRegion').value;
+      const toDistrict = document.getElementById('toDistrict').value;
+      const driver = document.getElementById('driver').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const price = document.getElementById('price').value.trim();
 
-      if (!ad.fromRegion || !ad.toRegion || !ad.phone) {
+      if (!fromRegion || !toRegion || !phone || !driver) {
         alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
         return;
       }
+
+      // 🔧 Admin bilan mos bo‘lishi uchun 'from' va 'to' ni birlashtiramiz
+      const ad = {
+        id: 'drv-' + Date.now(),
+        type: "driver",
+        fromRegion,
+        fromDistrict,
+        toRegion,
+        toDistrict,
+        from: `${fromRegion} ${fromDistrict}`,
+        to: `${toRegion} ${toDistrict}`,
+        driver,
+        phone,
+        price,
+        status: "pending",
+        date: new Date().toLocaleString()
+      };
 
       const ads = JSON.parse(localStorage.getItem('driverAds')) || [];
       ads.push(ad);
