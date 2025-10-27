@@ -164,7 +164,7 @@
       return '⏳ Kutilmoqda';
     }
 
-    // 🧩 Asosiy e’lonlarni chiqarish (Yo‘nalish tuzatildi)
+    // 🧩 E’lonlarni chiqarish
     function renderAds() {
       const { driver, passenger } = getAds();
       const typeFilter = document.getElementById('typeFilter').value;
@@ -185,25 +185,24 @@
         return;
       }
 
-      ads.forEach(ad => {
-        // 🩵 Yo‘nalishlarni to‘g‘rilash
-        let from = ad.from || '';
-        let to = ad.to || '';
+      ads.forEach((ad, index) => {
+        // har bir e’londa id bo‘lishi shart
+        if (!ad.id) ad.id = `${ad.type}_${Date.now()}_${index}`;
 
-        if ((!from || !to) && ad.route) {
-          const parts = ad.route.split('➜').map(x => x.trim());
-          from = from || parts[0] || '';
-          to = to || parts[1] || '';
-        }
+        // Yo‘nalishlarni to‘g‘rilash
+        const from = ad.fromDistrict && ad.fromRegion
+          ? `${ad.fromRegion} ${ad.fromDistrict}`
+          : (ad.from || '—');
 
-        if (!from) from = '—';
-        if (!to) to = '—';
+        const to = ad.toDistrict && ad.toRegion
+          ? `${ad.toRegion} ${ad.toDistrict}`
+          : (ad.to || '—');
 
         const div = document.createElement('div');
         div.className = 'ad';
         div.innerHTML = `
           <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-          <p><b>Yo‘nalish:</b> ${from} ➜ ${to}</p>
+          <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
           <p><b>Telefon:</b> ${ad.phone || 'Noma’lum'}</p>
           <p><b>Narx:</b> ${ad.price ? ad.price + ' so‘m' : 'Ko‘rsatilmagan'}</p>
           <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
@@ -231,7 +230,7 @@
       updateStats();
     }
 
-    // ✏️ Tahrirlash oynasini ochish
+    // ✏️ Tahrirlash
     function openEdit(type, id) {
       const { driver, passenger } = getAds();
       const ads = type === 'driver' ? driver : passenger;
@@ -239,17 +238,14 @@
       if (!ad) return;
 
       currentEdit = { type, id };
-
       document.getElementById('editPhone').value = ad.phone || '';
       document.getElementById('editPrice').value = ad.price || '';
-      document.getElementById('editFrom').value = ad.from || '';
-      document.getElementById('editTo').value = ad.to || '';
+      document.getElementById('editFrom').value = ad.from || ad.fromRegion || '';
+      document.getElementById('editTo').value = ad.to || ad.toRegion || '';
       document.getElementById('editStatus').value = ad.status || 'pending';
-
       document.getElementById('editModal').style.display = 'flex';
     }
 
-    // 💾 Tahrirni saqlash
     function saveEdit() {
       const { type, id } = currentEdit;
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
@@ -268,12 +264,11 @@
       updateStats();
     }
 
-    // 🔒 Modalni yopish
     function closeModal() {
       document.getElementById('editModal').style.display = 'none';
     }
 
-    // ❌ E’lonni o‘chirish
+    // ❌ O‘chirish
     function deleteAd(type, id) {
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       let ads = JSON.parse(localStorage.getItem(key)) || [];
@@ -283,7 +278,7 @@
       updateStats();
     }
 
-    // 📈 Statistika yangilash
+    // 📈 Statistika
     function updateStats() {
       const { driver, passenger } = getAds();
       const all = [...driver, ...passenger];
@@ -297,18 +292,15 @@
       localStorage.setItem('stats', JSON.stringify(stats));
     }
 
-    // 📊 Statistika sahifasiga o‘tish
     function goToStats() {
       updateStats();
       location.href = 'admin-stat.html';
     }
 
-    // ➕ E’lon qo‘shish sahifasiga o‘tish
     function goToAdd() {
       location.href = 'admin-add.html';
     }
 
-    // 🚀 Yuklanganda
     window.onload = () => {
       renderAds();
       updateStats();
