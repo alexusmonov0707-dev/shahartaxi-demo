@@ -166,56 +166,68 @@
 
     // 🧩 E’lonlarni chiqarish
     function renderAds() {
-      const { driver, passenger } = getAds();
-      const typeFilter = document.getElementById('typeFilter').value;
-      const statusFilter = document.getElementById('statusFilter').value;
+  const { driver, passenger } = getAds();
 
-      let ads = [];
-      if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
-      else if (typeFilter === 'passenger') ads = passenger.map(a => ({ ...a, type: 'passenger' }));
-      else ads = [...driver.map(a => ({ ...a, type: 'driver' })), ...passenger.map(a => ({ ...a, type: 'passenger' }))];
-
-      if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
-
-      const container = document.getElementById('ads');
-      container.innerHTML = '';
-
-      if (ads.length === 0) {
-        container.innerHTML = '<p>E’lonlar topilmadi.</p>';
-        return;
+  // 🧠 FIX: id yo‘q e’lonlarga avtomatik id berish
+  let updated = false;
+  ['driver', 'passenger'].forEach(type => {
+    let arr = type === 'driver' ? driver : passenger;
+    arr.forEach((ad, i) => {
+      if (!ad.id) {
+        ad.id = `${type}_${Date.now()}_${i}`;
+        updated = true;
       }
+    });
+    localStorage.setItem(type + 'Ads', JSON.stringify(arr));
+  });
+  if (updated) console.log("E’lonlarga ID berildi ✅");
 
-      ads.forEach((ad, index) => {
-        // har bir e’londa id bo‘lishi shart
-        if (!ad.id) ad.id = `${ad.type}_${Date.now()}_${index}`;
+  // 🔽 Quyidagisi sening mavjud kodlaring bilan bir xil
+  const typeFilter = document.getElementById('typeFilter').value;
+  const statusFilter = document.getElementById('statusFilter').value;
 
-        // Yo‘nalishlarni to‘g‘rilash
-        const from = ad.fromDistrict && ad.fromRegion
-          ? `${ad.fromRegion} ${ad.fromDistrict}`
-          : (ad.from || '—');
+  let ads = [];
+  if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
+  else if (typeFilter === 'passenger') ads = passenger.map(a => ({ ...a, type: 'passenger' }));
+  else ads = [...driver.map(a => ({ ...a, type: 'driver' })), ...passenger.map(a => ({ ...a, type: 'passenger' }))];
 
-        const to = ad.toDistrict && ad.toRegion
-          ? `${ad.toRegion} ${ad.toDistrict}`
-          : (ad.to || '—');
+  if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
 
-        const div = document.createElement('div');
-        div.className = 'ad';
-        div.innerHTML = `
-          <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-          <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
-          <p><b>Telefon:</b> ${ad.phone || 'Noma’lum'}</p>
-          <p><b>Narx:</b> ${ad.price ? ad.price + ' so‘m' : 'Ko‘rsatilmagan'}</p>
-          <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
-          <div class="actions">
-            <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
-            <button class="reject" onclick="updateStatus('${ad.type}', '${ad.id}', 'rejected')">Rad etish</button>
-            <button class="edit" onclick="openEdit('${ad.type}', '${ad.id}')">Tahrirlash</button>
-            <button class="delete" onclick="deleteAd('${ad.type}', '${ad.id}')">O‘chirish</button>
-          </div>
-        `;
-        container.appendChild(div);
-      });
-    }
+  const container = document.getElementById('ads');
+  container.innerHTML = '';
+
+  if (ads.length === 0) {
+    container.innerHTML = '<p>E’lonlar topilmadi.</p>';
+    return;
+  }
+
+  ads.forEach((ad, index) => {
+    const from = ad.fromDistrict && ad.fromRegion
+      ? `${ad.fromRegion} ${ad.fromDistrict}`
+      : (ad.from || '—');
+    const to = ad.toDistrict && ad.toRegion
+      ? `${ad.toRegion} ${ad.toDistrict}`
+      : (ad.to || '—');
+
+    const div = document.createElement('div');
+    div.className = 'ad';
+    div.innerHTML = `
+      <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
+      <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
+      <p><b>Telefon:</b> ${ad.phone || 'Noma’lum'}</p>
+      <p><b>Narx:</b> ${ad.price ? ad.price + ' so‘m' : 'Ko‘rsatilmagan'}</p>
+      <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
+      <div class="actions">
+        <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
+        <button class="reject" onclick="updateStatus('${ad.type}', '${ad.id}', 'rejected')">Rad etish</button>
+        <button class="edit" onclick="openEdit('${ad.type}', '${ad.id}')">Tahrirlash</button>
+        <button class="delete" onclick="deleteAd('${ad.type}', '${ad.id}')">O‘chirish</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
 
     // 🟢 Holatni o‘zgartirish
     function updateStatus(type, id, status) {
