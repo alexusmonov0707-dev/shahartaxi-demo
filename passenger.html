@@ -123,25 +123,26 @@
         status: "kutilyapti"
       };
 
-      // 🔥 To‘liq yo‘nalish
-      ad.route = `${ad.fromRegion}${ad.fromDistrict ? ' ' + ad.fromDistrict : ''} → ${ad.toRegion}${ad.toDistrict ? ' ' + ad.toDistrict : ''}`;
+      // ✅ To‘g‘ri formatdagi yo‘nalish (→ faqat kerak joyda chiqadi)
+      const from = `${ad.fromRegion}${ad.fromDistrict ? ' ' + ad.fromDistrict : ''}`;
+      const to = `${ad.toRegion}${ad.toDistrict ? ' ' + ad.toDistrict : ''}`;
+      ad.route = `${from} → ${to}`;
 
       if (!ad.fromRegion || !ad.toRegion || !ad.phone) {
         alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
         return;
       }
 
-      // 🔥 Admin panel uchun yagona saqlash (admin.html shu joydan o‘qiydi)
+      // ✅ Barcha e’lonlar yagona joyda saqlanadi
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
       allAds.push(ad);
       localStorage.setItem('allAds', JSON.stringify(allAds));
 
-      // 🔥 Faqat yo‘lovchi sahifasi uchun ham saqlaymiz (moslik uchun)
+      // ✅ Alohida yo‘lovchi e’lonlari ham (moslik uchun)
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       passengerAds.push(ad);
       localStorage.setItem('passengerAds', JSON.stringify(passengerAds));
 
-      // ✅ Muvaffaqiyat xabari
       document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
       setTimeout(() => location.href = 'index.html', 1500);
     }
