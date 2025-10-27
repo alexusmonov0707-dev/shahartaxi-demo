@@ -17,23 +17,7 @@
       padding: 1rem;
       text-align: center;
     }
-    <!-- ============ ADMIN LOGIN OVERLAY (INSERT AFTER </header> AND BEFORE <main>) ============ -->
-<div id="adminLoginOverlay" style="
-  position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.45); z-index: 99999;
-">
-  <div style="background:#fff;padding:24px;border-radius:12px; width:360px; box-shadow:0 8px 30px rgba(0,0,0,0.2); text-align:center;">
-    <h3 style="margin:0 0 12px;color:#007bff;">🔐 Admin kirish</h3>
-    <input id="adminPassInput" type="password" placeholder="Parolni kiriting" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:10px;font-size:14px" />
-    <div style="display:flex; gap:8px; justify-content:center;">
-      <button onclick="adminLogin()" style="padding:8px 12px;border-radius:8px;border:none;background:#007bff;color:#fff;cursor:pointer;">Kirish</button>
-      <button onclick="cancelAdminLogin()" style="padding:8px 12px;border-radius:8px;border:1px solid #ccc;background:#fff;cursor:pointer;">Bekor</button>
-    </div>
-    <p id="adminLoginError" style="color:#c00;margin-top:10px;display:none;">Noto‘g‘ri parol — qayta urinib ko‘ring.</p>
-    <p style="font-size:12px;color:#666;margin-top:8px">Agar parolni unutgan bo‘lsangiz, menga xabar bering — sozlayman.</p>
-  </div>
-</div>
-<!-- ===================================================================================== -->
+  
     main {
       max-width: 1000px;
       margin: 1rem auto;
@@ -372,78 +356,5 @@
       setInterval(() => renderAds(), 5000);
     };
   </script>
-<script>
-/* === Admin login minimal integratsiyasi ===
-   - Hech qanday mavjud funksiyani o'chirmaydi.
-   - Faqat overlay ko'rsatiladi agar admin logged-in bo'lmasa.
-   - Parolni localStorage bilan emas, oddiy tekshiruv bilan ishlatadi.
-   - Parolni o'zgartirish uchun ADMIN_PASSWORD qiymatini o'zgartiring.
-*/
-
-const ADMIN_PASSWORD = "shahartaxi2025"; // kerak bo'lsa o'zgartiring
-
-function showOverlay() {
-  const ov = document.getElementById('adminLoginOverlay');
-  if (ov) ov.style.display = 'flex';
-  // yashirish: asosiy kontentni ko'rsatmaslik uchun
-  const main = document.querySelector('main');
-  if (main) main.style.filter = 'blur(2px)';
-  // shuningdek header ni ham yashirish/blur qilmoqchi bo'lsangiz:
-  const header = document.querySelector('header');
-  if (header) header.style.filter = 'blur(2px)';
-}
-
-function hideOverlay() {
-  const ov = document.getElementById('adminLoginOverlay');
-  if (ov) ov.style.display = 'none';
-  const main = document.querySelector('main');
-  if (main) main.style.filter = '';
-  const header = document.querySelector('header');
-  if (header) header.style.filter = '';
-}
-
-function adminLogin() {
-  const val = document.getElementById('adminPassInput').value || '';
-  const err = document.getElementById('adminLoginError');
-  if (String(val) === String(ADMIN_PASSWORD)) {
-    localStorage.setItem('adminLoggedIn', 'true');
-    if (err) err.style.display = 'none';
-    hideOverlay();
-    // render yoki refresh qilish kerak bo'lsa:
-    if (typeof renderAds === 'function') renderAds();
-    if (typeof updateStats === 'function') updateStats();
-  } else {
-    if (err) { err.style.display = 'block'; }
-  }
-}
-
-function cancelAdminLogin() {
-  // foydalanuvchi bekor qilsa overlayni yashirish yoki qoldirish - sizga qulay variant
-  hideOverlay();
-}
-
-function adminLogout() {
-  localStorage.removeItem('adminLoggedIn');
-  // ko'rsatishni qayta tiklash
-  showOverlay();
-}
-
-// Sahifa yuklanganda tekshirish
-document.addEventListener('DOMContentLoaded', function() {
-  // agar admin allaqachon login bo'lsa, hech narsa qilmasin
-  const logged = localStorage.getItem('adminLoggedIn');
-  if (logged === 'true') {
-    hideOverlay();
-    // agar render funksiyalaringiz bo'lsa, chaqiring
-    if (typeof renderAds === 'function') renderAds();
-    if (typeof renderHistory === 'function') renderHistory();
-    if (typeof updateStats === 'function') updateStats();
-  } else {
-    // overlayni ko'rsatish (kirishni talab qilish)
-    showOverlay();
-  }
-});
-</script>
-
 </body>
 </html>
