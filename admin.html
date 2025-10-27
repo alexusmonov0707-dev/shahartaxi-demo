@@ -312,5 +312,65 @@
       setInterval(() => renderAds(), 5000);
     };
   </script>
+  <script>
+function updateStatus(id, newStatus) {
+  const ads = JSON.parse(localStorage.getItem("ads")) || [];
+  const index = ads.findIndex(a => String(a.id) === String(id));
+  if (index === -1) return;
+
+  ads[index].status = newStatus;
+  localStorage.setItem("ads", JSON.stringify(ads));
+
+  // 🕒 Yangi qism: tasdiqlash tarixini saqlash
+  const history = JSON.parse(localStorage.getItem("approvalHistory")) || {};
+  const currentDate = new Date().toLocaleString();
+
+  history[id] = {
+    status: newStatus,
+    time: currentDate
+  };
+
+  localStorage.setItem("approvalHistory", JSON.stringify(history));
+
+  renderAds();
+}
+
+// 🧾 Har safar e’lonlarni ko‘rsatishda tarixni ham chiqaramiz
+function renderAds() {
+  const ads = JSON.parse(localStorage.getItem("ads")) || [];
+  const history = JSON.parse(localStorage.getItem("approvalHistory")) || {};
+
+  const adContainer = document.getElementById("adsContainer");
+  adContainer.innerHTML = "";
+
+  ads.forEach(ad => {
+    const card = document.createElement("div");
+    card.className = "ad-card";
+    card.innerHTML = `
+      <h3>${ad.fromRegion} ➜ ${ad.toRegion}</h3>
+      <p>📞 ${ad.phone}</p>
+      <p>💬 ${ad.comment || ''}</p>
+      <p>📅 ${ad.date}</p>
+      <p>⚙️ Holat: <b>${ad.status}</b></p>
+
+      ${
+        history[ad.id]
+          ? `<p class="text-sm text-gray-600">
+              ${history[ad.id].status === "approved" ? "✅ Tasdiqlangan" : "❌ Rad etilgan"}:
+              ${history[ad.id].time}
+            </p>`
+          : ""
+      }
+
+      <button onclick="updateStatus('${ad.id}', 'approved')">Tasdiqlash</button>
+      <button onclick="updateStatus('${ad.id}', 'rejected')">Rad etish</button>
+      <button onclick="openEdit('${ad.id}')">✏️ Tahrirlash</button>
+      <button onclick="deleteAd('${ad.id}')">🗑️ O‘chirish</button>
+    `;
+    adContainer.appendChild(card);
+  });
+}
+</script>
+
 </body>
 </html>
