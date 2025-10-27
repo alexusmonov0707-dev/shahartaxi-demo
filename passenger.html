@@ -110,6 +110,7 @@
     // ✅ Yo‘lovchi e’lonini saqlash
     function savePassengerAd() {
       const ad = {
+        id: Date.now(),
         type: "passenger",
         fromRegion: document.getElementById('fromRegion').value,
         fromDistrict: document.getElementById('fromDistrict').value,
@@ -118,10 +119,11 @@
         name: document.getElementById('name').value,
         phone: document.getElementById('phone').value,
         price: document.getElementById('price').value,
-        date: new Date().toLocaleString()
+        date: new Date().toLocaleString(),
+        status: "kutilyapti"
       };
 
-      // 🔥 Qo‘shildi: to‘liq yo‘nalishni shakllantirish
+      // 🔥 To‘liq yo‘nalish
       ad.route = `${ad.fromRegion}${ad.fromDistrict ? ' ' + ad.fromDistrict : ''} → ${ad.toRegion}${ad.toDistrict ? ' ' + ad.toDistrict : ''}`;
 
       if (!ad.fromRegion || !ad.toRegion || !ad.phone) {
@@ -129,10 +131,17 @@
         return;
       }
 
-      const ads = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      ads.push(ad);
-      localStorage.setItem('passengerAds', JSON.stringify(ads));
+      // 🔥 Admin panel uchun yagona saqlash (admin.html shu joydan o‘qiydi)
+      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      allAds.push(ad);
+      localStorage.setItem('allAds', JSON.stringify(allAds));
 
+      // 🔥 Faqat yo‘lovchi sahifasi uchun ham saqlaymiz (moslik uchun)
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      passengerAds.push(ad);
+      localStorage.setItem('passengerAds', JSON.stringify(passengerAds));
+
+      // ✅ Muvaffaqiyat xabari
       document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
       setTimeout(() => location.href = 'index.html', 1500);
     }
