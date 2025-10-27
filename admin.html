@@ -79,6 +79,8 @@
       border-radius: 10px;
       width: 350px;
       box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+      max-height: 80vh;
+      overflow-y: auto;
     }
     .modal-content h3 { margin-top: 0; }
     .modal-content input, .modal-content select {
@@ -121,12 +123,13 @@
 
       <button onclick="goToStats()">📊 Statistika</button>
       <button onclick="goToAdd()">➕ E’lon qo‘shish</button>
+      <button onclick="showApprovalHistory()">📜 Tasdiqlash tarixi</button>
     </div>
 
     <div id="ads"></div>
   </main>
 
-  <!-- Modal -->
+  <!-- Edit Modal -->
   <div class="modal" id="editModal">
     <div class="modal-content">
       <h3>E’lonni tahrirlash</h3>
@@ -143,6 +146,15 @@
         <button class="save-btn" onclick="saveEdit()">Saqlash</button>
         <button class="cancel-btn" onclick="closeModal()">Bekor qilish</button>
       </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal" id="historyModal">
+    <div class="modal-content">
+      <h3>Tasdiqlash tarixi</h3>
+      <div id="historyList"></div>
+      <button class="cancel-btn" onclick="closeHistory()">Yopish</button>
     </div>
   </div>
 
@@ -223,7 +235,7 @@
       });
     }
 
-    // 🟢 FIX 1: Holatni o‘zgartirish
+    // ✅ Tasdiqlash holatini o‘zgartirish va tarixga yozish
     function updateStatus(type, id, status) {
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
       const ads = JSON.parse(localStorage.getItem(key)) || [];
@@ -231,18 +243,50 @@
       if (index > -1) {
         ads[index].status = status;
         localStorage.setItem(key, JSON.stringify(ads));
+        saveApprovalHistory(ads[index], status);
       }
       renderAds();
       updateStats();
     }
 
-    // 🟢 FIX 2: Tahrirlash
+    // ✅ Tasdiqlash tarixini saqlash
+    function saveApprovalHistory(ad, status) {
+      const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
+      const record = {
+        date: new Date().toLocaleString(),
+        name: ad.name || 'Noma’lum foydalanuvchi',
+        type: ad.type,
+        from: ad.fromDistrict || ad.fromRegion || ad.from || '—',
+        to: ad.toDistrict || ad.toRegion || ad.to || '—',
+        status: status
+      };
+      history.push(record);
+      localStorage.setItem('approvalHistory', JSON.stringify(history));
+    }
+
+    // ✅ Tasdiqlash tarixini ko‘rsatish
+    function showApprovalHistory() {
+      const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
+      const list = document.getElementById('historyList');
+      list.innerHTML = history.length
+        ? history.map(h => `
+          <p><b>${h.date}</b> — ${h.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}:
+          ${h.from} → ${h.to} — ${getStatusText(h.status)}</p>
+        `).join('')
+        : '<p>Hozircha tasdiqlash tarixi yo‘q.</p>';
+      document.getElementById('historyModal').style.display = 'flex';
+    }
+
+    function closeHistory() {
+      document.getElementById('historyModal').style.display = 'none';
+    }
+
+    // 🔵 Qolgan barcha funksiyalar o‘zgarmagan holda
     function openEdit(type, id) {
       const { driver, passenger } = getAds();
       const ads = type === 'driver' ? driver : passenger;
       const ad = ads.find(a => String(a.id) === String(id));
       if (!ad) return;
-
       currentEdit = { type, id };
       document.getElementById('editPhone').value = ad.phone || '';
       document.getElementById('editPrice').value = ad.price || '';
@@ -252,7 +296,6 @@
       document.getElementById('editModal').style.display = 'flex';
     }
 
-    // 🟢 FIX 3: Saqlash
     function saveEdit() {
       const { type, id } = currentEdit;
       const key = type === 'driver' ? 'driverAds' : 'passengerAds';
@@ -312,65 +355,6 @@
       setInterval(() => renderAds(), 5000);
     };
   </script>
-  <script>
-function updateStatus(id, newStatus) {
-  const ads = JSON.parse(localStorage.getItem("ads")) || [];
-  const index = ads.findIndex(a => String(a.id) === String(id));
-  if (index === -1) return;
-
-  ads[index].status = newStatus;
-  localStorage.setItem("ads", JSON.stringify(ads));
-
-  // 🕒 Yangi qism: tasdiqlash tarixini saqlash
-  const history = JSON.parse(localStorage.getItem("approvalHistory")) || {};
-  const currentDate = new Date().toLocaleString();
-
-  history[id] = {
-    status: newStatus,
-    time: currentDate
-  };
-
-  localStorage.setItem("approvalHistory", JSON.stringify(history));
-
-  renderAds();
-}
-
-// 🧾 Har safar e’lonlarni ko‘rsatishda tarixni ham chiqaramiz
-function renderAds() {
-  const ads = JSON.parse(localStorage.getItem("ads")) || [];
-  const history = JSON.parse(localStorage.getItem("approvalHistory")) || {};
-
-  const adContainer = document.getElementById("adsContainer");
-  adContainer.innerHTML = "";
-
-  ads.forEach(ad => {
-    const card = document.createElement("div");
-    card.className = "ad-card";
-    card.innerHTML = `
-      <h3>${ad.fromRegion} ➜ ${ad.toRegion}</h3>
-      <p>📞 ${ad.phone}</p>
-      <p>💬 ${ad.comment || ''}</p>
-      <p>📅 ${ad.date}</p>
-      <p>⚙️ Holat: <b>${ad.status}</b></p>
-
-      ${
-        history[ad.id]
-          ? `<p class="text-sm text-gray-600">
-              ${history[ad.id].status === "approved" ? "✅ Tasdiqlangan" : "❌ Rad etilgan"}:
-              ${history[ad.id].time}
-            </p>`
-          : ""
-      }
-
-      <button onclick="updateStatus('${ad.id}', 'approved')">Tasdiqlash</button>
-      <button onclick="updateStatus('${ad.id}', 'rejected')">Rad etish</button>
-      <button onclick="openEdit('${ad.id}')">✏️ Tahrirlash</button>
-      <button onclick="deleteAd('${ad.id}')">🗑️ O‘chirish</button>
-    `;
-    adContainer.appendChild(card);
-  });
-}
-</script>
 
 </body>
 </html>
