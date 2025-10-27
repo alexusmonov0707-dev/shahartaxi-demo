@@ -121,6 +121,9 @@
         date: new Date().toLocaleString()
       };
 
+      // 🔥 Qo‘shildi: to‘liq yo‘nalishni shakllantirish
+      ad.route = `${ad.fromRegion}${ad.fromDistrict ? ' ' + ad.fromDistrict : ''} → ${ad.toRegion}${ad.toDistrict ? ' ' + ad.toDistrict : ''}`;
+
       if (!ad.fromRegion || !ad.toRegion || !ad.phone) {
         alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
         return;
