@@ -1,183 +1,105 @@
-// admin.js — 1/3
-// ShaharTaxi admin panel yordamchi fayli
-// Eslatma: ushbu faylni <script src="admin.js"></script> orqali admin.html ichiga yuklang.
+// === CONFIG ===
+const ADMIN_PASSWORD = 'shahartaxi2025';
 
-// -------------------- Utils / yordamchi funksiyalar --------------------
+// === ADMIN LOGIN ===
+function checkAdminLogin() {
+  const user = document.getElementById('adminUser').value.trim();
+  const pass = document.getElementById('adminPass').value.trim();
+  const err = document.getElementById('loginError');
 
-/**
- * LocalStorage'dan barcha e'lonlarni qaytaradi.
- * Strukturani o'zgartirishdan qo'rqmaslik uchun mavjud bo'lmasa bo'sh massiv qaytaradi.
- */
-function getAdsData() {
+  if (pass === ADMIN_PASSWORD) {
+    localStorage.setItem('adminLoggedIn', 'true');
+    document.getElementById('loginOverlay').style.display = 'none';
+    renderAds();
+  } else {
+    err.textContent = '❌ Noto‘g‘ri parol';
+  }
+}
+
+function logoutAdmin() {
+  localStorage.removeItem('adminLoggedIn');
+  location.reload();
+}
+
+// === SHOW LOGIN OVERLAY IF NEEDED ===
+if (localStorage.getItem('adminLoggedIn') !== 'true') {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('loginOverlay').style.display = 'flex';
+  });
+}
+
+// === GLOBAL VARIABLES ===
+let currentEdit = { type: null, id: null };
+
+// === DATA ACCESS ===
+function getAds() {
   return {
     driver: JSON.parse(localStorage.getItem('driverAds')) || [],
     passenger: JSON.parse(localStorage.getItem('passengerAds')) || []
   };
 }
 
-/**
- * Barcha e'lonlarga ID yo'q bo'lsa — avtomatik ID taqdim etish.
- * Bugungi holatlarda turli manbalardan kelgan ID tiplari (raqam yoki string) aralash bo'lishi mumkin,
- * shuning uchun barchasiga id maydonini berib qo'yamiz (faqat kerak bo'lganda).
- */
-function ensureIds() {
-  let changed = false;
-  const data = getAdsData();
-
-  ['driver', 'passenger'].forEach(type => {
-    const arr = data[type];
-    for (let i = 0; i < arr.length; i++) {
-      const ad = arr[i];
-      if (ad && (ad.id === undefined || ad.id === null || ad.id === '')) {
-        // vaqt va index aralashmasidan noyob string yaratamiz
-        ad.id = `${type}_${Date.now()}_${Math.floor(Math.random() * 100000)}_${i}`;
-        changed = true;
-      }
-    }
-    // saqlaymiz faqat kerak bo'lsa
-    if (changed) {
-      localStorage.setItem(type + 'Ads', JSON.stringify(arr));
-    }
-  });
-
-  return changed;
+// === TEXT HELPERS ===
+function getStatusText(status) {
+  if (status === 'approved') return '✅ Tasdiqlangan';
+  if (status === 'rejected') return '❌ Rad etilgan';
+  return '⏳ Kutilmoqda';
 }
 
-/**
- * Id solishtirishda turli tiplar (string vs number) muammosini bartaraf etish.
- */
-function idEquals(a, b) {
-  return String(a) === String(b);
-}
-
-/**
- * Qo'shimcha: agar admin login tizimi ishlatilsa (overlay), shu funksiyalar orqali nazorat qilamiz.
- * localStorage adminLoggedIn: "true" bo'lsa panel ko'rinadi.
- */
-const ADMIN_PASSWORD = "shahartaxi2025"; // agar baribir o'zgartirish kerak bo'lsa admin.html va bu yerda moslang
-
-function isAdminLoggedIn() {
-  return localStorage.getItem('adminLoggedIn') === "true";
-}
-
-function requireAdminLoginOnLoad() {
-  // Agar admin login ishlatilsa overlay ko'rsatiladi
-  try {
-    const overlay = document.getElementById('loginOverlay');
-    if (!overlay) return; // admin.html da overlay yo'q bo'lsa chiqamiz
-
-    if (isAdminLoggedIn()) {
-      overlay.style.display = 'none';
-    } else {
-      overlay.style.display = 'flex';
-    }
-  } catch (e) {
-    console.warn("requireAdminLoginOnLoad:", e);
-  }
-}
-
-function checkAdminLogin() {
-  const user = (document.getElementById('adminUser') || {}).value || '';
-  const pass = (document.getElementById('adminPass') || {}).value || '';
-  const err = document.getElementById('loginError');
-  if (pass === ADMIN_PASSWORD) {
-    localStorage.setItem('adminLoggedIn', 'true');
-    if (err) err.textContent = '';
-    const overlay = document.getElementById('loginOverlay');
-    if (overlay) overlay.style.display = 'none';
-    // Yuklash
-    renderAds();
-    updateStats();
-  } else {
-    if (err) err.textContent = 'Noto‘g‘ri parol — qayta urinib ko‘ring.';
-  }
-}
-
-function logoutAdmin() {
-  localStorage.removeItem('adminLoggedIn');
-  const overlay = document.getElementById('loginOverlay');
-  if (overlay) overlay.style.display = 'flex';
-}
-
-// -------------------- Rendering va boshqaruv --------------------
-
-/**
- * getCombinedAds — driver va passenger massivlarini bitta massivga birlashtiradi
- * va har bir ob'ektga `type` maydoni qo'shadi.
- */
-function getCombinedAds() {
-  const { driver, passenger } = getAdsData();
-  const d = driver.map(a => ({ ...a, type: 'driver' }));
-  const p = passenger.map(a => ({ ...a, type: 'passenger' }));
-  return [...d, ...p];
-}
-
-/**
- * renderAds — asosiy render funksiyasi. filter-larni inobatga oladi.
- */
+// === RENDER ADS ===
 function renderAds() {
-  // Agar admin login talab qilingan va admin kirmagan bo'lsa — hech nima ko'rsatmaymiz
-  try {
-    if (document.getElementById('loginOverlay') && !isAdminLoggedIn()) {
-      // overlay mavjud va admin kirmagan — faqat overlay ko'rsatiladi, render qilinmaydi
-      return;
-    }
-  } catch (e) {
-    // ignore
-  }
+  const { driver, passenger } = getAds();
 
-  // ID lar borligini tekshiramiz (va kerak bo'lsa kvadrat saqlaymiz)
-  ensureIds();
+  // add IDs if missing
+  let updated = false;
+  ['driver', 'passenger'].forEach(type => {
+    let arr = type === 'driver' ? driver : passenger;
+    arr.forEach((ad, i) => {
+      if (!ad.id) {
+        ad.id = `${type}_${Date.now()}_${i}`;
+        updated = true;
+      }
+    });
+    localStorage.setItem(type + 'Ads', JSON.stringify(arr));
+  });
+  if (updated) console.log("E’lonlarga ID berildi ✅");
 
-  const combined = getCombinedAds();
+  const typeFilter = document.getElementById('typeFilter').value;
+  const statusFilter = document.getElementById('statusFilter').value;
 
-  const typeFilter = (document.getElementById('typeFilter') || {}).value || 'all';
-  const statusFilter = (document.getElementById('statusFilter') || {}).value || 'all';
+  let ads = [];
+  if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
+  else if (typeFilter === 'passenger') ads = passenger.map(a => ({ ...a, type: 'passenger' }));
+  else ads = [
+    ...driver.map(a => ({ ...a, type: 'driver' })),
+    ...passenger.map(a => ({ ...a, type: 'passenger' }))
+  ];
 
-  let filtered = combined.slice();
-
-  if (typeFilter !== 'all') {
-    filtered = filtered.filter(ad => ad.type === typeFilter);
-  }
-  if (statusFilter !== 'all') {
-    filtered = filtered.filter(ad => ((ad.status || 'pending') === statusFilter));
-  }
+  if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
 
   const container = document.getElementById('ads');
-  if (!container) {
-    console.warn("renderAds: #ads elementi topilmadi");
-    return;
-  }
   container.innerHTML = '';
 
-  if (!filtered.length) {
+  if (ads.length === 0) {
     container.innerHTML = '<p>E’lonlar topilmadi.</p>';
     return;
   }
 
-  filtered.forEach(ad => {
-    // Yo'nalishni tuzatish: eski ob'ektlar `fromRegion/fromDistrict` yoki `from` bo'lishi mumkin.
-    const fromParts = (ad.fromRegion && ad.fromDistrict) ? `${ad.fromRegion} ${ad.fromDistrict}` : (ad.from || '');
-    const toParts = (ad.toRegion && ad.toDistrict) ? `${ad.toRegion} ${ad.toDistrict}` : (ad.to || '');
+  ads.forEach(ad => {
+    const from = ad.fromDistrict && ad.fromRegion
+      ? `${ad.fromRegion} ${ad.fromDistrict}`
+      : (ad.from || '—');
+    const to = ad.toDistrict && ad.toRegion
+      ? `${ad.toRegion} ${ad.toDistrict}`
+      : (ad.to || '—');
 
-    const fromText = fromParts && fromParts.trim() ? fromParts : '—';
-    const toText = toParts && toParts.trim() ? toParts : '—';
-
-    const phone = ad.phone || ad.contact || ad.name || 'Noma’lum';
-    const price = ad.price ? (ad.price + ' so‘m') : 'Ko‘rsatilmagan';
-
-    const adEl = document.createElement('div');
-    adEl.className = 'ad';
-
-    // Qo'shimcha: kichik meta ma'lumot (va avtomatik ravishda IDni data attribute ga qo'yish)
-    adEl.setAttribute('data-ad-id', String(ad.id));
-    adEl.setAttribute('data-ad-type', ad.type);
-
-    adEl.innerHTML = `
+    const div = document.createElement('div');
+    div.className = 'ad';
+    div.innerHTML = `
       <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-      <p><b>Yo‘nalish:</b> ${escapeHtml(fromText)} → ${escapeHtml(toText)}</p>
-      <p><b>Telefon:</b> ${escapeHtml(String(phone))}</p>
-      <p><b>Narx:</b> ${escapeHtml(String(price))}</p>
+      <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
+      <p><b>Telefon:</b> ${ad.phone || 'Noma’lum'}</p>
+      <p><b>Narx:</b> ${ad.price ? ad.price + ' so‘m' : 'Ko‘rsatilmagan'}</p>
       <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
       <div class="actions">
         <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
@@ -186,240 +108,144 @@ function renderAds() {
         <button class="delete" onclick="deleteAd('${ad.type}', '${ad.id}')">O‘chirish</button>
       </div>
     `;
-
-    container.appendChild(adEl);
+    container.appendChild(div);
   });
 }
 
-/**
- * XSS dan himoyalash uchun eng oddiy escape funksiyasi.
- */
-function escapeHtml(str) {
-  if (str === undefined || str === null) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-// -------------------- Part 2 va 3 funksiyalariga tayyor --------------------
-// Keyingi qism: updateStatus, saveApprovalHistory, openEdit, saveEdit, deleteAd, updateStats,
-// showApprovalHistory, modal boshqarish, va window.onload tugallanadi.
-
-// EOF — admin.js 1/3
-// admin.js — 2/3
-// --- Tasdiqlash / Status o‘zgartirish funksiyalari ---
-
+// === STATUS UPDATE + HISTORY SAVE ===
 function updateStatus(type, id, newStatus) {
-  try {
-    const ads = JSON.parse(localStorage.getItem(type + 'Ads')) || [];
-    const index = ads.findIndex(a => idEquals(a.id, id));
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = JSON.parse(localStorage.getItem(key)) || [];
+  const index = ads.findIndex(a => String(a.id) === String(id));
 
-    if (index === -1) {
-      alert('E’lon topilmadi.');
-      return;
-    }
-
+  if (index > -1) {
     const oldStatus = ads[index].status || 'pending';
     ads[index].status = newStatus;
-    localStorage.setItem(type + 'Ads', JSON.stringify(ads));
-
-    // Tarixga yozamiz
-    saveApprovalHistory({
-      id,
-      type,
-      oldStatus,
-      newStatus,
-      date: new Date().toLocaleString()
-    });
-
-    renderAds();
-  } catch (e) {
-    console.error('updateStatus xatolik:', e);
+    localStorage.setItem(key, JSON.stringify(ads));
+    saveApprovalHistory({ ...ads[index], type, oldStatus, newStatus });
   }
-}
 
-// --- Tasdiqlash tarixi funksiyalari ---
-
-function saveApprovalHistory(entry) {
-  try {
-    const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
-    history.push(entry);
-    localStorage.setItem('approvalHistory', JSON.stringify(history));
-  } catch (e) {
-    console.error('saveApprovalHistory xatolik:', e);
-  }
-}
-
-function showApprovalHistory() {
-  try {
-    const modal = document.getElementById('historyModal');
-    const list = document.getElementById('historyList');
-    const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
-
-    if (!history.length) {
-      list.innerHTML = '<p>Hozircha tarix yo‘q.</p>';
-    } else {
-      list.innerHTML = history
-        .map(
-          (h) => `
-          <div style="border-bottom:1px solid #ddd;padding:8px 0;">
-            <p><b>ID:</b> ${escapeHtml(h.id)}</p>
-            <p><b>Tur:</b> ${escapeHtml(h.type)}</p>
-            <p><b>Eski holat:</b> ${escapeHtml(h.oldStatus)}</p>
-            <p><b>Yangi holat:</b> ${escapeHtml(h.newStatus)}</p>
-            <p><b>Sana:</b> ${escapeHtml(h.date)}</p>
-          </div>`
-        )
-        .join('');
-    }
-
-    modal.style.display = 'flex';
-  } catch (e) {
-    console.error('showApprovalHistory xatolik:', e);
-  }
-}
-
-function closeHistory() {
-  const modal = document.getElementById('historyModal');
-  if (modal) modal.style.display = 'none';
-}
-
-// --- E’lon tahrirlash funksiyalari ---
-
-let currentEdit = { type: '', id: '' };
-
-function openEdit(type, id) {
-  try {
-    const ads = JSON.parse(localStorage.getItem(type + 'Ads')) || [];
-    const ad = ads.find(a => idEquals(a.id, id));
-    if (!ad) {
-      alert('E’lon topilmadi.');
-      return;
-    }
-
-    currentEdit = { type, id };
-
-    document.getElementById('editPhone').value = ad.phone || '';
-    document.getElementById('editPrice').value = ad.price || '';
-    document.getElementById('editFrom').value =
-      ad.from || ad.fromDistrict || ad.fromRegion || '';
-    document.getElementById('editTo').value =
-      ad.to || ad.toDistrict || ad.toRegion || '';
-    document.getElementById('editStatus').value = ad.status || 'pending';
-
-    const modal = document.getElementById('editModal');
-    modal.style.display = 'flex';
-  } catch (e) {
-    console.error('openEdit xatolik:', e);
-  }
-}
-
-function saveEdit() {
-  try {
-    const { type, id } = currentEdit;
-    if (!type || !id) {
-      alert('Xatolik: tahrirlanayotgan e’lon aniqlanmadi.');
-      return;
-    }
-
-    const ads = JSON.parse(localStorage.getItem(type + 'Ads')) || [];
-    const index = ads.findIndex(a => idEquals(a.id, id));
-    if (index === -1) {
-      alert('E’lon topilmadi.');
-      return;
-    }
-
-    ads[index].phone = document.getElementById('editPhone').value.trim();
-    ads[index].price = document.getElementById('editPrice').value.trim();
-    ads[index].from = document.getElementById('editFrom').value.trim();
-    ads[index].to = document.getElementById('editTo').value.trim();
-    ads[index].status = document.getElementById('editStatus').value;
-
-    localStorage.setItem(type + 'Ads', JSON.stringify(ads));
-    closeModal();
-    renderAds();
-  } catch (e) {
-    console.error('saveEdit xatolik:', e);
-  }
-}
-
-function closeModal() {
-  const modal = document.getElementById('editModal');
-  if (modal) modal.style.display = 'none';
-}
-
-// --- E’lonni o‘chirish ---
-
-function deleteAd(type, id) {
-  if (!confirm('Haqiqatan ham o‘chirmoqchimisiz?')) return;
-
-  try {
-    let ads = JSON.parse(localStorage.getItem(type + 'Ads')) || [];
-    ads = ads.filter(a => !idEquals(a.id, id));
-    localStorage.setItem(type + 'Ads', JSON.stringify(ads));
-    renderAds();
-  } catch (e) {
-    console.error('deleteAd xatolik:', e);
-  }
-}
-// admin.js — 3/3
-// --- Qo‘shimcha yordamchi funksiyalar ---
-
-function getStatusText(status) {
-  switch (status) {
-    case 'pending': return '⏳ Kutilmoqda';
-    case 'approved': return '✅ Tasdiqlangan';
-    case 'rejected': return '❌ Rad etilgan';
-    default: return 'Noma’lum';
-  }
-}
-
-function updateStats() {
-  try {
-    const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-    const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-    const all = driverAds.concat(passengerAds);
-    const approved = all.filter(a => a.status === 'approved').length;
-    const pending = all.filter(a => a.status === 'pending').length;
-    const rejected = all.filter(a => a.status === 'rejected').length;
-
-    console.log(`📊 Statistika: Tasdiqlangan: ${approved}, Kutilmoqda: ${pending}, Rad etilgan: ${rejected}`);
-  } catch (e) {
-    console.error('updateStats xatolik:', e);
-  }
-}
-
-// --- Navigatsiya tugmalari ---
-
-function goToStats() {
-  alert('📊 Statistika hali to‘liq sahifa sifatida yaratilmagan, ammo konsolda ko‘rish mumkin.');
+  renderAds();
   updateStats();
 }
 
-function goToAdd() {
-  alert('➕ Yangi e’lon qo‘shish sahifasi hozircha admin panel ichida mavjud.');
+// === SAVE APPROVAL HISTORY ===
+function saveApprovalHistory(ad) {
+  const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
+
+  const record = {
+    id: ad.id,
+    type: ad.type,
+    oldStatus: ad.oldStatus,
+    newStatus: ad.newStatus,
+    from: ad.fromDistrict || ad.fromRegion || ad.from || '—',
+    to: ad.toDistrict || ad.toRegion || ad.to || '—',
+    date: new Date().toLocaleString()
+  };
+
+  history.push(record);
+  localStorage.setItem('approvalHistory', JSON.stringify(history));
 }
 
-// --- Sahifa yuklanganda avtomatik ishlaydigan qism ---
+// === SHOW APPROVAL HISTORY ===
+function showApprovalHistory() {
+  const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
+  const list = document.getElementById('historyList');
 
-document.addEventListener('DOMContentLoaded', () => {
-  renderAds();
-  requireAdminLoginOnLoad();
-});
+  list.innerHTML = history.length
+    ? history.map(h => `
+      <div style="border-bottom:1px solid #ddd;padding:8px 0;">
+        <p><b>ID:</b> ${h.id}</p>
+        <p><b>Tur:</b> ${h.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
+        <p><b>Eski holat:</b> ${getStatusText(h.oldStatus)}</p>
+        <p><b>Yangi holat:</b> ${getStatusText(h.newStatus)}</p>
+        <p><b>Sana:</b> ${h.date}</p>
+      </div>
+    `).join('')
+    : '<p>Hozircha tasdiqlash tarixi yo‘q.</p>';
 
-// --- Admin loginni sahifa yuklanganda tekshirish ---
+  document.getElementById('historyModal').style.display = 'flex';
+}
 
-function requireAdminLoginOnLoad() {
-  const overlay = document.getElementById('loginOverlay');
-  const adminLoggedIn = sessionStorage.getItem('adminLoggedIn');
+function closeHistory() {
+  document.getElementById('historyModal').style.display = 'none';
+}
 
-  if (!adminLoggedIn) {
-    overlay.style.display = 'flex';
-  } else {
-    overlay.style.display = 'none';
-    renderAds();
+// === EDIT MODAL ===
+function openEdit(type, id) {
+  const { driver, passenger } = getAds();
+  const ads = type === 'driver' ? driver : passenger;
+  const ad = ads.find(a => String(a.id) === String(id));
+  if (!ad) return;
+
+  currentEdit = { type, id };
+  document.getElementById('editPhone').value = ad.phone || '';
+  document.getElementById('editPrice').value = ad.price || '';
+  document.getElementById('editFrom').value = ad.from || ad.fromRegion || '';
+  document.getElementById('editTo').value = ad.to || ad.toRegion || '';
+  document.getElementById('editStatus').value = ad.status || 'pending';
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function saveEdit() {
+  const { type, id } = currentEdit;
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = JSON.parse(localStorage.getItem(key)) || [];
+  const index = ads.findIndex(a => String(a.id) === String(id));
+  if (index > -1) {
+    ads[index].phone = document.getElementById('editPhone').value;
+    ads[index].price = document.getElementById('editPrice').value;
+    ads[index].from = document.getElementById('editFrom').value;
+    ads[index].to = document.getElementById('editTo').value;
+    ads[index].status = document.getElementById('editStatus').value;
+    localStorage.setItem(key, JSON.stringify(ads));
   }
+  closeModal();
+  renderAds();
+  updateStats();
 }
+
+function closeModal() {
+  document.getElementById('editModal').style.display = 'none';
+}
+
+// === DELETE AD ===
+function deleteAd(type, id) {
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  let ads = JSON.parse(localStorage.getItem(key)) || [];
+  ads = ads.filter(a => String(a.id) !== String(id));
+  localStorage.setItem(key, JSON.stringify(ads));
+  renderAds();
+  updateStats();
+}
+
+// === STATISTICS ===
+function updateStats() {
+  const { driver, passenger } = getAds();
+  const all = [...driver, ...passenger];
+  const stats = {
+    drivers: driver.length,
+    passengers: passenger.length,
+    approved: all.filter(a => a.status === 'approved').length,
+    rejected: all.filter(a => a.status === 'rejected').length,
+    pending: all.filter(a => !a.status || a.status === 'pending').length
+  };
+  localStorage.setItem('stats', JSON.stringify(stats));
+}
+
+// === NAVIGATION ===
+function goToStats() {
+  updateStats();
+  window.location.href = 'admin-stat.html';
+}
+
+function goToAdd() {
+  window.location.href = 'admin-add.html';
+}
+
+// === INITIALIZE ===
+window.onload = () => {
+  renderAds();
+  updateStats();
+  setInterval(() => renderAds(), 5000);
+};
