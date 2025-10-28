@@ -1,0 +1,28 @@
+[
+  {
+    "id": "passenger_1761580702158_3",
+    "type": "passenger",
+    "fromRegion": "Toshkent",
+    "fromDistrict": "Yunusobod",
+    "toRegion": "Samarqand",
+    "toDistrict": "Urgut",
+    "name": "Baxtiyor",
+    "phone": "32032032",
+    "price": "",
+    "status": "approved",
+    "date": "10/27/2025, 9:19:47 AM"
+  },
+  {
+    "id": "1761571484072",
+    "type": "passenger",
+    "fromRegion": "Toshkent",
+    "fromDistrict": "Chilonzor",
+    "toRegion": "Samarqand",
+    "toDistrict": "Ishtixon",
+    "name": "Ali",
+    "phone": "998901234567",
+    "price": "120000",
+    "status": "pending",
+    "date": "10/27/2025, 8:10:15 AM"
+  }
+]
