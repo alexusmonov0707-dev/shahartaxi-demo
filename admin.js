@@ -1,5 +1,7 @@
 // === CONFIG ===
+const ADMIN_USER = 'admin';
 const ADMIN_PASSWORD = 'shahartaxi2025';
+const ADMIN_TOKEN_KEY = 'shaharTaxiAdminToken';
 
 // === ADMIN LOGIN ===
 function checkAdminLogin() {
@@ -7,22 +9,22 @@ function checkAdminLogin() {
   const pass = document.getElementById('adminPass').value.trim();
   const err = document.getElementById('loginError');
 
-  if (pass === ADMIN_PASSWORD) {
-    localStorage.setItem('adminLoggedIn', 'true');
+  if (user === ADMIN_USER && pass === ADMIN_PASSWORD) {
+    localStorage.setItem(ADMIN_TOKEN_KEY, 'true');
     document.getElementById('loginOverlay').style.display = 'none';
     renderAds();
   } else {
-    err.textContent = '❌ Noto‘g‘ri parol';
+    err.textContent = '❌ Noto‘g‘ri login yoki parol';
   }
 }
 
 function logoutAdmin() {
-  localStorage.removeItem('adminLoggedIn');
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
   location.reload();
 }
 
 // === SHOW LOGIN OVERLAY IF NEEDED ===
-if (localStorage.getItem('adminLoggedIn') !== 'true') {
+if (localStorage.getItem(ADMIN_TOKEN_KEY) !== 'true') {
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginOverlay').style.display = 'flex';
   });
@@ -123,7 +125,6 @@ function updateStatus(type, id, newStatus) {
     ads[index].status = newStatus;
     localStorage.setItem(key, JSON.stringify(ads));
 
-    // 🟢 ID va barcha maydonlarni aniq uzatamiz
     saveApprovalHistory({
       id: ads[index].id,
       type,
@@ -153,7 +154,6 @@ function saveApprovalHistory(record) {
   history.push(entry);
   localStorage.setItem('approvalHistory', JSON.stringify(history));
 }
-
 
 // === SHOW APPROVAL HISTORY ===
 function showApprovalHistory() {
