@@ -100,9 +100,41 @@
     }
     .save-btn { background: #007bff; color: white; }
     .cancel-btn { background: #6c757d; color: white; }
+
+    /* Login overlay styles */
+    #loginOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+    .login-box {
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      width: 360px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+    .login-box input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius:8px; border:1px solid #ccc; }
+    .login-box button { width: 100%; padding:10px; border-radius:8px; border:none; background:#007bff; color:#fff; }
   </style>
 </head>
 <body>
+  <!-- LOGIN OVERLAY (ADDED) -->
+  <div id="loginOverlay" style="display:none;">
+    <div class="login-box">
+      <h3>🔐 Admin kirish</h3>
+      <input type="text" id="adminUser" placeholder="Foydalanuvchi" value="admin" />
+      <input type="password" id="adminPass" placeholder="Parol" />
+      <p id="loginError" style="color:red;margin:8px 0 0 0"></p>
+      <button onclick="checkAdminLogin()">Kirish</button>
+    </div>
+  </div>
+
   <header>
     <h1>🛠 ShaharTaxi - Admin Panel</h1>
   </header>
@@ -125,6 +157,7 @@
       <button onclick="goToStats()">📊 Statistika</button>
       <button onclick="goToAdd()">➕ E’lon qo‘shish</button>
       <button onclick="showApprovalHistory()">📜 Tasdiqlash tarixi</button>
+      <button onclick="logoutAdmin()" style="background:#6c757d;">Chiqish</button>
     </div>
 
     <div id="ads"></div>
@@ -160,6 +193,35 @@
   </div>
 
   <script>
+    // === CONFIG: change this if you want ===
+    const ADMIN_PASSWORD = 'shahartaxi2025';
+
+    // show overlay if admin not logged in
+    function checkAdminLogin() {
+      const user = document.getElementById('adminUser').value.trim();
+      const pass = document.getElementById('adminPass').value.trim();
+      const err = document.getElementById('loginError');
+      if (pass === ADMIN_PASSWORD) {
+        localStorage.setItem('adminLoggedIn', 'true');
+        document.getElementById('loginOverlay').style.display = 'none';
+        renderAds();
+      } else {
+        err.textContent = '❌ Noto‘g‘ri parol';
+      }
+    }
+
+    function logoutAdmin() {
+      localStorage.removeItem('adminLoggedIn');
+      location.reload();
+    }
+
+    // if not logged in -> show overlay (block interactions)
+    if (localStorage.getItem('adminLoggedIn') !== 'true') {
+      document.addEventListener('DOMContentLoaded', ()=>{
+        document.getElementById('loginOverlay').style.display = 'flex';
+      });
+    }
+
     let currentEdit = { type: null, id: null };
 
     function getAds() {
@@ -255,7 +317,7 @@
       const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
       const record = {
         date: new Date().toLocaleString(),
-        name: ad.name || 'Noma’lum foydalanuvchi',
+        name: ad.name || ad.driver || 'Noma’lum foydalanuvchi',
         type: ad.type,
         from: ad.fromDistrict || ad.fromRegion || ad.from || '—',
         to: ad.toDistrict || ad.toRegion || ad.to || '—',
