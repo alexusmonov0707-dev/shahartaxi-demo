@@ -155,6 +155,37 @@ function saveApprovalHistory(record) {
   localStorage.setItem('approvalHistory', JSON.stringify(history));
 }
 
+// === 🧩 FIX OLD HISTORY IDs ===
+function fixApprovalHistory() {
+  let approvalHistory = JSON.parse(localStorage.getItem("approvalHistory")) || [];
+  let driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+  let passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
+
+  let updated = false;
+
+  approvalHistory = approvalHistory.map(history => {
+    if (!history.id || history.id === "undefined" || history.id === "—") {
+      const matchedAd = [...driverAds, ...passengerAds].find(
+        ad => ad.type === history.type && (
+          ad.from === history.from ||
+          ad.fromDistrict === history.from ||
+          ad.fromRegion === history.from
+        )
+      );
+      if (matchedAd) {
+        history.id = matchedAd.id;
+        updated = true;
+      }
+    }
+    return history;
+  });
+
+  if (updated) {
+    localStorage.setItem("approvalHistory", JSON.stringify(approvalHistory));
+    console.log("🧩 Eski tasdiqlash tarixlariga ID biriktirildi");
+  }
+}
+
 // === SHOW APPROVAL HISTORY ===
 function showApprovalHistory() {
   const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
@@ -250,6 +281,7 @@ function goToStats() {
 function goToAdd() {
   window.location.href = 'admin-add.html';
 }
+
 // === ONE-TIME FIX: eski e’lonlarga ID berish ===
 (function fixOldAdsWithoutID() {
   let changed = false;
@@ -271,5 +303,6 @@ function goToAdd() {
 window.onload = () => {
   renderAds();
   updateStats();
+  fixApprovalHistory(); // 🧩 bu qo‘shildi
   setInterval(() => renderAds(), 5000);
 };
