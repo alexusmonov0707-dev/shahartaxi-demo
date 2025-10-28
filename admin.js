@@ -250,6 +250,22 @@ function goToStats() {
 function goToAdd() {
   window.location.href = 'admin-add.html';
 }
+// === ONE-TIME FIX: eski e’lonlarga ID berish ===
+(function fixOldAdsWithoutID() {
+  let changed = false;
+  ['driverAds', 'passengerAds'].forEach(type => {
+    let ads = JSON.parse(localStorage.getItem(type)) || [];
+    ads.forEach((ad, i) => {
+      if (!ad.id) {
+        const prefix = type === 'driverAds' ? 'drv' : 'psg';
+        ad.id = `${prefix}-${Date.now()}-${i}`;
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem(type, JSON.stringify(ads));
+  });
+  if (changed) console.log('🔧 Eski e’lonlarga ID biriktirildi');
+})();
 
 // === INITIALIZE ===
 window.onload = () => {
