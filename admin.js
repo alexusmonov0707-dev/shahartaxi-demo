@@ -122,7 +122,16 @@ function updateStatus(type, id, newStatus) {
     const oldStatus = ads[index].status || 'pending';
     ads[index].status = newStatus;
     localStorage.setItem(key, JSON.stringify(ads));
-    saveApprovalHistory({ ...ads[index], type, oldStatus, newStatus });
+
+    // 🟢 ID va barcha maydonlarni aniq uzatamiz
+    saveApprovalHistory({
+      id: ads[index].id,
+      type,
+      from: ads[index].fromDistrict || ads[index].fromRegion || ads[index].from || '—',
+      to: ads[index].toDistrict || ads[index].toRegion || ads[index].to || '—',
+      oldStatus,
+      newStatus
+    });
   }
 
   renderAds();
@@ -130,22 +139,21 @@ function updateStatus(type, id, newStatus) {
 }
 
 // === SAVE APPROVAL HISTORY ===
-function saveApprovalHistory(ad) {
+function saveApprovalHistory(record) {
   const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
-
-  const record = {
-    id: ad.id,
-    type: ad.type,
-    oldStatus: ad.oldStatus,
-    newStatus: ad.newStatus,
-    from: ad.fromDistrict || ad.fromRegion || ad.from || '—',
-    to: ad.toDistrict || ad.toRegion || ad.to || '—',
+  const entry = {
+    id: record.id || '—',
+    type: record.type,
+    from: record.from,
+    to: record.to,
+    oldStatus: record.oldStatus,
+    newStatus: record.newStatus,
     date: new Date().toLocaleString()
   };
-
-  history.push(record);
+  history.push(entry);
   localStorage.setItem('approvalHistory', JSON.stringify(history));
 }
+
 
 // === SHOW APPROVAL HISTORY ===
 function showApprovalHistory() {
