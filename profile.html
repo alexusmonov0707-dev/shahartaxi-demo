@@ -4,112 +4,131 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profil - ShaharTaxi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: sans-serif;
-      background: #f2f2f2;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #007bff, #00c6ff);
       margin: 0;
+      padding: 0;
+      color: #333;
     }
-    .profile-box {
-      background: white;
-      padding: 25px;
-      border-radius: 10px;
-      width: 350px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    main {
+      max-width: 600px;
+      margin: 3rem auto;
+      background: #fff;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
     h2 {
       text-align: center;
-      margin-bottom: 20px;
+      color: #007bff;
     }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+    .info {
+      margin-top: 1.5rem;
+      line-height: 1.6;
+      font-size: 1rem;
     }
-    button {
+    .ads-section {
+      margin-top: 2rem;
+    }
+    .ad-card {
+      background: #f8f9fa;
+      border: 1px solid #ddd;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .logout-btn {
       width: 100%;
-      padding: 10px;
-      background: #007bff;
-      color: white;
+      margin-top: 1.5rem;
+      padding: 0.8rem;
       border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-    button:hover { background: #0056b3; }
-    .logout {
+      border-radius: 8px;
+      font-size: 1rem;
       background: #dc3545;
-      margin-top: 10px;
+      color: #fff;
+      cursor: pointer;
+      transition: 0.3s;
     }
-    .logout:hover { background: #b52a38; }
-    .msg {
+    .logout-btn:hover {
+      background: #b02a37;
+    }
+    .back-link {
       text-align: center;
-      color: green;
-      font-size: 14px;
-      margin-top: 8px;
+      display: block;
+      margin-top: 10px;
+      color: #007bff;
+      text-decoration: none;
+    }
+    .no-ads {
+      text-align: center;
+      color: gray;
+      font-style: italic;
     }
   </style>
 </head>
 <body>
-  <div class="profile-box">
-    <h2>Profil</h2>
-    <input type="text" id="name" placeholder="Ismingiz">
-    <input type="text" id="phone" placeholder="Telefon raqam">
-    <input type="password" id="password" placeholder="Parol">
-    <button onclick="updateProfile()">Yangilash</button>
-    <button class="logout" onclick="logout()">Chiqish</button>
-    <p class="msg" id="msg"></p>
-  </div>
+  <main>
+    <h2>👤 Foydalanuvchi profili</h2>
+
+    <div class="info" id="userInfo"></div>
+
+    <div class="ads-section">
+      <h3>📝 Mening e’lonlarim</h3>
+      <div id="myAdsList"></div>
+    </div>
+
+    <button class="logout-btn" onclick="logout()">Chiqish</button>
+    <a href="index.html" class="back-link">← Bosh sahifaga qaytish</a>
+  </main>
 
   <script>
-    // Profilni yuklash
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-
-    if (!currentUser) {
-      alert('Avval tizimga kiring!');
-      window.location.href = 'login.html';
-    } else {
-      document.getElementById('name').value = currentUser.name;
-      document.getElementById('phone').value = currentUser.phone;
-      document.getElementById('password').value = currentUser.password;
-    }
-
-    // Yangilash funksiyasi
-    function updateProfile() {
-      const name = document.getElementById('name').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const msg = document.getElementById('msg');
-
-      if (!name || !phone || !password) {
-        msg.style.color = 'red';
-        msg.textContent = '❌ Barcha maydonlarni to‘ldiring!';
+    // ✅ Profil yuklanishi
+    window.onload = () => {
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      if (!user) {
+        alert('Avval tizimga kiring.');
+        window.location.href = 'login.html';
         return;
       }
 
-      // Barcha foydalanuvchilar ro‘yxatini yangilash
+      // Foydalanuvchi ma’lumotlarini chiqarish
       const users = JSON.parse(localStorage.getItem('users')) || [];
-      const index = users.findIndex(u => u.phone === currentUser.phone);
+      const fullData = users.find(u => u.phone === user.phone);
+      const infoDiv = document.getElementById('userInfo');
+      infoDiv.innerHTML = `
+        <p><b>Ism:</b> ${fullData?.name || user.name}</p>
+        <p><b>Telefon:</b> ${user.phone}</p>
+        <p><b>Rol:</b> ${user.userType === 'driver' ? 'Haydovchi' : user.userType === 'passenger' ? 'Yo‘lovchi' : 'Admin'}</p>
+        <p><b>Ro‘yxatdan o‘tgan:</b> ${fullData?.createdAt || '—'}</p>
+      `;
 
-      if (index > -1) {
-        users[index] = { name, phone, password };
-        localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('currentUser', JSON.stringify({ name, phone, password }));
+      // E’lonlarni topish
+      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      const myAds = allAds.filter(ad => ad.phone === user.phone || ad.ownerPhone === user.phone);
 
-        msg.style.color = 'green';
-        msg.textContent = '✅ Ma’lumotlar yangilandi!';
+      const adsContainer = document.getElementById('myAdsList');
+      if (myAds.length === 0) {
+        adsContainer.innerHTML = '<p class="no-ads">Sizda hali e’lonlar yo‘q.</p>';
+      } else {
+        adsContainer.innerHTML = myAds.map(ad => `
+          <div class="ad-card">
+            <strong>${ad.fromRegion || '—'} ${ad.fromDistrict || ''}</strong> → 
+            <strong>${ad.toRegion || '—'} ${ad.toDistrict || ''}</strong><br>
+            💰 ${ad.price || 'Noma’lum'} so‘m<br>
+            📅 ${ad.date || ''}<br>
+            ⚙️ Holat: <b>${ad.status || 'Kutilyapti'}</b>
+          </div>
+        `).join('');
       }
-    }
+    };
 
-    // Chiqish
+    // ✅ Chiqish funksiyasi
     function logout() {
       localStorage.removeItem('currentUser');
+      alert('Tizimdan chiqdingiz!');
       window.location.href = 'login.html';
     }
   </script>
