@@ -24,6 +24,7 @@
     h2 {
       text-align: center;
       margin-bottom: 20px;
+      color: #007bff;
     }
     input, select {
       width: 100%;
@@ -45,10 +46,7 @@
       transition: 0.3s;
     }
     button:hover { background: #0056b3; }
-    p {
-      text-align: center;
-      margin-top: 12px;
-    }
+    p { text-align: center; margin-top: 12px; }
     .error { color: red; text-align: center; font-size: 14px; }
     .success { color: green; text-align: center; font-size: 14px; }
   </style>
@@ -82,28 +80,55 @@
       error.textContent = '';
       success.textContent = '';
 
+      // Maydonlar to‘ldirilganligini tekshirish
       if (!name || !phone || !password || !userType) {
         error.textContent = '⚠️ Iltimos, barcha maydonlarni to‘ldiring!';
         return;
       }
 
+      // Telefon raqam formati tekshiruvi
+      const phoneRegex = /^\+998\d{9}$/;
+      if (!phoneRegex.test(phone)) {
+        error.textContent = '📞 Telefon raqamini to‘g‘ri kiriting! (+998 bilan boshlansin)';
+        return;
+      }
+
       let users = JSON.parse(localStorage.getItem('users')) || [];
 
-      // Telefon raqam bo‘yicha tekshirish
+      // Raqam allaqachon ro‘yxatdan o‘tganligini tekshirish
       if (users.some(u => u.phone === phone)) {
         error.textContent = '❌ Bu telefon raqam allaqachon ro‘yxatdan o‘tgan!';
         return;
       }
 
-      // Yangi foydalanuvchi
-      const newUser = { name, phone, password, userType, createdAt: new Date().toLocaleString() };
+      // Yangi foydalanuvchi obyektini yaratish
+      const newUser = {
+        name,
+        phone,
+        password,
+        userType,
+        createdAt: new Date().toLocaleString()
+      };
       users.push(newUser);
 
+      // Ma’lumotlarni saqlash
       localStorage.setItem('users', JSON.stringify(users));
 
+      // Tizimga avtomatik kirish (currentUser)
+      localStorage.setItem('currentUser', JSON.stringify({
+        name,
+        phone,
+        userType
+      }));
+
+      // Muvaffaqiyatli xabar
       success.textContent = '✅ Muvaffaqiyatli ro‘yxatdan o‘tildi!';
       setTimeout(() => {
-        window.location.href = 'login.html';
+        if (userType === 'driver') {
+          window.location.href = 'driver.html';
+        } else {
+          window.location.href = 'passenger.html';
+        }
       }, 1500);
     }
   </script>
