@@ -88,6 +88,13 @@
           select.appendChild(opt);
         });
       });
+
+      // Agar foydalanuvchi tizimga kirgan bo‘lsa, ism va telefonni avtomatik to‘ldiramiz
+      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+      if (currentUser) {
+        document.getElementById('driver').value = currentUser.name || '';
+        document.getElementById('phone').value = currentUser.phone || '';
+      }
     }
 
     // ✅ Tanlangan viloyatga qarab tumanlarni yangilash
@@ -118,14 +125,21 @@
       const price = document.getElementById('price').value.trim();
 
       if (!fromRegion || !toRegion || !phone || !driver) {
-        alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
+        alert("❗ Iltimos, barcha majburiy maydonlarni to‘ldiring!");
         return;
       }
 
-      // 🔧 Admin bilan mos bo‘lishi uchun 'from' va 'to' ni birlashtiramiz
+      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+      if (!currentUser) {
+        alert("⚠️ E’lon joylash uchun tizimga kiring!");
+        window.location.href = 'login.html';
+        return;
+      }
+
       const ad = {
         id: 'drv-' + Date.now(),
         type: "driver",
+        userPhone: currentUser.phone,
         fromRegion,
         fromDistrict,
         toRegion,
@@ -135,7 +149,7 @@
         driver,
         phone,
         price,
-        status: "pending",
+        status: "pending", // admin tasdiqlashi uchun
         date: new Date().toLocaleString()
       };
 
@@ -143,7 +157,7 @@
       ads.push(ad);
       localStorage.setItem('driverAds', JSON.stringify(ads));
 
-      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
+      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi! Admin tasdiqlagach ko‘rinadi.";
       setTimeout(() => location.href = 'index.html', 1500);
     }
 
