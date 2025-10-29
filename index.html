@@ -82,10 +82,15 @@
       <a href="driver.html">Haydovchi e’lon joylash</a>
       <a href="passenger.html">Yo‘lovchi e’lon joylash</a>
       <a href="admin.html">Admin panel</a>
+      <a href="my-ads.html">Mening e’lonlarim</a>
     </div>
   </main>
 
   <script>
+    function safe(val) {
+      return val && val !== 'undefined' ? val : '—';
+    }
+
     function loadAds() {
       const driverList = document.getElementById('driverList');
       const passengerList = document.getElementById('passengerList');
@@ -103,11 +108,11 @@
       } else {
         driverList.innerHTML = approvedDrivers.map(ad => `
           <div class="ad-card">
-            <strong>${ad.fromRegion} ${ad.fromDistrict}</strong> → 
-            <strong>${ad.toRegion} ${ad.toDistrict}</strong><br>
-            🚘 Haydovchi: <b>${ad.driver}</b><br>
-            📞 Tel: ${ad.phone}<br>
-            💰 Narx: ${ad.price} so‘m
+            <strong>${safe(ad.fromRegion)} ${safe(ad.fromDistrict)}</strong> → 
+            <strong>${safe(ad.toRegion)} ${safe(ad.toDistrict)}</strong><br>
+            🚘 Haydovchi: <b>${safe(ad.driver) || safe(ad.name) || 'Noma’lum'}</b><br>
+            📞 Tel: ${safe(ad.phone)}<br>
+            💰 Narx: ${safe(ad.price)} so‘m
           </div>
         `).join('');
       }
@@ -118,14 +123,31 @@
       } else {
         passengerList.innerHTML = approvedPassengers.map(ad => `
           <div class="ad-card">
-            <strong>${ad.fromRegion} ${ad.fromDistrict}</strong> → 
-            <strong>${ad.toRegion} ${ad.toDistrict}</strong><br>
-            📞 Tel: ${ad.phone}<br>
-            💰 Taklif narxi: ${ad.price} so‘m
+            <strong>${safe(ad.fromRegion)} ${safe(ad.fromDistrict)}</strong> → 
+            <strong>${safe(ad.toRegion)} ${safe(ad.toDistrict)}</strong><br>
+            📞 Tel: ${safe(ad.phone)}<br>
+            💰 Taklif narxi: ${safe(ad.price)} so‘m
           </div>
         `).join('');
       }
     }
+
+    // Eski e’lonlarda undefined qiymatlarni tozalovchi funksiya
+    (function cleanOldAds() {
+      ['driverAds', 'passengerAds'].forEach(key => {
+        let ads = JSON.parse(localStorage.getItem(key)) || [];
+        let changed = false;
+        ads.forEach(ad => {
+          ['fromRegion','fromDistrict','toRegion','toDistrict','price','phone','driver','name'].forEach(k => {
+            if (ad[k] === undefined || ad[k] === 'undefined') {
+              ad[k] = '—';
+              changed = true;
+            }
+          });
+        });
+        if (changed) localStorage.setItem(key, JSON.stringify(ads));
+      });
+    })();
 
     window.onload = loadAds;
   </script>
