@@ -1,82 +1,78 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Login - ShaharTaxi</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kirish - ShaharTaxi</title>
   <style>
     body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #007bff, #00c6ff);
+      font-family: sans-serif;
+      background: #f4f4f4;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
-      margin: 0;
     }
-
     .login-box {
-      background: #fff;
-      padding: 2rem;
-      border-radius: 16px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-      width: 320px;
-      text-align: center;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 350px;
     }
-
-    input, button {
+    h2 { text-align: center; margin-bottom: 20px; }
+    input {
       width: 100%;
-      padding: 0.8rem;
-      margin-top: 1rem;
-      border-radius: 8px;
+      padding: 10px;
+      margin: 8px 0;
       border: 1px solid #ccc;
-      font-size: 1rem;
+      border-radius: 5px;
     }
-
     button {
+      width: 100%;
+      padding: 10px;
       background: #007bff;
-      color: #fff;
       border: none;
+      color: white;
+      border-radius: 5px;
       cursor: pointer;
+      font-size: 16px;
     }
-
-    button:hover {
-      background: #0056b3;
+    button:hover { background: #0056b3; }
+    p {
+      text-align: center;
+      margin-top: 10px;
     }
-
-    h2 {
-      color: #007bff;
-    }
-
-    .msg {
-      margin-top: 1rem;
-      font-size: 0.9rem;
-      color: red;
-    }
+    .error { color: red; text-align: center; }
   </style>
 </head>
 <body>
   <div class="login-box">
-    <h2>🔐 Admin tizimiga kirish</h2>
-    <input id="username" placeholder="Login" />
-    <input id="password" type="password" placeholder="Parol" />
-    <button onclick="login()">Kirish</button>
-    <p class="msg" id="msg"></p>
+    <h2>Tizimga kirish</h2>
+    <input type="text" id="loginPhone" placeholder="Telefon raqam" required>
+    <input type="password" id="loginPassword" placeholder="Parol" required>
+    <button onclick="loginUser()">Kirish</button>
+    <p class="error" id="loginError"></p>
+    <p>Hisobingiz yo‘qmi? <a href="register.html">Ro‘yxatdan o‘tish</a></p>
   </div>
 
   <script>
-    function login() {
-      const user = document.getElementById("username").value;
-      const pass = document.getElementById("password").value;
+    function loginUser() {
+      const phone = document.getElementById('loginPhone').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+      const error = document.getElementById('loginError');
 
-      // Oddiy parol (keyinchalik backend bilan almashtiriladi)
-      if (user === "admin" && pass === "12345") {
-        localStorage.setItem("adminLoggedIn", "true");
-        window.location.href = "admin.html";
-      } else {
-        document.getElementById("msg").innerText = "❌ Login yoki parol xato!";
+      const users = JSON.parse(localStorage.getItem('users')) || [];
+      const user = users.find(u => u.phone === phone && u.password === password);
+
+      if (!user) {
+        error.textContent = '❌ Noto‘g‘ri telefon raqam yoki parol!';
+        return;
       }
+
+      localStorage.setItem('currentUser', JSON.stringify(user));
+      alert(`✅ Xush kelibsiz, ${user.name}!`);
+      window.location.href = 'index.html'; // Asosiy sahifa
     }
   </script>
 </body>
