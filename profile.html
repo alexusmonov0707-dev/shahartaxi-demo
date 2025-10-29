@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profil - ShaharTaxi</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f2f2f2;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .profile-box {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 350px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 16px;
+      margin: 8px 0;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #d9534f;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background: #c9302c;
+    }
+  </style>
+</head>
+<body>
+  <div class="profile-box">
+    <h2>Foydalanuvchi profili</h2>
+    <div id="userInfo"></div>
+    <button onclick="logoutUser()">Chiqish</button>
+  </div>
+
+  <script>
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+    if (!currentUser) {
+      // Agar foydalanuvchi tizimga kirmagan bo‘lsa — login sahifasiga qaytarish
+      window.location.href = 'login.html';
+    } else {
+      // Foydalanuvchi ma’lumotlarini chiqarish
+      const userDiv = document.getElementById('userInfo');
+      userDiv.innerHTML = `
+        <p><b>Ism:</b> ${currentUser.name}</p>
+        <p><b>Telefon:</b> ${currentUser.phone}</p>
+        <p><b>Rol:</b> ${currentUser.role === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
+      `;
+    }
+
+    // Chiqish funksiyasi
+    function logoutUser() {
+      localStorage.removeItem('currentUser');
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>
