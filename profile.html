@@ -141,144 +141,143 @@
     <button class="logout-btn" onclick="logout()">Chiqish</button>
     <a href="index.html" class="back-link">← Bosh sahifaga qaytish</a>
   </main>
+<script>
+  const regions = ["Toshkent", "Andijon", "Farg‘ona", "Namangan", "Samarqand", "Buxoro", "Navoiy", "Surxondaryo", "Qashqadaryo", "Jizzax", "Sirdaryo", "Xorazm", "Qoraqalpog‘iston"];
 
-  <script>
-    // Oddiy viloyatlar
-    const regions = ["Toshkent", "Andijon", "Farg‘ona", "Namangan", "Samarqand", "Buxoro", "Navoiy", "Surxondaryo", "Qashqadaryo", "Jizzax", "Sirdaryo", "Xorazm", "Qoraqalpog‘iston"];
+  window.onload = () => {
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+    if (!user) {
+      alert('Avval tizimga kiring.');
+      window.location.href = 'login.html';
+      return;
+    }
 
-    window.onload = () => {
-      const user = JSON.parse(localStorage.getItem('currentUser'));
-      if (!user) {
-        alert('Avval tizimga kiring.');
-        window.location.href = 'login.html';
-        return;
-      }
+    const userInfo = document.getElementById('userInfo');
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const fullData = users.find(u => u.phone === user.phone);
 
-      const userInfo = document.getElementById('userInfo');
-      const users = JSON.parse(localStorage.getItem('users')) || [];
-      const fullData = users.find(u => u.phone === user.phone);
+    userInfo.innerHTML = `
+      <p><b>Ism:</b> ${fullData?.name || user.name}</p>
+      <p><b>Telefon:</b> ${user.phone}</p>
+      <p><b>Rol:</b> ${user.userType === 'driver' ? 'Haydovchi' : user.userType === 'passenger' ? 'Yo‘lovchi' : 'Admin'}</p>
+    `;
 
-      userInfo.innerHTML = `
-        <p><b>Ism:</b> ${fullData?.name || user.name}</p>
-        <p><b>Telefon:</b> ${user.phone}</p>
-        <p><b>Rol:</b> ${user.userType === 'driver' ? 'Haydovchi' : user.userType === 'passenger' ? 'Yo‘lovchi' : 'Admin'}</p>
-      `;
+    loadRegions();
+    renderAds(user);
+  };
 
-      loadRegions();
-      renderAds(user);
+  function loadRegions() {
+    ['fromRegion', 'toRegion'].forEach(id => {
+      const select = document.getElementById(id);
+      regions.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r;
+        opt.textContent = r;
+        select.appendChild(opt);
+      });
+    });
+  }
+
+  // === E’lonlarni ko‘rsatish ===
+  function renderAds(user) {
+    const key = user.userType === 'driver' ? 'driverAds' : 'passengerAds';
+    const myAds = (JSON.parse(localStorage.getItem(key)) || []).filter(ad => ad.phone === user.phone);
+    const adsContainer = document.getElementById('myAdsList');
+
+    if (myAds.length === 0) {
+      adsContainer.innerHTML = '<p class="no-ads">Sizda hali e’lonlar yo‘q.</p>';
+      return;
+    }
+
+    adsContainer.innerHTML = myAds.map((ad, index) => `
+      <div class="ad-card">
+        <strong>${ad.fromRegion || '—'}</strong> → <strong>${ad.toRegion || '—'}</strong><br>
+        💰 ${ad.price || 'Noma’lum'} so‘m<br>
+        ⚙️ Holat: <b>${ad.status === 'approved' ? '✅ Tasdiqlangan' : ad.status === 'rejected' ? '❌ Rad etilgan' : '⏳ Kutilmoqda'}</b>
+        <div class="btns">
+          <button class="edit-btn" onclick="editAd('${key}', ${index})">✏️</button>
+          <button class="delete-btn" onclick="deleteAd('${key}', ${index})">🗑️</button>
+        </div>
+        <div id="editBox${index}" class="edit-box" style="display:none;">
+          <input type="text" id="from${index}" value="${ad.fromRegion || ''}" placeholder="Qayerdan">
+          <input type="text" id="to${index}" value="${ad.toRegion || ''}" placeholder="Qayerga">
+          <input type="text" id="price${index}" value="${ad.price || ''}" placeholder="Narx">
+          <button onclick="saveAd('${key}', ${index})">💾 Saqlash</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // === Tahrirlash va saqlash ===
+  function editAd(key, index) {
+    document.getElementById(`editBox${index}`).style.display = 'block';
+  }
+
+  function saveAd(key, index) {
+    const ads = JSON.parse(localStorage.getItem(key)) || [];
+    ads[index].fromRegion = document.getElementById(`from${index}`).value;
+    ads[index].toRegion = document.getElementById(`to${index}`).value;
+    ads[index].price = document.getElementById(`price${index}`).value;
+    localStorage.setItem(key, JSON.stringify(ads));
+    alert('✅ E’lon yangilandi!');
+    window.location.reload();
+  }
+
+  // === O‘chirish ===
+  function deleteAd(key, index) {
+    if (!confirm('Rostdan ham bu e’lonni o‘chirasizmi?')) return;
+    const ads = JSON.parse(localStorage.getItem(key)) || [];
+    ads.splice(index, 1);
+    localStorage.setItem(key, JSON.stringify(ads));
+    alert('🗑️ O‘chirildi!');
+    window.location.reload();
+  }
+
+  // === Qo‘shish ===
+  function toggleAddForm() {
+    const form = document.getElementById('addForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  }
+
+  function addNewAd() {
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+    const from = document.getElementById('fromRegion').value;
+    const to = document.getElementById('toRegion').value;
+    const price = document.getElementById('price').value;
+
+    if (!from || !to || !price) {
+      alert('Barcha maydonlarni to‘ldiring!');
+      return;
+    }
+
+    const newAd = {
+      id: Date.now(),
+      type: user.userType,
+      fromRegion: from,
+      toRegion: to,
+      price: price,
+      phone: user.phone,
+      date: new Date().toLocaleString(),
+      status: "pending"
     };
 
-    // Viloyatlar yuklash
-    function loadRegions() {
-      ['fromRegion', 'toRegion'].forEach(id => {
-        const select = document.getElementById(id);
-        regions.forEach(r => {
-          const opt = document.createElement('option');
-          opt.value = r;
-          opt.textContent = r;
-          select.appendChild(opt);
-        });
-      });
-    }
+    const key = user.userType === 'driver' ? 'driverAds' : 'passengerAds';
+    const ads = JSON.parse(localStorage.getItem(key)) || [];
+    ads.push(newAd);
+    localStorage.setItem(key, JSON.stringify(ads));
 
-    // E’lonlarni ko‘rsatish
-    function renderAds(user) {
-      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      const myAds = allAds.filter(ad => ad.phone === user.phone || ad.ownerPhone === user.phone);
-      const adsContainer = document.getElementById('myAdsList');
+    alert('✅ E’lon qo‘shildi!');
+    window.location.reload();
+  }
 
-      if (myAds.length === 0) {
-        adsContainer.innerHTML = '<p class="no-ads">Sizda hali e’lonlar yo‘q.</p>';
-        return;
-      }
+  // === Chiqish ===
+  function logout() {
+    localStorage.removeItem('currentUser');
+    alert('Tizimdan chiqdingiz!');
+    window.location.href = 'login.html';
+  }
+</script>
 
-      adsContainer.innerHTML = myAds.map((ad, index) => `
-        <div class="ad-card">
-          <strong>${ad.fromRegion || '—'}</strong> → <strong>${ad.toRegion || '—'}</strong><br>
-          💰 ${ad.price || 'Noma’lum'} so‘m<br>
-          ⚙️ Holat: <b>${ad.status || 'Kutilyapti'}</b>
-          <div class="btns">
-            <button class="edit-btn" onclick="editAd(${index})">✏️</button>
-            <button class="delete-btn" onclick="deleteAd(${index})">🗑️</button>
-          </div>
-          <div id="editBox${index}" class="edit-box" style="display:none;">
-            <input type="text" id="from${index}" value="${ad.fromRegion || ''}" placeholder="Qayerdan">
-            <input type="text" id="to${index}" value="${ad.toRegion || ''}" placeholder="Qayerga">
-            <input type="text" id="price${index}" value="${ad.price || ''}" placeholder="Narx">
-            <button onclick="saveAd(${index})">💾 Saqlash</button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    // ✏️ Tahrirlash
-    function editAd(index) {
-      document.getElementById(`editBox${index}`).style.display = 'block';
-    }
-
-    // 💾 Saqlash
-    function saveAd(index) {
-      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      allAds[index].fromRegion = document.getElementById(`from${index}`).value;
-      allAds[index].toRegion = document.getElementById(`to${index}`).value;
-      allAds[index].price = document.getElementById(`price${index}`).value;
-      localStorage.setItem('allAds', JSON.stringify(allAds));
-      alert('✅ E’lon yangilandi!');
-      window.location.reload();
-    }
-
-    // 🗑️ O‘chirish
-    function deleteAd(index) {
-      if (!confirm('Rostdan ham bu e’lonni o‘chirasizmi?')) return;
-      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      allAds.splice(index, 1);
-      localStorage.setItem('allAds', JSON.stringify(allAds));
-      alert('🗑️ O‘chirildi!');
-      window.location.reload();
-    }
-
-    // ➕ Qo‘shish
-    function toggleAddForm() {
-      const form = document.getElementById('addForm');
-      form.style.display = form.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function addNewAd() {
-      const user = JSON.parse(localStorage.getItem('currentUser'));
-      const from = document.getElementById('fromRegion').value;
-      const to = document.getElementById('toRegion').value;
-      const price = document.getElementById('price').value;
-
-      if (!from || !to || !price) {
-        alert('Barcha maydonlarni to‘ldiring!');
-        return;
-      }
-
-      const newAd = {
-        id: 'ad-' + Date.now(),
-        type: user.userType,
-        fromRegion: from,
-        toRegion: to,
-        price: price,
-        phone: user.phone,
-        date: new Date().toLocaleString(),
-        status: "kutilyapti"
-      };
-
-      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      allAds.push(newAd);
-      localStorage.setItem('allAds', JSON.stringify(allAds));
-
-      alert('✅ E’lon qo‘shildi!');
-      window.location.reload();
-    }
-
-    // 🚪 Chiqish
-    function logout() {
-      localStorage.removeItem('currentUser');
-      alert('Tizimdan chiqdingiz!');
-      window.location.href = 'login.html';
-    }
-  </script>
+ 
 </body>
 </html>
