@@ -1,35 +1,86 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ro‘yxatdan o‘tish | ShaharTaxi</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ro‘yxatdan o‘tish - ShaharTaxi</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .register-box {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 350px;
+    }
+    h2 { text-align: center; margin-bottom: 20px; }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover { background: #0056b3; }
+    p {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .error { color: red; text-align: center; }
+  </style>
 </head>
 <body>
-  <div class="form-container">
+  <div class="register-box">
     <h2>Ro‘yxatdan o‘tish</h2>
-    <label>Foydalanuvchi turi:</label>
-    <select id="userType">
-      <option value="passenger">Yo‘lovchi</option>
-      <option value="driver">Haydovchi</option>
-    </select>
-
-    <label>Ism va familiya:</label>
-    <input type="text" id="fullName" placeholder="Masalan: Ali Karimov" />
-
-    <label>Telefon raqam:</label>
-    <input type="text" id="phone" placeholder="+998901234567" />
-
-    <label>Parol:</label>
-    <input type="password" id="password" placeholder="Parol kiriting" />
-
+    <input type="text" id="regName" placeholder="Ism" required>
+    <input type="text" id="regPhone" placeholder="Telefon raqam (998901234567)" required>
+    <input type="password" id="regPassword" placeholder="Parol" required>
     <button onclick="registerUser()">Ro‘yxatdan o‘tish</button>
-    <p>Allaqachon akkauntingiz bormi? <a href="login.html">Kirish</a></p>
-
-    <p id="regMessage" class="msg"></p>
+    <p class="error" id="regError"></p>
+    <p>Allaqachon hisobingiz bormi? <a href="login.html">Kirish</a></p>
   </div>
 
-  <script src="user.js"></script>
+  <script>
+    function registerUser() {
+      const name = document.getElementById('regName').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
+      const error = document.getElementById('regError');
+
+      if (!name || !phone || !password) {
+        error.textContent = '❌ Barcha maydonlarni to‘ldiring!';
+        return;
+      }
+
+      const users = JSON.parse(localStorage.getItem('users')) || [];
+      if (users.find(u => u.phone === phone)) {
+        error.textContent = '❌ Bu telefon raqam allaqachon ro‘yxatdan o‘tgan!';
+        return;
+      }
+
+      users.push({ name, phone, password, createdAt: new Date().toLocaleString() });
+      localStorage.setItem('users', JSON.stringify(users));
+
+      alert('✅ Ro‘yxatdan o‘tish muvaffaqiyatli!');
+      window.location.href = 'login.html';
+    }
+  </script>
 </body>
 </html>
