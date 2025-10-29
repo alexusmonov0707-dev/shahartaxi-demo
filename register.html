@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ro‘yxatdan o‘tish | ShaharTaxi</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="form-container">
+    <h2>Ro‘yxatdan o‘tish</h2>
+    <label>Foydalanuvchi turi:</label>
+    <select id="userType">
+      <option value="passenger">Yo‘lovchi</option>
+      <option value="driver">Haydovchi</option>
+    </select>
+
+    <label>Ism va familiya:</label>
+    <input type="text" id="fullName" placeholder="Masalan: Ali Karimov" />
+
+    <label>Telefon raqam:</label>
+    <input type="text" id="phone" placeholder="+998901234567" />
+
+    <label>Parol:</label>
+    <input type="password" id="password" placeholder="Parol kiriting" />
+
+    <button onclick="registerUser()">Ro‘yxatdan o‘tish</button>
+    <p>Allaqachon akkauntingiz bormi? <a href="login.html">Kirish</a></p>
+
+    <p id="regMessage" class="msg"></p>
+  </div>
+
+  <script src="user.js"></script>
+</body>
+</html>
