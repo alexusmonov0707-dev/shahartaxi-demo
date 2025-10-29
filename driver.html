@@ -155,11 +155,12 @@
       const to = `${ad.toRegion}${ad.toDistrict ? ' ' + ad.toDistrict : ''}`;
       ad.route = `${from} → ${to}`;
 
-      if (!ad.fromRegion || !ad.toRegion || !ad.driver) {
+      if (!ad.fromRegion || !ad.toRegion || !ad.driver || !ad.price) {
         alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
         return;
       }
 
+      // ✅ Har ikki joyga yozish
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
       allAds.push(ad);
       localStorage.setItem('allAds', JSON.stringify(allAds));
@@ -167,6 +168,9 @@
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       driverAds.push(ad);
       localStorage.setItem('driverAds', JSON.stringify(driverAds));
+
+      // ✅ Sinxron bo‘lishi uchun flag qo‘shamiz
+      localStorage.setItem('lastAdUpdated', Date.now());
 
       document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
       setTimeout(() => location.href = 'index.html', 1500);
