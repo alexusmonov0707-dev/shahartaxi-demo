@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="uz">
 <head>
   <meta charset="UTF-8" />
@@ -87,18 +87,18 @@
   </main>
 
   <script>
-    // === Eski ma'lumotlarni tozalash va to'g'rilash funksiyasi ===
+    // === Eski ma'lumotlarni tozalash va to‘g‘rilash funksiyasi ===
     function fixOldAds(list) {
       return list.map(ad => ({
         ...ad,
         fromRegion: ad.fromRegion || ad.from || 'Noma’lum viloyat',
-        fromDistrict: ad.fromDistrict || ad.fromDistrict || '',
+        fromDistrict: ad.fromDistrict || '',
         toRegion: ad.toRegion || ad.to || 'Noma’lum viloyat',
-        toDistrict: ad.toDistrict || ad.toDistrict || '',
+        toDistrict: ad.toDistrict || '',
         price: ad.price || '—',
         driver: ad.driver || ad.name || 'Noma’lum',
         phone: ad.phone || ad.phoneNumber || '—',
-        status: ad.status || 'pending'
+        status: (ad.status || 'kutilyapti').toLowerCase() // barcha statuslarni kichik qilib saqlaymiz
       }));
     }
 
@@ -113,9 +113,9 @@
       drivers = fixOldAds(drivers);
       passengers = fixOldAds(passengers);
 
-      // Faqat tasdiqlanganlarni ko‘rsatamiz
-      const approvedDrivers = drivers.filter(ad => ad.status === 'approved');
-      const approvedPassengers = passengers.filter(ad => ad.status === 'approved');
+      // === Status nomlarini yagona formatda solishtiramiz ===
+      const approvedDrivers = drivers.filter(ad => ['tasdiqlandi', 'approved', 'tasdiqlangan'].includes(ad.status));
+      const approvedPassengers = passengers.filter(ad => ['tasdiqlandi', 'approved', 'tasdiqlangan'].includes(ad.status));
 
       // === Haydovchilar ===
       if (approvedDrivers.length === 0) {
