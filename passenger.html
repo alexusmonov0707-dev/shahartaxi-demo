@@ -76,7 +76,6 @@
 
   <script src="regions.js"></script>
   <script>
-    // ✅ Viloyatlar ro‘yxatini yuklash
     function loadRegions() {
       const selects = ["fromRegion", "toRegion"];
       selects.forEach(id => {
@@ -90,7 +89,6 @@
       });
     }
 
-    // ✅ Tanlangan viloyatga qarab tumanlarni yangilash
     function updateDistricts(type) {
       const regionSelect = document.getElementById(type + "Region");
       const districtSelect = document.getElementById(type + "District");
@@ -107,23 +105,47 @@
       }
     }
 
-    // ✅ Yo‘lovchi e’lonini saqlash
+    function requireLoginOrRedirect() {
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      if (!user || !user.phone) {
+        alert('E’lon joylash uchun avval tizimga kiring.');
+        window.location.href = 'login.html';
+        return null;
+      }
+      return user;
+    }
+
+    window.onload = () => {
+      loadRegions();
+      const user = requireLoginOrRedirect();
+      if (!user) return;
+      const phoneInput = document.getElementById('phone');
+      if (phoneInput) {
+        phoneInput.value = user.phone;
+        phoneInput.readOnly = true;
+        phoneInput.style.background = '#f1f1f1';
+      }
+    };
+
     function savePassengerAd() {
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      if (!user) { alert('Avval tizimga kiring.'); window.location.href='login.html'; return; }
+
       const ad = {
-        id: Date.now(),
+        id: 'psg-' + Date.now(),
         type: "passenger",
+        ownerPhone: user.phone,
         fromRegion: document.getElementById('fromRegion').value,
         fromDistrict: document.getElementById('fromDistrict').value,
         toRegion: document.getElementById('toRegion').value,
         toDistrict: document.getElementById('toDistrict').value,
-        name: document.getElementById('name').value,
-        phone: document.getElementById('phone').value,
-        price: document.getElementById('price').value,
+        name: document.getElementById('name').value.trim(),
+        phone: user.phone,
+        price: document.getElementById('price').value.trim(),
         date: new Date().toLocaleString(),
         status: "kutilyapti"
       };
 
-      // ✅ To‘g‘ri formatdagi yo‘nalish (→ faqat kerak joyda chiqadi)
       const from = `${ad.fromRegion}${ad.fromDistrict ? ' ' + ad.fromDistrict : ''}`;
       const to = `${ad.toRegion}${ad.toDistrict ? ' ' + ad.toDistrict : ''}`;
       ad.route = `${from} → ${to}`;
@@ -133,12 +155,10 @@
         return;
       }
 
-      // ✅ Barcha e’lonlar yagona joyda saqlanadi
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
       allAds.push(ad);
       localStorage.setItem('allAds', JSON.stringify(allAds));
 
-      // ✅ Alohida yo‘lovchi e’lonlari ham (moslik uchun)
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       passengerAds.push(ad);
       localStorage.setItem('passengerAds', JSON.stringify(passengerAds));
@@ -146,8 +166,6 @@
       document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
       setTimeout(() => location.href = 'index.html', 1500);
     }
-
-    window.onload = loadRegions;
   </script>
 </body>
 </html>
