@@ -39,7 +39,6 @@
       padding: 1rem;
       border-radius: 10px;
       margin-bottom: 10px;
-      position: relative;
     }
     .btns {
       margin-top: 8px;
@@ -59,6 +58,20 @@
     .edit-btn:hover { background: #e0a800; }
     .delete-btn { background: #dc3545; color: white; }
     .delete-btn:hover { background: #b02a37; }
+    .add-btn {
+      width: 100%;
+      padding: 10px;
+      background: #28a745;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .add-btn:hover {
+      background: #218838;
+    }
     .logout-btn {
       width: 100%;
       margin-top: 1.5rem;
@@ -86,13 +99,13 @@
       color: gray;
       font-style: italic;
     }
-    .edit-box {
+    .edit-box, .add-box {
       background: #eef7ff;
       padding: 12px;
       border-radius: 8px;
       margin-top: 10px;
     }
-    input {
+    input, select {
       width: 100%;
       padding: 8px;
       margin: 5px 0;
@@ -107,6 +120,19 @@
 
     <div class="info" id="userInfo"></div>
 
+    <button class="add-btn" onclick="toggleAddForm()">+ Yangi e’lon qo‘shish</button>
+
+    <div id="addForm" class="add-box" style="display:none;">
+      <select id="fromRegion">
+        <option value="">Qayerdan (viloyat)</option>
+      </select>
+      <select id="toRegion">
+        <option value="">Qayerga (viloyat)</option>
+      </select>
+      <input type="text" id="price" placeholder="Yo‘l haqi (so‘m)">
+      <button onclick="addNewAd()">💾 Saqlash</button>
+    </div>
+
     <div class="ads-section">
       <h3>📝 Mening e’lonlarim</h3>
       <div id="myAdsList"></div>
@@ -117,9 +143,9 @@
   </main>
 
   <script>
-    let editingAdIndex = null;
+    // Oddiy viloyatlar
+    const regions = ["Toshkent", "Andijon", "Farg‘ona", "Namangan", "Samarqand", "Buxoro", "Navoiy", "Surxondaryo", "Qashqadaryo", "Jizzax", "Sirdaryo", "Xorazm", "Qoraqalpog‘iston"];
 
-    // ✅ Profil yuklanishi
     window.onload = () => {
       const user = JSON.parse(localStorage.getItem('currentUser'));
       if (!user) {
@@ -128,21 +154,34 @@
         return;
       }
 
-      // Foydalanuvchi ma’lumotlarini chiqarish
+      const userInfo = document.getElementById('userInfo');
       const users = JSON.parse(localStorage.getItem('users')) || [];
       const fullData = users.find(u => u.phone === user.phone);
-      const infoDiv = document.getElementById('userInfo');
-      infoDiv.innerHTML = `
+
+      userInfo.innerHTML = `
         <p><b>Ism:</b> ${fullData?.name || user.name}</p>
         <p><b>Telefon:</b> ${user.phone}</p>
         <p><b>Rol:</b> ${user.userType === 'driver' ? 'Haydovchi' : user.userType === 'passenger' ? 'Yo‘lovchi' : 'Admin'}</p>
-        <p><b>Ro‘yxatdan o‘tgan:</b> ${fullData?.createdAt || '—'}</p>
       `;
 
+      loadRegions();
       renderAds(user);
     };
 
-    // ✅ E’lonlarni chiqarish
+    // Viloyatlar yuklash
+    function loadRegions() {
+      ['fromRegion', 'toRegion'].forEach(id => {
+        const select = document.getElementById(id);
+        regions.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r;
+          opt.textContent = r;
+          select.appendChild(opt);
+        });
+      });
+    }
+
+    // E’lonlarni ko‘rsatish
     function renderAds(user) {
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
       const myAds = allAds.filter(ad => ad.phone === user.phone || ad.ownerPhone === user.phone);
@@ -155,63 +194,86 @@
 
       adsContainer.innerHTML = myAds.map((ad, index) => `
         <div class="ad-card">
-          <strong>${ad.fromRegion || '—'} ${ad.fromDistrict || ''}</strong> → 
-          <strong>${ad.toRegion || '—'} ${ad.toDistrict || ''}</strong><br>
+          <strong>${ad.fromRegion || '—'}</strong> → <strong>${ad.toRegion || '—'}</strong><br>
           💰 ${ad.price || 'Noma’lum'} so‘m<br>
-          📅 ${ad.date || ''}<br>
           ⚙️ Holat: <b>${ad.status || 'Kutilyapti'}</b>
-
           <div class="btns">
-            <button class="edit-btn" onclick="editAd(${index})">✏️ Tahrirlash</button>
-            <button class="delete-btn" onclick="deleteAd(${index})">🗑️ O‘chirish</button>
+            <button class="edit-btn" onclick="editAd(${index})">✏️</button>
+            <button class="delete-btn" onclick="deleteAd(${index})">🗑️</button>
           </div>
-
           <div id="editBox${index}" class="edit-box" style="display:none;">
             <input type="text" id="from${index}" value="${ad.fromRegion || ''}" placeholder="Qayerdan">
             <input type="text" id="to${index}" value="${ad.toRegion || ''}" placeholder="Qayerga">
-            <input type="number" id="price${index}" value="${ad.price || ''}" placeholder="Narx">
-            <input type="date" id="date${index}" value="${ad.date || ''}">
+            <input type="text" id="price${index}" value="${ad.price || ''}" placeholder="Narx">
             <button onclick="saveAd(${index})">💾 Saqlash</button>
           </div>
         </div>
       `).join('');
     }
 
-    // ✏️ E’lonni tahrirlash
+    // ✏️ Tahrirlash
     function editAd(index) {
       document.getElementById(`editBox${index}`).style.display = 'block';
     }
 
-    // 💾 E’lonni saqlash
+    // 💾 Saqlash
     function saveAd(index) {
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      const ad = allAds[index];
-
-      ad.fromRegion = document.getElementById(`from${index}`).value;
-      ad.toRegion = document.getElementById(`to${index}`).value;
-      ad.price = document.getElementById(`price${index}`).value;
-      ad.date = document.getElementById(`date${index}`).value;
-
-      allAds[index] = ad;
+      allAds[index].fromRegion = document.getElementById(`from${index}`).value;
+      allAds[index].toRegion = document.getElementById(`to${index}`).value;
+      allAds[index].price = document.getElementById(`price${index}`).value;
       localStorage.setItem('allAds', JSON.stringify(allAds));
-
       alert('✅ E’lon yangilandi!');
       window.location.reload();
     }
 
-    // 🗑️ E’lonni o‘chirish
+    // 🗑️ O‘chirish
     function deleteAd(index) {
-      if (!confirm('Rostdan ham bu e’lonni o‘chirilsinmi?')) return;
-
+      if (!confirm('Rostdan ham bu e’lonni o‘chirasizmi?')) return;
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
       allAds.splice(index, 1);
       localStorage.setItem('allAds', JSON.stringify(allAds));
-
-      alert('🗑️ E’lon o‘chirildi!');
+      alert('🗑️ O‘chirildi!');
       window.location.reload();
     }
 
-    // 🚪 Chiqish funksiyasi
+    // ➕ Qo‘shish
+    function toggleAddForm() {
+      const form = document.getElementById('addForm');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function addNewAd() {
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      const from = document.getElementById('fromRegion').value;
+      const to = document.getElementById('toRegion').value;
+      const price = document.getElementById('price').value;
+
+      if (!from || !to || !price) {
+        alert('Barcha maydonlarni to‘ldiring!');
+        return;
+      }
+
+      const newAd = {
+        id: 'ad-' + Date.now(),
+        type: user.userType,
+        fromRegion: from,
+        toRegion: to,
+        price: price,
+        phone: user.phone,
+        date: new Date().toLocaleString(),
+        status: "kutilyapti"
+      };
+
+      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      allAds.push(newAd);
+      localStorage.setItem('allAds', JSON.stringify(allAds));
+
+      alert('✅ E’lon qo‘shildi!');
+      window.location.reload();
+    }
+
+    // 🚪 Chiqish
     function logout() {
       localStorage.removeItem('currentUser');
       alert('Tizimdan chiqdingiz!');
