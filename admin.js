@@ -41,7 +41,7 @@ function getAds() {
   };
 }
 
-// === TEXT HELPERS ===
+// === STATUS TEXT ===
 function getStatusText(status) {
   if (status === 'approved') return '✅ Tasdiqlangan';
   if (status === 'rejected') return '❌ Rad etilgan';
@@ -52,7 +52,7 @@ function getStatusText(status) {
 function renderAds() {
   const { driver, passenger } = getAds();
 
-  // add IDs if missing
+  // ID berish
   let updated = false;
   ['driver', 'passenger'].forEach(type => {
     let arr = type === 'driver' ? driver : passenger;
@@ -114,7 +114,7 @@ function renderAds() {
   });
 }
 
-// === STATUS UPDATE + HISTORY SAVE ===
+// === UPDATE STATUS ===
 function updateStatus(type, id, newStatus) {
   const key = type === 'driver' ? 'driverAds' : 'passengerAds';
   const ads = JSON.parse(localStorage.getItem(key)) || [];
@@ -139,7 +139,7 @@ function updateStatus(type, id, newStatus) {
   updateStats();
 }
 
-// === SAVE APPROVAL HISTORY ===
+// === SAVE HISTORY ===
 function saveApprovalHistory(record) {
   const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
   const entry = {
@@ -155,7 +155,7 @@ function saveApprovalHistory(record) {
   localStorage.setItem('approvalHistory', JSON.stringify(history));
 }
 
-// === 🧩 FIX OLD HISTORY IDs ===
+// === FIX OLD HISTORY ===
 function fixApprovalHistory() {
   let approvalHistory = JSON.parse(localStorage.getItem("approvalHistory")) || [];
   let driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
@@ -186,7 +186,7 @@ function fixApprovalHistory() {
   }
 }
 
-// === SHOW APPROVAL HISTORY ===
+// === SHOW HISTORY ===
 function showApprovalHistory() {
   const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
   const list = document.getElementById('historyList');
@@ -303,6 +303,6 @@ function goToAdd() {
 window.onload = () => {
   renderAds();
   updateStats();
-  fixApprovalHistory(); // 🧩 bu qo‘shildi
+  fixApprovalHistory();
   setInterval(() => renderAds(), 5000);
 };
