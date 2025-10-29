@@ -8,7 +8,7 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #007bff, #00c6ff);
+      background: linear-gradient(135deg, #ff8c00, #ffcc70);
       margin: 0;
       padding: 0;
       color: #333;
@@ -30,18 +30,18 @@
       font-size: 1rem;
     }
     button {
-      background: #007bff;
+      background: #ff8c00;
       color: #fff;
       border: none;
       cursor: pointer;
       transition: 0.3s;
     }
     button:hover {
-      background: #0056b3;
+      background: #e67300;
     }
     h2 {
       text-align: center;
-      color: #007bff;
+      color: #ff8c00;
     }
   </style>
 </head>
@@ -65,9 +65,9 @@
       <option value="">Tuman (qayerga)</option>
     </select>
 
-    <input id="driver" placeholder="Ismingiz" />
+    <input id="driver" placeholder="Haydovchi ismi" />
     <input id="phone" placeholder="Telefon raqamingiz" />
-    <input id="price" placeholder="Narx (so‘m)" />
+    <input id="price" placeholder="Yo‘l haqi (so‘m)" />
 
     <button onclick="saveDriverAd()">E’lonni joylash</button>
 
@@ -88,13 +88,6 @@
           select.appendChild(opt);
         });
       });
-
-      // Agar foydalanuvchi tizimga kirgan bo‘lsa, ism va telefonni avtomatik to‘ldiramiz
-      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-      if (currentUser) {
-        document.getElementById('driver').value = currentUser.name || '';
-        document.getElementById('phone').value = currentUser.phone || '';
-      }
     }
 
     // ✅ Tanlangan viloyatga qarab tumanlarni yangilash
@@ -114,54 +107,70 @@
       }
     }
 
+    // ✅ Login bo‘lmagan foydalanuvchini qaytarish
+    function requireLoginOrRedirect() {
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      if (!user || !user.phone) {
+        alert('E’lon joylash uchun avval tizimga kiring.');
+        window.location.href = 'login.html';
+        return null;
+      }
+      return user;
+    }
+
+    // ✅ Sahifa yuklanganda login foydalanuvchi raqamini o‘rnatish
+    window.onload = () => {
+      loadRegions();
+      const user = requireLoginOrRedirect();
+      if (!user) return;
+      const phoneInput = document.getElementById('phone');
+      if (phoneInput) {
+        phoneInput.value = user.phone;
+        phoneInput.readOnly = true;
+        phoneInput.style.background = '#f1f1f1';
+      }
+    };
+
     // ✅ Haydovchi e’lonini saqlash
     function saveDriverAd() {
-      const fromRegion = document.getElementById('fromRegion').value;
-      const fromDistrict = document.getElementById('fromDistrict').value;
-      const toRegion = document.getElementById('toRegion').value;
-      const toDistrict = document.getElementById('toDistrict').value;
-      const driver = document.getElementById('driver').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const price = document.getElementById('price').value.trim();
-
-      if (!fromRegion || !toRegion || !phone || !driver) {
-        alert("❗ Iltimos, barcha majburiy maydonlarni to‘ldiring!");
-        return;
-      }
-
-      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-      if (!currentUser) {
-        alert("⚠️ E’lon joylash uchun tizimga kiring!");
-        window.location.href = 'login.html';
-        return;
-      }
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      if (!user) { alert('Avval tizimga kiring.'); window.location.href='login.html'; return; }
 
       const ad = {
         id: 'drv-' + Date.now(),
         type: "driver",
-        userPhone: currentUser.phone,
-        fromRegion,
-        fromDistrict,
-        toRegion,
-        toDistrict,
-        from: `${fromRegion} ${fromDistrict}`,
-        to: `${toRegion} ${toDistrict}`,
-        driver,
-        phone,
-        price,
-        status: "pending", // admin tasdiqlashi uchun
-        date: new Date().toLocaleString()
+        ownerPhone: user.phone,
+        fromRegion: document.getElementById('fromRegion').value,
+        fromDistrict: document.getElementById('fromDistrict').value,
+        toRegion: document.getElementById('toRegion').value,
+        toDistrict: document.getElementById('toDistrict').value,
+        driver: document.getElementById('driver').value.trim(),
+        phone: user.phone,
+        price: document.getElementById('price').value.trim(),
+        date: new Date().toLocaleString(),
+        status: "kutilyapti"
       };
 
-      const ads = JSON.parse(localStorage.getItem('driverAds')) || [];
-      ads.push(ad);
-      localStorage.setItem('driverAds', JSON.stringify(ads));
+      const from = `${ad.fromRegion}${ad.fromDistrict ? ' ' + ad.fromDistrict : ''}`;
+      const to = `${ad.toRegion}${ad.toDistrict ? ' ' + ad.toDistrict : ''}`;
+      ad.route = `${from} → ${to}`;
 
-      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi! Admin tasdiqlagach ko‘rinadi.";
+      if (!ad.fromRegion || !ad.toRegion || !ad.driver) {
+        alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
+        return;
+      }
+
+      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      allAds.push(ad);
+      localStorage.setItem('allAds', JSON.stringify(allAds));
+
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      driverAds.push(ad);
+      localStorage.setItem('driverAds', JSON.stringify(driverAds));
+
+      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
       setTimeout(() => location.href = 'index.html', 1500);
     }
-
-    window.onload = loadRegions;
   </script>
 </body>
 </html>
