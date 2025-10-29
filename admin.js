@@ -1,11 +1,3 @@
-<script>
-/* ===========================
-   ADMIN SCRIPT - SYNCHRONIZING
-   ===========================
-   Replace only the <script>...</script> contents in admin.html with this.
-   Do NOT remove other HTML.
-*/
-
 // === CONFIG ===
 const ADMIN_USER = 'admin';
 const ADMIN_PASSWORD = 'shahartaxi2025';
@@ -31,237 +23,116 @@ function logoutAdmin() {
   location.reload();
 }
 
-// show login overlay if not logged in
+// === SHOW LOGIN OVERLAY IF NEEDED ===
 if (localStorage.getItem(ADMIN_TOKEN_KEY) !== 'true') {
   document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('loginOverlay')) {
-      document.getElementById('loginOverlay').style.display = 'flex';
-    }
+    document.getElementById('loginOverlay').style.display = 'flex';
   });
 }
 
-// === HELPERS: read/write storages and normalize ===
-function readStorage(name) {
-  try {
-    return JSON.parse(localStorage.getItem(name)) || [];
-  } catch (e) {
-    return [];
-  }
-}
-function writeStorage(name, val) {
-  localStorage.setItem(name, JSON.stringify(val));
-}
+// === GLOBAL VARIABLES ===
+let currentEdit = { type: null, id: null };
 
-// Normalize old ad objects -> ensure fields exist
-function normalizeAd(ad, inferredType = null) {
+// === DATA ACCESS ===
+function getAds() {
   return {
-    id: ad.id !== undefined ? ad.id : (ad.routeId || ad._id || null),
-    type: ad.type || inferredType || (String(ad.id || '').startsWith('drv') ? 'driver' : (String(ad.id || '').startsWith('psg') ? 'passenger' : (ad.ownerPhone || ad.driver ? 'driver' : 'passenger'))),
-    fromRegion: ad.fromRegion || ad.from || (ad.route ? (ad.route.split('→')[0] || '').trim() : '') || '—',
-    fromDistrict: ad.fromDistrict || '',
-    toRegion: ad.toRegion || ad.to || (ad.route ? (ad.route.split('→')[1] || '').trim() : '') || '—',
-    toDistrict: ad.toDistrict || '',
-    driver: ad.driver || ad.name || ad.ownerName || '',
-    phone: ad.phone || ad.ownerPhone || ad.phoneNumber || '',
-    price: ad.price || ad.fee || '—',
-    status: (ad.status || ad.state || 'pending'),
-    date: ad.date || ad.createdAt || new Date().toLocaleString(),
-    // keep original so we don't lose unknown fields if needed
-    __orig: ad
+    driver: JSON.parse(localStorage.getItem('driverAds')) || [],
+    passenger: JSON.parse(localStorage.getItem('passengerAds')) || []
   };
 }
 
-// Unified getter: returns { all, driver, passenger }
-function getAllSources() {
-  const allAds = readStorage('allAds');
-  const driverAds = readStorage('driverAds');
-  const passengerAds = readStorage('passengerAds');
-
-  // normalize all
-  const all = [];
-  allAds.forEach(a => all.push(normalizeAd(a, a.type || null)));
-  driverAds.forEach(a => all.push(normalizeAd(a, 'driver')));
-  passengerAds.forEach(a => all.push(normalizeAd(a, 'passenger')));
-
-  // de-duplicate by id (prefer first occurrence from unified sources)
-  const seen = new Map();
-  const unified = [];
-  all.forEach(a => {
-    const key = a.id ? String(a.id) : null;
-    if (key && !seen.has(key)) {
-      seen.set(key, true);
-      unified.push(a);
-    } else if (!key) {
-      // keep those without id too (will be fixed later)
-      unified.push(a);
-    }
-  });
-
-  // build separate lists from unified (driver/passenger) by type
-  const drivers = unified.filter(a => a.type === 'driver');
-  const passengers = unified.filter(a => a.type === 'passenger');
-
-  return { unified, drivers, passengers, raw: { allAds, driverAds, passengerAds } };
-}
-
-// One-time fix: assign IDs for old ads without id (keeps prefix so we can recognize)
-(function fixOldAdsWithoutID() {
-  let changedAny = false;
-  ['allAds', 'driverAds', 'passengerAds'].forEach(key => {
-    const arr = readStorage(key);
-    let changed = false;
-    for (let i = 0; i < arr.length; i++) {
-      if (!arr[i].id && !arr[i].routeId && !arr[i]._id) {
-        const prefix = key === 'driverAds' ? 'drv' : (key === 'passengerAds' ? 'psg' : 'ads');
-        arr[i].id = `${prefix}-${Date.now()}-${i}`;
-        changed = true;
-      }
-    }
-    if (changed) {
-      writeStorage(key, arr);
-      changedAny = true;
-    }
-  });
-  if (changedAny) console.log('🔧 Eski e’lonlarga ID berildi (one-time fix).');
-})();
-
-// Utility: write back updates to storages where ad exists
-function upsertAdToStorages(ad) {
-  // ad is normalized object (has id)
-  const idStr = ad.id ? String(ad.id) : null;
-
-  // update allAds
-  let allAds = readStorage('allAds');
-  let found = false;
-  for (let i = 0; i < allAds.length; i++) {
-    if (String(allAds[i].id) === idStr) {
-      allAds[i] = { ...allAds[i], ...ad };
-      found = true;
-      break;
-    }
-  }
-  if (!found) {
-    // push if not present
-    allAds.push(ad);
-  }
-  writeStorage('allAds', allAds);
-
-  // update driverAds/passengerAds according to ad.type
-  if (ad.type === 'driver') {
-    let driverAds = readStorage('driverAds');
-    let idx = driverAds.findIndex(a => String(a.id) === idStr);
-    if (idx > -1) driverAds[idx] = { ...driverAds[idx], ...ad };
-    else driverAds.push(ad);
-    writeStorage('driverAds', driverAds);
-
-    // remove from passengerAds if exists
-    let passengerAds = readStorage('passengerAds');
-    passengerAds = passengerAds.filter(a => String(a.id) !== idStr);
-    writeStorage('passengerAds', passengerAds);
-  } else { // passenger
-    let passengerAds = readStorage('passengerAds');
-    let idx = passengerAds.findIndex(a => String(a.id) === idStr);
-    if (idx > -1) passengerAds[idx] = { ...passengerAds[idx], ...ad };
-    else passengerAds.push(ad);
-    writeStorage('passengerAds', passengerAds);
-
-    // remove from driverAds if exists
-    let driverAds = readStorage('driverAds');
-    driverAds = driverAds.filter(a => String(a.id) !== idStr);
-    writeStorage('driverAds', driverAds);
-  }
+// === TEXT HELPERS ===
+function getStatusText(status) {
+  if (status === 'approved') return '✅ Tasdiqlangan';
+  if (status === 'rejected') return '❌ Rad etilgan';
+  return '⏳ Kutilmoqda';
 }
 
 // === RENDER ADS ===
 function renderAds() {
-  const { unified, drivers, passengers } = getAllSources();
+  const { driver, passenger } = getAds();
 
-  // filters from UI (if they exist)
-  const typeFilterEl = document.getElementById('typeFilter');
-  const statusFilterEl = document.getElementById('statusFilter');
-  const typeFilter = typeFilterEl ? typeFilterEl.value : 'all';
-  const statusFilter = statusFilterEl ? statusFilterEl.value : 'all';
+  // add IDs if missing
+  let updated = false;
+  ['driver', 'passenger'].forEach(type => {
+    let arr = type === 'driver' ? driver : passenger;
+    arr.forEach((ad, i) => {
+      if (!ad.id) {
+        ad.id = `${type}_${Date.now()}_${i}`;
+        updated = true;
+      }
+    });
+    localStorage.setItem(type + 'Ads', JSON.stringify(arr));
+  });
+  if (updated) console.log("E’lonlarga ID berildi ✅");
+
+  const typeFilter = document.getElementById('typeFilter').value;
+  const statusFilter = document.getElementById('statusFilter').value;
 
   let ads = [];
-  if (typeFilter === 'driver') ads = drivers.slice();
-  else if (typeFilter === 'passenger') ads = passengers.slice();
-  else ads = unified.slice();
+  if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
+  else if (typeFilter === 'passenger') ads = passenger.map(a => ({ ...a, type: 'passenger' }));
+  else ads = [
+    ...driver.map(a => ({ ...a, type: 'driver' })),
+    ...passenger.map(a => ({ ...a, type: 'passenger' }))
+  ];
 
-  if (statusFilter !== 'all') {
-    ads = ads.filter(a => (a.status || 'pending') === statusFilter);
-  }
+  if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
 
-  const container = document.getElementById('ads') || document.getElementById('adsContainer') || document.getElementById('adsList') || document.createElement('div');
-  // clear container (if we used fallback, don't remove)
-  if (container.id) container.innerHTML = '';
+  const container = document.getElementById('ads');
+  container.innerHTML = '';
 
   if (ads.length === 0) {
-    if (container.id) container.innerHTML = '<p>E’lonlar topilmadi.</p>';
+    container.innerHTML = '<p>E’lonlar topilmadi.</p>';
     return;
   }
 
   ads.forEach(ad => {
-    const from = (ad.fromRegion || '—') + (ad.fromDistrict ? ' ' + ad.fromDistrict : '');
-    const to = (ad.toRegion || '—') + (ad.toDistrict ? ' ' + ad.toDistrict : '');
+    const from = ad.fromDistrict && ad.fromRegion
+      ? `${ad.fromRegion} ${ad.fromDistrict}`
+      : (ad.from || '—');
+    const to = ad.toDistrict && ad.toRegion
+      ? `${ad.toRegion} ${ad.toDistrict}`
+      : (ad.to || '—');
 
     const div = document.createElement('div');
     div.className = 'ad';
     div.innerHTML = `
-      <p><b>ID:</b> ${ad.id || '—'}</p>
       <p><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
       <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
       <p><b>Telefon:</b> ${ad.phone || 'Noma’lum'}</p>
       <p><b>Narx:</b> ${ad.price ? ad.price + ' so‘m' : 'Ko‘rsatilmagan'}</p>
       <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
       <div class="actions">
-        <button class="approve" onclick="updateStatus('${ad.type}', '${String(ad.id)}', 'approved')">Tasdiqlash</button>
-        <button class="reject" onclick="updateStatus('${ad.type}', '${String(ad.id)}', 'rejected')">Rad etish</button>
-        <button class="edit" onclick="openEdit('${ad.type}', '${String(ad.id)}')">Tahrirlash</button>
-        <button class="delete" onclick="deleteAd('${ad.type}', '${String(ad.id)}')">O‘chirish</button>
+        <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
+        <button class="reject" onclick="updateStatus('${ad.type}', '${ad.id}', 'rejected')">Rad etish</button>
+        <button class="edit" onclick="openEdit('${ad.type}', '${ad.id}')">Tahrirlash</button>
+        <button class="delete" onclick="deleteAd('${ad.type}', '${ad.id}')">O‘chirish</button>
       </div>
     `;
-    if (container.id) container.appendChild(div);
+    container.appendChild(div);
   });
 }
 
 // === STATUS UPDATE + HISTORY SAVE ===
 function updateStatus(type, id, newStatus) {
-  // find in all storages and update
-  const idStr = String(id);
-  // helper to update array
-  function updateIn(key) {
-    let arr = readStorage(key);
-    let changed = false;
-    for (let i = 0; i < arr.length; i++) {
-      if (String(arr[i].id) === idStr) {
-        const oldStatus = arr[i].status || 'pending';
-        arr[i].status = newStatus;
-        writeStorage(key, arr);
-        // save history record (give precedence to full ad details)
-        const adNorm = normalizeAd(arr[i], type);
-        saveApprovalHistory(adNorm, oldStatus, newStatus);
-        changed = true;
-        break;
-      }
-    }
-    return changed;
-  }
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = JSON.parse(localStorage.getItem(key)) || [];
+  const index = ads.findIndex(a => String(a.id) === String(id));
 
-  // try update in each storage
-  const updatedAll = updateIn('allAds');
-  const updatedDrv = updateIn('driverAds');
-  const updatedPsg = updateIn('passengerAds');
+  if (index > -1) {
+    const oldStatus = ads[index].status || 'pending';
+    ads[index].status = newStatus;
+    localStorage.setItem(key, JSON.stringify(ads));
 
-  // If not found anywhere but we have unified list, try to upsert using unified data
-  if (!updatedAll && !updatedDrv && !updatedPsg) {
-    // attempt to find details from unified (in case id was generated in other place)
-    const { unified } = getAllSources();
-    const ad = unified.find(a => String(a.id) === idStr);
-    if (ad) {
-      ad.status = newStatus;
-      upsertAdToStorages(ad);
-      saveApprovalHistory(ad, ad.status || 'pending', newStatus);
-    }
+    saveApprovalHistory({
+      id: ads[index].id,
+      type,
+      from: ads[index].fromDistrict || ads[index].fromRegion || ads[index].from || '—',
+      to: ads[index].toDistrict || ads[index].toRegion || ads[index].to || '—',
+      oldStatus,
+      newStatus
+    });
   }
 
   renderAds();
@@ -269,30 +140,56 @@ function updateStatus(type, id, newStatus) {
 }
 
 // === SAVE APPROVAL HISTORY ===
-function saveApprovalHistory(ad, oldStatus, newStatus) {
-  const history = readStorage('approvalHistory') || [];
-
+function saveApprovalHistory(record) {
+  const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
   const entry = {
-    id: ad.id || '—',
-    type: ad.type || '—',
-    from: ad.fromDistrict || ad.fromRegion || ad.from || '—',
-    to: ad.toDistrict || ad.toRegion || ad.to || '—',
-    oldStatus: oldStatus || 'pending',
-    newStatus: newStatus || ad.status || 'pending',
+    id: record.id || '—',
+    type: record.type,
+    from: record.from,
+    to: record.to,
+    oldStatus: record.oldStatus,
+    newStatus: record.newStatus,
     date: new Date().toLocaleString()
   };
   history.push(entry);
-  writeStorage('approvalHistory', history);
+  localStorage.setItem('approvalHistory', JSON.stringify(history));
+}
+
+// === 🧩 FIX OLD HISTORY IDs ===
+function fixApprovalHistory() {
+  let approvalHistory = JSON.parse(localStorage.getItem("approvalHistory")) || [];
+  let driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+  let passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
+
+  let updated = false;
+
+  approvalHistory = approvalHistory.map(history => {
+    if (!history.id || history.id === "undefined" || history.id === "—") {
+      const matchedAd = [...driverAds, ...passengerAds].find(
+        ad => ad.type === history.type && (
+          ad.from === history.from ||
+          ad.fromDistrict === history.from ||
+          ad.fromRegion === history.from
+        )
+      );
+      if (matchedAd) {
+        history.id = matchedAd.id;
+        updated = true;
+      }
+    }
+    return history;
+  });
+
+  if (updated) {
+    localStorage.setItem("approvalHistory", JSON.stringify(approvalHistory));
+    console.log("🧩 Eski tasdiqlash tarixlariga ID biriktirildi");
+  }
 }
 
 // === SHOW APPROVAL HISTORY ===
 function showApprovalHistory() {
-  const history = readStorage('approvalHistory') || [];
+  const history = JSON.parse(localStorage.getItem('approvalHistory')) || [];
   const list = document.getElementById('historyList');
-  if (!list) {
-    alert('historyList elementi topilmadi (HTMLda mavjudligiga ishonch hosil qiling).');
-    return;
-  }
 
   list.innerHTML = history.length
     ? history.map(h => `
@@ -308,64 +205,40 @@ function showApprovalHistory() {
 
   document.getElementById('historyModal').style.display = 'flex';
 }
+
 function closeHistory() {
   document.getElementById('historyModal').style.display = 'none';
 }
 
 // === EDIT MODAL ===
 function openEdit(type, id) {
-  const idStr = String(id);
-  // search in storages
-  let ad = null;
-  ['allAds','driverAds','passengerAds'].some(key => {
-    const arr = readStorage(key);
-    const found = arr.find(a => String(a.id) === idStr);
-    if (found) {
-      ad = normalizeAd(found, type);
-      return true;
-    }
-  });
+  const { driver, passenger } = getAds();
+  const ads = type === 'driver' ? driver : passenger;
+  const ad = ads.find(a => String(a.id) === String(id));
   if (!ad) return;
-  currentEdit = { type, id: idStr };
+
+  currentEdit = { type, id };
   document.getElementById('editPhone').value = ad.phone || '';
   document.getElementById('editPrice').value = ad.price || '';
-  document.getElementById('editFrom').value = ad.fromRegion || '';
-  document.getElementById('editTo').value = ad.toRegion || '';
+  document.getElementById('editFrom').value = ad.from || ad.fromRegion || '';
+  document.getElementById('editTo').value = ad.to || ad.toRegion || '';
   document.getElementById('editStatus').value = ad.status || 'pending';
   document.getElementById('editModal').style.display = 'flex';
 }
 
 function saveEdit() {
   const { type, id } = currentEdit;
-  const idStr = String(id);
-  // find and update in each storage (if exists), otherwise upsert
-  ['allAds','driverAds','passengerAds'].forEach(key => {
-    let arr = readStorage(key);
-    let idx = arr.findIndex(a => String(a.id) === idStr);
-    if (idx > -1) {
-      arr[idx].phone = document.getElementById('editPhone').value;
-      arr[idx].price = document.getElementById('editPrice').value;
-      // preserve region/district fields if provided
-      arr[idx].fromRegion = document.getElementById('editFrom').value || arr[idx].fromRegion;
-      arr[idx].toRegion = document.getElementById('editTo').value || arr[idx].toRegion;
-      arr[idx].status = document.getElementById('editStatus').value;
-      writeStorage(key, arr);
-    }
-  });
-
-  // ensure unified storages synced
-  const updatedAd = {
-    id: idStr,
-    type,
-    phone: document.getElementById('editPhone').value,
-    price: document.getElementById('editPrice').value,
-    fromRegion: document.getElementById('editFrom').value,
-    toRegion: document.getElementById('editTo').value,
-    status: document.getElementById('editStatus').value,
-    date: new Date().toLocaleString()
-  };
-  upsertAdToStorages(updatedAd);
-
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = JSON.parse(localStorage.getItem(key)) || [];
+  const index = ads.findIndex(a => String(a.id) === String(id));
+  if (index > -1) {
+    ads[index].phone = document.getElementById('editPhone').value;
+    ads[index].price = document.getElementById('editPrice').value;
+    ads[index].from = document.getElementById('editFrom').value;
+    ads[index].to = document.getElementById('editTo').value;
+    ads[index].status = document.getElementById('editStatus').value;
+    localStorage.setItem(key, JSON.stringify(ads));
+  }
   closeModal();
   renderAds();
   updateStats();
@@ -377,28 +250,26 @@ function closeModal() {
 
 // === DELETE AD ===
 function deleteAd(type, id) {
-  const idStr = String(id);
-  ['allAds','driverAds','passengerAds'].forEach(key => {
-    let arr = readStorage(key);
-    arr = arr.filter(a => String(a.id) !== idStr);
-    writeStorage(key, arr);
-  });
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  let ads = JSON.parse(localStorage.getItem(key)) || [];
+  ads = ads.filter(a => String(a.id) !== String(id));
+  localStorage.setItem(key, JSON.stringify(ads));
   renderAds();
   updateStats();
 }
 
-// === STATS ===
+// === STATISTICS ===
 function updateStats() {
-  const { unified } = getAllSources();
-  const all = unified;
+  const { driver, passenger } = getAds();
+  const all = [...driver, ...passenger];
   const stats = {
-    drivers: all.filter(a => a.type === 'driver').length,
-    passengers: all.filter(a => a.type === 'passenger').length,
+    drivers: driver.length,
+    passengers: passenger.length,
     approved: all.filter(a => a.status === 'approved').length,
     rejected: all.filter(a => a.status === 'rejected').length,
     pending: all.filter(a => !a.status || a.status === 'pending').length
   };
-  writeStorage('stats', stats);
+  localStorage.setItem('stats', JSON.stringify(stats));
 }
 
 // === NAVIGATION ===
@@ -406,14 +277,32 @@ function goToStats() {
   updateStats();
   window.location.href = 'admin-stat.html';
 }
+
 function goToAdd() {
   window.location.href = 'admin-add.html';
 }
 
-// INITIALIZE
+// === ONE-TIME FIX: eski e’lonlarga ID berish ===
+(function fixOldAdsWithoutID() {
+  let changed = false;
+  ['driverAds', 'passengerAds'].forEach(type => {
+    let ads = JSON.parse(localStorage.getItem(type)) || [];
+    ads.forEach((ad, i) => {
+      if (!ad.id) {
+        const prefix = type === 'driverAds' ? 'drv' : 'psg';
+        ad.id = `${prefix}-${Date.now()}-${i}`;
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem(type, JSON.stringify(ads));
+  });
+  if (changed) console.log('🔧 Eski e’lonlarga ID biriktirildi');
+})();
+
+// === INITIALIZE ===
 window.onload = () => {
   renderAds();
   updateStats();
+  fixApprovalHistory(); // 🧩 bu qo‘shildi
   setInterval(() => renderAds(), 5000);
 };
-</script>
