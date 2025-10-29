@@ -1,75 +1,114 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profil - ShaharTaxi</title>
   <style>
     body {
       font-family: sans-serif;
       background: #f2f2f2;
-      margin: 0;
-      padding: 0;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      min-height: 100vh;
+      margin: 0;
     }
     .profile-box {
       background: white;
-      padding: 30px;
+      padding: 25px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       width: 350px;
-      text-align: center;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     h2 {
+      text-align: center;
       margin-bottom: 20px;
     }
-    p {
-      font-size: 16px;
+    input {
+      width: 100%;
+      padding: 10px;
       margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
     }
     button {
       width: 100%;
       padding: 10px;
-      background: #d9534f;
+      background: #007bff;
       color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-      margin-top: 20px;
+      font-size: 16px;
     }
-    button:hover {
-      background: #c9302c;
+    button:hover { background: #0056b3; }
+    .logout {
+      background: #dc3545;
+      margin-top: 10px;
+    }
+    .logout:hover { background: #b52a38; }
+    .msg {
+      text-align: center;
+      color: green;
+      font-size: 14px;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
   <div class="profile-box">
-    <h2>Foydalanuvchi profili</h2>
-    <div id="userInfo"></div>
-    <button onclick="logoutUser()">Chiqish</button>
+    <h2>Profil</h2>
+    <input type="text" id="name" placeholder="Ismingiz">
+    <input type="text" id="phone" placeholder="Telefon raqam">
+    <input type="password" id="password" placeholder="Parol">
+    <button onclick="updateProfile()">Yangilash</button>
+    <button class="logout" onclick="logout()">Chiqish</button>
+    <p class="msg" id="msg"></p>
   </div>
 
   <script>
+    // Profilni yuklash
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
     if (!currentUser) {
-      // Agar foydalanuvchi tizimga kirmagan bo‘lsa — login sahifasiga qaytarish
+      alert('Avval tizimga kiring!');
       window.location.href = 'login.html';
     } else {
-      // Foydalanuvchi ma’lumotlarini chiqarish
-      const userDiv = document.getElementById('userInfo');
-      userDiv.innerHTML = `
-        <p><b>Ism:</b> ${currentUser.name}</p>
-        <p><b>Telefon:</b> ${currentUser.phone}</p>
-        <p><b>Rol:</b> ${currentUser.role === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
-      `;
+      document.getElementById('name').value = currentUser.name;
+      document.getElementById('phone').value = currentUser.phone;
+      document.getElementById('password').value = currentUser.password;
     }
 
-    // Chiqish funksiyasi
-    function logoutUser() {
+    // Yangilash funksiyasi
+    function updateProfile() {
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const msg = document.getElementById('msg');
+
+      if (!name || !phone || !password) {
+        msg.style.color = 'red';
+        msg.textContent = '❌ Barcha maydonlarni to‘ldiring!';
+        return;
+      }
+
+      // Barcha foydalanuvchilar ro‘yxatini yangilash
+      const users = JSON.parse(localStorage.getItem('users')) || [];
+      const index = users.findIndex(u => u.phone === currentUser.phone);
+
+      if (index > -1) {
+        users[index] = { name, phone, password };
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('currentUser', JSON.stringify({ name, phone, password }));
+
+        msg.style.color = 'green';
+        msg.textContent = '✅ Ma’lumotlar yangilandi!';
+      }
+    }
+
+    // Chiqish
+    function logout() {
       localStorage.removeItem('currentUser');
       window.location.href = 'login.html';
     }
