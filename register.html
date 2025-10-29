@@ -6,27 +6,32 @@
   <title>Ro‘yxatdan o‘tish - ShaharTaxi</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #f4f4f4;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #f0f2f5, #d9e4f5);
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
+      margin: 0;
     }
     .register-box {
       background: white;
       padding: 30px;
       border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
       width: 350px;
     }
-    h2 { text-align: center; margin-bottom: 20px; }
-    input {
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input, select {
       width: 100%;
       padding: 10px;
       margin: 8px 0;
       border: 1px solid #ccc;
       border-radius: 5px;
+      font-size: 15px;
     }
     button {
       width: 100%;
@@ -37,49 +42,69 @@
       border-radius: 5px;
       cursor: pointer;
       font-size: 16px;
+      transition: 0.3s;
     }
     button:hover { background: #0056b3; }
     p {
       text-align: center;
-      margin-top: 10px;
+      margin-top: 12px;
     }
-    .error { color: red; text-align: center; }
+    .error { color: red; text-align: center; font-size: 14px; }
+    .success { color: green; text-align: center; font-size: 14px; }
   </style>
 </head>
 <body>
   <div class="register-box">
     <h2>Ro‘yxatdan o‘tish</h2>
-    <input type="text" id="regName" placeholder="Ism" required>
-    <input type="text" id="regPhone" placeholder="Telefon raqam (998901234567)" required>
-    <input type="password" id="regPassword" placeholder="Parol" required>
+    <input type="text" id="name" placeholder="Ism" required>
+    <input type="text" id="phone" placeholder="Telefon raqam (masalan: +998901234567)" required>
+    <input type="password" id="password" placeholder="Parol" required>
+    <select id="userType" required>
+      <option value="">Rolni tanlang</option>
+      <option value="driver">Haydovchi</option>
+      <option value="passenger">Yo‘lovchi</option>
+    </select>
     <button onclick="registerUser()">Ro‘yxatdan o‘tish</button>
-    <p class="error" id="regError"></p>
-    <p>Allaqachon hisobingiz bormi? <a href="login.html">Kirish</a></p>
+    <p class="error" id="registerError"></p>
+    <p class="success" id="registerSuccess"></p>
+    <p>Hisobingiz bormi? <a href="login.html">Kirish</a></p>
   </div>
 
   <script>
     function registerUser() {
-      const name = document.getElementById('regName').value.trim();
-      const phone = document.getElementById('regPhone').value.trim();
-      const password = document.getElementById('regPassword').value.trim();
-      const error = document.getElementById('regError');
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const userType = document.getElementById('userType').value;
+      const error = document.getElementById('registerError');
+      const success = document.getElementById('registerSuccess');
 
-      if (!name || !phone || !password) {
-        error.textContent = '❌ Barcha maydonlarni to‘ldiring!';
+      error.textContent = '';
+      success.textContent = '';
+
+      if (!name || !phone || !password || !userType) {
+        error.textContent = '⚠️ Iltimos, barcha maydonlarni to‘ldiring!';
         return;
       }
 
-      const users = JSON.parse(localStorage.getItem('users')) || [];
-      if (users.find(u => u.phone === phone)) {
+      let users = JSON.parse(localStorage.getItem('users')) || [];
+
+      // Telefon raqam bo‘yicha tekshirish
+      if (users.some(u => u.phone === phone)) {
         error.textContent = '❌ Bu telefon raqam allaqachon ro‘yxatdan o‘tgan!';
         return;
       }
 
-      users.push({ name, phone, password, createdAt: new Date().toLocaleString() });
+      // Yangi foydalanuvchi
+      const newUser = { name, phone, password, userType, createdAt: new Date().toLocaleString() };
+      users.push(newUser);
+
       localStorage.setItem('users', JSON.stringify(users));
 
-      alert('✅ Ro‘yxatdan o‘tish muvaffaqiyatli!');
-      window.location.href = 'login.html';
+      success.textContent = '✅ Muvaffaqiyatli ro‘yxatdan o‘tildi!';
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 1500);
     }
   </script>
 </body>
