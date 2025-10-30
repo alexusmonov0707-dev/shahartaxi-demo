@@ -103,55 +103,7 @@
 
 <input type="number" id="price" placeholder="Narx (so‘m)">
 <button onclick="addAd()">E’lonni joylash</button>
-
   </div>
-<script>
-  const viloyatlar = {
-    "Toshkent": ["Yunusobod", "Chilonzor", "Bektemir", "Yakkasaroy", "Olmazor", "Mirzo Ulug‘bek", "Yashnobod", "Sergeli"],
-    "Andijon": ["Andijon shahri", "Asaka", "Xonobod", "Paxtaobod", "Xo‘jaobod"],
-    "Farg‘ona": ["Farg‘ona shahri", "Marg‘ilon", "Qo‘qon", "Oltiariq", "Rishton"],
-    "Namangan": ["Namangan shahri", "Chortoq", "Pop", "Uychi", "Kosonsoy"],
-    "Samarqand": ["Samarqand shahri", "Urgut", "Kattaqo‘rg‘on", "Ishtixon", "Nurobod"],
-    "Buxoro": ["Buxoro shahri", "G‘ijduvon", "Vobkent", "Qorako‘l", "Romitan"],
-    "Qashqadaryo": ["Qarshi", "Shahrisabz", "Yakkabog‘", "Kitob", "Kasbi"],
-    "Surxondaryo": ["Termiz", "Denov", "Sherobod", "Boysun", "Angor"],
-    "Jizzax": ["Jizzax shahri", "G‘allaorol", "Do‘stlik", "Paxtakor", "Zomin"],
-    "Sirdaryo": ["Guliston", "Shirin", "Yangiyer", "Boyovut", "Sardoba"],
-    "Navoiy": ["Navoiy shahri", "Zarafshon", "Karmana", "Konimex", "Uchquduq"],
-    "Xorazm": ["Urganch", "Xiva", "Hazorasp", "Shovot", "Qo‘shko‘pir"],
-    "Qoraqalpog‘iston": ["Nukus", "Taxiatosh", "Beruniy", "Qo‘ng‘irot", "Chimboy"]
-  };
-
-  function loadRegions() {
-    const fromRegion = document.getElementById("fromRegion");
-    const toRegion = document.getElementById("toRegion");
-    fromRegion.innerHTML = "<option value=''>Tanlang</option>";
-    toRegion.innerHTML = "<option value=''>Tanlang</option>";
-
-    Object.keys(viloyatlar).forEach(v => {
-      const opt1 = new Option(v, v);
-      const opt2 = new Option(v, v);
-      fromRegion.add(opt1);
-      toRegion.add(opt2);
-    });
-  }
-
-  function updateDistricts(type) {
-    const regionSelect = document.getElementById(type + "Region");
-    const districtSelect = document.getElementById(type + "District");
-    const selectedRegion = regionSelect.value;
-    districtSelect.innerHTML = "<option value=''>Tanlang</option>";
-
-    if (selectedRegion && viloyatlar[selectedRegion]) {
-      viloyatlar[selectedRegion].forEach(t => {
-        const opt = new Option(t, t);
-        districtSelect.add(opt);
-      });
-    }
-  }
-
-  window.addEventListener("load", loadRegions);
-</script>
 
   <script>
     // === USERNI TEKSHIRISH ===
@@ -293,5 +245,39 @@
       setInterval(syncStatuses, 5000);
     };
   </script>
+  <script src="regions.js"></script>
+<script>
+  function loadRegions() {
+    const fromRegion = document.getElementById("fromRegion");
+    const toRegion = document.getElementById("toRegion");
+    fromRegion.innerHTML = "<option value=''>Tanlang</option>";
+    toRegion.innerHTML = "<option value=''>Tanlang</option>";
+
+    // regions.js dagi ma’lumotdan foydalanamiz
+    Object.keys(regions).forEach(v => {
+      const opt1 = new Option(v, v);
+      const opt2 = new Option(v, v);
+      fromRegion.add(opt1);
+      toRegion.add(opt2);
+    });
+  }
+
+  function updateDistricts(type) {
+    const regionSelect = document.getElementById(type + "Region");
+    const districtSelect = document.getElementById(type + "District");
+    const selectedRegion = regionSelect.value;
+    districtSelect.innerHTML = "<option value=''>Tanlang</option>";
+
+    if (selectedRegion && regions[selectedRegion]) {
+      regions[selectedRegion].forEach(t => {
+        const opt = new Option(t, t);
+        districtSelect.add(opt);
+      });
+    }
+  }
+
+  window.addEventListener("load", loadRegions);
+</script>
+
 </body>
 </html>
