@@ -267,9 +267,36 @@ function editAd(id, type) {
     }
 
     // === STATUSNI SINXRONLASHTIRISH ===
-    function syncStatuses() {
-      renderUserAds();
+    // === STATUSNI SINXRONLASHTIRISH VA BILDIRISHNOMA ===
+function syncStatuses() {
+  const { driver, passenger } = getAds();
+  const userPhone = currentUser.phone;
+  const allAds = [...driver, ...passenger];
+  const userAds = allAds.filter(ad => ad.phone === userPhone);
+
+  // Oldingi holatni localStorage’dan olamiz
+  const lastStatuses = JSON.parse(localStorage.getItem("userAdStatuses")) || {};
+
+  userAds.forEach(ad => {
+    const prevStatus = lastStatuses[ad.id];
+    if (prevStatus && prevStatus !== ad.status) {
+      // Agar status o‘zgargan bo‘lsa — foydalanuvchiga bildirish chiqadi
+      if (ad.status === "approved") {
+        alert(`✅ Sizning e’loningiz "${ad.fromRegion} → ${ad.toRegion}" admin tomonidan TASDIQLANDI!`);
+      } else if (ad.status === "rejected") {
+        alert(`❌ Sizning e’loningiz "${ad.fromRegion} → ${ad.toRegion}" RAD ETILDI.`);
+      }
     }
+
+    // Yangi statusni saqlab qo‘yamiz
+    lastStatuses[ad.id] = ad.status;
+  });
+
+  // Yangilangan holatni qayta saqlaymiz
+  localStorage.setItem("userAdStatuses", JSON.stringify(lastStatuses));
+
+  renderUserAds();
+}
 
     // === SAHIFA YUKLANGANDA ===
     window.onload = function () {
