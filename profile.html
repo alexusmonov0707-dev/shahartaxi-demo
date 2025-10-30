@@ -80,19 +80,78 @@
     <div id="myAds"></div>
 
     <hr>
-    <h2>Yangi e’lon qo‘shish</h2>
-    <select id="adType">
-      <option value="">E’lon turini tanlang</option>
-      <option value="driver">Haydovchi</option>
-      <option value="passenger">Yo‘lovchi</option>
-    </select>
-    <input type="text" id="fromRegion" placeholder="Qayerdan (viloyat)">
-    <input type="text" id="fromDistrict" placeholder="Qayerdan (tuman)">
-    <input type="text" id="toRegion" placeholder="Qayerga (viloyat)">
-    <input type="text" id="toDistrict" placeholder="Qayerga (tuman)">
-    <input type="number" id="price" placeholder="Narx (so‘m)">
-    <button onclick="addAd()">E’lonni joylash</button>
+   <h2>Yangi e’lon qo‘shish</h2>
+<select id="adType">
+  <option value="">E’lon turini tanlang</option>
+  <option value="driver">Haydovchi</option>
+  <option value="passenger">Yo‘lovchi</option>
+</select>
+
+<!-- Qayerdan -->
+<label>Qayerdan (viloyat):</label>
+<select id="fromRegion" onchange="updateDistricts('from')"></select>
+
+<label>Qayerdan (tuman):</label>
+<select id="fromDistrict"></select>
+
+<!-- Qayerga -->
+<label>Qayerga (viloyat):</label>
+<select id="toRegion" onchange="updateDistricts('to')"></select>
+
+<label>Qayerga (tuman):</label>
+<select id="toDistrict"></select>
+
+<input type="number" id="price" placeholder="Narx (so‘m)">
+<button onclick="addAd()">E’lonni joylash</button>
+
   </div>
+<script>
+  const viloyatlar = {
+    "Toshkent": ["Yunusobod", "Chilonzor", "Bektemir", "Yakkasaroy", "Olmazor", "Mirzo Ulug‘bek", "Yashnobod", "Sergeli"],
+    "Andijon": ["Andijon shahri", "Asaka", "Xonobod", "Paxtaobod", "Xo‘jaobod"],
+    "Farg‘ona": ["Farg‘ona shahri", "Marg‘ilon", "Qo‘qon", "Oltiariq", "Rishton"],
+    "Namangan": ["Namangan shahri", "Chortoq", "Pop", "Uychi", "Kosonsoy"],
+    "Samarqand": ["Samarqand shahri", "Urgut", "Kattaqo‘rg‘on", "Ishtixon", "Nurobod"],
+    "Buxoro": ["Buxoro shahri", "G‘ijduvon", "Vobkent", "Qorako‘l", "Romitan"],
+    "Qashqadaryo": ["Qarshi", "Shahrisabz", "Yakkabog‘", "Kitob", "Kasbi"],
+    "Surxondaryo": ["Termiz", "Denov", "Sherobod", "Boysun", "Angor"],
+    "Jizzax": ["Jizzax shahri", "G‘allaorol", "Do‘stlik", "Paxtakor", "Zomin"],
+    "Sirdaryo": ["Guliston", "Shirin", "Yangiyer", "Boyovut", "Sardoba"],
+    "Navoiy": ["Navoiy shahri", "Zarafshon", "Karmana", "Konimex", "Uchquduq"],
+    "Xorazm": ["Urganch", "Xiva", "Hazorasp", "Shovot", "Qo‘shko‘pir"],
+    "Qoraqalpog‘iston": ["Nukus", "Taxiatosh", "Beruniy", "Qo‘ng‘irot", "Chimboy"]
+  };
+
+  function loadRegions() {
+    const fromRegion = document.getElementById("fromRegion");
+    const toRegion = document.getElementById("toRegion");
+    fromRegion.innerHTML = "<option value=''>Tanlang</option>";
+    toRegion.innerHTML = "<option value=''>Tanlang</option>";
+
+    Object.keys(viloyatlar).forEach(v => {
+      const opt1 = new Option(v, v);
+      const opt2 = new Option(v, v);
+      fromRegion.add(opt1);
+      toRegion.add(opt2);
+    });
+  }
+
+  function updateDistricts(type) {
+    const regionSelect = document.getElementById(type + "Region");
+    const districtSelect = document.getElementById(type + "District");
+    const selectedRegion = regionSelect.value;
+    districtSelect.innerHTML = "<option value=''>Tanlang</option>";
+
+    if (selectedRegion && viloyatlar[selectedRegion]) {
+      viloyatlar[selectedRegion].forEach(t => {
+        const opt = new Option(t, t);
+        districtSelect.add(opt);
+      });
+    }
+  }
+
+  window.addEventListener("load", loadRegions);
+</script>
 
   <script>
     // === USERNI TEKSHIRISH ===
