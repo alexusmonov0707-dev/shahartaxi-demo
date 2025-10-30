@@ -60,14 +60,22 @@
       margin-top: 10px;
     }
     button:hover { background: #0056b3; }
+
+    /* E’lon qutilari */
     .ad-box {
-      background: #f1f5ff;
       padding: 15px;
       border-radius: 8px;
       margin-bottom: 10px;
       border: 1px solid #cdddfc;
+      transition: background 0.3s;
     }
+
+    .pending { background: #f9f9f9; }
+    .approved { background: #e6ffe6; }  /* Yashil fon */
+    .rejected { background: #ffe6e6; }  /* Qizil fon */
+
     .ad-box p { margin: 5px 0; }
+
     .actions button {
       background: #28a745;
       margin-right: 5px;
@@ -159,8 +167,15 @@
             ? "❌ Rad etilgan"
             : "⏳ Kutilmoqda";
 
+        const statusClass =
+          ad.status === "approved"
+            ? "approved"
+            : ad.status === "rejected"
+            ? "rejected"
+            : "pending";
+
         const div = document.createElement("div");
-        div.className = "ad-box";
+        div.className = `ad-box ${statusClass}`;
         div.innerHTML = `
           <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
           <p><b>Narx:</b> ${ad.price || "Ko‘rsatilmagan"} so‘m</p>
