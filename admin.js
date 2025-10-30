@@ -90,10 +90,10 @@ function renderAds() {
   ads.forEach(ad => {
     const from = ad.fromDistrict && ad.fromRegion
       ? `${ad.fromRegion} ${ad.fromDistrict}`
-      : (ad.from || '—');
+      : (ad.fromRegion || ad.from || '—');
     const to = ad.toDistrict && ad.toRegion
       ? `${ad.toRegion} ${ad.toDistrict}`
-      : (ad.to || '—');
+      : (ad.toRegion || ad.to || '—');
 
     const div = document.createElement('div');
     div.className = 'ad';
