@@ -16,6 +16,18 @@
       color: white;
       padding: 15px;
       text-align: center;
+      position: relative;
+    }
+    .logout {
+      position: absolute;
+      right: 20px;
+      top: 15px;
+      background: #dc3545;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 5px;
+      color: white;
+      cursor: pointer;
     }
     .container {
       max-width: 800px;
@@ -63,10 +75,6 @@
     .actions button:last-child {
       background: #dc3545;
     }
-    .logout {
-      float: right;
-      background: #dc3545;
-    }
   </style>
 </head>
 <body>
@@ -80,29 +88,30 @@
     <div id="myAds"></div>
 
     <hr>
-   <h2>Yangi e’lon qo‘shish</h2>
-<select id="adType">
-  <option value="">E’lon turini tanlang</option>
-  <option value="driver">Haydovchi</option>
-  <option value="passenger">Yo‘lovchi</option>
-</select>
+    <h2>Yangi e’lon qo‘shish</h2>
 
-<!-- Qayerdan -->
-<label>Qayerdan (viloyat):</label>
-<select id="fromRegion" onchange="updateDistricts('from')"></select>
+    <select id="adType">
+      <option value="">E’lon turini tanlang</option>
+      <option value="driver">Haydovchi</option>
+      <option value="passenger">Yo‘lovchi</option>
+    </select>
 
-<label>Qayerdan (tuman):</label>
-<select id="fromDistrict"></select>
+    <!-- Qayerdan -->
+    <label>Qayerdan (viloyat):</label>
+    <select id="fromRegion" onchange="updateDistricts('from')"></select>
 
-<!-- Qayerga -->
-<label>Qayerga (viloyat):</label>
-<select id="toRegion" onchange="updateDistricts('to')"></select>
+    <label>Qayerdan (tuman):</label>
+    <select id="fromDistrict"></select>
 
-<label>Qayerga (tuman):</label>
-<select id="toDistrict"></select>
+    <!-- Qayerga -->
+    <label>Qayerga (viloyat):</label>
+    <select id="toRegion" onchange="updateDistricts('to')"></select>
 
-<input type="number" id="price" placeholder="Narx (so‘m)">
-<button onclick="addAd()">E’lonni joylash</button>
+    <label>Qayerga (tuman):</label>
+    <select id="toDistrict"></select>
+
+    <input type="number" id="price" placeholder="Narx (so‘m)">
+    <button onclick="addAd()">E’lonni joylash</button>
   </div>
 
   <script>
@@ -141,13 +150,8 @@
       }
 
       allAds.forEach(ad => {
-        const from = ad.fromDistrict && ad.fromRegion
-          ? `${ad.fromRegion} ${ad.fromDistrict}`
-          : (ad.fromRegion || ad.from || "—");
-        const to = ad.toDistrict && ad.toRegion
-          ? `${ad.toRegion} ${ad.toDistrict}`
-          : (ad.toRegion || ad.to || "—");
-
+        const from = ad.fromRegion && ad.fromDistrict ? `${ad.fromRegion} ${ad.fromDistrict}` : ad.fromRegion || "—";
+        const to = ad.toRegion && ad.toDistrict ? `${ad.toRegion} ${ad.toDistrict}` : ad.toRegion || "—";
         const statusText =
           ad.status === "approved"
             ? "✅ Tasdiqlangan"
@@ -242,42 +246,40 @@
     // === SAHIFA YUKLANGANDA ===
     window.onload = function () {
       renderUserAds();
+      loadRegions();
       setInterval(syncStatuses, 5000);
     };
   </script>
+
   <script src="regions.js"></script>
-<script>
-  function loadRegions() {
-    const fromRegion = document.getElementById("fromRegion");
-    const toRegion = document.getElementById("toRegion");
-    fromRegion.innerHTML = "<option value=''>Tanlang</option>";
-    toRegion.innerHTML = "<option value=''>Tanlang</option>";
+  <script>
+    function loadRegions() {
+      const fromRegion = document.getElementById("fromRegion");
+      const toRegion = document.getElementById("toRegion");
 
-    // regions.js dagi ma’lumotdan foydalanamiz
-    Object.keys(regions).forEach(v => {
-      const opt1 = new Option(v, v);
-      const opt2 = new Option(v, v);
-      fromRegion.add(opt1);
-      toRegion.add(opt2);
-    });
-  }
+      fromRegion.innerHTML = "<option value=''>Viloyatni tanlang</option>";
+      toRegion.innerHTML = "<option value=''>Viloyatni tanlang</option>";
 
-  function updateDistricts(type) {
-    const regionSelect = document.getElementById(type + "Region");
-    const districtSelect = document.getElementById(type + "District");
-    const selectedRegion = regionSelect.value;
-    districtSelect.innerHTML = "<option value=''>Tanlang</option>";
-
-    if (selectedRegion && regions[selectedRegion]) {
-      regions[selectedRegion].forEach(t => {
-        const opt = new Option(t, t);
-        districtSelect.add(opt);
+      Object.keys(regions).forEach(region => {
+        const opt1 = new Option(region, region);
+        const opt2 = new Option(region, region);
+        fromRegion.add(opt1);
+        toRegion.add(opt2);
       });
     }
-  }
 
-  window.addEventListener("load", loadRegions);
-</script>
+    function updateDistricts(prefix) {
+      const region = document.getElementById(prefix + "Region").value;
+      const districtSelect = document.getElementById(prefix + "District");
+      districtSelect.innerHTML = "<option value=''>Tumanni tanlang</option>";
 
+      if (regions[region]) {
+        regions[region].forEach(district => {
+          const opt = new Option(district, district);
+          districtSelect.add(opt);
+        });
+      }
+    }
+  </script>
 </body>
 </html>
