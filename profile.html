@@ -90,7 +90,11 @@
       color: #007bff;
       text-decoration: none;
     }
-    .no-ads { text-align: center; color: gray; font-style: italic; }
+    .no-ads {
+      text-align: center;
+      color: gray;
+      font-style: italic;
+    }
     .edit-box, .add-box {
       background: #eef7ff;
       padding: 12px;
@@ -109,6 +113,7 @@
 <body>
   <main>
     <h2>👤 Foydalanuvchi profili</h2>
+
     <div class="info" id="userInfo"></div>
 
     <button class="add-btn" onclick="toggleAddForm()">+ Yangi e’lon qo‘shish</button>
@@ -134,8 +139,47 @@
   </main>
 
   <script>
+    // 🌍 Viloyatlar
     const regions = ["Toshkent", "Andijon", "Farg‘ona", "Namangan", "Samarqand", "Buxoro", "Navoiy", "Surxondaryo", "Qashqadaryo", "Jizzax", "Sirdaryo", "Xorazm", "Qoraqalpog‘iston"];
 
+    //------------------------------------------------
+    // 1️⃣ Eski elonlarni moslashtiruvchi funksiya
+    //------------------------------------------------
+    function migrateOldAds() {
+      let allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      let changed = false;
+
+      allAds = allAds.map(ad => {
+        if (!ad.id) {
+          ad.id = 'ad-' + Date.now() + Math.floor(Math.random() * 1000);
+          changed = true;
+        }
+        if (!ad.status) {
+          ad.status = "Kutilmoqda";
+          changed = true;
+        }
+        return ad;
+      });
+
+      if (changed) localStorage.setItem('allAds', JSON.stringify(allAds));
+    }
+
+    //------------------------------------------------
+    // 2️⃣ Status sinxronizatsiyasini tiklovchi funksiya
+    //------------------------------------------------
+    function syncAdStatus() {
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      if (!user) return;
+
+      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      let myAds = allAds.filter(a => a.phone === user.phone);
+
+      localStorage.setItem('myAds_' + user.phone, JSON.stringify(myAds));
+    }
+
+    //------------------------------------------------
+    // 3️⃣ Sahifa yuklanganda
+    //------------------------------------------------
     window.onload = () => {
       const user = JSON.parse(localStorage.getItem('currentUser'));
       if (!user) {
@@ -143,6 +187,9 @@
         window.location.href = 'login.html';
         return;
       }
+
+      migrateOldAds();
+      syncAdStatus();
 
       const userInfo = document.getElementById('userInfo');
       userInfo.innerHTML = `
@@ -155,6 +202,9 @@
       renderAds(user);
     };
 
+    //------------------------------------------------
+    // 🌍 Viloyatlar yuklash
+    //------------------------------------------------
     function loadRegions() {
       ['fromRegion', 'toRegion'].forEach(id => {
         const select = document.getElementById(id);
@@ -167,6 +217,9 @@
       });
     }
 
+    //------------------------------------------------
+    // 🧾 E’lonlarni ko‘rsatish
+    //------------------------------------------------
     function renderAds(user) {
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
       const myAds = allAds.filter(ad => ad.phone === user.phone);
@@ -177,60 +230,64 @@
         return;
       }
 
-      adsContainer.innerHTML = myAds.map((ad, i) => `
+      adsContainer.innerHTML = myAds.map((ad, index) => `
         <div class="ad-card">
           <strong>${ad.fromRegion || '—'}</strong> → <strong>${ad.toRegion || '—'}</strong><br>
           💰 ${ad.price || 'Noma’lum'} so‘m<br>
           ⚙️ Holat: <b>${ad.status || 'Kutilmoqda'}</b>
           <div class="btns">
-            <button class="edit-btn" onclick="editAd(${i})">✏️</button>
-            <button class="delete-btn" onclick="deleteAd(${i})">🗑️</button>
+            <button class="edit-btn" onclick="editAd('${ad.id}')">✏️</button>
+            <button class="delete-btn" onclick="deleteAd('${ad.id}')">🗑️</button>
           </div>
-          <div id="editBox${i}" class="edit-box" style="display:none;">
-            <input type="text" id="from${i}" value="${ad.fromRegion || ''}" placeholder="Qayerdan">
-            <input type="text" id="to${i}" value="${ad.toRegion || ''}" placeholder="Qayerga">
-            <input type="text" id="price${i}" value="${ad.price || ''}" placeholder="Narx">
-            <button onclick="saveAd(${i})">💾 Saqlash</button>
+          <div id="editBox${ad.id}" class="edit-box" style="display:none;">
+            <input type="text" id="from${ad.id}" value="${ad.fromRegion || ''}" placeholder="Qayerdan">
+            <input type="text" id="to${ad.id}" value="${ad.toRegion || ''}" placeholder="Qayerga">
+            <input type="text" id="price${ad.id}" value="${ad.price || ''}" placeholder="Narx">
+            <button onclick="saveAd('${ad.id}')">💾 Saqlash</button>
           </div>
         </div>
       `).join('');
     }
 
-    function editAd(i) {
-      document.getElementById(`editBox${i}`).style.display = 'block';
+    //------------------------------------------------
+    // ✏️ Tahrirlash
+    //------------------------------------------------
+    function editAd(id) {
+      document.getElementById(`editBox${id}`).style.display = 'block';
     }
 
-    function saveAd(i) {
-      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      const user = JSON.parse(localStorage.getItem('currentUser'));
-      const myAds = allAds.filter(ad => ad.phone === user.phone);
+    //------------------------------------------------
+    // 💾 Saqlash
+    //------------------------------------------------
+    function saveAd(id) {
+      let allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      const ad = allAds.find(a => a.id === id);
+      if (!ad) return alert('Xatolik: e’lon topilmadi.');
 
-      if (i >= myAds.length) return;
-
-      const indexInAll = allAds.findIndex(ad => ad.id === myAds[i].id);
-      allAds[indexInAll].fromRegion = document.getElementById(`from${i}`).value;
-      allAds[indexInAll].toRegion = document.getElementById(`to${i}`).value;
-      allAds[indexInAll].price = document.getElementById(`price${i}`).value;
+      ad.fromRegion = document.getElementById(`from${id}`).value;
+      ad.toRegion = document.getElementById(`to${id}`).value;
+      ad.price = document.getElementById(`price${id}`).value;
 
       localStorage.setItem('allAds', JSON.stringify(allAds));
       alert('✅ E’lon yangilandi!');
       window.location.reload();
     }
 
-    function deleteAd(i) {
+    //------------------------------------------------
+    // 🗑️ O‘chirish
+    //------------------------------------------------
+    function deleteAd(id) {
       if (!confirm('Rostdan ham bu e’lonni o‘chirasizmi?')) return;
-      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      const user = JSON.parse(localStorage.getItem('currentUser'));
-      const myAds = allAds.filter(ad => ad.phone === user.phone);
-
-      const indexInAll = allAds.findIndex(ad => ad.id === myAds[i].id);
-      if (indexInAll !== -1) allAds.splice(indexInAll, 1);
-
+      let allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      allAds = allAds.filter(a => a.id !== id);
       localStorage.setItem('allAds', JSON.stringify(allAds));
       alert('🗑️ O‘chirildi!');
       window.location.reload();
     }
 
+    //------------------------------------------------
+    // ➕ Qo‘shish
+    //------------------------------------------------
     function toggleAddForm() {
       const form = document.getElementById('addForm');
       form.style.display = form.style.display === 'none' ? 'block' : 'none';
@@ -242,19 +299,15 @@
       const to = document.getElementById('toRegion').value;
       const price = document.getElementById('price').value;
 
-      if (!from || !to || !price) {
-        alert('Barcha maydonlarni to‘ldiring!');
-        return;
-      }
+      if (!from || !to || !price) return alert('Barcha maydonlarni to‘ldiring!');
 
       const newAd = {
         id: 'ad-' + Date.now(),
-        name: user.name,
-        phone: user.phone,
-        userType: user.userType,
+        type: user.userType,
         fromRegion: from,
         toRegion: to,
         price: price,
+        phone: user.phone,
         date: new Date().toLocaleString(),
         status: "Kutilmoqda"
       };
@@ -267,6 +320,9 @@
       window.location.reload();
     }
 
+    //------------------------------------------------
+    // 🚪 Chiqish
+    //------------------------------------------------
     function logout() {
       localStorage.removeItem('currentUser');
       alert('Tizimdan chiqdingiz!');
