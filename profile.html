@@ -227,22 +227,30 @@
       renderUserAds();
     }
 
-    // === TAHRIRLASH ===
-    function editAd(id, type) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads.find(a => a.id === id);
-      if (!ad) return;
+   // === TAHRIRLASH (faqat 1 marta) ===
+function editAd(id, type) {
+  const key = type === "driver" ? "driverAds" : "passengerAds";
+  const ads = JSON.parse(localStorage.getItem(key)) || [];
+  const ad = ads.find(a => a.id === id);
+  if (!ad) return;
 
-      const newPrice = prompt("Yangi narxni kiriting:", ad.price || "");
-      if (newPrice === null) return;
+  // Agar oldin tahrirlangan bo‘lsa
+  if (ad.edited) {
+    alert("❗ Ushbu e’lon oldin tahrirlangan. Qayta o‘zgartirish mumkin emas.");
+    return;
+  }
 
-      ad.price = newPrice;
-      localStorage.setItem(key, JSON.stringify(ads));
+  const newPrice = prompt("Yangi narxni kiriting:", ad.price || "");
+  if (newPrice === null) return;
 
-      alert("✏️ E’lon yangilandi (status o‘zgarmaydi).");
-      renderUserAds();
-    }
+  ad.price = newPrice;
+  ad.edited = true; // belgi qo‘shamiz
+  localStorage.setItem(key, JSON.stringify(ads));
+
+  alert("✏️ E’lon 1 marta tahrirlandi. Keyinchalik o‘zgartirib bo‘lmaydi.");
+  renderUserAds();
+}
+
 
     // === O‘CHIRISH ===
     function deleteAd(id, type) {
