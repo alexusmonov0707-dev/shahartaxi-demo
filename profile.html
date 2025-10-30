@@ -69,9 +69,7 @@
       margin-top: 10px;
       cursor: pointer;
     }
-    .add-btn:hover {
-      background: #218838;
-    }
+    .add-btn:hover { background: #218838; }
     .logout-btn {
       width: 100%;
       margin-top: 1.5rem;
@@ -84,9 +82,7 @@
       cursor: pointer;
       transition: 0.3s;
     }
-    .logout-btn:hover {
-      background: #0056b3;
-    }
+    .logout-btn:hover { background: #0056b3; }
     .back-link {
       text-align: center;
       display: block;
@@ -94,11 +90,7 @@
       color: #007bff;
       text-decoration: none;
     }
-    .no-ads {
-      text-align: center;
-      color: gray;
-      font-style: italic;
-    }
+    .no-ads { text-align: center; color: gray; font-style: italic; }
     .edit-box, .add-box {
       background: #eef7ff;
       padding: 12px;
@@ -117,7 +109,6 @@
 <body>
   <main>
     <h2>👤 Foydalanuvchi profili</h2>
-
     <div class="info" id="userInfo"></div>
 
     <button class="add-btn" onclick="toggleAddForm()">+ Yangi e’lon qo‘shish</button>
@@ -143,11 +134,7 @@
   </main>
 
   <script>
-    const regions = [
-      "Toshkent", "Andijon", "Farg‘ona", "Namangan", "Samarqand",
-      "Buxoro", "Navoiy", "Surxondaryo", "Qashqadaryo", "Jizzax",
-      "Sirdaryo", "Xorazm", "Qoraqalpog‘iston"
-    ];
+    const regions = ["Toshkent", "Andijon", "Farg‘ona", "Namangan", "Samarqand", "Buxoro", "Navoiy", "Surxondaryo", "Qashqadaryo", "Jizzax", "Sirdaryo", "Xorazm", "Qoraqalpog‘iston"];
 
     window.onload = () => {
       const user = JSON.parse(localStorage.getItem('currentUser'));
@@ -161,7 +148,7 @@
       userInfo.innerHTML = `
         <p><b>Ism:</b> ${user.name}</p>
         <p><b>Telefon:</b> ${user.phone}</p>
-        <p><b>Rol:</b> ${user.userType === 'driver' ? 'Haydovchi' : user.userType === 'passenger' ? 'Yo‘lovchi' : 'Admin'}</p>
+        <p><b>Rol:</b> ${user.userType === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
       `;
 
       loadRegions();
@@ -183,62 +170,70 @@
     function renderAds(user) {
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
       const myAds = allAds.filter(ad => ad.phone === user.phone);
-      const container = document.getElementById('myAdsList');
+      const adsContainer = document.getElementById('myAdsList');
 
       if (myAds.length === 0) {
-        container.innerHTML = '<p class="no-ads">Sizda hali e’lonlar yo‘q.</p>';
+        adsContainer.innerHTML = '<p class="no-ads">Sizda hali e’lonlar yo‘q.</p>';
         return;
       }
 
-      container.innerHTML = myAds.map((ad, i) => `
+      adsContainer.innerHTML = myAds.map((ad, i) => `
         <div class="ad-card">
           <strong>${ad.fromRegion || '—'}</strong> → <strong>${ad.toRegion || '—'}</strong><br>
           💰 ${ad.price || 'Noma’lum'} so‘m<br>
-          ⚙️ Holat: <b>${ad.status || 'Kutilyapti'}</b>
+          ⚙️ Holat: <b>${ad.status || 'Kutilmoqda'}</b>
           <div class="btns">
-            <button class="edit-btn" onclick="editAd('${ad.id}')">✏️</button>
-            <button class="delete-btn" onclick="deleteAd('${ad.id}')">🗑️</button>
+            <button class="edit-btn" onclick="editAd(${i})">✏️</button>
+            <button class="delete-btn" onclick="deleteAd(${i})">🗑️</button>
           </div>
-          <div id="editBox${ad.id}" class="edit-box" style="display:none;">
-            <input type="text" id="from${ad.id}" value="${ad.fromRegion || ''}" placeholder="Qayerdan">
-            <input type="text" id="to${ad.id}" value="${ad.toRegion || ''}" placeholder="Qayerga">
-            <input type="text" id="price${ad.id}" value="${ad.price || ''}" placeholder="Narx">
-            <button onclick="saveAd('${ad.id}')">💾 Saqlash</button>
+          <div id="editBox${i}" class="edit-box" style="display:none;">
+            <input type="text" id="from${i}" value="${ad.fromRegion || ''}" placeholder="Qayerdan">
+            <input type="text" id="to${i}" value="${ad.toRegion || ''}" placeholder="Qayerga">
+            <input type="text" id="price${i}" value="${ad.price || ''}" placeholder="Narx">
+            <button onclick="saveAd(${i})">💾 Saqlash</button>
           </div>
         </div>
       `).join('');
     }
 
-    function editAd(id) {
-      document.getElementById(`editBox${id}`).style.display = 'block';
+    function editAd(i) {
+      document.getElementById(`editBox${i}`).style.display = 'block';
     }
 
-    function saveAd(id) {
-      let allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      let index = allAds.findIndex(a => a.id === id);
-      if (index === -1) return;
+    function saveAd(i) {
+      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      const myAds = allAds.filter(ad => ad.phone === user.phone);
 
-      allAds[index].fromRegion = document.getElementById(`from${id}`).value;
-      allAds[index].toRegion = document.getElementById(`to${id}`).value;
-      allAds[index].price = document.getElementById(`price${id}`).value;
+      if (i >= myAds.length) return;
+
+      const indexInAll = allAds.findIndex(ad => ad.id === myAds[i].id);
+      allAds[indexInAll].fromRegion = document.getElementById(`from${i}`).value;
+      allAds[indexInAll].toRegion = document.getElementById(`to${i}`).value;
+      allAds[indexInAll].price = document.getElementById(`price${i}`).value;
 
       localStorage.setItem('allAds', JSON.stringify(allAds));
       alert('✅ E’lon yangilandi!');
       window.location.reload();
     }
 
-    function deleteAd(id) {
-      if (!confirm('Rostdan ham o‘chirmoqchimisiz?')) return;
-      let allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      allAds = allAds.filter(a => a.id !== id);
+    function deleteAd(i) {
+      if (!confirm('Rostdan ham bu e’lonni o‘chirasizmi?')) return;
+      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
+      const user = JSON.parse(localStorage.getItem('currentUser'));
+      const myAds = allAds.filter(ad => ad.phone === user.phone);
+
+      const indexInAll = allAds.findIndex(ad => ad.id === myAds[i].id);
+      if (indexInAll !== -1) allAds.splice(indexInAll, 1);
+
       localStorage.setItem('allAds', JSON.stringify(allAds));
       alert('🗑️ O‘chirildi!');
       window.location.reload();
     }
 
     function toggleAddForm() {
-      const f = document.getElementById('addForm');
-      f.style.display = f.style.display === 'none' ? 'block' : 'none';
+      const form = document.getElementById('addForm');
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
     }
 
     function addNewAd() {
@@ -254,15 +249,14 @@
 
       const newAd = {
         id: 'ad-' + Date.now(),
-        ownerPhone: user.phone,
-        phone: user.phone,
         name: user.name,
+        phone: user.phone,
+        userType: user.userType,
         fromRegion: from,
         toRegion: to,
         price: price,
-        type: user.userType,
-        status: "Kutilyapti",
-        date: new Date().toLocaleString()
+        date: new Date().toLocaleString(),
+        status: "Kutilmoqda"
       };
 
       const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
