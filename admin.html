@@ -153,6 +153,11 @@
         <option value="approved">Tasdiqlangan</option>
         <option value="rejected">Rad etilgan</option>
       </select>
+      
+      <select id="sortFilter" onchange="renderAds()">
+  <option value="desc">Eng yangi avval</option>
+  <option value="asc">Eng eski avval</option>
+</select>
 
       <button onclick="goToStats()">📊 Statistika</button>
       <button onclick="goToAdd()">➕ E’lon qo‘shish</button>
