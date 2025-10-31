@@ -124,12 +124,25 @@
         <tr><td colspan="2">Ma’lumot yuklanmoqda...</td></tr>
       </tbody>
     </table>
-
     <canvas id="regionChart"></canvas>
 
-    <!-- 🆕 YANGI TREND GRAFIGI -->
-    <h2 style="margin-top: 3rem;">📅 So‘nggi 7 kunlik e’lonlar trendlari</h2>
-    <canvas id="trendChart"></canvas>
+    <!-- 🆕 Faol foydalanuvchilar statistikasi -->
+    <h2 style="margin-top: 3rem;">👥 Faol foydalanuvchilar</h2>
+    <div class="stats">
+      <div class="stat-box">
+        <h3>Faol haydovchilar</h3>
+        <p id="activeDrivers">0</p>
+      </div>
+      <div class="stat-box">
+        <h3>Faol yo‘lovchilar</h3>
+        <p id="activePassengers">0</p>
+      </div>
+      <div class="stat-box" style="grid-column: span 2;">
+        <h3>Eng faol foydalanuvchi</h3>
+        <p id="topUser">Aniqlanmoqda...</p>
+      </div>
+    </div>
+    <canvas id="userChart"></canvas>
 
     <button onclick="location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
@@ -137,20 +150,16 @@
   <script>
     const ctx = document.getElementById('statusChart').getContext('2d');
     const regionCtx = document.getElementById('regionChart').getContext('2d');
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    let chart, regionChart, trendChart;
+    const userCtx = document.getElementById('userChart').getContext('2d');
+    let chart, regionChart, userChart;
 
     function loadStats() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const allAds = [...driverAds, ...passengerAds];
-
-      const stats = {
-        drivers: driverAds.length,
-        passengers: passengerAds.length,
-        approved: allAds.filter(a => a.status === 'approved').length,
-        rejected: allAds.filter(a => a.status === 'rejected').length,
-        pending: allAds.filter(a => a.status === 'pending' || !a.status).length
+      const stats = JSON.parse(localStorage.getItem('stats')) || {
+        drivers: 0,
+        passengers: 0,
+        approved: 0,
+        rejected: 0,
+        pending: 0
       };
 
       document.getElementById('driverCount').innerText = stats.drivers;
@@ -160,6 +169,7 @@
       document.getElementById('pendingCount').innerText = stats.pending;
 
       const data = [stats.approved, stats.rejected, stats.pending];
+
       if (chart) {
         chart.data.datasets[0].data = data;
         chart.update();
@@ -177,14 +187,16 @@
         });
       }
 
-      loadRegionStats(driverAds, passengerAds);
-      loadTrendChart(allAds);
+      loadRegionStats();
+      loadUserStats();
     }
 
-    function loadRegionStats(driverAds, passengerAds) {
+    function loadRegionStats() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       const allAds = [...driverAds, ...passengerAds];
-      const regionCounts = {};
 
+      const regionCounts = {};
       allAds.forEach(ad => {
         const region = ad.fromRegion || ad.toRegion || 'Noma’lum';
         regionCounts[region] = (regionCounts[region] || 0) + 1;
@@ -230,47 +242,41 @@
       }
     }
 
-    // 🆕 YANGI TREND GRAFIGI
-    function loadTrendChart(allAds) {
-      // Oxirgi 7 kun
-      const today = new Date();
-      const last7Days = [...Array(7)].map((_, i) => {
-        const d = new Date();
-        d.setDate(today.getDate() - (6 - i));
-        return d.toISOString().split('T')[0];
-      });
+    // 🆕 Faol foydalanuvchilar statistikasi
+    function loadUserStats() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [...driverAds, ...passengerAds];
 
-      const countsByDay = {};
-      last7Days.forEach(date => countsByDay[date] = 0);
-
+      const userCounts = {};
       allAds.forEach(ad => {
-        const created = ad.createdAt ? new Date(ad.createdAt).toISOString().split('T')[0] : null;
-        if (created && countsByDay.hasOwnProperty(created)) {
-          countsByDay[created]++;
-        }
+        const user = ad.phone || 'Noma’lum';
+        userCounts[user] = (userCounts[user] || 0) + 1;
       });
 
-      const labels = last7Days.map(d => d.split('-').reverse().join('.'));
-      const data = Object.values(countsByDay);
+      const activeDrivers = new Set(driverAds.map(ad => ad.phone)).size;
+      const activePassengers = new Set(passengerAds.map(ad => ad.phone)).size;
+      document.getElementById('activeDrivers').innerText = activeDrivers;
+      document.getElementById('activePassengers').innerText = activePassengers;
+
+      const topUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0];
+      document.getElementById('topUser').innerText = topUser ? `${topUser[0]} (${topUser[1]} e’lon)` : 'Ma’lumot yo‘q';
 
       const chartData = {
-        labels: labels,
+        labels: Object.keys(userCounts),
         datasets: [{
-          label: 'E’lonlar soni',
-          data: data,
-          borderColor: '#007bff',
-          backgroundColor: 'rgba(0,123,255,0.1)',
-          fill: true,
-          tension: 0.3
+          label: 'E’lonlar soni (foydalanuvchi bo‘yicha)',
+          data: Object.values(userCounts),
+          backgroundColor: '#17a2b8'
         }]
       };
 
-      if (trendChart) {
-        trendChart.data = chartData;
-        trendChart.update();
+      if (userChart) {
+        userChart.data = chartData;
+        userChart.update();
       } else {
-        trendChart = new Chart(trendCtx, {
-          type: 'line',
+        userChart = new Chart(userCtx, {
+          type: 'bar',
           data: chartData,
           options: {
             responsive: true,
