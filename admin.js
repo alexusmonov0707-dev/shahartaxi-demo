@@ -68,6 +68,7 @@ function renderAds() {
 
   const typeFilter = document.getElementById('typeFilter').value;
   const statusFilter = document.getElementById('statusFilter').value;
+  const sortFilter = document.getElementById('sortFilter') ? document.getElementById('sortFilter').value : 'desc';
 
   let ads = [];
   if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
@@ -79,11 +80,11 @@ function renderAds() {
 
   if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
 
-  // ✅ Sana bo‘yicha tartiblash (eng yangi e’lonlar yuqorida)
+  // ✅ Sana bo‘yicha tartiblash — foydalanuvchi tanloviga qarab
   ads.sort((a, b) => {
     const dateA = new Date(a.createdAt || 0);
     const dateB = new Date(b.createdAt || 0);
-    return dateB - dateA;
+    return sortFilter === 'asc' ? dateA - dateB : dateB - dateA;
   });
 
   const container = document.getElementById('ads');
@@ -102,7 +103,6 @@ function renderAds() {
       ? `${ad.toRegion} ${ad.toDistrict}`
       : (ad.toRegion || ad.to || '—');
      
-    // === Sana chiqarish ===
     const createdDate = ad.createdAt
       ? new Date(ad.createdAt).toLocaleString('uz-UZ')
       : '—';
