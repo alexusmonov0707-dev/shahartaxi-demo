@@ -112,7 +112,6 @@
     <h2 style="margin-top: 2rem;">Holatlar nisbati</h2>
     <canvas id="statusChart"></canvas>
 
-    <!-- 🆕 Viloyatlar bo‘yicha statistik jadval -->
     <h2 style="margin-top: 3rem;">Viloyatlar kesimida e’lonlar</h2>
     <table>
       <thead>
@@ -128,36 +127,38 @@
 
     <canvas id="regionChart"></canvas>
 
-    <!-- 🆕 7 kunlik trend grafigi -->
-    <h2 style="margin-top: 3rem;">📅 So‘nggi 7 kunlik e’lonlar trendlari</h2>
-    <canvas id="trendChart"></canvas>
-
     <button onclick="location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
 
   <script>
     const ctx = document.getElementById('statusChart').getContext('2d');
     const regionCtx = document.getElementById('regionChart').getContext('2d');
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    let chart, regionChart, trendChart;
+    let chart, regionChart;
 
     function loadStats() {
-      const stats = JSON.parse(localStorage.getItem('stats')) || {
-        drivers: 0,
-        passengers: 0,
-        approved: 0,
-        rejected: 0,
-        pending: 0
+      // 🔹 E’lonlarni olish
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [...driverAds, ...passengerAds];
+
+      // 🔹 Umumiy sonlar
+      const stats = {
+        drivers: driverAds.length,
+        passengers: passengerAds.length,
+        approved: allAds.filter(a => a.status === 'approved').length,
+        rejected: allAds.filter(a => a.status === 'rejected').length,
+        pending: allAds.filter(a => a.status === 'pending' || !a.status).length
       };
 
+      // 🔹 Ekranga chiqaramiz
       document.getElementById('driverCount').innerText = stats.drivers;
       document.getElementById('passengerCount').innerText = stats.passengers;
       document.getElementById('approvedCount').innerText = stats.approved;
       document.getElementById('rejectedCount').innerText = stats.rejected;
       document.getElementById('pendingCount').innerText = stats.pending;
 
+      // 🔹 Grafik ma’lumot
       const data = [stats.approved, stats.rejected, stats.pending];
-
       if (chart) {
         chart.data.datasets[0].data = data;
         chart.update();
@@ -175,16 +176,14 @@
         });
       }
 
-      loadRegionStats();
-      loadTrendStats();
+      // 🔹 Viloyatlar statistikasi
+      loadRegionStats(driverAds, passengerAds);
     }
 
-    function loadRegionStats() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+    function loadRegionStats(driverAds, passengerAds) {
       const allAds = [...driverAds, ...passengerAds];
-
       const regionCounts = {};
+
       allAds.forEach(ad => {
         const region = ad.fromRegion || ad.toRegion || 'Noma’lum';
         regionCounts[region] = (regionCounts[region] || 0) + 1;
@@ -224,54 +223,9 @@
           options: {
             responsive: true,
             indexAxis: 'y',
-            scales: { x: { beginAtZero: true } }
-          }
-        });
-      }
-    }
-
-    // 🆕 So‘nggi 7 kunlik trend grafigi
-    function loadTrendStats() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const allAds = [...driverAds, ...passengerAds];
-      const today = new Date();
-
-      const days = [];
-      const counts = [];
-
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-
-        const count = allAds.filter(ad => ad.createdAt && ad.createdAt.startsWith(dateStr)).length;
-        days.push(dateStr.slice(5));
-        counts.push(count);
-      }
-
-      const data = {
-        labels: days,
-        datasets: [{
-          label: 'Kunlik e’lonlar soni',
-          data: counts,
-          borderColor: '#007bff',
-          backgroundColor: 'rgba(0,123,255,0.2)',
-          tension: 0.3,
-          fill: true
-        }]
-      };
-
-      if (trendChart) {
-        trendChart.data = data;
-        trendChart.update();
-      } else {
-        trendChart = new Chart(trendCtx, {
-          type: 'line',
-          data: data,
-          options: {
-            responsive: true,
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            scales: {
+              x: { beginAtZero: true }
+            }
           }
         });
       }
