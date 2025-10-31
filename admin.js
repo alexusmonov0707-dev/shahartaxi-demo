@@ -1,4 +1,5 @@
 // === CONFIG ===
+// === CONFIG ===
 const ADMIN_USER = 'admin';
 const ADMIN_PASSWORD = 'shahartaxi2025';
 const ADMIN_TOKEN_KEY = 'shaharTaxiAdminToken';
@@ -68,7 +69,9 @@ function renderAds() {
 
   const typeFilter = document.getElementById('typeFilter').value;
   const statusFilter = document.getElementById('statusFilter').value;
-  const sortFilter = document.getElementById('sortFilter') ? document.getElementById('sortFilter').value : 'desc';
+  const sortFilter = document.getElementById('sortFilter')
+    ? document.getElementById('sortFilter').value
+    : 'desc';
 
   let ads = [];
   if (typeFilter === 'driver') ads = driver.map(a => ({ ...a, type: 'driver' }));
@@ -151,6 +154,7 @@ function updateStatus(type, id, newStatus) {
   renderAds();
   updateStats();
 }
+
 
 // === SAVE HISTORY ===
 function saveApprovalHistory(record) {
