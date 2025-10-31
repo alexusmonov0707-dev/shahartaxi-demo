@@ -1,228 +1,391 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profil – ShaharTaxi</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mening profilim - ShaharTaxi</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f5f6fa;
+      background: #f7f9fc;
       margin: 0;
       padding: 0;
     }
-
-    .profile-container {
-      max-width: 800px;
-      margin: 40px auto;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      padding: 20px;
-    }
-
-    h2 {
-      text-align: center;
-      color: #333;
-    }
-
-    .ad-card {
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-      background: #fff;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      transition: background 0.3s ease;
-    }
-
-    .ad-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-
-    .status {
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-size: 13px;
-      color: #fff;
-    }
-
-    .ad-actions button {
-      margin-right: 5px;
-      border: none;
+    header {
       background: #007bff;
       color: white;
-      border-radius: 6px;
-      padding: 6px 10px;
+      padding: 15px;
+      text-align: center;
+      position: relative;
+    }
+    .logout {
+      position: absolute;
+      right: 20px;
+      top: 15px;
+      background: #dc3545;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 5px;
+      color: white;
       cursor: pointer;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    h2 {
+      color: #007bff;
+      text-align: center;
+    }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 15px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+      margin-top: 10px;
+    }
+    button:hover { background: #0056b3; }
+
+    .ad-box {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #cdddfc;
       transition: background 0.3s;
     }
+    .pending { background: #f9f9f9; }
+    .approved { background: #e6ffe6; }
+    .rejected { background: #ffe6e6; }
 
-    .ad-actions button:hover {
-      background: #0056b3;
-    }
+    .ad-box p { margin: 5px 0; }
 
-    .notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
+    .actions button {
       background: #28a745;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 8px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.15);
-      z-index: 9999;
-      animation: fadeInOut 3s ease;
+      margin-right: 5px;
+    }
+    .actions button:last-child {
+      background: #dc3545;
     }
 
-    @keyframes fadeInOut {
-      0% { opacity: 0; transform: translateY(-10px); }
-      10%, 90% { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0; transform: translateY(-10px); }
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
     }
-
-    input.edit-price {
-      width: 100px;
-      padding: 4px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
+    .user-info {
+      text-align: center;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .price-edit-input {
+      width: 120px;
+      display: inline-block;
+      margin-right: 5px;
     }
   </style>
 </head>
 <body>
-  <div class="profile-container">
+  <header>
+    <h1>ShaharTaxi - Profil</h1>
+    <button class="logout" onclick="logout()">Chiqish</button>
+  </header>
+
+  <div class="container">
+    <div id="userPhone" class="user-info"></div>
+
     <h2>Mening e’lonlarim</h2>
-    <div id="my-ads"></div>
+
+    <div class="filters">
+      <select id="typeFilter" onchange="applyFilters()">
+        <option value="all">Barcha turlar</option>
+        <option value="driver">Haydovchi</option>
+        <option value="passenger">Yo‘lovchi</option>
+      </select>
+
+      <select id="statusFilter" onchange="applyFilters()">
+        <option value="all">Barcha holatlar</option>
+        <option value="pending">Kutilmoqda</option>
+        <option value="approved">Tasdiqlangan</option>
+        <option value="rejected">Rad etilgan</option>
+      </select>
+
+      <select id="filterFromRegion" onchange="updateFilterDistricts('filterFrom')">
+        <option value="">Qayerdan (viloyat)</option>
+      </select>
+      <select id="filterFromDistrict">
+        <option value="">Qayerdan (tuman)</option>
+      </select>
+
+      <select id="filterToRegion" onchange="updateFilterDistricts('filterTo')">
+        <option value="">Qayerga (viloyat)</option>
+      </select>
+      <select id="filterToDistrict">
+        <option value="">Qayerga (tuman)</option>
+      </select>
+
+      <button onclick="clearFilters()">Filterlarni tozalash</button>
+    </div>
+
+    <div id="myAds"></div>
+
+    <hr>
+    <h2>Yangi e’lon qo‘shish</h2>
+
+    <select id="adType">
+      <option value="">E’lon turini tanlang</option>
+      <option value="driver">Haydovchi</option>
+      <option value="passenger">Yo‘lovchi</option>
+    </select>
+
+    <label>Qayerdan (viloyat):</label>
+    <select id="fromRegion" onchange="updateDistricts('from')"></select>
+
+    <label>Qayerdan (tuman):</label>
+    <select id="fromDistrict"></select>
+
+    <label>Qayerga (viloyat):</label>
+    <select id="toRegion" onchange="updateDistricts('to')"></select>
+
+    <label>Qayerga (tuman):</label>
+    <select id="toDistrict"></select>
+
+    <input type="number" id="price" placeholder="Narx (so‘m)">
+    <button onclick="addAd()">E’lonni joylash</button>
   </div>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSy...",
-      authDomain: "shahartaxi.firebaseapp.com",
-      databaseURL: "https://shahartaxi-default-rtdb.firebaseio.com",
-      projectId: "shahartaxi",
-      storageBucket: "shahartaxi.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:abcdef123456"
-    };
-    firebase.initializeApp(firebaseConfig);
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser || !currentUser.phone) {
+      alert("Avval tizimga kiring!");
+      window.location.href = "login.html";
+    }
+    document.getElementById('userPhone').textContent = `Telefon: ${currentUser.phone}`;
 
-    const userPhone = localStorage.getItem("userPhone");
-    const adsRef = firebase.database().ref("ads");
+    function logout() {
+      localStorage.removeItem("currentUser");
+      window.location.href = "login.html";
+    }
 
-    adsRef.on("value", snapshot => {
-      const data = snapshot.val();
-      const userAds = [];
-      for (let id in data) {
-        if (data[id].phone === userPhone) {
-          userAds.push({ id, ...data[id] });
-        }
-      }
-      renderMyAds(userAds.reverse());
-    });
+    function getAds() {
+      return {
+        driver: JSON.parse(localStorage.getItem("driverAds")) || [],
+        passenger: JSON.parse(localStorage.getItem("passengerAds")) || []
+      };
+    }
 
-    function renderMyAds(ads) {
-      const container = document.getElementById("my-ads");
+    // === INLINE EDIT qo‘shilgan render funksiyasi ===
+    function renderUserAds() {
+      const { driver, passenger } = getAds();
+      const userPhone = currentUser.phone;
+      let allAds = [...driver, ...passenger].filter(ad => ad.phone === userPhone);
+
+      const typeFilter = document.getElementById('typeFilter').value;
+      const statusFilter = document.getElementById('statusFilter').value;
+      const fFromRegion = document.getElementById('filterFromRegion').value;
+      const fFromDistrict = document.getElementById('filterFromDistrict').value;
+      const fToRegion = document.getElementById('filterToRegion').value;
+      const fToDistrict = document.getElementById('filterToDistrict').value;
+
+      if (typeFilter !== 'all') allAds = allAds.filter(a => a.type === typeFilter);
+      if (statusFilter !== 'all') allAds = allAds.filter(a => (a.status || 'pending') === statusFilter);
+      if (fFromRegion) allAds = allAds.filter(a => (a.fromRegion || a.from || '').includes(fFromRegion));
+      if (fFromDistrict) allAds = allAds.filter(a => (a.fromDistrict || '').includes(fFromDistrict));
+      if (fToRegion) allAds = allAds.filter(a => (a.toRegion || a.to || '').includes(fToRegion));
+      if (fToDistrict) allAds = allAds.filter(a => (a.toDistrict || '').includes(fToDistrict));
+
+      const container = document.getElementById("myAds");
       container.innerHTML = "";
 
-      ads.forEach(ad => {
-        const adCard = document.createElement("div");
-        adCard.classList.add("ad-card");
+      if (allAds.length === 0) {
+        container.innerHTML = "<p>Hozircha e’lonlar yo‘q.</p>";
+        return;
+      }
 
-        // Rang statusga qarab
-        let bgColor = "#fff";
-        if (ad.status === "Tasdiqlangan") bgColor = "#d4edda";
-        else if (ad.status === "Rad etilgan") bgColor = "#f8d7da";
-        else if (ad.status === "Kutilmoqda") bgColor = "#fff3cd";
-        adCard.style.backgroundColor = bgColor;
+      allAds.forEach(ad => {
+        const from = ad.fromDistrict && ad.fromRegion
+          ? `${ad.fromRegion} ${ad.fromDistrict}`
+          : (ad.fromRegion || ad.from || "—");
+        const to = ad.toDistrict && ad.toRegion
+          ? `${ad.toRegion} ${ad.toDistrict}`
+          : (ad.toRegion || ad.to || "—");
 
-        adCard.innerHTML = `
-          <div class="ad-header">
-            <h3>${ad.fromRegion} → ${ad.toRegion}</h3>
-            <span class="status">${ad.status}</span>
-          </div>
-          <p><strong>Narx:</strong> <span class="ad-price">${ad.price}</span> so‘m</p>
-          <p><strong>Yo‘nalish:</strong> ${ad.fromDistrict || ''} → ${ad.toDistrict || ''}</p>
-          <p><strong>Telefon:</strong> ${ad.phone}</p>
-          <div class="ad-actions">
-            <button class="edit-btn">✏️ Tahrirlash</button>
-            <button class="delete-btn">🗑️ O‘chirish</button>
+        const statusText =
+          ad.status === "approved" ? "✅ Tasdiqlangan"
+          : ad.status === "rejected" ? "❌ Rad etilgan"
+          : "⏳ Kutilmoqda";
+
+        const canEdit = ad.status !== "approved";
+
+        const div = document.createElement("div");
+        div.className = "ad-box " + (ad.status || "pending");
+
+        // === INLINE EDIT PART ===
+        const priceHTML = ad.editing
+          ? `<input type="number" id="editPrice_${ad.id}" class="price-edit-input" value="${ad.price || ''}">
+             <button onclick="saveEditAd('${ad.id}', '${ad.type}')">💾 Saqlash</button>
+             <button onclick="cancelEditAd('${ad.id}', '${ad.type}')">❌ Bekor qilish</button>`
+          : `<span id="priceText_${ad.id}">${ad.price || 'Ko‘rsatilmagan'} so‘m</span>`;
+
+        div.innerHTML = `
+          <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
+          <p><b>Narx:</b> ${priceHTML}</p>
+          <p><b>Telefon:</b> ${ad.phone}</p>
+          <p><b>Holat:</b> ${statusText}</p>
+          <div class="actions">
+            ${
+              canEdit
+                ? `<button onclick="editAd('${ad.id}', '${ad.type}')">✏️ Tahrirlash</button>`
+                : `<button disabled style="background:#ccc;cursor:not-allowed;">✏️ Tahrirlash</button>`
+            }
+            <button onclick="deleteAd('${ad.id}', '${ad.type}')">🗑️ O‘chirish</button>
           </div>
         `;
-
-        // === Tahrirlash funksiyasi ===
-        const editBtn = adCard.querySelector(".edit-btn");
-        editBtn.addEventListener("click", () => {
-          const priceEl = adCard.querySelector(".ad-price");
-          const oldPrice = priceEl.textContent;
-          priceEl.outerHTML = `<input type="number" class="edit-price" value="${oldPrice}" />`;
-
-          const actions = adCard.querySelector(".ad-actions");
-          actions.innerHTML = `
-            <button class="save-btn">💾 Saqlash</button>
-            <button class="cancel-btn">❌ Bekor qilish</button>
-          `;
-
-          const saveBtn = actions.querySelector(".save-btn");
-          const cancelBtn = actions.querySelector(".cancel-btn");
-          const inputEl = adCard.querySelector(".edit-price");
-
-          saveBtn.addEventListener("click", () => {
-            const newPrice = inputEl.value;
-            if (!newPrice) {
-              alert("Narxni kiriting!");
-              return;
-            }
-
-            firebase.database().ref(`ads/${ad.id}`).update({
-              price: newPrice,
-              lastEdited: new Date().toISOString()
-            }).then(() => {
-              showNotification("✅ E’lon muvaffaqiyatli yangilandi!");
-            });
-
-            inputEl.outerHTML = `<span class="ad-price">${newPrice}</span>`;
-            actions.innerHTML = `<span style="color:gray;">🔒 Narx tahrirlandi</span>`;
-          });
-
-          cancelBtn.addEventListener("click", () => {
-            inputEl.outerHTML = `<span class="ad-price">${oldPrice}</span>`;
-            actions.innerHTML = `
-              <button class="edit-btn">✏️ Tahrirlash</button>
-              <button class="delete-btn">🗑️ O‘chirish</button>
-            `;
-          });
-        });
-
-        // === O‘chirish funksiyasi ===
-        const deleteBtn = adCard.querySelector(".delete-btn");
-        deleteBtn.addEventListener("click", () => {
-          if (confirm("E’lonni o‘chirishni xohlaysizmi?")) {
-            firebase.database().ref(`ads/${ad.id}`).remove().then(() => {
-              showNotification("🗑️ E’lon o‘chirildi!");
-            });
-          }
-        });
-
-        container.appendChild(adCard);
+        container.appendChild(div);
       });
     }
 
-    function showNotification(msg) {
-      const note = document.createElement("div");
-      note.classList.add("notification");
-      note.textContent = msg;
-      document.body.appendChild(note);
-      setTimeout(() => note.remove(), 3000);
+    // === INLINE EDIT FUNKSIYALARI ===
+    function editAd(id, type) {
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const ad = ads.find(a => a.id === id);
+      if (!ad) return;
+
+      if (ad.edited) {
+        alert("❗ Ushbu e’lon oldin tahrirlangan. Qayta o‘zgartirish mumkin emas.");
+        return;
+      }
+
+      ad.editing = true;
+      localStorage.setItem(key, JSON.stringify(ads));
+      renderUserAds();
+    }
+
+    function saveEditAd(id, type) {
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const ad = ads.find(a => a.id === id);
+      if (!ad) return;
+
+      const newPrice = document.getElementById(`editPrice_${id}`).value.trim();
+      if (!newPrice) {
+        alert("Narxni kiriting!");
+        return;
+      }
+
+      ad.price = newPrice;
+      ad.edited = true;
+      ad.editing = false;
+      localStorage.setItem(key, JSON.stringify(ads));
+
+      alert("✏️ E’lon muvaffaqiyatli tahrirlandi (faqat 1 marta).");
+      renderUserAds();
+    }
+
+    function cancelEditAd(id, type) {
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      const ads = JSON.parse(localStorage.getItem(key)) || [];
+      const ad = ads.find(a => a.id === id);
+      if (ad) ad.editing = false;
+      localStorage.setItem(key, JSON.stringify(ads));
+      renderUserAds();
+    }
+
+    function deleteAd(id, type) {
+      const key = type === "driver" ? "driverAds" : "passengerAds";
+      let ads = JSON.parse(localStorage.getItem(key)) || [];
+      ads = ads.filter(a => a.id !== id);
+      localStorage.setItem(key, JSON.stringify(ads));
+      renderUserAds();
+    }
+
+    function applyFilters() { renderUserAds(); }
+    function clearFilters() {
+      document.getElementById('typeFilter').value = 'all';
+      document.getElementById('statusFilter').value = 'all';
+      document.getElementById('filterFromRegion').value = '';
+      document.getElementById('filterFromDistrict').innerHTML = '<option value="">Qayerdan (tuman)</option>';
+      document.getElementById('filterToRegion').value = '';
+      document.getElementById('filterToDistrict').innerHTML = '<option value="">Qayerga (tuman)</option>';
+      renderUserAds();
+    }
+
+    function syncStatuses() {
+      const { driver, passenger } = getAds();
+      const userPhone = currentUser.phone;
+      const allAds = [...driver, ...passenger];
+      const userAds = allAds.filter(ad => ad.phone === userPhone);
+      const lastStatuses = JSON.parse(localStorage.getItem("userAdStatuses")) || {};
+
+      userAds.forEach(ad => {
+        const prevStatus = lastStatuses[ad.id];
+        if (prevStatus && prevStatus !== ad.status) {
+          if (ad.status === "approved") {
+            alert(`✅ Sizning e’loningiz "${ad.fromRegion || ad.from} → ${ad.toRegion || ad.to}" admin tomonidan TASDIQLANDI!`);
+          } else if (ad.status === "rejected") {
+            alert(`❌ Sizning e’loningiz "${ad.fromRegion || ad.from} → ${ad.toRegion || ad.to}" RAD ETILDI.`);
+          }
+        }
+        lastStatuses[ad.id] = ad.status;
+      });
+      localStorage.setItem("userAdStatuses", JSON.stringify(lastStatuses));
+      renderUserAds();
+    }
+
+    window.onload = function() {
+      loadRegions();
+      renderUserAds();
+      setInterval(syncStatuses, 5000);
+    };
+
+    window.addEventListener("storage", e => {
+      if (["driverAds", "passengerAds"].includes(e.key)) renderUserAds();
+    });
+  </script>
+
+  <script src="regions.js"></script>
+  <script>
+    function loadRegions() {
+      const fromRegion = document.getElementById("fromRegion");
+      const toRegion = document.getElementById("toRegion");
+      const fFromRegion = document.getElementById("filterFromRegion");
+      const fToRegion = document.getElementById("filterToRegion");
+
+      fromRegion.innerHTML = "<option value=''>Viloyatni tanlang</option>";
+      toRegion.innerHTML = "<option value=''>Viloyatni tanlang</option>";
+      fFromRegion.innerHTML = "<option value=''>Qayerdan (viloyat)</option>";
+      fToRegion.innerHTML = "<option value=''>Qayerga (viloyat)</option>";
+
+      if (typeof regions === "object") {
+        Object.keys(regions).forEach(region => {
+          [fromRegion, toRegion, fFromRegion, fToRegion].forEach(sel => sel.add(new Option(region, region)));
+        });
+      }
+    }
+
+    function updateDistricts(prefix) {
+      const region = document.getElementById(prefix + "Region").value;
+      const districtSelect = document.getElementById(prefix + "District");
+      districtSelect.innerHTML = "<option value=''>Tumanni tanlang</option>";
+      if (typeof regions === "object" && regions[region]) {
+        regions[region].forEach(d => districtSelect.add(new Option(d, d)));
+      }
     }
   </script>
 </body>
