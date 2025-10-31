@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
@@ -12,7 +12,6 @@
       margin: 0; padding: 0;
       text-align: center;
     }
-    
     header {
       background: #007bff;
       color: white;
@@ -50,7 +49,7 @@
       font-weight: bold;
     }
     canvas {
-      max-width: 600px;
+      max-width: 500px;
       margin-top: 2rem;
     }
     button {
@@ -61,6 +60,22 @@
       border-radius: 8px;
       cursor: pointer;
       margin-top: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f8f9fa;
     }
   </style>
 </head>
@@ -92,25 +107,34 @@
         <h3>Kutilmoqda</h3>
         <p id="pendingCount">0</p>
       </div>
-      <div class="stat-box">
-        <h3>Oxirgi 7 kunda e’lonlar</h3>
-        <p id="last7days">0</p>
-      </div>
     </div>
 
     <h2 style="margin-top: 2rem;">Holatlar nisbati</h2>
     <canvas id="statusChart"></canvas>
 
-    <h2 style="margin-top: 3rem;">📅 Oxirgi 7 kunlik e’lonlar grafigi</h2>
-    <canvas id="weeklyChart"></canvas>
+    <!-- 🆕 Viloyatlar bo‘yicha statistik jadval -->
+    <h2 style="margin-top: 3rem;">Viloyatlar kesimida e’lonlar</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Viloyat</th>
+          <th>E’lonlar soni</th>
+        </tr>
+      </thead>
+      <tbody id="regionTableBody">
+        <tr><td colspan="2">Ma’lumot yuklanmoqda...</td></tr>
+      </tbody>
+    </table>
+
+    <canvas id="regionChart"></canvas>
 
     <button onclick="location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
 
   <script>
-    const ctx1 = document.getElementById('statusChart').getContext('2d');
-    const ctx2 = document.getElementById('weeklyChart').getContext('2d');
-    let chart1, chart2;
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    const regionCtx = document.getElementById('regionChart').getContext('2d');
+    let chart, regionChart;
 
     function loadStats() {
       const stats = JSON.parse(localStorage.getItem('stats')) || {
@@ -121,38 +145,24 @@
         pending: 0
       };
 
-      // 1️⃣ Asosiy statistikani yangilash
       document.getElementById('driverCount').innerText = stats.drivers;
       document.getElementById('passengerCount').innerText = stats.passengers;
       document.getElementById('approvedCount').innerText = stats.approved;
       document.getElementById('rejectedCount').innerText = stats.rejected;
       document.getElementById('pendingCount').innerText = stats.pending;
 
-      // 2️⃣ E’lonlar va vaqt bo‘yicha tahlil
-      const all = [
-        ...(JSON.parse(localStorage.getItem('driverAds')) || []),
-        ...(JSON.parse(localStorage.getItem('passengerAds')) || [])
-      ];
+      const data = [stats.approved, stats.rejected, stats.pending];
 
-      const now = new Date();
-      const weekAgo = new Date(now);
-      weekAgo.setDate(weekAgo.getDate() - 7);
-
-      const last7 = all.filter(a => new Date(a.createdAt || 0) >= weekAgo);
-      document.getElementById('last7days').innerText = last7.length;
-
-      // 3️⃣ Pie chart — holatlar nisbati
-      const data1 = [stats.approved, stats.rejected, stats.pending];
-      if (chart1) {
-        chart1.data.datasets[0].data = data1;
-        chart1.update();
+      if (chart) {
+        chart.data.datasets[0].data = data;
+        chart.update();
       } else {
-        chart1 = new Chart(ctx1, {
+        chart = new Chart(ctx, {
           type: 'pie',
           data: {
             labels: ['Tasdiqlangan', 'Rad etilgan', 'Kutilmoqda'],
             datasets: [{
-              data: data1,
+              data: data,
               backgroundColor: ['#28a745', '#dc3545', '#ffc107']
             }]
           },
@@ -160,40 +170,59 @@
         });
       }
 
-      // 4️⃣ Bar chart — oxirgi 7 kunlik e’lonlar
-      const days = [];
-      const counts = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const dayStr = d.toLocaleDateString('uz-UZ', { month: 'short', day: 'numeric' });
-        const cnt = all.filter(a => {
-          const date = new Date(a.createdAt || 0);
-          return date.toDateString() === d.toDateString();
-        }).length;
-        days.push(dayStr);
-        counts.push(cnt);
+      // 🆕 Viloyatlar bo‘yicha ma’lumotlarni yangilaymiz
+      loadRegionStats();
+    }
+
+    function loadRegionStats() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [...driverAds, ...passengerAds];
+
+      // Viloyat nomi bo‘yicha guruhlash
+      const regionCounts = {};
+      allAds.forEach(ad => {
+        const region = ad.fromRegion || ad.toRegion || 'Noma’lum';
+        regionCounts[region] = (regionCounts[region] || 0) + 1;
+      });
+
+      const tbody = document.getElementById('regionTableBody');
+      tbody.innerHTML = '';
+
+      const regions = Object.keys(regionCounts);
+      if (regions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2">E’lonlar topilmadi.</td></tr>';
+        return;
       }
 
-      if (chart2) {
-        chart2.data.labels = days;
-        chart2.data.datasets[0].data = counts;
-        chart2.update();
+      regions.forEach(region => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${region}</td><td>${regionCounts[region]}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      // 🧭 Diagramma (bar chart)
+      const chartData = {
+        labels: regions,
+        datasets: [{
+          label: 'E’lonlar soni',
+          data: Object.values(regionCounts),
+          backgroundColor: '#007bff'
+        }]
+      };
+
+      if (regionChart) {
+        regionChart.data = chartData;
+        regionChart.update();
       } else {
-        chart2 = new Chart(ctx2, {
+        regionChart = new Chart(regionCtx, {
           type: 'bar',
-          data: {
-            labels: days,
-            datasets: [{
-              label: 'E’lonlar soni',
-              data: counts,
-              backgroundColor: '#007bff'
-            }]
-          },
+          data: chartData,
           options: {
             responsive: true,
+            indexAxis: 'y',
             scales: {
-              y: { beginAtZero: true }
+              x: { beginAtZero: true }
             }
           }
         });
