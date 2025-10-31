@@ -144,6 +144,10 @@
     </div>
     <canvas id="userChart"></canvas>
 
+    <!-- 🆕 So‘nggi 7 kunlik trend -->
+    <h2 style="margin-top: 3rem;">📅 So‘nggi 7 kunlik e’lonlar trendlari</h2>
+    <canvas id="trendChart"></canvas>
+
     <button onclick="location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
 
@@ -151,7 +155,8 @@
     const ctx = document.getElementById('statusChart').getContext('2d');
     const regionCtx = document.getElementById('regionChart').getContext('2d');
     const userCtx = document.getElementById('userChart').getContext('2d');
-    let chart, regionChart, userChart;
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    let chart, regionChart, userChart, trendChart;
 
     function loadStats() {
       const stats = JSON.parse(localStorage.getItem('stats')) || {
@@ -189,6 +194,7 @@
 
       loadRegionStats();
       loadUserStats();
+      loadTrendChart(); // 🆕 yangi qo‘shilgan
     }
 
     function loadRegionStats() {
@@ -242,7 +248,6 @@
       }
     }
 
-    // 🆕 Faol foydalanuvchilar statistikasi
     function loadUserStats() {
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
@@ -277,6 +282,49 @@
       } else {
         userChart = new Chart(userCtx, {
           type: 'bar',
+          data: chartData,
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      }
+    }
+
+    // 🆕 7 kunlik e’lonlar trendi
+    function loadTrendChart() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [...driverAds, ...passengerAds];
+
+      const today = new Date();
+      const dates = Array.from({length: 7}, (_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() - (6 - i));
+        return d.toISOString().split('T')[0];
+      });
+
+      const counts = dates.map(date => {
+        return allAds.filter(ad => ad.createdAt && ad.createdAt.startsWith(date)).length;
+      });
+
+      const chartData = {
+        labels: dates,
+        datasets: [{
+          label: 'So‘nggi 7 kunlik e’lonlar soni',
+          data: counts,
+          fill: false,
+          borderColor: '#007bff',
+          tension: 0.2
+        }]
+      };
+
+      if (trendChart) {
+        trendChart.data = chartData;
+        trendChart.update();
+      } else {
+        trendChart = new Chart(trendCtx, {
+          type: 'line',
           data: chartData,
           options: {
             responsive: true,
