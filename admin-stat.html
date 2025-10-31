@@ -18,7 +18,7 @@
       padding: 1rem;
     }
     main {
-      max-width: 800px;
+      max-width: 900px;
       margin: 2rem auto;
       background: white;
       padding: 1.5rem;
@@ -49,7 +49,7 @@
       font-weight: bold;
     }
     canvas {
-      max-width: 500px;
+      max-width: 600px;
       margin-top: 2rem;
     }
     button {
@@ -127,21 +127,24 @@
 
     <canvas id="regionChart"></canvas>
 
+    <!-- 🆕 YANGI TREND GRAFIGI -->
+    <h2 style="margin-top: 3rem;">📅 So‘nggi 7 kunlik e’lonlar trendlari</h2>
+    <canvas id="trendChart"></canvas>
+
     <button onclick="location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
 
   <script>
     const ctx = document.getElementById('statusChart').getContext('2d');
     const regionCtx = document.getElementById('regionChart').getContext('2d');
-    let chart, regionChart;
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    let chart, regionChart, trendChart;
 
     function loadStats() {
-      // 🔹 E’lonlarni olish
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       const allAds = [...driverAds, ...passengerAds];
 
-      // 🔹 Umumiy sonlar
       const stats = {
         drivers: driverAds.length,
         passengers: passengerAds.length,
@@ -150,14 +153,12 @@
         pending: allAds.filter(a => a.status === 'pending' || !a.status).length
       };
 
-      // 🔹 Ekranga chiqaramiz
       document.getElementById('driverCount').innerText = stats.drivers;
       document.getElementById('passengerCount').innerText = stats.passengers;
       document.getElementById('approvedCount').innerText = stats.approved;
       document.getElementById('rejectedCount').innerText = stats.rejected;
       document.getElementById('pendingCount').innerText = stats.pending;
 
-      // 🔹 Grafik ma’lumot
       const data = [stats.approved, stats.rejected, stats.pending];
       if (chart) {
         chart.data.datasets[0].data = data;
@@ -176,8 +177,8 @@
         });
       }
 
-      // 🔹 Viloyatlar statistikasi
       loadRegionStats(driverAds, passengerAds);
+      loadTrendChart(allAds);
     }
 
     function loadRegionStats(driverAds, passengerAds) {
@@ -223,9 +224,57 @@
           options: {
             responsive: true,
             indexAxis: 'y',
-            scales: {
-              x: { beginAtZero: true }
-            }
+            scales: { x: { beginAtZero: true } }
+          }
+        });
+      }
+    }
+
+    // 🆕 YANGI TREND GRAFIGI
+    function loadTrendChart(allAds) {
+      // Oxirgi 7 kun
+      const today = new Date();
+      const last7Days = [...Array(7)].map((_, i) => {
+        const d = new Date();
+        d.setDate(today.getDate() - (6 - i));
+        return d.toISOString().split('T')[0];
+      });
+
+      const countsByDay = {};
+      last7Days.forEach(date => countsByDay[date] = 0);
+
+      allAds.forEach(ad => {
+        const created = ad.createdAt ? new Date(ad.createdAt).toISOString().split('T')[0] : null;
+        if (created && countsByDay.hasOwnProperty(created)) {
+          countsByDay[created]++;
+        }
+      });
+
+      const labels = last7Days.map(d => d.split('-').reverse().join('.'));
+      const data = Object.values(countsByDay);
+
+      const chartData = {
+        labels: labels,
+        datasets: [{
+          label: 'E’lonlar soni',
+          data: data,
+          borderColor: '#007bff',
+          backgroundColor: 'rgba(0,123,255,0.1)',
+          fill: true,
+          tension: 0.3
+        }]
+      };
+
+      if (trendChart) {
+        trendChart.data = chartData;
+        trendChart.update();
+      } else {
+        trendChart = new Chart(trendCtx, {
+          type: 'line',
+          data: chartData,
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true } }
           }
         });
       }
