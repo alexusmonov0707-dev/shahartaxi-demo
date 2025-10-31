@@ -79,6 +79,11 @@ function renderAds() {
   ];
 
   if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
+  <select id="sortFilter" onchange="renderAds()">
+  <option value="desc">Eng yangi avval</option>
+  <option value="asc">Eng eski avval</option>
+</select>
+
 
   // ✅ Sana bo‘yicha tartiblash — foydalanuvchi tanloviga qarab
   ads.sort((a, b) => {
