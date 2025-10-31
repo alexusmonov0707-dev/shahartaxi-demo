@@ -79,6 +79,13 @@ function renderAds() {
 
   if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
 
+  // ✅ Sana bo‘yicha tartiblash (eng yangi e’lonlar yuqorida)
+  ads.sort((a, b) => {
+    const dateA = new Date(a.createdAt || 0);
+    const dateB = new Date(b.createdAt || 0);
+    return dateB - dateA;
+  });
+
   const container = document.getElementById('ads');
   container.innerHTML = '';
 
@@ -96,9 +103,9 @@ function renderAds() {
       : (ad.toRegion || ad.to || '—');
      
     // === Sana chiqarish ===
-  const createdDate = ad.createdAt
-    ? new Date(ad.createdAt).toLocaleString('uz-UZ')
-    : '—';
+    const createdDate = ad.createdAt
+      ? new Date(ad.createdAt).toLocaleString('uz-UZ')
+      : '—';
 
     const div = document.createElement('div');
     div.className = 'ad';
