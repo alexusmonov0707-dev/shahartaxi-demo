@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
@@ -18,7 +18,7 @@
       padding: 1rem;
     }
     main {
-      max-width: 700px;
+      max-width: 800px;
       margin: 2rem auto;
       background: white;
       padding: 1.5rem;
@@ -61,6 +61,22 @@
       cursor: pointer;
       margin-top: 2rem;
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    th {
+      background: #007bff;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f8f9fa;
+    }
   </style>
 </head>
 <body>
@@ -96,6 +112,23 @@
     <h2 style="margin-top: 2rem;">Holatlar nisbati</h2>
     <canvas id="statusChart"></canvas>
 
+    <!-- 🆕 Viloyatlar bo‘yicha statistik jadval -->
+    <h2 style="margin-top: 3rem;">Viloyatlar kesimida e’lonlar</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Viloyat</th>
+          <th>E’lonlar soni</th>
+        </tr>
+      </thead>
+      <tbody id="regionTableBody">
+        <tr><td colspan="2">Ma’lumot yuklanmoqda...</td></tr>
+      </tbody>
+    </table>
+
+    <canvas id="regionChart"></canvas>
+
+    <!-- 🆕 7 kunlik trend grafigi -->
     <h2 style="margin-top: 3rem;">📅 So‘nggi 7 kunlik e’lonlar trendlari</h2>
     <canvas id="trendChart"></canvas>
 
@@ -103,9 +136,10 @@
   </main>
 
   <script>
-    const ctxStatus = document.getElementById('statusChart').getContext('2d');
-    const ctxTrend = document.getElementById('trendChart').getContext('2d');
-    let statusChart, trendChart;
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    const regionCtx = document.getElementById('regionChart').getContext('2d');
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    let chart, regionChart, trendChart;
 
     function loadStats() {
       const stats = JSON.parse(localStorage.getItem('stats')) || {
@@ -124,11 +158,11 @@
 
       const data = [stats.approved, stats.rejected, stats.pending];
 
-      if (statusChart) {
-        statusChart.data.datasets[0].data = data;
-        statusChart.update();
+      if (chart) {
+        chart.data.datasets[0].data = data;
+        chart.update();
       } else {
-        statusChart = new Chart(ctxStatus, {
+        chart = new Chart(ctx, {
           type: 'pie',
           data: {
             labels: ['Tasdiqlangan', 'Rad etilgan', 'Kutilmoqda'],
@@ -141,52 +175,103 @@
         });
       }
 
-      loadTrendChart();
+      loadRegionStats();
+      loadTrendStats();
     }
 
-    function loadTrendChart() {
-      const ads = JSON.parse(localStorage.getItem('ads')) || [];
+    function loadRegionStats() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [...driverAds, ...passengerAds];
+
+      const regionCounts = {};
+      allAds.forEach(ad => {
+        const region = ad.fromRegion || ad.toRegion || 'Noma’lum';
+        regionCounts[region] = (regionCounts[region] || 0) + 1;
+      });
+
+      const tbody = document.getElementById('regionTableBody');
+      tbody.innerHTML = '';
+
+      const regions = Object.keys(regionCounts);
+      if (regions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2">E’lonlar topilmadi.</td></tr>';
+        return;
+      }
+
+      regions.forEach(region => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${region}</td><td>${regionCounts[region]}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      const chartData = {
+        labels: regions,
+        datasets: [{
+          label: 'E’lonlar soni',
+          data: Object.values(regionCounts),
+          backgroundColor: '#007bff'
+        }]
+      };
+
+      if (regionChart) {
+        regionChart.data = chartData;
+        regionChart.update();
+      } else {
+        regionChart = new Chart(regionCtx, {
+          type: 'bar',
+          data: chartData,
+          options: {
+            responsive: true,
+            indexAxis: 'y',
+            scales: { x: { beginAtZero: true } }
+          }
+        });
+      }
+    }
+
+    // 🆕 So‘nggi 7 kunlik trend grafigi
+    function loadTrendStats() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [...driverAds, ...passengerAds];
       const today = new Date();
+
       const days = [];
       const counts = [];
 
       for (let i = 6; i >= 0; i--) {
-        const day = new Date(today);
-        day.setDate(today.getDate() - i);
-        const dayStr = day.toISOString().slice(0, 10);
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
 
-        const count = ads.filter(ad => {
-          if (!ad.createdAt) return false;
-          return ad.createdAt.startsWith(dayStr);
-        }).length;
-
-        days.push(dayStr.slice(5)); // "MM-DD" ko‘rinishida
+        const count = allAds.filter(ad => ad.createdAt && ad.createdAt.startsWith(dateStr)).length;
+        days.push(dateStr.slice(5));
         counts.push(count);
       }
 
+      const data = {
+        labels: days,
+        datasets: [{
+          label: 'Kunlik e’lonlar soni',
+          data: counts,
+          borderColor: '#007bff',
+          backgroundColor: 'rgba(0,123,255,0.2)',
+          tension: 0.3,
+          fill: true
+        }]
+      };
+
       if (trendChart) {
-        trendChart.data.labels = days;
-        trendChart.data.datasets[0].data = counts;
+        trendChart.data = data;
         trendChart.update();
       } else {
-        trendChart = new Chart(ctxTrend, {
+        trendChart = new Chart(trendCtx, {
           type: 'line',
-          data: {
-            labels: days,
-            datasets: [{
-              label: 'Kunlik e’lonlar soni',
-              data: counts,
-              borderColor: '#007bff',
-              backgroundColor: 'rgba(0,123,255,0.2)',
-              tension: 0.3,
-              fill: true
-            }]
-          },
+          data: data,
           options: {
             responsive: true,
-            scales: {
-              y: { beginAtZero: true, ticks: { precision: 0 } }
-            }
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
           }
         });
       }
@@ -197,4 +282,3 @@
   </script>
 </body>
 </html>
-
