@@ -94,6 +94,11 @@ function renderAds() {
     const to = ad.toDistrict && ad.toRegion
       ? `${ad.toRegion} ${ad.toDistrict}`
       : (ad.toRegion || ad.to || '—');
+     
+    // === Sana chiqarish ===
+  const createdDate = ad.createdAt
+    ? new Date(ad.createdAt).toLocaleString('uz-UZ')
+    : '—';
 
     const div = document.createElement('div');
     div.className = 'ad';
@@ -102,6 +107,7 @@ function renderAds() {
       <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
       <p><b>Telefon:</b> ${ad.phone || 'Noma’lum'}</p>
       <p><b>Narx:</b> ${ad.price ? ad.price + ' so‘m' : 'Ko‘rsatilmagan'}</p>
+      <p><b>Sana:</b> ${createdDate}</p>
       <p class="status"><b>Holat:</b> ${getStatusText(ad.status)}</p>
       <div class="actions">
         <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
