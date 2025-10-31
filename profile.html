@@ -400,6 +400,15 @@ function syncStatuses() {
       renderUserAds();
       setInterval(syncStatuses, 5000);
     };
+    // === REAL-TIME SINXRONLASH (Admin o‘zgartirgan zahoti yangilanish) ===
+window.addEventListener("storage", (event) => {
+  // Faqat e’lonlar bilan bog‘liq o‘zgarishlarga javob beramiz
+  if (["driverAds", "passengerAds"].includes(event.key)) {
+    console.log("🔄 Ma'lumot o‘zgardi, profil yangilanmoqda...");
+    renderUserAds();
+  }
+});
+
   </script>
 
   <script src="regions.js"></script>
