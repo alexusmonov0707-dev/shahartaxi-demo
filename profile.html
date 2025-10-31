@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
@@ -110,6 +110,13 @@
       padding: 6px 10px;
       font-size: 13px;
       margin-top: 0;
+    }
+
+    /* Sana uchun qo'shimcha stil */
+    .date-info {
+      font-size: 13px;
+      color: #666;
+      font-style: italic;
     }
   </style>
 </head>
@@ -244,11 +251,14 @@
           </div>
         ` : "";
 
+        const createdAt = ad.createdAt ? `<p class="date-info">🕒 Joylangan: ${ad.createdAt}</p>` : "";
+
         div.innerHTML = `
           <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
           <p><b>Narx:</b> ${ad.price || "Ko‘rsatilmagan"} so‘m</p>
           <p><b>Telefon:</b> ${ad.phone}</p>
           <p><b>Holat:</b> ${statusText}</p>
+          ${createdAt}
           ${editArea}
           <div class="actions">
             ${ad.status !== "approved"
@@ -296,7 +306,6 @@
       renderUserAds();
     }
 
-    // === INLINE EDIT FUNKSIYALAR ===
     function editAd(id, type) {
       const key = type === "driver" ? "driverAds" : "passengerAds";
       const ads = JSON.parse(localStorage.getItem(key)) || [];
