@@ -149,6 +149,25 @@
   </main>
 
   <script>
+    // Sana formatini to‘g‘rilovchi funksiya
+function parseAdDate(dateStr) {
+  if (!dateStr) return null;
+
+  // ISO formatni tekshiradi (2025-10-31T15:00:00Z)
+  if (!isNaN(Date.parse(dateStr))) {
+    return new Date(dateStr);
+  }
+
+  // DD.MM.YYYY HH:mm formatni tekshiradi (31.10.2025 15:00)
+  const match = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
+  if (match) {
+    const [_, day, month, year, hour, minute] = match;
+    return new Date(year, month - 1, day, hour || 0, minute || 0);
+  }
+
+  return null; // nomalum format
+}
+
     const ctx = document.getElementById('statusChart').getContext('2d');
     const regionCtx = document.getElementById('regionChart').getContext('2d');
     const userCtx = document.getElementById('userChart').getContext('2d');
