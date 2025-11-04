@@ -241,20 +241,6 @@
 
         const div = document.createElement("div");
         div.className = "ad-box " + (ad.status === "approved" ? "approved" : ad.status === "rejected" ? "rejected" : "pending");
-
-        <!-- ⭐ Fikr qoldirish modal oynasi -->
-<div id="feedbackModal" style="
-  display:none; position:fixed; top:0; left:0; right:0; bottom:0;
-  background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index:999;">
-  <div style="
-    background:#fff; padding:20px; border-radius:10px; width:90%; max-width:400px;
-    text-align:center; box-shadow:0 3px 10px rgba(0,0,0,0.2);">
-    <h3>⭐ Fikr qoldirish</h3>
-    <p id="feedbackAdTitle"></p>
-    <div id="starContainer" style="font-size:24px; margin:10px 0;"></div>
-    <textarea id="feedbackText" rows="3" style="width:100%; border:1px solid #ccc; border-radius:5px;" placeholder
-
-
         // Inline edit qismi
         const editArea = ad.editing ? `
           <div class="inline-edit">
