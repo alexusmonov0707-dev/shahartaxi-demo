@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Statistika - ShaharTaxi</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -18,7 +18,7 @@
       padding: 1rem;
     }
     main {
-      max-width: 900px;
+      max-width: 1000px;
       margin: 2rem auto;
       background: white;
       padding: 1.5rem;
@@ -38,81 +38,31 @@
       padding: 1rem;
       border: 1px solid #e1e1e1;
     }
-    .stat-box h3 {
-      margin: 0;
-      font-size: 1.1rem;
-      color: #333;
-    }
-    .stat-box p {
-      margin: 0.4rem 0 0;
-      font-size: 1.3rem;
-      font-weight: bold;
-    }
-    canvas {
-      max-width: 600px;
-      margin-top: 2rem;
-    }
-    button {
-      background: #007bff;
-      border: none;
-      color: white;
-      padding: 0.6rem 1.2rem;
-      border-radius: 8px;
-      cursor: pointer;
-      margin-top: 2rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1.5rem;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-    }
-    th {
-      background: #007bff;
-      color: white;
-    }
-    tr:nth-child(even) {
-      background: #f8f9fa;
-    }
+    .stat-box h3 { margin: 0; font-size: 1.1rem; color: #333; }
+    .stat-box p { margin: 0.4rem 0 0; font-size: 1.3rem; font-weight: bold; }
+    canvas { max-width: 800px; margin-top: 2rem; }
+    button { background: #007bff; border: none; color: white; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; margin-top: 2rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #007bff; color: white; }
+    tr:nth-child(even) { background: #f8f9fa; }
+
+    /* small helpers for layout */
+    .charts-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    @media(min-width:900px){ .charts-grid { grid-template-columns: 1fr 1fr; } }
+    .chart-card { background:#fff; padding:12px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.05); }
+    .section-title { margin-top: 2rem; }
   </style>
 </head>
 <body>
   <header>
     <h1>📊 ShaharTaxi Statistika</h1>
   </header>
-  
-<!-- 🧮 Filtrlash paneli -->
-<section id="filterSection" style="margin-bottom: 2rem; text-align:left;">
-  <h2>🔍 Filtrlash</h2>
-  <label>
-    E’lon turi:
-    <select id="adTypeFilter">
-      <option value="all">Barchasi</option>
-      <option value="driver">Haydovchi</option>
-      <option value="passenger">Yo‘lovchi</option>
-    </select>
-  </label>
-  <label style="margin-left:1rem;">
-    Holati:
-    <select id="statusFilter">
-      <option value="all">Barchasi</option>
-      <option value="approved">Tasdiqlangan</option>
-      <option value="rejected">Rad etilgan</option>
-      <option value="pending">Kutilmoqda</option>
-    </select>
-  </label>
-  <label style="margin-left:1rem;">
-    Sana:
-    <input type="date" id="fromDate"> –
-    <input type="date" id="toDate">
-  </label>
-  <button onclick="applyFilters()">Filtrlash</button>
-</section>
 
   <main>
+    <!-- Filtrlash panel (agar kerak bo'lsa) -->
+    <!-- (Siz oldingi versiyada ham filtrlashni bordek o'zgartirishlarni qo'shishingiz mumkin) -->
+
     <h2>Umumiy ma’lumot</h2>
     <div class="stats">
       <div class="stat-box"><h3>Haydovchi e’lonlar</h3><p id="driverCount">0</p></div>
@@ -122,74 +72,97 @@
       <div class="stat-box"><h3>Kutilmoqda</h3><p id="pendingCount">0</p></div>
     </div>
 
-    <h2 style="margin-top: 2rem;">Holatlar nisbati</h2>
-    <canvas id="statusChart"></canvas>
+    <h2 class="section-title">Holatlar nisbati</h2>
+    <div class="chart-card"><canvas id="statusChart"></canvas></div>
 
-    <h2 style="margin-top: 3rem;">Viloyatlar kesimida e’lonlar</h2>
+    <h2 class="section-title">Viloyatlar kesimida e’lonlar</h2>
     <table>
       <thead><tr><th>Viloyat</th><th>E’lonlar soni</th></tr></thead>
       <tbody id="regionTableBody"><tr><td colspan="2">Ma’lumot yuklanmoqda...</td></tr></tbody>
     </table>
-    <canvas id="regionChart"></canvas>
+    <div class="chart-card"><canvas id="regionChart"></canvas></div>
 
-    <!-- 🆕 So‘nggi 7 kunlik e’lonlar trendi -->
-    <h2 style="margin-top: 3rem;">📅 So‘nggi 7 kunlik e’lonlar trendlari</h2>
-    <canvas id="weeklyAdsChart"></canvas>
+    <h2 class="section-title">📅 So‘nggi 7 kunlik e’lonlar trendlari</h2>
+    <div class="chart-card"><canvas id="weeklyAdsChart"></canvas></div>
 
-    <!-- 🆕 Faol foydalanuvchilar statistikasi -->
-    <h2 style="margin-top: 3rem;">👥 Faol foydalanuvchilar</h2>
+    <!-- Yangi qo'shilgan: 30 kunlik kunlik trend va holat trendlari -->
+    <div class="charts-grid">
+      <div>
+        <h2 class="section-title">📈 So‘nggi 30 kun - kunlik e’lonlar (total)</h2>
+        <div class="chart-card"><canvas id="thirtyDayChart"></canvas></div>
+      </div>
+
+      <div>
+        <h2 class="section-title">📊 Holat bo‘yicha 30 kunlik trend (approved / rejected / pending)</h2>
+        <div class="chart-card"><canvas id="statusTrendChart"></canvas></div>
+      </div>
+    </div>
+
+    <h2 class="section-title">👥 Faol foydalanuvchilar</h2>
     <div class="stats">
       <div class="stat-box"><h3>Faol haydovchilar</h3><p id="activeDrivers">0</p></div>
       <div class="stat-box"><h3>Faol yo‘lovchilar</h3><p id="activePassengers">0</p></div>
       <div class="stat-box" style="grid-column: span 2;"><h3>Eng faol foydalanuvchi</h3><p id="topUser">Aniqlanmoqda...</p></div>
     </div>
-    <canvas id="userChart"></canvas>
+    <div class="chart-card"><canvas id="userChart"></canvas></div>
 
     <button onclick="location.href='admin.html'">⬅️ Admin panelga qaytish</button>
   </main>
 
   <script>
-    // 🧩 Sana formatini to‘g‘rilovchi funksiya
-function parseAdDate(dateStr) {
-  if (!dateStr) return null;
-  if (!isNaN(Date.parse(dateStr))) return new Date(dateStr);
-  const match = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
-  if (match) {
-    const [_, day, month, year, hour, minute] = match;
-    return new Date(year, month - 1, day, hour || 0, minute || 0);
-  }
-  return null;
-}
+    /* Helper: is valid Date */
+    function isValidDate(d){
+      return d instanceof Date && !isNaN(d);
+    }
 
-// 🧹 Eski e’lonlarni avtomatik ISO formatga o‘tkazish
-function normalizeCreatedAt() {
-  ['driverAds', 'passengerAds'].forEach(key => {
-    const ads = JSON.parse(localStorage.getItem(key)) || [];
-    let updated = false;
-    ads.forEach(ad => {
-      if (ad.createdAt && !ad.createdAt.includes('T')) {
-        const parsed = parseAdDate(ad.createdAt);
-        if (parsed) {
-          ad.createdAt = parsed.toISOString();
-          updated = true;
-        }
+    // parseAdDate: robust parser that handles multiple stored formats
+    function parseAdDate(dateStr){
+      if (!dateStr) return null;
+      // If it's already a Date object, return
+      if (dateStr instanceof Date) return dateStr;
+
+      // Try ISO / general parse first
+      const tryDate = new Date(dateStr);
+      if (isValidDate(tryDate)) return tryDate;
+
+      // Try numeric timestamp
+      if (!isNaN(Number(dateStr))) {
+        const t = new Date(Number(dateStr));
+        if (isValidDate(t)) return t;
       }
-    });
-    if (updated) localStorage.setItem(key, JSON.stringify(ads));
-  });
-}
-normalizeCreatedAt();
+
+      // Try format: DD.MM.YYYY or DD.MM.YYYY HH:mm
+      const match = String(dateStr).match(/^(\d{2})\.(\d{2})\.(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (match){
+        const day = Number(match[1]), month = Number(match[2]), year = Number(match[3]);
+        const hour = Number(match[4]||0), minute = Number(match[5]||0), second = Number(match[6]||0);
+        const dt = new Date(year, month-1, day, hour, minute, second);
+        if (isValidDate(dt)) return dt;
+      }
+
+      // Try locale-ish formats like "11/4/2025, 3:00:00 PM" — new Date tried that above, but fallback:
+      // Extract numbers from common patterns
+      const altMatch = String(dateStr).match(/(\d{1,4})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
+      if (altMatch){
+        // best effort: try Date again
+        const d2 = new Date(dateStr);
+        if (isValidDate(d2)) return d2;
+      }
+
+      return null;
+    }
 
     const ctx = document.getElementById('statusChart').getContext('2d');
     const regionCtx = document.getElementById('regionChart').getContext('2d');
-    const userCtx = document.getElementById('userChart').getContext('2d');
     const weeklyCtx = document.getElementById('weeklyAdsChart').getContext('2d');
-    let chart, regionChart, userChart, weeklyChart;
+    const thirtyCtx = document.getElementById('thirtyDayChart').getContext('2d');
+    const statusTrendCtx = document.getElementById('statusTrendChart').getContext('2d');
+    const userCtx = document.getElementById('userChart').getContext('2d');
 
-    function loadStats() {
-      const stats = JSON.parse(localStorage.getItem('stats')) || {
-        drivers: 0, passengers: 0, approved: 0, rejected: 0, pending: 0
-      };
+    let statusChart, regionChart, weeklyChart, thirtyChart, statusTrendChart, userChart;
+
+    function loadStats(){
+      const stats = JSON.parse(localStorage.getItem('stats')) || { drivers:0, passengers:0, approved:0, rejected:0, pending:0 };
 
       document.getElementById('driverCount').innerText = stats.drivers;
       document.getElementById('passengerCount').innerText = stats.passengers;
@@ -198,121 +171,237 @@ normalizeCreatedAt();
       document.getElementById('pendingCount').innerText = stats.pending;
 
       const data = [stats.approved, stats.rejected, stats.pending];
-      if (!chart) {
-        chart = new Chart(ctx, {
+      if (!statusChart){
+        statusChart = new Chart(ctx, {
           type: 'pie',
-          data: { labels: ['Tasdiqlangan', 'Rad etilgan', 'Kutilmoqda'],
-            datasets: [{ data, backgroundColor: ['#28a745', '#dc3545', '#ffc107'] }]
-          }
+          data: { labels: ['Tasdiqlangan','Rad etilgan','Kutilmoqda'], datasets:[{ data, backgroundColor:['#28a745','#dc3545','#ffc107'] }] },
+          options: { responsive:true }
         });
-      } else { chart.data.datasets[0].data = data; chart.update(); }
+      } else {
+        statusChart.data.datasets[0].data = data;
+        statusChart.update();
+      }
 
       loadRegionStats();
-      loadUserStats();
       loadWeeklyTrends();
+      load30DayTrends();
+      loadStatusTrend30();
+      loadUserStats();
     }
 
-    function loadRegionStats() {
+    function loadRegionStats(){
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       const allAds = [...driverAds, ...passengerAds];
+
       const regionCounts = {};
       allAds.forEach(ad => {
         const region = ad.fromRegion || ad.toRegion || 'Noma’lum';
         regionCounts[region] = (regionCounts[region] || 0) + 1;
       });
+
       const tbody = document.getElementById('regionTableBody');
       tbody.innerHTML = '';
       const regions = Object.keys(regionCounts);
       if (regions.length === 0) {
         tbody.innerHTML = '<tr><td colspan="2">E’lonlar topilmadi.</td></tr>';
-        return;
-      }
-      regions.forEach(region => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${region}</td><td>${regionCounts[region]}</td>`;
-        tbody.appendChild(tr);
-      });
-      const chartData = {
-        labels: regions,
-        datasets: [{ label: 'E’lonlar soni', data: Object.values(regionCounts), backgroundColor: '#007bff' }]
-      };
-      if (!regionChart) {
-        regionChart = new Chart(regionCtx, {
-          type: 'bar',
-          data: chartData,
-          options: { responsive: true, indexAxis: 'y', scales: { x: { beginAtZero: true } } }
+      } else {
+        regions.forEach(region => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${region}</td><td>${regionCounts[region]}</td>`;
+          tbody.appendChild(tr);
         });
-      } else { regionChart.data = chartData; regionChart.update(); }
+      }
+
+      const chartData = { labels: regions, datasets:[{ label:'E’lonlar soni', data:Object.values(regionCounts), backgroundColor:'#007bff' }] };
+      if (!regionChart){
+        regionChart = new Chart(regionCtx, { type:'bar', data:chartData, options:{ responsive:true, indexAxis:'y', scales:{ x:{ beginAtZero:true } } }});
+      } else {
+        regionChart.data = chartData;
+        regionChart.update();
+      }
     }
 
-    function loadWeeklyTrends() {
+    // Weekly (7 days) trend — keeps previous behavior but robust to different createdAt formats
+    function loadWeeklyTrends(){
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       const allAds = [...driverAds, ...passengerAds];
+
       const now = new Date();
-      const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const last7 = Array.from({length:7}, (_,i) => {
         const d = new Date(now);
         d.setDate(now.getDate() - (6 - i));
+        // return date string in YYYY-MM-DD to compare easily
         return d.toISOString().split('T')[0];
       });
-      const counts = last7Days.map(date => {
+
+      const counts = last7.map(dayStr => {
         return allAds.filter(ad => {
           if (!ad.createdAt) return false;
-          const parsed = parseAdDate(ad.createdAt);
-          if (!parsed) return false;
-          return parsed.toISOString().split('T')[0] === date;
+          const dt = parseAdDate(ad.createdAt);
+          if (!isValidDate(dt)) return false;
+          return dt.toISOString().split('T')[0] === dayStr;
         }).length;
       });
-      const data = { labels: last7Days, datasets: [{ label: 'So‘nggi 7 kunlik e’lonlar', data: counts, fill: false, borderColor: '#007bff', tension: 0.3 }] };
-      if (!weeklyChart) {
-        weeklyChart = new Chart(weeklyCtx, { type: 'line', data, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
-      } else { weeklyChart.data = data; weeklyChart.update(); }
+
+      const data = { labels:last7, datasets:[{ label:'So‘nggi 7 kunlik e’lonlar', data:counts, fill:false, borderColor:'#007bff', tension:0.3 }] };
+      if (!weeklyChart){
+        weeklyChart = new Chart(weeklyCtx, { type:'line', data, options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }});
+      } else {
+        weeklyChart.data = data;
+        weeklyChart.update();
+      }
     }
 
-    function loadUserStats() {
+    // New: 30-day total daily counts
+    function load30DayTrends(){
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       const allAds = [...driverAds, ...passengerAds];
+
+      const now = new Date();
+      const last30 = Array.from({length:30}, (_,i) => {
+        const d = new Date(now);
+        d.setDate(now.getDate() - (29 - i));
+        return d.toISOString().split('T')[0];
+      });
+
+      const counts = last30.map(dayStr => {
+        return allAds.filter(ad => {
+          if (!ad.createdAt) return false;
+          const dt = parseAdDate(ad.createdAt);
+          if (!isValidDate(dt)) return false;
+          return dt.toISOString().split('T')[0] === dayStr;
+        }).length;
+      });
+
+      const data = { labels:last30, datasets:[{ label:'Kunlik e’lonlar (30 kun)', data:counts, fill:false, borderColor:'#17a2b8', tension:0.2 }] };
+
+      if (!thirtyChart){
+        thirtyChart = new Chart(thirtyCtx, { type:'line', data, options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }});
+      } else {
+        thirtyChart.data = data;
+        thirtyChart.update();
+      }
+    }
+
+    // New: status-specific 30-day trends (approved, rejected, pending)
+    function loadStatusTrend30(){
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [...driverAds, ...passengerAds];
+
+      const now = new Date();
+      const last30 = Array.from({length:30}, (_,i) => {
+        const d = new Date(now);
+        d.setDate(now.getDate() - (29 - i));
+        return d.toISOString().split('T')[0];
+      });
+
+      const approvedCounts = last30.map(dayStr => 0);
+      const rejectedCounts = last30.map(dayStr => 0);
+      const pendingCounts = last30.map(dayStr => 0);
+
+      allAds.forEach(ad => {
+        if (!ad.createdAt) return;
+        const dt = parseAdDate(ad.createdAt);
+        if (!isValidDate(dt)) return;
+        const dayKey = dt.toISOString().split('T')[0];
+        const idx = last30.indexOf(dayKey);
+        if (idx === -1) return;
+        const status = ad.status || 'pending';
+        if (status === 'approved') approvedCounts[idx]++;
+        else if (status === 'rejected') rejectedCounts[idx]++;
+        else pendingCounts[idx]++;
+      });
+
+      const data = {
+        labels: last30,
+        datasets: [
+          { label: 'Tasdiqlangan', data: approvedCounts, borderColor:'#28a745', fill:false, tension:0.2 },
+          { label: 'Rad etilgan', data: rejectedCounts, borderColor:'#dc3545', fill:false, tension:0.2 },
+          { label: 'Kutilmoqda', data: pendingCounts, borderColor:'#ffc107', fill:false, tension:0.2 }
+        ]
+      };
+
+      if (!statusTrendChart){
+        statusTrendChart = new Chart(statusTrendCtx, { type:'line', data, options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }});
+      } else {
+        statusTrendChart.data = data;
+        statusTrendChart.update();
+      }
+    }
+
+    function loadUserStats(){
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      const allAds = [...driverAds, ...passengerAds];
+
       const userCounts = {};
       allAds.forEach(ad => {
         const user = ad.phone || 'Noma’lum';
         userCounts[user] = (userCounts[user] || 0) + 1;
       });
+
       const activeDrivers = new Set(driverAds.map(ad => ad.phone)).size;
       const activePassengers = new Set(passengerAds.map(ad => ad.phone)).size;
       document.getElementById('activeDrivers').innerText = activeDrivers;
       document.getElementById('activePassengers').innerText = activePassengers;
-      const topUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0];
+
+      const topUser = Object.entries(userCounts).sort((a,b)=>b[1]-a[1])[0];
       document.getElementById('topUser').innerText = topUser ? `${topUser[0]} (${topUser[1]} e’lon)` : 'Ma’lumot yo‘q';
-      const chartData = { labels: Object.keys(userCounts), datasets: [{ label: 'E’lonlar soni (foydalanuvchi bo‘yicha)', data: Object.values(userCounts), backgroundColor: '#17a2b8' }] };
-      if (!userChart) {
-        userChart = new Chart(userCtx, { type: 'bar', data: chartData, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
-      } else { userChart.data = chartData; userChart.update(); }
+
+      const chartData = { labels:Object.keys(userCounts), datasets:[{ label:'E’lonlar soni (foydalanuvchi bo‘yicha)', data:Object.values(userCounts), backgroundColor:'#17a2b8' }] };
+      if (!userChart){
+        userChart = new Chart(userCtx, { type:'bar', data:chartData, options:{ responsive:true, scales:{ y:{ beginAtZero:true } } }});
+      } else {
+        userChart.data = chartData;
+        userChart.update();
+      }
     }
 
-    function applyFilters() {
-      const type = document.getElementById('adTypeFilter').value;
-      const status = document.getElementById('statusFilter').value;
-      const fromDate = document.getElementById('fromDate').value ? new Date(document.getElementById('fromDate').value) : null;
-      const toDate = document.getElementById('toDate').value ? new Date(document.getElementById('toDate').value) : null;
+    // Filtrlash (oldingi dialogga mos)
+    function applyFilters(){
+      // If you want to display count / table results based on filters — current function just alerts count like before
+      const typeSelect = document.getElementById('adTypeFilter');
+      const statusSelect = document.getElementById('statusFilter');
+      const fromDateInput = document.getElementById('fromDate');
+      const toDateInput = document.getElementById('toDate');
+
+      const type = typeSelect ? typeSelect.value : 'all';
+      const status = statusSelect ? statusSelect.value : 'all';
+      const fromDate = fromDateInput && fromDateInput.value ? new Date(fromDateInput.value) : null;
+      const toDate = toDateInput && toDateInput.value ? new Date(toDateInput.value) : null;
+
       const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
       const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
       let allAds = [...driverAds, ...passengerAds];
+
       if (type === 'driver') allAds = driverAds;
       else if (type === 'passenger') allAds = passengerAds;
-      if (status !== 'all') allAds = allAds.filter(ad => ad.status === status);
+
+      if (status !== 'all') {
+        allAds = allAds.filter(ad => (ad.status||'pending') === status);
+      }
+
       if (fromDate || toDate) {
         allAds = allAds.filter(ad => {
-          const created = parseAdDate(ad.createdAt);
-          if (!created) return false;
-          return (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
+          const dt = parseAdDate(ad.createdAt);
+          if (!isValidDate(dt)) return false;
+          // normalize time for fromDate/toDate comparisons: set to start/end of day
+          const start = fromDate ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 0,0,0) : null;
+          const end = toDate ? new Date(toDate.getFullYear(), toDate.getMonth(), toDate.getDate(), 23,59,59) : null;
+          return (!start || dt >= start) && (!end || dt <= end);
         });
       }
+
       alert(`Topilgan e’lonlar: ${allAds.length} ta`);
     }
 
+    // Initialize
     loadStats();
+    // Auto-refresh charts/stats every 5s (like admin other pages)
     setInterval(loadStats, 5000);
   </script>
 </body>
