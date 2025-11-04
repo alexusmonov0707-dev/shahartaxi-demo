@@ -1,8 +1,8 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mening profilim - ShaharTaxi</title>
   <style>
     body {
@@ -37,87 +37,36 @@
       border-radius: 10px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
-    h2 {
-      color: #007bff;
-      text-align: center;
-    }
+    h2 { color: #007bff; text-align: center; }
     input, select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 15px;
+      width: 100%; padding: 10px; margin: 8px 0;
+      border: 1px solid #ccc; border-radius: 5px; font-size: 15px;
     }
     button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: 0.3s;
-      margin-top: 10px;
+      background: #007bff; color: white; border: none;
+      padding: 10px 20px; border-radius: 5px; cursor: pointer;
+      transition: 0.3s; margin-top: 10px;
     }
     button:hover { background: #0056b3; }
-
     .ad-box {
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-      border: 1px solid #cdddfc;
-      transition: background 0.3s;
+      padding: 15px; border-radius: 8px; margin-bottom: 10px;
+      border: 1px solid #cdddfc; transition: background 0.3s;
     }
-
     .pending { background: #f9f9f9; }
     .approved { background: #e6ffe6; }
     .rejected { background: #ffe6e6; }
-
     .ad-box p { margin: 5px 0; }
-
-    .actions button {
-      background: #28a745;
-      margin-right: 5px;
-    }
-    .actions button:last-child {
-      background: #dc3545;
-    }
-
+    .actions button { background: #28a745; margin-right: 5px; }
+    .actions button:last-child { background: #dc3545; }
     .filters {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 8px;
-      margin-bottom: 12px;
+      display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+      gap: 8px; margin-bottom: 12px;
     }
-    .user-info {
-      text-align: center;
-      margin-bottom: 10px;
-      font-weight: 600;
-    }
-
-    .inline-edit {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      margin-top: 5px;
-    }
-    .inline-edit input {
-      flex: 1;
-      padding: 5px 8px;
-      font-size: 14px;
-    }
-    .inline-edit button {
-      padding: 6px 10px;
-      font-size: 13px;
-      margin-top: 0;
-    }
-
-    /* Sana uchun qo'shimcha stil */
-    .date-info {
-      font-size: 13px;
-      color: #666;
-      font-style: italic;
-    }
+    .user-info { text-align: center; margin-bottom: 10px; font-weight: 600; }
+    .inline-edit { display: flex; gap: 8px; align-items: center; margin-top: 5px; }
+    .inline-edit input { flex: 1; padding: 5px 8px; font-size: 14px; }
+    .inline-edit button { padding: 6px 10px; font-size: 13px; margin-top: 0; }
+    .date-info { font-size: 13px; color: #666; font-style: italic; }
   </style>
 </head>
 <body>
@@ -236,19 +185,17 @@
         const to = ad.toDistrict && ad.toRegion ? `${ad.toRegion} ${ad.toDistrict}` : (ad.toRegion || ad.to || "—");
         const statusText =
           ad.status === "approved" ? "✅ Tasdiqlangan" :
-          ad.status === "rejected" ? "❌ Rad etilgan" :
-          "⏳ Kutilmoqda";
+          ad.status === "rejected" ? "❌ Rad etilgan" : "⏳ Kutilmoqda";
 
         const div = document.createElement("div");
         div.className = "ad-box " + (ad.status === "approved" ? "approved" : ad.status === "rejected" ? "rejected" : "pending");
-        // Inline edit qismi
+
         const editArea = ad.editing ? `
           <div class="inline-edit">
             <input type="number" id="editPrice_${ad.id}" value="${ad.price || ''}" placeholder="Yangi narx">
             <button onclick="saveInlineEdit('${ad.id}', '${ad.type}')">💾 Saqlash</button>
             <button onclick="cancelInlineEdit('${ad.id}', '${ad.type}')">❌ Bekor</button>
-          </div>
-        ` : "";
+          </div>` : "";
 
         const createdAt = ad.createdAt ? `<p class="date-info">🕒 Joylangan: ${ad.createdAt}</p>` : "";
 
@@ -262,7 +209,7 @@
           <div class="actions">
             ${ad.status !== "approved"
               ? `<button onclick="editAd('${ad.id}', '${ad.type}')">✏️ Tahrirlash</button>`
-              : `<button disabled style="background:#ccc; cursor:not-allowed;">✏️ Tahrirlash</button>`}
+              : `<button disabled style="background:#ccc;cursor:not-allowed;">✏️ Tahrirlash</button>`}
             <button onclick="deleteAd('${ad.id}', '${ad.type}')">🗑️ O‘chirish</button>
           </div>
         `;
@@ -301,7 +248,7 @@
 
       ads.push(newAd);
       localStorage.setItem(key, JSON.stringify(ads));
-      alert("✅ E’lon muvaffaqiyatli joylandi (Admin tasdiqlashi kutilmoqda).");
+      alert("✅ E’lon joylandi (Admin tasdiqlashi kutilmoqda).");
       renderUserAds();
     }
 
@@ -310,11 +257,7 @@
       const ads = JSON.parse(localStorage.getItem(key)) || [];
       const ad = ads.find(a => a.id === id);
       if (!ad) return;
-
-      if (ad.edited) {
-        alert("❗ Ushbu e’lon oldin tahrirlangan. Qayta o‘zgartirish mumkin emas.");
-        return;
-      }
+      if (ad.edited) return alert("❗ Ushbu e’lon oldin tahrirlangan.");
       ad.editing = true;
       localStorage.setItem(key, JSON.stringify(ads));
       renderUserAds();
@@ -325,19 +268,11 @@
       const ads = JSON.parse(localStorage.getItem(key)) || [];
       const ad = ads.find(a => a.id === id);
       if (!ad) return;
-
       const newPrice = document.getElementById(`editPrice_${id}`).value.trim();
-      if (!newPrice) {
-        alert("Narxni kiriting!");
-        return;
-      }
-
-      ad.price = newPrice;
-      ad.edited = true;
-      delete ad.editing;
+      if (!newPrice) return alert("Narxni kiriting!");
+      ad.price = newPrice; ad.edited = true; delete ad.editing;
       localStorage.setItem(key, JSON.stringify(ads));
-
-      alert("✏️ E’lon 1 marta tahrirlandi. Keyinchalik o‘zgartirib bo‘lmaydi.");
+      alert("✏️ E’lon 1 marta tahrirlandi.");
       renderUserAds();
     }
 
@@ -375,10 +310,7 @@
       const selectedRegion = regionSelect.value;
       districtSelect.innerHTML = "<option value=''>Tanlang</option>";
       if (selectedRegion && regions[selectedRegion]) {
-        regions[selectedRegion].forEach(t => {
-          const opt = new Option(t, t);
-          districtSelect.add(opt);
-        });
+        regions[selectedRegion].forEach(t => districtSelect.add(new Option(t, t)));
       }
       applyFilters();
     }
@@ -388,12 +320,11 @@
       const userPhone = currentUser.phone;
       const userAds = [...driver, ...passenger].filter(ad => ad.phone === userPhone);
       const lastStatuses = JSON.parse(localStorage.getItem("userAdStatuses")) || {};
-
       userAds.forEach(ad => {
         const prev = lastStatuses[ad.id];
         if (prev && prev !== ad.status) {
-          if (ad.status === "approved") alert(`✅ E’lon "${ad.fromRegion} → ${ad.toRegion}" TASDIQLANDI!`);
-          else if (ad.status === "rejected") alert(`❌ E’lon "${ad.fromRegion} → ${ad.toRegion}" RAD ETILDI.`);
+          if (ad.status === "approved") alert(`✅ "${ad.fromRegion} → ${ad.toRegion}" TASDIQLANDI!`);
+          else if (ad.status === "rejected") alert(`❌ "${ad.fromRegion} → ${ad.toRegion}" RAD ETILDI.`);
         }
         lastStatuses[ad.id] = ad.status;
       });
@@ -401,14 +332,9 @@
       renderUserAds();
     }
 
-    window.onload = function () {
-      loadRegions();
-      renderUserAds();
-      setInterval(syncStatuses, 5000);
-    };
-
-    window.addEventListener("storage", (e) => {
-      if (["driverAds", "passengerAds"].includes(e.key)) renderUserAds();
+    window.onload = () => { loadRegions(); renderUserAds(); setInterval(syncStatuses, 5000); };
+    window.addEventListener("storage", e => {
+      if (["driverAds","passengerAds"].includes(e.key)) renderUserAds();
     });
   </script>
 
@@ -419,155 +345,54 @@
       const toRegion = document.getElementById("toRegion");
       const fFromRegion = document.getElementById("filterFromRegion");
       const fToRegion = document.getElementById("filterToRegion");
-
-      fromRegion.innerHTML = "<option value=''>Viloyatni tanlang</option>";
-      toRegion.innerHTML = "<option value=''>Viloyatni tanlang</option>";
-      fFromRegion.innerHTML = "<option value=''>Qayerdan (viloyat)</option>";
-      fToRegion.innerHTML = "<option value=''>Qayerga (viloyat)</option>";
-
-      if (typeof regions === "object") {
-        Object.keys(regions).forEach(region => {
-          [fromRegion, toRegion, fFromRegion, fToRegion].forEach(sel => sel.add(new Option(region, region)));
-        });
-      }
+      [fromRegion,toRegion,fFromRegion,fToRegion].forEach(sel=>sel.innerHTML='<option value="">Viloyatni tanlang</option>');
+      if (typeof regions==="object") Object.keys(regions).forEach(r=>[fromRegion,toRegion,fFromRegion,fToRegion].forEach(sel=>sel.add(new Option(r,r))));
     }
-
     function updateDistricts(prefix) {
-      const region = document.getElementById(prefix + "Region").value;
-      const districtSelect = document.getElementById(prefix + "District");
-      districtSelect.innerHTML = "<option value=''>Tumanni tanlang</option>";
-      if (typeof regions === "object" && regions[region]) {
-        regions[region].forEach(d => districtSelect.add(new Option(d, d)));
-      }
+      const region = document.getElementById(prefix+"Region").value;
+      const districtSelect = document.getElementById(prefix+"District");
+      districtSelect.innerHTML="<option value=''>Tumanni tanlang</option>";
+      if (regions[region]) regions[region].forEach(d=>districtSelect.add(new Option(d,d)));
     }
-    <!-- ===== FIKR QOLDIRISH TIZIMI ===== -->
-<script>
-  // Fikrlarni olish va saqlash
-  function getReviews() {
-    return JSON.parse(localStorage.getItem("reviews")) || [];
-  }
-  function saveReviews(reviews) {
-    localStorage.setItem("reviews", JSON.stringify(reviews));
-  }
+  </script>
 
-  // Modal oynani yaratamiz
-  const reviewModal = document.createElement("div");
-  reviewModal.innerHTML = `
-    <div id="reviewModal" style="
-      display:none;
-      position:fixed;
-      top:0;left:0;width:100%;height:100%;
-      background:rgba(0,0,0,0.4);
-      align-items:center;justify-content:center;
-      z-index:1000;">
-      <div style="background:white;padding:20px;border-radius:10px;max-width:400px;width:90%;">
-        <h3>⭐ Fikr qoldirish</h3>
-        <p id="modalAdTitle" style="font-weight:bold;color:#007bff;"></p>
-        <label>Baho (1–5):</label>
-        <select id="reviewRating" style="width:100%;padding:6px;margin:5px 0;">
-          <option value="5">5 - A’lo</option>
-          <option value="4">4 - Yaxshi</option>
-          <option value="3">3 - O‘rtacha</option>
-          <option value="2">2 - Yomon</option>
-          <option value="1">1 - Juda yomon</option>
+  <!-- ===== FIKR QOLDIRISH BLOKI ===== -->
+  <script>
+    function getReviews(){return JSON.parse(localStorage.getItem("reviews"))||[];}
+    function saveReviews(r){localStorage.setItem("reviews",JSON.stringify(r));}
+
+    const reviewModal=document.createElement("div");
+    reviewModal.innerHTML=`<div id="reviewModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);justify-content:center;align-items:center;z-index:9999;">
+      <div style="background:#fff;padding:20px;border-radius:10px;width:320px;text-align:center;">
+        <h3>Fikr qoldirish</h3>
+        <select id="reviewStars">
+          <option value="5">⭐️⭐️⭐️⭐️⭐️ - A’lo</option>
+          <option value="4">⭐️⭐️⭐️⭐️ - Yaxshi</option>
+          <option value="3">⭐️⭐️⭐️ - O‘rtacha</option>
+          <option value="2">⭐️⭐️ - Yomon</option>
+          <option value="1">⭐️ - Juda yomon</option>
         </select>
-        <textarea id="reviewText" placeholder="Izoh yozing..." style="width:100%;height:80px;padding:8px;margin-top:5px;border-radius:6px;border:1px solid #ccc;"></textarea>
-        <div style="text-align:right;margin-top:10px;">
-          <button onclick="closeReviewModal()" style="background:#ccc;">Bekor qilish</button>
-          <button onclick="submitReview()" style="background:#007bff;color:white;">Yuborish</button>
+        <textarea id="reviewText" rows="3" style="width:100%;margin-top:10px;" placeholder="Izoh..."></textarea>
+        <div style="margin-top:10px;">
+          <button onclick="submitReview()">Yuborish</button>
+          <button onclick="closeReviewModal()">Bekor</button>
         </div>
       </div>
     </div>`;
-  document.body.appendChild(reviewModal);
-
-  let currentReviewAdId = null;
-
-  function openReviewModal(adId, from, to) {
-    currentReviewAdId = adId;
-    document.getElementById("modalAdTitle").textContent = `${from} → ${to}`;
-    document.getElementById("reviewModal").style.display = "flex";
-  }
-
-  function closeReviewModal() {
-    document.getElementById("reviewModal").style.display = "none";
-    document.getElementById("reviewText").value = "";
-    currentReviewAdId = null;
-  }
-
-  function submitReview() {
-    const rating = parseInt(document.getElementById("reviewRating").value);
-    const text = document.getElementById("reviewText").value.trim();
-    if (!currentReviewAdId || !rating || !text) {
-      alert("Iltimos, barcha maydonlarni to‘ldiring!");
-      return;
+    document.body.appendChild(reviewModal);
+    let currentAdId=null;
+    function openReviewModal(id){currentAdId=id;document.getElementById("reviewModal").style.display="flex";}
+    function closeReviewModal(){document.getElementById("reviewModal").style.display="none";}
+    function submitReview(){
+      const text=document.getElementById("reviewText").value.trim();
+      const stars=parseInt(document.getElementById("reviewStars").value);
+      if(!text){alert("Iltimos izoh yozing!");return;}
+      const all=getReviews();
+      all.push({adId:currentAdId,phone:currentUser.phone,stars,text,date:new Date().toLocaleString()});
+      saveReviews(all);
+      alert("✅ Fikr saqlandi!");
+      closeReviewModal();
     }
-    const reviews = getReviews();
-    reviews.push({
-      adId: currentReviewAdId,
-      phone: currentUser.phone,
-      rating,
-      text,
-      createdAt: new Date().toLocaleString()
-    });
-    saveReviews(reviews);
-    alert("✅ Fikr muvaffaqiyatli yuborildi!");
-    closeReviewModal();
-    renderUserAds();
-  }
-
-  // O‘rtacha bahoni hisoblash
-  function getAverageRating(adId) {
-    const reviews = getReviews().filter(r => r.adId === adId);
-    if (reviews.length === 0) return null;
-    const avg = (reviews.reduce((a, b) => a + b.rating, 0) / reviews.length).toFixed(1);
-    return `⭐ ${avg} (${reviews.length} ta)`;
-  }
-
-  // Fikrlarni ko‘rsatish
-  function showReviews(adId) {
-    const reviews = getReviews().filter(r => r.adId === adId);
-    if (!reviews.length) {
-      alert("Bu e’londa hozircha fikrlar yo‘q.");
-      return;
-    }
-    let msg = "💬 Fikrlar:\n\n";
-    reviews.forEach(r => {
-      msg += `⭐ ${r.rating} — ${r.text}\n(${r.createdAt})\n\n`;
-    });
-    alert(msg);
-  }
-
-  // Fikr tugmasini qo‘shamiz
-  const originalRenderUserAds = renderUserAds;
-  renderUserAds = function() {
-    originalRenderUserAds(); // eski funksiyani ishlatamiz
-    const { driver, passenger } = getAds();
-    const allAds = [...driver, ...passenger].filter(a => a.phone === currentUser.phone);
-
-    allAds.forEach(ad => {
-      const adDivs = Array.from(document.querySelectorAll(".ad-box"));
-      adDivs.forEach(div => {
-        if (div.innerHTML.includes(ad.id)) return; // oldin qo‘shilganini tashlab ket
-      });
-
-      const from = ad.fromRegion || ad.from || "—";
-      const to = ad.toRegion || ad.to || "—";
-      const avg = getAverageRating(ad.id);
-      const container = Array.from(document.querySelectorAll(".ad-box"))
-        .find(d => d.innerHTML.includes(ad.phone) && d.innerHTML.includes(from) && d.innerHTML.includes(to));
-      if (!container) return;
-
-      const reviewBlock = document.createElement("div");
-      reviewBlock.innerHTML = `
-        <p style="margin-top:8px;">${avg ? avg : "⭐ Hali baholanmagan"}</p>
-        <button onclick="openReviewModal('${ad.id}','${from}','${to}')">⭐ Fikr qoldirish</button>
-        <button onclick="showReviews('${ad.id}')">💬 Fikrlarni ko‘rish</button>
-      `;
-      container.appendChild(reviewBlock);
-    });
-  };
-</script>
-
   </script>
 </body>
 </html>
