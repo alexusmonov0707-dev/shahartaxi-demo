@@ -1,203 +1,134 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Panel - ShaharTaxi</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: #f4f6f9;
-      margin: 0; padding: 0;
-    }
-    header {
-      background: #007bff;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
-  
-    main {
-      max-width: 1000px;
-      margin: 1rem auto;
-      background: white;
-      border-radius: 10px;
-      padding: 1.5rem;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-    }
-    .filters {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-    }
-    select, button {
-      padding: 0.5rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 0.95rem;
-      cursor: pointer;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      transition: 0.2s;
-    }
-    button:hover { background: #0056b3; }
-    .ad {
-      border-bottom: 1px solid #ddd;
-      padding: 1rem 0;
-      position: relative;
-    }
-    .ad:last-child { border-bottom: none; }
-    .actions button {
-      margin-right: 5px;
-      padding: 0.4rem 0.8rem;
-      border-radius: 6px;
-      cursor: pointer;
-      color: white;
-      font-size: 0.9rem;
-    }
-    .approve { background: #28a745; }
-    .reject { background: #dc3545; }
-    .edit { background: #ffc107; color: black; }
-    .delete { background: #6c757d; }
-    .status { font-weight: bold; }
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.4);
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 350px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    .modal-content h3 { margin-top: 0; }
-    .modal-content input, .modal-content select {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    .modal-content button {
-      margin-right: 10px;
-      padding: 6px 10px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    .save-btn { background: #007bff; color: white; }
-    .cancel-btn { background: #6c757d; color: white; }
-
-    /* Login overlay styles */
-    #loginOverlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-    }
-    .login-box {
-      background: #fff;
-      padding: 24px;
-      border-radius: 12px;
-      width: 360px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
-      text-align: center;
-    }
-    .login-box input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius:8px; border:1px solid #ccc; }
-    .login-box button { width: 100%; padding:10px; border-radius:8px; border:none; background:#007bff; color:#fff; }
+    body { font-family: 'Inter', sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+    header { background: #007bff; color: white; padding: 1rem; text-align: center; }
+    main { max-width: 1100px; margin: 1rem auto; background: white; border-radius: 10px; padding: 1.2rem; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+    .controls { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
+    input[type="text"], select { padding: 8px; border-radius:6px; border:1px solid #ccc; }
+    button { padding:8px 10px; border-radius:6px; border:none; background:#007bff; color:white; cursor:pointer; }
+    button.secondary { background:#6c757d; }
+    .ad { border-bottom:1px solid #ddd; padding:12px 0; position:relative; display:flex; gap:12px; align-items:flex-start; }
+    .ad:last-child{ border-bottom:none; }
+    .ad-left { width:36px; display:flex; align-items:center; }
+    .ad-body { flex:1; }
+    .ad-meta { font-size:0.95rem; color:#333; }
+    .actions { display:flex; gap:6px; margin-top:8px; }
+    .approve { background:#28a745; }
+    .reject { background:#dc3545; }
+    .edit { background:#ffc107; color:black; }
+    .delete { background:#6c757d; }
+    .status { font-weight:600; }
+    .inline-edit-input { width:120px; padding:6px; border-radius:6px; border:1px solid #ccc; }
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; z-index:9999; }
+    .modal-content { background:white; padding:16px; border-radius:8px; width:360px; box-shadow:0 3px 12px rgba(0,0,0,0.2); }
+    .pagination { display:flex; gap:6px; margin-top:10px; align-items:center; }
+    .file-input { display:none; }
+    .top-row { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .bulk-actions { display:flex; gap:6px; }
+    .small-btn { padding:6px 8px; font-size:0.9rem; }
+    .info { font-size:0.9rem; color:#555; }
+    @media (max-width:720px){ .ad { flex-direction:column; } .ad-left{ width:100% } }
   </style>
 </head>
 <body>
-  <!-- LOGIN OVERLAY (ADDED) -->
+  <!-- LOGIN OVERLAY -->
   <div id="loginOverlay" style="display:none;">
-    <div class="login-box">
+    <div class="login-box" style="background:#fff;padding:24px;border-radius:12px;width:360px;margin:auto;">
       <h3>🔐 Admin kirish</h3>
-      <input type="text" id="adminUser" placeholder="Foydalanuvchi" value="admin" />
-      <input type="password" id="adminPass" placeholder="Parol" />
+      <input type="text" id="adminUser" placeholder="Foydalanuvchi" value="admin" style="width:100%;padding:8px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
+      <input type="password" id="adminPass" placeholder="Parol" style="width:100%;padding:8px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
       <p id="loginError" style="color:red;margin:8px 0 0 0"></p>
       <button onclick="checkAdminLogin()">Kirish</button>
     </div>
   </div>
 
-  <header>
-    <h1>🛠 ShaharTaxi - Admin Panel</h1>
-  </header>
+  <header><h1>🛠 ShaharTaxi - Admin Panel</h1></header>
 
   <main>
-    <div class="filters">
-      <select id="typeFilter" onchange="renderAds()">
-        <option value="all">Barcha turlar</option>
-        <option value="driver">Haydovchilar</option>
-        <option value="passenger">Yo‘lovchilar</option>
-      </select>
+    <div class="top-row">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input type="text" id="searchInput" placeholder="Qidirish: telefon yoki ID..." oninput="onSearchChange()" style="padding:8px;border-radius:6px;border:1px solid #ccc;">
+        <select id="typeFilter" onchange="renderAds()">
+          <option value="all">Barcha turlar</option>
+          <option value="driver">Haydovchilar</option>
+          <option value="passenger">Yo‘lovchilar</option>
+        </select>
+        <select id="statusFilter" onchange="renderAds()">
+          <option value="all">Barcha holatlar</option>
+          <option value="pending">Kutilmoqda</option>
+          <option value="approved">Tasdiqlangan</option>
+          <option value="rejected">Rad etilgan</option>
+        </select>
+        <select id="sortFilter" onchange="renderAds()">
+          <option value="desc">Eng yangi avval</option>
+          <option value="asc">Eng eski avval</option>
+        </select>
+      </div>
 
-      <select id="statusFilter" onchange="renderAds()">
-        <option value="all">Barcha holatlar</option>
-        <option value="pending">Kutilmoqda</option>
-        <option value="approved">Tasdiqlangan</option>
-        <option value="rejected">Rad etilgan</option>
-      </select>
-      
-      <select id="sortFilter" onchange="renderAds()">
-  <option value="desc">Eng yangi avval</option>
-  <option value="asc">Eng eski avval</option>
-</select>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="bulk-actions">
+          <button class="small-btn" onclick="selectAllToggle()">⬜ Barchasini tanlash</button>
+          <button class="small-btn" onclick="bulkUpdateStatus('approved')">✅ Tasdiqlash</button>
+          <button class="small-btn" onclick="bulkUpdateStatus('rejected')">❌ Rad etish</button>
+        </div>
 
-      <button onclick="goToStats()">📊 Statistika</button>
-      <button onclick="goToAdd()">➕ E’lon qo‘shish</button>
-      <button onclick="showApprovalHistory()">📜 Tasdiqlash tarixi</button>
-      <button onclick="logoutAdmin()" style="background:#6c757d;">Chiqish</button>
+        <button onclick="exportAllCSV()">Export CSV</button>
+        <label style="display:inline-block;">
+          <input type="file" id="csvImport" class="file-input" accept=".csv" onchange="importCSV(this.files)" />
+          <button class="secondary" onclick="document.getElementById('csvImport').click()">Import CSV</button>
+        </label>
+
+        <button onclick="standardizeDates()">🧹 Fix dates</button>
+        <button onclick="toggleNotifications()">🔔 Notifications</button>
+        <button onclick="logoutAdmin()" style="background:#6c757d;">Chiqish</button>
+      </div>
+    </div>
+
+    <div class="controls info">
+      <span id="adsInfo">E’lonlar yuklanmoqda...</span>
     </div>
 
     <div id="ads"></div>
-  </main>
 
-  <!-- Edit Modal -->
-  <div class="modal" id="editModal">
-    <div class="modal-content">
-      <h3>E’lonni tahrirlash</h3>
-      <input type="text" id="editPhone" placeholder="Telefon raqam">
-      <input type="text" id="editPrice" placeholder="Narx (so‘m)">
-      <input type="text" id="editFrom" placeholder="Qayerdan">
-      <input type="text" id="editTo" placeholder="Qayerga">
-      <select id="editStatus">
-        <option value="pending">Kutilmoqda</option>
-        <option value="approved">Tasdiqlangan</option>
-        <option value="rejected">Rad etilgan</option>
-      </select>
-      <div>
-        <button class="save-btn" onclick="saveEdit()">Saqlash</button>
-        <button class="cancel-btn" onclick="closeModal()">Bekor qilish</button>
+    <div class="pagination" id="paginationControls"></div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+      <div class="modal-content">
+        <h3>E’lonni tahrirlash</h3>
+        <input type="text" id="editPhone" placeholder="Telefon raqam">
+        <input type="text" id="editPrice" placeholder="Narx (so‘m)">
+        <input type="text" id="editFrom" placeholder="Qayerdan">
+        <input type="text" id="editTo" placeholder="Qayerga">
+        <select id="editStatus">
+          <option value="pending">Kutilmoqda</option>
+          <option value="approved">Tasdiqlangan</option>
+          <option value="rejected">Rad etilgan</option>
+        </select>
+        <div style="margin-top:8px;">
+          <button class="save-btn" onclick="saveEdit()">Saqlash</button>
+          <button class="cancel-btn" onclick="closeModal()">Bekor qilish</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- History Modal -->
-  <div class="modal" id="historyModal">
-    <div class="modal-content">
-      <h3>Tasdiqlash tarixi</h3>
-      <div id="historyList"></div>
-      <button class="cancel-btn" onclick="closeHistory()">Yopish</button>
+    <!-- History Modal -->
+    <div class="modal" id="historyModal">
+      <div class="modal-content">
+        <h3>Tasdiqlash tarixi</h3>
+        <div id="historyList"></div>
+        <button class="cancel-btn" onclick="closeHistory()">Yopish</button>
+      </div>
     </div>
-  </div>
- <!-- 🔗 Endi barcha kodlar tashqaridagi faylda -->
+
+  </main>
+
   <script src="admin.js"></script>
- 
 </body>
 </html>
