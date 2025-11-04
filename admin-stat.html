@@ -307,6 +307,25 @@
     }
 
     loadStats();
+    // Sana formatini to‘g‘rilovchi funksiya
+function parseAdDate(dateStr) {
+  if (!dateStr) return null;
+
+  // ISO formatni tekshiradi
+  if (!isNaN(Date.parse(dateStr))) {
+    return new Date(dateStr);
+  }
+
+  // DD.MM.YYYY HH:mm formatni tekshiradi
+  const match = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
+  if (match) {
+    const [_, day, month, year, hour, minute] = match;
+    return new Date(year, month - 1, day, hour || 0, minute || 0);
+  }
+
+  return null; // nomalum format
+}
+
     // 🧮 Filtrlash funksiyasi
 function applyFilters() {
   const type = document.getElementById('adTypeFilter').value;
