@@ -440,6 +440,134 @@
         regions[region].forEach(d => districtSelect.add(new Option(d, d)));
       }
     }
+    <!-- ===== FIKR QOLDIRISH TIZIMI ===== -->
+<script>
+  // Fikrlarni olish va saqlash
+  function getReviews() {
+    return JSON.parse(localStorage.getItem("reviews")) || [];
+  }
+  function saveReviews(reviews) {
+    localStorage.setItem("reviews", JSON.stringify(reviews));
+  }
+
+  // Modal oynani yaratamiz
+  const reviewModal = document.createElement("div");
+  reviewModal.innerHTML = `
+    <div id="reviewModal" style="
+      display:none;
+      position:fixed;
+      top:0;left:0;width:100%;height:100%;
+      background:rgba(0,0,0,0.4);
+      align-items:center;justify-content:center;
+      z-index:1000;">
+      <div style="background:white;padding:20px;border-radius:10px;max-width:400px;width:90%;">
+        <h3>⭐ Fikr qoldirish</h3>
+        <p id="modalAdTitle" style="font-weight:bold;color:#007bff;"></p>
+        <label>Baho (1–5):</label>
+        <select id="reviewRating" style="width:100%;padding:6px;margin:5px 0;">
+          <option value="5">5 - A’lo</option>
+          <option value="4">4 - Yaxshi</option>
+          <option value="3">3 - O‘rtacha</option>
+          <option value="2">2 - Yomon</option>
+          <option value="1">1 - Juda yomon</option>
+        </select>
+        <textarea id="reviewText" placeholder="Izoh yozing..." style="width:100%;height:80px;padding:8px;margin-top:5px;border-radius:6px;border:1px solid #ccc;"></textarea>
+        <div style="text-align:right;margin-top:10px;">
+          <button onclick="closeReviewModal()" style="background:#ccc;">Bekor qilish</button>
+          <button onclick="submitReview()" style="background:#007bff;color:white;">Yuborish</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(reviewModal);
+
+  let currentReviewAdId = null;
+
+  function openReviewModal(adId, from, to) {
+    currentReviewAdId = adId;
+    document.getElementById("modalAdTitle").textContent = `${from} → ${to}`;
+    document.getElementById("reviewModal").style.display = "flex";
+  }
+
+  function closeReviewModal() {
+    document.getElementById("reviewModal").style.display = "none";
+    document.getElementById("reviewText").value = "";
+    currentReviewAdId = null;
+  }
+
+  function submitReview() {
+    const rating = parseInt(document.getElementById("reviewRating").value);
+    const text = document.getElementById("reviewText").value.trim();
+    if (!currentReviewAdId || !rating || !text) {
+      alert("Iltimos, barcha maydonlarni to‘ldiring!");
+      return;
+    }
+    const reviews = getReviews();
+    reviews.push({
+      adId: currentReviewAdId,
+      phone: currentUser.phone,
+      rating,
+      text,
+      createdAt: new Date().toLocaleString()
+    });
+    saveReviews(reviews);
+    alert("✅ Fikr muvaffaqiyatli yuborildi!");
+    closeReviewModal();
+    renderUserAds();
+  }
+
+  // O‘rtacha bahoni hisoblash
+  function getAverageRating(adId) {
+    const reviews = getReviews().filter(r => r.adId === adId);
+    if (reviews.length === 0) return null;
+    const avg = (reviews.reduce((a, b) => a + b.rating, 0) / reviews.length).toFixed(1);
+    return `⭐ ${avg} (${reviews.length} ta)`;
+  }
+
+  // Fikrlarni ko‘rsatish
+  function showReviews(adId) {
+    const reviews = getReviews().filter(r => r.adId === adId);
+    if (!reviews.length) {
+      alert("Bu e’londa hozircha fikrlar yo‘q.");
+      return;
+    }
+    let msg = "💬 Fikrlar:\n\n";
+    reviews.forEach(r => {
+      msg += `⭐ ${r.rating} — ${r.text}\n(${r.createdAt})\n\n`;
+    });
+    alert(msg);
+  }
+
+  // Fikr tugmasini qo‘shamiz
+  const originalRenderUserAds = renderUserAds;
+  renderUserAds = function() {
+    originalRenderUserAds(); // eski funksiyani ishlatamiz
+    const { driver, passenger } = getAds();
+    const allAds = [...driver, ...passenger].filter(a => a.phone === currentUser.phone);
+
+    allAds.forEach(ad => {
+      const adDivs = Array.from(document.querySelectorAll(".ad-box"));
+      adDivs.forEach(div => {
+        if (div.innerHTML.includes(ad.id)) return; // oldin qo‘shilganini tashlab ket
+      });
+
+      const from = ad.fromRegion || ad.from || "—";
+      const to = ad.toRegion || ad.to || "—";
+      const avg = getAverageRating(ad.id);
+      const container = Array.from(document.querySelectorAll(".ad-box"))
+        .find(d => d.innerHTML.includes(ad.phone) && d.innerHTML.includes(from) && d.innerHTML.includes(to));
+      if (!container) return;
+
+      const reviewBlock = document.createElement("div");
+      reviewBlock.innerHTML = `
+        <p style="margin-top:8px;">${avg ? avg : "⭐ Hali baholanmagan"}</p>
+        <button onclick="openReviewModal('${ad.id}','${from}','${to}')">⭐ Fikr qoldirish</button>
+        <button onclick="showReviews('${ad.id}')">💬 Fikrlarni ko‘rish</button>
+      `;
+      container.appendChild(reviewBlock);
+    });
+  };
+</script>
+
   </script>
 </body>
 </html>
