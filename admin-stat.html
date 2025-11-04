@@ -84,33 +84,33 @@
     <h1>📊 ShaharTaxi Statistika</h1>
   </header>
   
-<!-- 🧮 Filtrlash paneli -->
-<section id="filterSection" style="margin-bottom: 2rem; text-align:left;">
-  <h2>🔍 Filtrlash</h2>
-  <label>
-    E’lon turi:
-    <select id="adTypeFilter">
-      <option value="all">Barchasi</option>
-      <option value="driver">Haydovchi</option>
-      <option value="passenger">Yo‘lovchi</option>
-    </select>
-  </label>
-  <label style="margin-left:1rem;">
-    Holati:
-    <select id="statusFilter">
-      <option value="all">Barchasi</option>
-      <option value="approved">Tasdiqlangan</option>
-      <option value="rejected">Rad etilgan</option>
-      <option value="pending">Kutilmoqda</option>
-    </select>
-  </label>
-  <label style="margin-left:1rem;">
-    Sana:
-    <input type="date" id="fromDate"> –
-    <input type="date" id="toDate">
-  </label>
-  <button onclick="applyFilters()">Filtrlash</button>
-</section>
+  <!-- 🧮 Filtrlash paneli -->
+  <section id="filterSection" style="margin-bottom: 2rem; text-align:left;">
+    <h2>🔍 Filtrlash</h2>
+    <label>
+      E’lon turi:
+      <select id="adTypeFilter">
+        <option value="all">Barchasi</option>
+        <option value="driver">Haydovchi</option>
+        <option value="passenger">Yo‘lovchi</option>
+      </select>
+    </label>
+    <label style="margin-left:1rem;">
+      Holati:
+      <select id="statusFilter">
+        <option value="all">Barchasi</option>
+        <option value="approved">Tasdiqlangan</option>
+        <option value="rejected">Rad etilgan</option>
+        <option value="pending">Kutilmoqda</option>
+      </select>
+    </label>
+    <label style="margin-left:1rem;">
+      Sana:
+      <input type="date" id="fromDate"> –
+      <input type="date" id="toDate">
+    </label>
+    <button onclick="applyFilters()">Filtrlash</button>
+  </section>
 
   <main>
     <h2>Umumiy ma’lumot</h2>
@@ -132,11 +132,9 @@
     </table>
     <canvas id="regionChart"></canvas>
 
-    <!-- 🆕 So‘nggi 7 kunlik e’lonlar trendi -->
     <h2 style="margin-top: 3rem;">📅 So‘nggi 7 kunlik e’lonlar trendlari</h2>
     <canvas id="weeklyAdsChart"></canvas>
 
-    <!-- 🆕 Faol foydalanuvchilar statistikasi -->
     <h2 style="margin-top: 3rem;">👥 Faol foydalanuvchilar</h2>
     <div class="stats">
       <div class="stat-box"><h3>Faol haydovchilar</h3><p id="activeDrivers">0</p></div>
@@ -150,23 +148,16 @@
 
   <script>
     // Sana formatini to‘g‘rilovchi funksiya
-function parseAdDate(dateStr) {
-  if (!dateStr) return null;
-
-  // ISO formatni tekshiradi (2025-10-31T15:00:00Z)
-  if (!isNaN(Date.parse(dateStr))) {
-    return new Date(dateStr);
-  }
-
-  // DD.MM.YYYY HH:mm formatni tekshiradi (31.10.2025 15:00)
-  const match = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
-  if (match) {
-    const [_, day, month, year, hour, minute] = match;
-    return new Date(year, month - 1, day, hour || 0, minute || 0);
-  }
-
-  return null; // nomalum format
-}
+    function parseAdDate(dateStr) {
+      if (!dateStr) return null;
+      if (!isNaN(Date.parse(dateStr))) return new Date(dateStr);
+      const match = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
+      if (match) {
+        const [_, d, m, y, h, min] = match;
+        return new Date(y, m - 1, d, h || 0, min || 0);
+      }
+      return null;
+    }
 
     const ctx = document.getElementById('statusChart').getContext('2d');
     const regionCtx = document.getElementById('regionChart').getContext('2d');
@@ -175,26 +166,33 @@ function parseAdDate(dateStr) {
 
     let chart, regionChart, userChart, weeklyChart;
 
-    function loadStats() {
-      const stats = JSON.parse(localStorage.getItem('stats')) || {
-        drivers: 0, passengers: 0, approved: 0, rejected: 0, pending: 0
-      };
+    function getAllAds() {
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+      return [...driverAds, ...passengerAds];
+    }
 
-      document.getElementById('driverCount').innerText = stats.drivers;
-      document.getElementById('passengerCount').innerText = stats.passengers;
-      document.getElementById('approvedCount').innerText = stats.approved;
-      document.getElementById('rejectedCount').innerText = stats.rejected;
-      document.getElementById('pendingCount').innerText = stats.pending;
+    function loadStats(filteredAds = null) {
+      const allAds = filteredAds || getAllAds();
 
-      const data = [stats.approved, stats.rejected, stats.pending];
+      const drivers = allAds.filter(ad => ad.type === 'driver').length;
+      const passengers = allAds.filter(ad => ad.type === 'passenger').length;
+      const approved = allAds.filter(ad => ad.status === 'approved').length;
+      const rejected = allAds.filter(ad => ad.status === 'rejected').length;
+      const pending = allAds.filter(ad => ad.status === 'pending').length;
+
+      document.getElementById('driverCount').innerText = drivers;
+      document.getElementById('passengerCount').innerText = passengers;
+      document.getElementById('approvedCount').innerText = approved;
+      document.getElementById('rejectedCount').innerText = rejected;
+      document.getElementById('pendingCount').innerText = pending;
+
+      const data = [approved, rejected, pending];
 
       if (!chart) {
         chart = new Chart(ctx, {
           type: 'pie',
-          data: {
-            labels: ['Tasdiqlangan', 'Rad etilgan', 'Kutilmoqda'],
-            datasets: [{ data: data, backgroundColor: ['#28a745', '#dc3545', '#ffc107'] }]
-          },
+          data: { labels: ['Tasdiqlangan', 'Rad etilgan', 'Kutilmoqda'], datasets: [{ data, backgroundColor: ['#28a745', '#dc3545', '#ffc107'] }] },
           options: { responsive: true }
         });
       } else {
@@ -202,17 +200,13 @@ function parseAdDate(dateStr) {
         chart.update();
       }
 
-      loadRegionStats();
-      loadUserStats();
-      loadWeeklyTrends();
+      loadRegionStats(allAds);
+      loadWeeklyTrends(allAds);
+      loadUserStats(allAds);
     }
 
-    function loadRegionStats() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const allAds = [...driverAds, ...passengerAds];
+    function loadRegionStats(allAds) {
       const regionCounts = {};
-
       allAds.forEach(ad => {
         const region = ad.fromRegion || ad.toRegion || 'Noma’lum';
         regionCounts[region] = (regionCounts[region] || 0) + 1;
@@ -220,41 +214,22 @@ function parseAdDate(dateStr) {
 
       const tbody = document.getElementById('regionTableBody');
       tbody.innerHTML = '';
-
-      const regions = Object.keys(regionCounts);
-      if (regions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="2">E’lonlar topilmadi.</td></tr>';
-        return;
-      }
-
-      regions.forEach(region => {
+      Object.entries(regionCounts).forEach(([region, count]) => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${region}</td><td>${regionCounts[region]}</td>`;
+        tr.innerHTML = `<td>${region}</td><td>${count}</td>`;
         tbody.appendChild(tr);
       });
 
-      const chartData = {
-        labels: regions,
-        datasets: [{ label: 'E’lonlar soni', data: Object.values(regionCounts), backgroundColor: '#007bff' }]
-      };
-
+      const chartData = { labels: Object.keys(regionCounts), datasets: [{ label: 'E’lonlar soni', data: Object.values(regionCounts), backgroundColor: '#007bff' }] };
       if (!regionChart) {
-        regionChart = new Chart(regionCtx, {
-          type: 'bar',
-          data: chartData,
-          options: { responsive: true, indexAxis: 'y', scales: { x: { beginAtZero: true } } }
-        });
+        regionChart = new Chart(regionCtx, { type: 'bar', data: chartData, options: { responsive: true, indexAxis: 'y', scales: { x: { beginAtZero: true } } } });
       } else {
         regionChart.data = chartData;
         regionChart.update();
       }
     }
 
-    // 🆕 7 kunlik trend
-    function loadWeeklyTrends() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const allAds = [...driverAds, ...passengerAds];
+    function loadWeeklyTrends(allAds) {
       const now = new Date();
       const last7Days = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(now);
@@ -262,24 +237,13 @@ function parseAdDate(dateStr) {
         return d.toISOString().split('T')[0];
       });
 
-      const counts = last7Days.map(date => {
-        return allAds.filter(ad => {
-          if (!ad.createdAt) return false;
-          return ad.createdAt.startsWith(date);
-        }).length;
-      });
+      const counts = last7Days.map(date => allAds.filter(ad => {
+        const adDate = parseAdDate(ad.createdAt);
+        if (!adDate) return false;
+        return adDate.toISOString().split('T')[0] === date;
+      }).length);
 
-      const data = {
-        labels: last7Days,
-        datasets: [{
-          label: 'So‘nggi 7 kunlik e’lonlar',
-          data: counts,
-          fill: false,
-          borderColor: '#007bff',
-          tension: 0.3
-        }]
-      };
-
+      const data = { labels: last7Days, datasets: [{ label: 'So‘nggi 7 kunlik e’lonlar', data: counts, fill: false, borderColor: '#007bff', tension: 0.3 }] };
       if (!weeklyChart) {
         weeklyChart = new Chart(weeklyCtx, { type: 'line', data, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
       } else {
@@ -288,95 +252,53 @@ function parseAdDate(dateStr) {
       }
     }
 
-    // Faol foydalanuvchilar
-    function loadUserStats() {
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-      const allAds = [...driverAds, ...passengerAds];
+    function loadUserStats(allAds) {
       const userCounts = {};
-
       allAds.forEach(ad => {
         const user = ad.phone || 'Noma’lum';
         userCounts[user] = (userCounts[user] || 0) + 1;
       });
 
-      const activeDrivers = new Set(driverAds.map(ad => ad.phone)).size;
-      const activePassengers = new Set(passengerAds.map(ad => ad.phone)).size;
-      document.getElementById('activeDrivers').innerText = activeDrivers;
-      document.getElementById('activePassengers').innerText = activePassengers;
+      const driverAds = allAds.filter(ad => ad.type === 'driver');
+      const passengerAds = allAds.filter(ad => ad.type === 'passenger');
+      document.getElementById('activeDrivers').innerText = new Set(driverAds.map(ad => ad.phone)).size;
+      document.getElementById('activePassengers').innerText = new Set(passengerAds.map(ad => ad.phone)).size;
 
-      const topUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0];
+      const topUser = Object.entries(userCounts).sort((a,b)=>b[1]-a[1])[0];
       document.getElementById('topUser').innerText = topUser ? `${topUser[0]} (${topUser[1]} e’lon)` : 'Ma’lumot yo‘q';
 
-      const chartData = {
-        labels: Object.keys(userCounts),
-        datasets: [{ label: 'E’lonlar soni (foydalanuvchi bo‘yicha)', data: Object.values(userCounts), backgroundColor: '#17a2b8' }]
-      };
-
+      const chartData = { labels: Object.keys(userCounts), datasets: [{ label: 'E’lonlar soni', data: Object.values(userCounts), backgroundColor: '#17a2b8' }] };
       if (!userChart) {
-        userChart = new Chart(userCtx, {
-          type: 'bar',
-          data: chartData,
-          options: { responsive: true, scales: { y: { beginAtZero: true } } }
-        });
+        userChart = new Chart(userCtx, { type: 'bar', data: chartData, options: { responsive: true, scales: { y: { beginAtZero: true } } } });
       } else {
         userChart.data = chartData;
         userChart.update();
       }
     }
 
+    function applyFilters() {
+      const type = document.getElementById('adTypeFilter').value;
+      const status = document.getElementById('statusFilter').value;
+      const fromDate = document.getElementById('fromDate').value ? new Date(document.getElementById('fromDate').value) : null;
+      const toDate = document.getElementById('toDate').value ? new Date(document.getElementById('toDate').value) : null;
+
+      let ads = getAllAds();
+
+      if (type !== 'all') ads = ads.filter(ad => ad.type === type);
+      if (status !== 'all') ads = ads.filter(ad => ad.status === status);
+
+      if (fromDate || toDate) {
+        ads = ads.filter(ad => {
+          const d = parseAdDate(ad.createdAt);
+          if (!d) return false;
+          return (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
+        });
+      }
+
+      loadStats(ads);
+    }
+
     loadStats();
-    // Sana formatini to‘g‘rilovchi funksiya
-function parseAdDate(dateStr) {
-  if (!dateStr) return null;
-
-  // ISO formatni tekshiradi
-  if (!isNaN(Date.parse(dateStr))) {
-    return new Date(dateStr);
-  }
-
-  // DD.MM.YYYY HH:mm formatni tekshiradi
-  const match = dateStr.match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
-  if (match) {
-    const [_, day, month, year, hour, minute] = match;
-    return new Date(year, month - 1, day, hour || 0, minute || 0);
-  }
-
-  return null; // nomalum format
-}
-
-    // 🧮 Filtrlash funksiyasi
-function applyFilters() {
-  const type = document.getElementById('adTypeFilter').value;
-  const status = document.getElementById('statusFilter').value;
-  const fromDate = document.getElementById('fromDate').value ? new Date(document.getElementById('fromDate').value) : null;
-  const toDate = document.getElementById('toDate').value ? new Date(document.getElementById('toDate').value) : null;
-
-  const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-  const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-  let allAds = [...driverAds, ...passengerAds];
-
-  // Tur bo‘yicha filtrlash
-  if (type === 'driver') allAds = driverAds;
-  else if (type === 'passenger') allAds = passengerAds;
-
-  // Holat bo‘yicha filtrlash
-  if (status !== 'all') {
-    allAds = allAds.filter(ad => ad.status === status);
-  }
-
-  // Sana oralig‘iga ko‘ra filtrlash
-  if (fromDate || toDate) {
-    allAds = allAds.filter(ad => {
-     const created = parseAdDate(ad.createdAt);
-      if (!created) return false;
-      return (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
-    });
-  }
-
-  alert(`Topilgan e’lonlar: ${allAds.length} ta`);
-}
-
     setInterval(loadStats, 5000);
   </script>
 </body>
