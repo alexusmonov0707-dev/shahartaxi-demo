@@ -349,7 +349,7 @@ function applyFilters() {
   // Sana oralig‘iga ko‘ra filtrlash
   if (fromDate || toDate) {
     allAds = allAds.filter(ad => {
-      const created = ad.createdAt ? new Date(ad.createdAt) : null;
+     const created = parseAdDate(ad.createdAt);
       if (!created) return false;
       return (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
     });
