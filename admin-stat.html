@@ -83,6 +83,34 @@
   <header>
     <h1>📊 ShaharTaxi Statistika</h1>
   </header>
+  
+<!-- 🧮 Filtrlash paneli -->
+<section id="filterSection" style="margin-bottom: 2rem; text-align:left;">
+  <h2>🔍 Filtrlash</h2>
+  <label>
+    E’lon turi:
+    <select id="adTypeFilter">
+      <option value="all">Barchasi</option>
+      <option value="driver">Haydovchi</option>
+      <option value="passenger">Yo‘lovchi</option>
+    </select>
+  </label>
+  <label style="margin-left:1rem;">
+    Holati:
+    <select id="statusFilter">
+      <option value="all">Barchasi</option>
+      <option value="approved">Tasdiqlangan</option>
+      <option value="rejected">Rad etilgan</option>
+      <option value="pending">Kutilmoqda</option>
+    </select>
+  </label>
+  <label style="margin-left:1rem;">
+    Sana:
+    <input type="date" id="fromDate"> –
+    <input type="date" id="toDate">
+  </label>
+  <button onclick="applyFilters()">Filtrlash</button>
+</section>
 
   <main>
     <h2>Umumiy ma’lumot</h2>
@@ -279,6 +307,38 @@
     }
 
     loadStats();
+    // 🧮 Filtrlash funksiyasi
+function applyFilters() {
+  const type = document.getElementById('adTypeFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const fromDate = document.getElementById('fromDate').value ? new Date(document.getElementById('fromDate').value) : null;
+  const toDate = document.getElementById('toDate').value ? new Date(document.getElementById('toDate').value) : null;
+
+  const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+  const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+  let allAds = [...driverAds, ...passengerAds];
+
+  // Tur bo‘yicha filtrlash
+  if (type === 'driver') allAds = driverAds;
+  else if (type === 'passenger') allAds = passengerAds;
+
+  // Holat bo‘yicha filtrlash
+  if (status !== 'all') {
+    allAds = allAds.filter(ad => ad.status === status);
+  }
+
+  // Sana oralig‘iga ko‘ra filtrlash
+  if (fromDate || toDate) {
+    allAds = allAds.filter(ad => {
+      const created = ad.createdAt ? new Date(ad.createdAt) : null;
+      if (!created) return false;
+      return (!fromDate || created >= fromDate) && (!toDate || created <= toDate);
+    });
+  }
+
+  alert(`Topilgan e’lonlar: ${allAds.length} ta`);
+}
+
     setInterval(loadStats, 5000);
   </script>
 </body>
