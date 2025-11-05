@@ -147,25 +147,31 @@ function renderAds() {
     const div = document.createElement('div');
     div.className = 'ad';
     div.innerHTML = `
-      <div class="ad-left">
-        <input type="checkbox" id="select_${ad.id}" data-id="${ad.id}" />
-      </div>
-      <div class="ad-body">
-        <div class="ad-meta"><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'} — <b>ID:</b> ${ad.id}</div>
-        <div class="ad-meta"><b>Yo‘nalish:</b> ${from} → ${to}</div>
-        <div class="ad-meta"><b>Telefon:</b> ${ad.phone || 'Noma’lum'} — <b>Narx:</b> ${ad.price ? ad.price + ' so‘m' : 'Ko‘rsatilmagan'}</div>
-        <div class="ad-meta"><b>Sana:</b> ${createdDate}</div>
-        <div class="ad-meta"><b>Holat:</b> <span class="status">${getStatusText(ad.status)}</span></div>
+  <div class="ad-left">
+    <input type="checkbox" id="select_${ad.id}" data-id="${ad.id}" />
+  </div>
+  <div class="ad-body">
+    <div class="ad-meta"><b>Turi:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'} — <b>ID:</b> ${ad.id}</div>
+    <div class="ad-meta"><b>Yo‘nalish:</b> ${from} → ${to}</div>
+    <div class="ad-meta"><b>Telefon:</b> ${ad.phone || 'Noma’lum'} — <b>Narx:</b> ${ad.price ? ad.price + ' so‘m' : 'Ko‘rsatilmagan'}</div>
+    <div class="ad-meta"><b>Sana:</b> ${createdDate}</div>
+    <div class="ad-meta"><b>Holat:</b> <span class="status">${getStatusText(ad.status)}</span></div>
 
-        <div class="actions" id="actions_${ad.id}">
-          <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
-          <button class="reject" onclick="updateStatus('${ad.type}', '${ad.id}', 'rejected')">Rad etish</button>
-          <button class="edit" onclick="openEdit('${ad.type}', '${ad.id}')">Modal tahrirlash</button>
-          <button class="small-btn" onclick="startInlineEdit('${ad.type}', '${ad.id}')">Inline tahrir</button>
-          <button class="delete" onclick="deleteAd('${ad.type}', '${ad.id}')">O‘chirish</button>
-        </div>
-      </div>
-    `;
+    ${ad.comment || ad.extraInfo ? `
+      <div class="ad-meta" style="background:#f9f9f9;border-left:3px solid #0056b3;padding:6px;margin-top:5px;">
+        <b>Izoh:</b> ${ad.comment || ad.extraInfo}
+      </div>` : ''}
+
+    <div class="actions" id="actions_${ad.id}">
+      <button class="approve" onclick="updateStatus('${ad.type}', '${ad.id}', 'approved')">Tasdiqlash</button>
+      <button class="reject" onclick="updateStatus('${ad.type}', '${ad.id}', 'rejected')">Rad etish</button>
+      <button class="edit" onclick="openEdit('${ad.type}', '${ad.id}')">Modal tahrirlash</button>
+      <button class="small-btn" onclick="startInlineEdit('${ad.type}', '${ad.id}')">Inline tahrir</button>
+      <button class="delete" onclick="deleteAd('${ad.type}', '${ad.id}')">O‘chirish</button>
+    </div>
+  </div>
+`;
+
     container.appendChild(div);
   });
 
