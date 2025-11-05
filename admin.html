@@ -1,134 +1,136 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Admin Panel - ShaharTaxi</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
-    header { background: #007bff; color: white; padding: 1rem; text-align: center; }
-    main { max-width: 1100px; margin: 1rem auto; background: white; border-radius: 10px; padding: 1.2rem; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
-    .controls { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center; }
-    input[type="text"], select { padding: 8px; border-radius:6px; border:1px solid #ccc; }
-    button { padding:8px 10px; border-radius:6px; border:none; background:#007bff; color:white; cursor:pointer; }
-    button.secondary { background:#6c757d; }
-    .ad { border-bottom:1px solid #ddd; padding:12px 0; position:relative; display:flex; gap:12px; align-items:flex-start; }
-    .ad:last-child{ border-bottom:none; }
-    .ad-left { width:36px; display:flex; align-items:center; }
-    .ad-body { flex:1; }
-    .ad-meta { font-size:0.95rem; color:#333; }
-    .actions { display:flex; gap:6px; margin-top:8px; }
-    .approve { background:#28a745; }
-    .reject { background:#dc3545; }
-    .edit { background:#ffc107; color:black; }
-    .delete { background:#6c757d; }
-    .status { font-weight:600; }
-    .inline-edit-input { width:120px; padding:6px; border-radius:6px; border:1px solid #ccc; }
-    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; z-index:9999; }
-    .modal-content { background:white; padding:16px; border-radius:8px; width:360px; box-shadow:0 3px 12px rgba(0,0,0,0.2); }
-    .pagination { display:flex; gap:6px; margin-top:10px; align-items:center; }
-    .file-input { display:none; }
-    .top-row { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
-    .bulk-actions { display:flex; gap:6px; }
-    .small-btn { padding:6px 8px; font-size:0.9rem; }
-    .info { font-size:0.9rem; color:#555; }
-    @media (max-width:720px){ .ad { flex-direction:column; } .ad-left{ width:100% } }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin panel - ShaharTaxi</title>
+<style>
+  body { font-family: Arial, sans-serif; background:#f7f9fc; margin:0; padding:0; }
+  header { background:#007bff; color:white; text-align:center; padding:15px; }
+  .container { max-width:1000px; margin:20px auto; background:white; padding:20px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+  h2 { text-align:center; color:#007bff; }
+  .ad-box { border:1px solid #ddd; border-radius:8px; padding:12px; margin:8px 0; }
+  .pending { background:#fff8e1; }
+  .approved { background:#e6ffe6; }
+  .rejected { background:#ffe6e6; }
+  .actions button { padding:6px 10px; border:none; border-radius:5px; cursor:pointer; margin-right:5px; color:white; }
+  .approve { background:#28a745; }
+  .reject { background:#dc3545; }
+  .filters { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-bottom:15px; }
+  select, button { padding:8px; font-size:14px; }
+  .logout { position:absolute; top:15px; right:20px; background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; }
+</style>
 </head>
 <body>
-  <!-- LOGIN OVERLAY -->
-  <div id="loginOverlay" style="display:none;">
-    <div class="login-box" style="background:#fff;padding:24px;border-radius:12px;width:360px;margin:auto;">
-      <h3>🔐 Admin kirish</h3>
-      <input type="text" id="adminUser" placeholder="Foydalanuvchi" value="admin" style="width:100%;padding:8px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
-      <input type="password" id="adminPass" placeholder="Parol" style="width:100%;padding:8px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
-      <p id="loginError" style="color:red;margin:8px 0 0 0"></p>
-      <button onclick="checkAdminLogin()">Kirish</button>
-    </div>
+
+<header>
+  <h1>ShaharTaxi - Admin panel</h1>
+  <button class="logout" onclick="logout()">Chiqish</button>
+</header>
+
+<div class="container">
+  <h2>Barcha e’lonlar</h2>
+
+  <div class="filters">
+    <select id="typeFilter" onchange="renderAds()">
+      <option value="all">Barcha turlar</option>
+      <option value="driver">Haydovchi</option>
+      <option value="passenger">Yo‘lovchi</option>
+    </select>
+    <select id="statusFilter" onchange="renderAds()">
+      <option value="all">Barcha holatlar</option>
+      <option value="pending">Kutilmoqda</option>
+      <option value="approved">Tasdiqlangan</option>
+      <option value="rejected">Rad etilgan</option>
+    </select>
+    <button onclick="clearFilters()">Filterlarni tozalash</button>
   </div>
 
-  <header><h1>🛠 ShaharTaxi - Admin Panel</h1></header>
+  <div id="adsList"></div>
+</div>
 
-  <main>
-    <div class="top-row">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-        <input type="text" id="searchInput" placeholder="Qidirish: telefon yoki ID..." oninput="onSearchChange()" style="padding:8px;border-radius:6px;border:1px solid #ccc;">
-        <select id="typeFilter" onchange="renderAds()">
-          <option value="all">Barcha turlar</option>
-          <option value="driver">Haydovchilar</option>
-          <option value="passenger">Yo‘lovchilar</option>
-        </select>
-        <select id="statusFilter" onchange="renderAds()">
-          <option value="all">Barcha holatlar</option>
-          <option value="pending">Kutilmoqda</option>
-          <option value="approved">Tasdiqlangan</option>
-          <option value="rejected">Rad etilgan</option>
-        </select>
-        <select id="sortFilter" onchange="renderAds()">
-          <option value="desc">Eng yangi avval</option>
-          <option value="asc">Eng eski avval</option>
-        </select>
+<script>
+function logout(){
+  localStorage.removeItem('isAdmin');
+  window.location.href='login.html';
+}
+
+function getAds(){
+  return {
+    driver: JSON.parse(localStorage.getItem('driverAds')) || [],
+    passenger: JSON.parse(localStorage.getItem('passengerAds')) || []
+  };
+}
+
+function saveAds(type, data){
+  localStorage.setItem(type==='driver'?'driverAds':'passengerAds', JSON.stringify(data));
+}
+
+function renderAds(){
+  const { driver, passenger } = getAds();
+  let allAds = [...driver, ...passenger];
+  
+  const typeFilter = document.getElementById('typeFilter').value;
+  const statusFilter = document.getElementById('statusFilter').value;
+
+  if(typeFilter !== 'all') allAds = allAds.filter(a => a.type === typeFilter);
+  if(statusFilter !== 'all') allAds = allAds.filter(a => (a.status || 'pending') === statusFilter);
+
+  const container = document.getElementById('adsList');
+  container.innerHTML = allAds.length ? "" : "<p>Hozircha e’lonlar yo‘q.</p>";
+
+  allAds.sort((a,b)=>b.createdAt?.localeCompare(a.createdAt || ""));
+
+  allAds.forEach(ad => {
+    const div = document.createElement('div');
+    div.className = `ad-box ${ad.status || 'pending'}`;
+
+    const statusText = ad.status === 'approved'
+      ? '✅ Tasdiqlangan'
+      : ad.status === 'rejected'
+      ? '❌ Rad etilgan'
+      : '⏳ Kutilmoqda';
+
+    div.innerHTML = `
+      <p><b>Tur:</b> ${ad.type === 'driver' ? 'Haydovchi' : 'Yo‘lovchi'}</p>
+      <p><b>Yo‘nalish:</b> ${ad.fromRegion || ''} ${ad.fromDistrict || ''} → ${ad.toRegion || ''} ${ad.toDistrict || ''}</p>
+      <p><b>Narx:</b> ${ad.price || 'Ko‘rsatilmagan'} so‘m</p>
+      <p><b>Telefon:</b> ${ad.phone}</p>
+      ${ad.comment ? `<p><b>Izoh:</b> ${ad.comment}</p>` : ''}
+      <p><b>Holat:</b> ${statusText}</p>
+      ${ad.createdAt ? `<small style="color:#666;">🕒 ${ad.createdAt}</small>` : ''}
+      <div class="actions">
+        <button class="approve" onclick="updateStatus('${ad.id}', '${ad.type}', 'approved')">Tasdiqlash</button>
+        <button class="reject" onclick="updateStatus('${ad.id}', '${ad.type}', 'rejected')">Rad etish</button>
       </div>
+    `;
+    container.appendChild(div);
+  });
+}
 
-      <div style="display:flex;gap:8px;align-items:center;">
-        <div class="bulk-actions">
-          <button class="small-btn" onclick="selectAllToggle()">⬜ Barchasini tanlash</button>
-          <button class="small-btn" onclick="bulkUpdateStatus('approved')">✅ Tasdiqlash</button>
-          <button class="small-btn" onclick="bulkUpdateStatus('rejected')">❌ Rad etish</button>
-        </div>
+function updateStatus(id, type, status){
+  const key = type==='driver' ? 'driverAds' : 'passengerAds';
+  const ads = JSON.parse(localStorage.getItem(key)) || [];
+  const ad = ads.find(a => a.id === id);
+  if(!ad) return;
+  ad.status = status;
+  saveAds(type, ads);
+  renderAds();
+}
 
-        <button onclick="exportAllCSV()">Export CSV</button>
-        <label style="display:inline-block;">
-          <input type="file" id="csvImport" class="file-input" accept=".csv" onchange="importCSV(this.files)" />
-          <button class="secondary" onclick="document.getElementById('csvImport').click()">Import CSV</button>
-        </label>
+function clearFilters(){
+  document.getElementById('typeFilter').value='all';
+  document.getElementById('statusFilter').value='all';
+  renderAds();
+}
 
-        <button onclick="standardizeDates()">🧹 Fix dates</button>
-        <button onclick="toggleNotifications()">🔔 Notifications</button>
-        <button onclick="logoutAdmin()" style="background:#6c757d;">Chiqish</button>
-      </div>
-    </div>
+window.onload = () => {
+  const isAdmin = localStorage.getItem('isAdmin');
+  if(!isAdmin){ alert("Avval admin sifatida tizimga kiring!"); window.location.href='login.html'; return; }
+  renderAds();
+  setInterval(renderAds, 5000);
+};
+</script>
 
-    <div class="controls info">
-      <span id="adsInfo">E’lonlar yuklanmoqda...</span>
-    </div>
-
-    <div id="ads"></div>
-
-    <div class="pagination" id="paginationControls"></div>
-
-    <!-- Edit Modal -->
-    <div class="modal" id="editModal">
-      <div class="modal-content">
-        <h3>E’lonni tahrirlash</h3>
-        <input type="text" id="editPhone" placeholder="Telefon raqam">
-        <input type="text" id="editPrice" placeholder="Narx (so‘m)">
-        <input type="text" id="editFrom" placeholder="Qayerdan">
-        <input type="text" id="editTo" placeholder="Qayerga">
-        <select id="editStatus">
-          <option value="pending">Kutilmoqda</option>
-          <option value="approved">Tasdiqlangan</option>
-          <option value="rejected">Rad etilgan</option>
-        </select>
-        <div style="margin-top:8px;">
-          <button class="save-btn" onclick="saveEdit()">Saqlash</button>
-          <button class="cancel-btn" onclick="closeModal()">Bekor qilish</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- History Modal -->
-    <div class="modal" id="historyModal">
-      <div class="modal-content">
-        <h3>Tasdiqlash tarixi</h3>
-        <div id="historyList"></div>
-        <button class="cancel-btn" onclick="closeHistory()">Yopish</button>
-      </div>
-    </div>
-
-  </main>
-
-  <script src="admin.js"></script>
 </body>
 </html>
