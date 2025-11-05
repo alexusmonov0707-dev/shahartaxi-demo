@@ -101,28 +101,6 @@ function renderAds() {
   ];
 
   if (statusFilter !== 'all') ads = ads.filter(a => (a.status || 'pending') === statusFilter);
-  // 🔧 E'lonlarni yuklash funksiyasi (eski e'lonlarda izoh yo'q bo'lsa, avtomatik qo'shadi)
-function loadAds() {
-  try {
-    let ads = JSON.parse(localStorage.getItem("ads") || "[]");
-
-    // Har bir e'lonni tekshiramiz va comment bo'lmasa qo'shamiz
-    ads = ads.map(ad => ({
-      ...ad,
-      comment: ad.comment || ""
-    }));
-
-    localStorage.setItem("ads", JSON.stringify(ads));
-    return ads;
-  } catch (e) {
-    console.error("E'lonlarni yuklashda xatolik:", e);
-    return [];
-  }
-}
-
-// Sahifa yuklanganda e'lonlarni chaqirish
-let ads = loadAds();
-
 
   // Search filter (by phone or id)
   if (search) {
