@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mening profilim - ShaharTaxi</title>
   <style>
     body {
@@ -37,36 +37,87 @@
       border-radius: 10px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
     }
-    h2 { color: #007bff; text-align: center; }
-    input, select, textarea {
-      width: 100%; padding: 10px; margin: 8px 0;
-      border: 1px solid #ccc; border-radius: 5px; font-size: 15px;
+    h2 {
+      color: #007bff;
+      text-align: center;
     }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 15px;
+    }
+    textarea { resize: vertical; }
     button {
-      background: #007bff; color: white; border: none;
-      padding: 10px 20px; border-radius: 5px; cursor: pointer;
-      transition: 0.3s; margin-top: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+      margin-top: 10px;
     }
     button:hover { background: #0056b3; }
+
     .ad-box {
-      padding: 15px; border-radius: 8px; margin-bottom: 10px;
-      border: 1px solid #cdddfc; transition: background 0.3s;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border: 1px solid #cdddfc;
+      transition: background 0.3s;
     }
+
     .pending { background: #f9f9f9; }
     .approved { background: #e6ffe6; }
     .rejected { background: #ffe6e6; }
+
     .ad-box p { margin: 5px 0; }
-    .actions button { background: #28a745; margin-right: 5px; }
-    .actions button:last-child { background: #dc3545; }
-    .filters {
-      display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
-      gap: 8px; margin-bottom: 12px;
+
+    .actions button {
+      background: #28a745;
+      margin-right: 5px;
     }
-    .user-info { text-align: center; margin-bottom: 10px; font-weight: 600; }
-    .inline-edit { display: flex; gap: 8px; align-items: center; margin-top: 5px; }
-    .inline-edit input { flex: 1; padding: 5px 8px; font-size: 14px; }
-    .inline-edit button { padding: 6px 10px; font-size: 13px; margin-top: 0; }
-    .date-info { font-size: 13px; color: #666; font-style: italic; }
+    .actions button:last-child {
+      background: #dc3545;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .user-info {
+      text-align: center;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .inline-edit {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 5px;
+    }
+    .inline-edit input {
+      flex: 1;
+      padding: 5px 8px;
+      font-size: 14px;
+    }
+    .inline-edit button {
+      padding: 6px 10px;
+      font-size: 13px;
+      margin-top: 0;
+    }
+
+    .date-info {
+      font-size: 13px;
+      color: #666;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -135,7 +186,7 @@
     <select id="toDistrict"></select>
 
     <input type="number" id="price" placeholder="Narx (so‘m)">
-    <textarea id="comment" placeholder="Izoh (qo‘shimcha ma’lumot)"></textarea>
+    <textarea id="extraInfo" rows="3" placeholder="Qo‘shimcha ma’lumot (masalan, 2ta bo‘sh joy bor, kechasi chiqaman...)"></textarea>
     <button onclick="addAd()">E’lonni joylash</button>
   </div>
 
@@ -173,46 +224,48 @@
 
       if (typeFilter !== 'all') allAds = allAds.filter(a => a.type === typeFilter);
       if (statusFilter !== 'all') allAds = allAds.filter(a => (a.status || 'pending') === statusFilter);
-      if (fFromRegion) allAds = allAds.filter(a => (a.fromRegion || a.from || '').includes(fFromRegion));
+      if (fFromRegion) allAds = allAds.filter(a => (a.fromRegion || '').includes(fFromRegion));
       if (fFromDistrict) allAds = allAds.filter(a => (a.fromDistrict || '').includes(fFromDistrict));
-      if (fToRegion) allAds = allAds.filter(a => (a.toRegion || a.to || '').includes(fToRegion));
+      if (fToRegion) allAds = allAds.filter(a => (a.toRegion || '').includes(fToRegion));
       if (fToDistrict) allAds = allAds.filter(a => (a.toDistrict || '').includes(fToDistrict));
 
       const container = document.getElementById("myAds");
       container.innerHTML = allAds.length ? "" : "<p>Hozircha e’lonlar yo‘q.</p>";
 
       allAds.forEach(ad => {
-        const from = ad.fromDistrict && ad.fromRegion ? `${ad.fromRegion} ${ad.fromDistrict}` : (ad.fromRegion || ad.from || "—");
-        const to = ad.toDistrict && ad.toRegion ? `${ad.toRegion} ${ad.toDistrict}` : (ad.toRegion || ad.to || "—");
+        const from = `${ad.fromRegion || "—"} ${ad.fromDistrict || ""}`;
+        const to = `${ad.toRegion || "—"} ${ad.toDistrict || ""}`;
         const statusText =
           ad.status === "approved" ? "✅ Tasdiqlangan" :
-          ad.status === "rejected" ? "❌ Rad etilgan" : "⏳ Kutilmoqda";
+          ad.status === "rejected" ? "❌ Rad etilgan" :
+          "⏳ Kutilmoqda";
 
         const div = document.createElement("div");
         div.className = "ad-box " + (ad.status === "approved" ? "approved" : ad.status === "rejected" ? "rejected" : "pending");
+
+        const extraText = ad.extraInfo ? `<p><b>Qo‘shimcha:</b> ${ad.extraInfo}</p>` : "";
 
         const editArea = ad.editing ? `
           <div class="inline-edit">
             <input type="number" id="editPrice_${ad.id}" value="${ad.price || ''}" placeholder="Yangi narx">
             <button onclick="saveInlineEdit('${ad.id}', '${ad.type}')">💾 Saqlash</button>
             <button onclick="cancelInlineEdit('${ad.id}', '${ad.type}')">❌ Bekor</button>
-          </div>` : "";
+          </div>
+        ` : "";
 
         const createdAt = ad.createdAt ? `<p class="date-info">🕒 Joylangan: ${ad.createdAt}</p>` : "";
-        const comment = ad.comment ? `<p><b>Izoh:</b> ${ad.comment}</p>` : "";
 
         div.innerHTML = `
           <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
           <p><b>Narx:</b> ${ad.price || "Ko‘rsatilmagan"} so‘m</p>
-          <p><b>Telefon:</b> ${ad.phone}</p>
+          ${extraText}
           <p><b>Holat:</b> ${statusText}</p>
-          ${comment}
           ${createdAt}
           ${editArea}
           <div class="actions">
             ${ad.status !== "approved"
               ? `<button onclick="editAd('${ad.id}', '${ad.type}')">✏️ Tahrirlash</button>`
-              : `<button disabled style="background:#ccc;cursor:not-allowed;">✏️ Tahrirlash</button>`}
+              : `<button disabled style="background:#ccc; cursor:not-allowed;">✏️ Tahrirlash</button>`}
             <button onclick="deleteAd('${ad.id}', '${ad.type}')">🗑️ O‘chirish</button>
           </div>
         `;
@@ -227,7 +280,7 @@
       const toRegion = document.getElementById("toRegion").value.trim();
       const toDistrict = document.getElementById("toDistrict").value.trim();
       const price = document.getElementById("price").value.trim();
-      const comment = document.getElementById("comment").value.trim();
+      const extraInfo = document.getElementById("extraInfo").value.trim();
 
       if (!type || !fromRegion || !toRegion) {
         alert("Iltimos, yo‘nalish ma’lumotlarini to‘ldiring!");
@@ -245,7 +298,7 @@
         toRegion,
         toDistrict,
         price,
-        comment,
+        extraInfo,
         type,
         status: "pending",
         createdAt: new Date().toLocaleString()
@@ -253,13 +306,12 @@
 
       ads.push(newAd);
       localStorage.setItem(key, JSON.stringify(ads));
-      alert("✅ E’lon joylandi (Admin tasdiqlashi kutilmoqda).");
+      alert("✅ E’lon muvaffaqiyatli joylandi (Admin tasdiqlashi kutilmoqda).");
       renderUserAds();
     }
 
-    // qolgan funksiyalar o‘zgarmaydi (editAd, saveInlineEdit, cancelInlineEdit, deleteAd, filters, va h.k.)
+    // --- qolgan funksiyalar (edit, saveInlineEdit, deleteAd, filterlar, syncStatuses, viloyatlar) avvalgidek qoladi ---
   </script>
-
   <script src="regions.js"></script>
 </body>
 </html>
