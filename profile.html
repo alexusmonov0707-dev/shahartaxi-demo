@@ -202,10 +202,17 @@ function logout() {
 }
 
 function getAds() {
-  return {
-    driver: JSON.parse(localStorage.getItem("driverAds")) || [],
-    passenger: JSON.parse(localStorage.getItem("passengerAds")) || []
-  };
+  const driver = JSON.parse(localStorage.getItem("driverAds")) || [];
+  const passenger = JSON.parse(localStorage.getItem("passengerAds")) || [];
+
+  // Eski e’lonlar uchun comment maydonini avtomatik qo‘shish
+  driver.forEach(ad => { if (!ad.comment) ad.comment = ""; });
+  passenger.forEach(ad => { if (!ad.comment) ad.comment = ""; });
+
+  localStorage.setItem("driverAds", JSON.stringify(driver));
+  localStorage.setItem("passengerAds", JSON.stringify(passenger));
+
+  return { driver, passenger };
 }
 
 function renderUserAds() {
@@ -241,10 +248,7 @@ function renderUserAds() {
     div.className = "ad-box " + (ad.status || "pending");
 
     const createdAt = ad.createdAt ? `<p class="date-info">🕒 Joylangan: ${ad.createdAt}</p>` : "";
-
-    const commentHTML = ad.comment
-      ? `<div class="comment-box"><b>Izoh:</b> ${ad.comment}</div>`
-      : "";
+    const commentHTML = ad.comment ? `<div class="comment-box"><b>Izoh:</b> ${ad.comment}</div>` : "";
 
     div.innerHTML = `
       <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
