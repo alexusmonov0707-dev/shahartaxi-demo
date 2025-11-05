@@ -41,7 +41,7 @@ h2 {
   color: #007bff;
   text-align: center;
 }
-input, select {
+input, select, textarea {
   width: 100%;
   padding: 10px;
   margin: 8px 0;
@@ -59,7 +59,9 @@ button {
   transition: 0.3s;
   margin-top: 10px;
 }
-button:hover { background: #0056b3; }
+button:hover {
+  background: #0056b3;
+}
 .ad-box {
   padding: 15px;
   border-radius: 8px;
@@ -71,8 +73,13 @@ button:hover { background: #0056b3; }
 .approved { background: #e6ffe6; }
 .rejected { background: #ffe6e6; }
 .ad-box p { margin: 5px 0; }
-.actions button { background: #28a745; margin-right: 5px; }
-.actions button:last-child { background: #dc3545; }
+.actions button {
+  background: #28a745;
+  margin-right: 5px;
+}
+.actions button:last-child {
+  background: #dc3545;
+}
 .filters {
   display: grid;
   grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
@@ -105,9 +112,17 @@ button:hover { background: #0056b3; }
   color: #666;
   font-style: italic;
 }
+.comment-box {
+  background: #f8f9ff;
+  padding: 8px;
+  border-left: 4px solid #007bff;
+  border-radius: 6px;
+  margin-top: 6px;
+}
 </style>
 </head>
 <body>
+
 <header>
   <h1>ShaharTaxi - Profil</h1>
   <button class="logout" onclick="logout()">Chiqish</button>
@@ -115,8 +130,8 @@ button:hover { background: #0056b3; }
 
 <div class="container">
   <div id="userPhone" class="user-info"></div>
-  <h2>Mening e’lonlarim</h2>
 
+  <h2>Mening e’lonlarim</h2>
   <div class="filters">
     <select id="typeFilter" onchange="applyFilters()">
       <option value="all">Barcha turlar</option>
@@ -145,6 +160,7 @@ button:hover { background: #0056b3; }
   </div>
 
   <div id="myAds"></div>
+
   <hr>
 
   <h2>Yangi e’lon qo‘shish</h2>
@@ -153,15 +169,22 @@ button:hover { background: #0056b3; }
     <option value="driver">Haydovchi</option>
     <option value="passenger">Yo‘lovchi</option>
   </select>
+
   <label>Qayerdan (viloyat):</label>
   <select id="fromRegion" onchange="updateDistricts('from')"></select>
+
   <label>Qayerdan (tuman):</label>
   <select id="fromDistrict"></select>
+
   <label>Qayerga (viloyat):</label>
   <select id="toRegion" onchange="updateDistricts('to')"></select>
+
   <label>Qayerga (tuman):</label>
   <select id="toDistrict"></select>
+
   <input type="number" id="price" placeholder="Narx (so‘m)">
+  <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh (ixtiyoriy)"></textarea>
+
   <button onclick="addAd()">E’lonni joylash</button>
 </div>
 
@@ -199,32 +222,29 @@ function renderUserAds() {
 
   if (typeFilter !== 'all') allAds = allAds.filter(a => a.type === typeFilter);
   if (statusFilter !== 'all') allAds = allAds.filter(a => (a.status || 'pending') === statusFilter);
-  if (fFromRegion) allAds = allAds.filter(a => (a.fromRegion || a.from || '').includes(fFromRegion));
+  if (fFromRegion) allAds = allAds.filter(a => (a.fromRegion || '').includes(fFromRegion));
   if (fFromDistrict) allAds = allAds.filter(a => (a.fromDistrict || '').includes(fFromDistrict));
-  if (fToRegion) allAds = allAds.filter(a => (a.toRegion || a.to || '').includes(fToRegion));
+  if (fToRegion) allAds = allAds.filter(a => (a.toRegion || '').includes(fToRegion));
   if (fToDistrict) allAds = allAds.filter(a => (a.toDistrict || '').includes(fToDistrict));
 
   const container = document.getElementById("myAds");
   container.innerHTML = allAds.length ? "" : "<p>Hozircha e’lonlar yo‘q.</p>";
 
   allAds.forEach(ad => {
-    const from = ad.fromDistrict && ad.fromRegion ? `${ad.fromRegion} ${ad.fromDistrict}` : (ad.fromRegion || ad.from || "—");
-    const to = ad.toDistrict && ad.toRegion ? `${ad.toRegion} ${ad.toDistrict}` : (ad.toRegion || ad.to || "—");
-    const statusText = ad.status === "approved" ? "✅ Tasdiqlangan" :
-                      ad.status === "rejected" ? "❌ Rad etilgan" : "⏳ Kutilmoqda";
+    const from = `${ad.fromRegion || ''} ${ad.fromDistrict || ''}`;
+    const to = `${ad.toRegion || ''} ${ad.toDistrict || ''}`;
+    const statusText = ad.status === "approved" ? "✅ Tasdiqlangan"
+                     : ad.status === "rejected" ? "❌ Rad etilgan"
+                     : "⏳ Kutilmoqda";
 
     const div = document.createElement("div");
-    div.className = "ad-box " + (ad.status === "approved" ? "approved" :
-                                 ad.status === "rejected" ? "rejected" : "pending");
-
-    const editArea = ad.editing ? `
-      <div class="inline-edit">
-        <input type="number" id="editPrice_${ad.id}" value="${ad.price || ''}" placeholder="Yangi narx">
-        <button onclick="saveInlineEdit('${ad.id}', '${ad.type}')">💾 Saqlash</button>
-        <button onclick="cancelInlineEdit('${ad.id}', '${ad.type}')">❌ Bekor</button>
-      </div>` : "";
+    div.className = "ad-box " + (ad.status || "pending");
 
     const createdAt = ad.createdAt ? `<p class="date-info">🕒 Joylangan: ${ad.createdAt}</p>` : "";
+
+    const commentHTML = ad.comment
+      ? `<div class="comment-box"><b>Izoh:</b> ${ad.comment}</div>`
+      : "";
 
     div.innerHTML = `
       <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
@@ -232,13 +252,14 @@ function renderUserAds() {
       <p><b>Telefon:</b> ${ad.phone}</p>
       <p><b>Holat:</b> ${statusText}</p>
       ${createdAt}
-      ${editArea}
+      ${commentHTML}
       <div class="actions">
         ${ad.status !== "approved"
           ? `<button onclick="editAd('${ad.id}', '${ad.type}')">✏️ Tahrirlash</button>`
           : `<button disabled style="background:#ccc;cursor:not-allowed;">✏️ Tahrirlash</button>`}
         <button onclick="deleteAd('${ad.id}', '${ad.type}')">🗑️ O‘chirish</button>
-      </div>`;
+      </div>
+    `;
     container.appendChild(div);
   });
 }
@@ -250,10 +271,13 @@ function addAd() {
   const toRegion = document.getElementById("toRegion").value.trim();
   const toDistrict = document.getElementById("toDistrict").value.trim();
   const price = document.getElementById("price").value.trim();
+  const comment = document.getElementById("adComment").value.trim();
+
   if (!type || !fromRegion || !toRegion) {
     alert("Iltimos, yo‘nalish ma’lumotlarini to‘ldiring!");
     return;
   }
+
   const key = type === "driver" ? "driverAds" : "passengerAds";
   const ads = JSON.parse(localStorage.getItem(key)) || [];
   const newAd = {
@@ -262,9 +286,11 @@ function addAd() {
     fromRegion, fromDistrict,
     toRegion, toDistrict,
     price, type,
+    comment: comment || "",
     status: "pending",
     createdAt: new Date().toLocaleString()
   };
+
   ads.push(newAd);
   localStorage.setItem(key, JSON.stringify(ads));
   alert("✅ E’lon joylandi (Admin tasdiqlashi kutilmoqda).");
@@ -276,33 +302,11 @@ function editAd(id, type) {
   const ads = JSON.parse(localStorage.getItem(key)) || [];
   const ad = ads.find(a => a.id === id);
   if (!ad) return;
-  if (ad.edited) return alert("❗ Ushbu e’lon oldin tahrirlangan.");
-  ad.editing = true;
-  localStorage.setItem(key, JSON.stringify(ads));
-  renderUserAds();
-}
-
-function saveInlineEdit(id, type) {
-  const key = type === "driver" ? "driverAds" : "passengerAds";
-  const ads = JSON.parse(localStorage.getItem(key)) || [];
-  const ad = ads.find(a => a.id === id);
-  if (!ad) return;
-  const newPrice = document.getElementById(`editPrice_${id}`).value.trim();
-  if (!newPrice) return alert("Narxni kiriting!");
+  const newPrice = prompt("Yangi narxni kiriting:", ad.price || "");
+  if (!newPrice) return;
   ad.price = newPrice;
-  ad.edited = true;
-  delete ad.editing;
   localStorage.setItem(key, JSON.stringify(ads));
-  alert("✏️ E’lon 1 marta tahrirlandi.");
-  renderUserAds();
-}
-
-function cancelInlineEdit(id, type) {
-  const key = type === "driver" ? "driverAds" : "passengerAds";
-  const ads = JSON.parse(localStorage.getItem(key)) || [];
-  const ad = ads.find(a => a.id === id);
-  if (ad) delete ad.editing;
-  localStorage.setItem(key, JSON.stringify(ads));
+  alert("✏️ E’lon yangilandi.");
   renderUserAds();
 }
 
@@ -315,7 +319,6 @@ function deleteAd(id, type) {
 }
 
 function applyFilters() { renderUserAds(); }
-
 function clearFilters() {
   document.getElementById('typeFilter').value = 'all';
   document.getElementById('statusFilter').value = 'all';
@@ -381,5 +384,6 @@ function updateDistricts(prefix) {
   if (regions[region]) regions[region].forEach(d=>districtSelect.add(new Option(d,d)));
 }
 </script>
+
 </body>
 </html>
