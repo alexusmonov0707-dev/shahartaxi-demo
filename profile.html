@@ -421,3 +421,132 @@ function ensureRatingContainer() {
 }
 function renderRatingsUI(profilePhone) {
  
+<!-- === Baholash tizimi to‘liq versiyasi === -->
+<script>
+function getProfileRatingsStore() {
+  return JSON.parse(localStorage.getItem('profileRatings') || '[]');
+}
+
+function saveProfileRatingsStore(store) {
+  localStorage.setItem('profileRatings', JSON.stringify(store));
+}
+
+function getRatingsForProfile(phone) {
+  const store = getProfileRatingsStore();
+  const entry = store.find(x => String(x.phone) === String(phone));
+  return entry ? entry.ratings : [];
+}
+
+function addRatingForProfile(phone, rating) {
+  const store = getProfileRatingsStore();
+  let entry = store.find(x => String(x.phone) === String(phone));
+  if (!entry) {
+    entry = { phone: String(phone), ratings: [] };
+    store.push(entry);
+  }
+  entry.ratings.push(rating);
+  saveProfileRatingsStore(store);
+}
+
+function computeAverage(ratings) {
+  if (!ratings.length) return 0;
+  return +(ratings.reduce((a, b) => a + Number(b.stars || 0), 0) / ratings.length).toFixed(1);
+}
+
+function renderRatingStars(value) {
+  let stars = "";
+  for (let i = 1; i <= 5; i++) {
+    stars += i <= value ? "⭐" : "☆";
+  }
+  return stars;
+}
+
+function ensureRatingContainer() {
+  if (document.getElementById("profileRatingBlock")) return;
+  const c = document.createElement("div");
+  c.id = "profileRatingBlock";
+  c.innerHTML = `
+    <hr>
+    <h2 style="color:#007bff;text-align:center;">Foydalanuvchi baholari</h2>
+    <div id="ratingSummary" style="text-align:center;margin-bottom:8px;">Yuklanmoqda...</div>
+    <div id="ratingFormWrap" style="max-width:700px;margin:0 auto 12px;text-align:center;"></div>
+    <div id="ratingList" style="max-width:700px;margin:0 auto;"></div>
+  `;
+  (document.querySelector(".container") || document.body).appendChild(c);
+}
+
+function renderRatingsUI(profilePhone) {
+  ensureRatingContainer();
+
+  const ratings = getRatingsForProfile(profilePhone);
+  const avg = computeAverage(ratings);
+  const ratingSummary = document.getElementById("ratingSummary");
+  const ratingList = document.getElementById("ratingList");
+  const ratingFormWrap = document.getElementById("ratingFormWrap");
+
+  // 🟨 O‘rtacha baho
+  ratingSummary.innerHTML =
+    ratings.length === 0
+      ? "Baholar hozircha yo‘q."
+      : `⭐ O‘rtacha baho: <b>${avg}</b> (${ratings.length} ta fikr)`;
+
+  // 🟩 Baholash formasi (barcha foydalanuvchilar ko‘radi)
+  ratingFormWrap.innerHTML = `
+    <p style="margin-bottom:6px;">Siz ham baho bering:</p>
+    <div id="starInputs" style="font-size:22px;cursor:pointer;">
+      ${[1,2,3,4,5].map(i => `<span data-star="${i}" onclick="selectStar(${i})">☆</span>`).join('')}
+    </div>
+    <textarea id="ratingComment" rows="2" placeholder="Izoh yozing..." style="width:100%;margin-top:8px;"></textarea>
+    <button onclick="submitRating('${profilePhone}')" style="margin-top:8px;">Yuborish</button>
+  `;
+
+  // 🟦 Baholar ro‘yxati
+  ratingList.innerHTML = "";
+  if (ratings.length) {
+    ratings.slice().reverse().forEach(r => {
+      const div = document.createElement("div");
+      div.style.background = "#f8f9ff";
+      div.style.border = "1px solid #d0d9ff";
+      div.style.borderRadius = "8px";
+      div.style.padding = "8px";
+      div.style.marginBottom = "8px";
+      div.innerHTML = `
+        <p><b>${renderRatingStars(r.stars)}</b></p>
+        <p>${r.comment || "(Izoh yo‘q)"} </p>
+        <p style="font-size:12px;color:#666;">${r.date}</p>
+      `;
+      ratingList.appendChild(div);
+    });
+  }
+}
+
+let selectedStars = 0;
+function selectStar(n) {
+  selectedStars = n;
+  document.querySelectorAll("#starInputs span").forEach((s, i) => {
+    s.textContent = i < n ? "⭐" : "☆";
+  });
+}
+
+function submitRating(profilePhone) {
+  if (!selectedStars) {
+    alert("Iltimos, yulduzcha sonini tanlang!");
+    return;
+  }
+  const comment = document.getElementById("ratingComment").value.trim();
+  addRatingForProfile(profilePhone, {
+    stars: selectedStars,
+    comment,
+    date: new Date().toLocaleString(),
+  });
+  alert("✅ Baholash qo‘shildi!");
+  selectedStars = 0;
+  renderRatingsUI(profilePhone);
+}
+
+// 🔄 Profil yuklanganda reytingni ko‘rsatish
+window.addEventListener("load", () => {
+  const userPhone = currentUser.phone;
+  renderRatingsUI(userPhone);
+});
+</script>
