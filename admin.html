@@ -13,86 +13,120 @@
     input[type="text"], select { padding: 8px; border-radius:6px; border:1px solid #ccc; }
     button { padding:8px 10px; border-radius:6px; border:none; background:#007bff; color:white; cursor:pointer; }
     button.secondary { background:#6c757d; }
-    .stat-card { flex:1;min-width:220px;padding:16px;border-radius:10px;text-align:center;color:white; }
-    .blue { background:#007bff; }
-    .green { background:#28a745; }
-    .yellow { background:#ffc107;color:black; }
-    .red { background:#dc3545; }
-    #statsSection { display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:16px auto;max-width:1100px; }
+    .ad { border-bottom:1px solid #ddd; padding:12px 0; position:relative; display:flex; gap:12px; align-items:flex-start; }
+    .ad:last-child{ border-bottom:none; }
+    .ad-left { width:36px; display:flex; align-items:center; }
+    .ad-body { flex:1; }
+    .ad-meta { font-size:0.95rem; color:#333; }
+    .actions { display:flex; gap:6px; margin-top:8px; }
+    .approve { background:#28a745; }
+    .reject { background:#dc3545; }
+    .edit { background:#ffc107; color:black; }
+    .delete { background:#6c757d; }
+    .status { font-weight:600; }
+    .inline-edit-input { width:120px; padding:6px; border-radius:6px; border:1px solid #ccc; }
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; z-index:9999; }
+    .modal-content { background:white; padding:16px; border-radius:8px; width:360px; box-shadow:0 3px 12px rgba(0,0,0,0.2); }
+    .pagination { display:flex; gap:6px; margin-top:10px; align-items:center; }
+    .file-input { display:none; }
+    .top-row { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .bulk-actions { display:flex; gap:6px; }
+    .small-btn { padding:6px 8px; font-size:0.9rem; }
+    .info { font-size:0.9rem; color:#555; }
+    @media (max-width:720px){ .ad { flex-direction:column; } .ad-left{ width:100% } }
   </style>
 </head>
 <body>
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay" style="display:none;">
+    <div class="login-box" style="background:#fff;padding:24px;border-radius:12px;width:360px;margin:auto;">
+      <h3>🔐 Admin kirish</h3>
+      <input type="text" id="adminUser" placeholder="Foydalanuvchi" value="admin" style="width:100%;padding:8px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
+      <input type="password" id="adminPass" placeholder="Parol" style="width:100%;padding:8px;margin:8px 0;border-radius:8px;border:1px solid #ccc;">
+      <p id="loginError" style="color:red;margin:8px 0 0 0"></p>
+      <button onclick="checkAdminLogin()">Kirish</button>
+    </div>
+  </div>
 
   <header><h1>🛠 ShaharTaxi - Admin Panel</h1></header>
-
-  <!-- 📊 STATISTIKA -->
-  <section id="statsSection">
-    <div class="stat-card blue">
-      <h3 id="totalAds">0</h3><p>Barcha e’lonlar</p>
-    </div>
-    <div class="stat-card green">
-      <h3 id="approvedAds">0</h3><p>Tasdiqlangan</p>
-    </div>
-    <div class="stat-card yellow">
-      <h3 id="pendingAds">0</h3><p>Kutilayotgan</p>
-    </div>
-    <div class="stat-card red">
-      <h3 id="rejectedAds">0</h3><p>Rad etilgan</p>
-    </div>
-  </section>
-
   <main>
+    <div class="top-row">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input type="text" id="searchInput" placeholder="Qidirish: telefon yoki ID..." oninput="onSearchChange()" style="padding:8px;border-radius:6px;border:1px solid #ccc;">
+        <select id="typeFilter" onchange="renderAds()">
+          <option value="all">Barcha turlar</option>
+          <option value="driver">Haydovchilar</option>
+          <option value="passenger">Yo‘lovchilar</option>
+        </select>
+        <select id="statusFilter" onchange="renderAds()">
+          <option value="all">Barcha holatlar</option>
+          <option value="pending">Kutilmoqda</option>
+          <option value="approved">Tasdiqlangan</option>
+          <option value="rejected">Rad etilgan</option>
+        </select>
+        <select id="sortFilter" onchange="renderAds()">
+          <option value="desc">Eng yangi avval</option>
+          <option value="asc">Eng eski avval</option>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div class="bulk-actions">
+          <button class="small-btn" onclick="selectAllToggle()">⬜ Barchasini tanlash</button>
+          <button class="small-btn" onclick="bulkUpdateStatus('approved')">✅ Tasdiqlash</button>
+          <button class="small-btn" onclick="bulkUpdateStatus('rejected')">❌ Rad etish</button>
+        </div>
+
+        <button onclick="exportAllCSV()">Export CSV</button>
+        <label style="display:inline-block;">
+          <input type="file" id="csvImport" class="file-input" accept=".csv" onchange="importCSV(this.files)" />
+          <button class="secondary" onclick="document.getElementById('csvImport').click()">Import CSV</button>
+        </label>
+
+        <button onclick="standardizeDates()">🧹 Fix dates</button>
+        <button onclick="toggleNotifications()">🔔 Notifications</button>
+        <button onclick="logoutAdmin()" style="background:#6c757d;">Chiqish</button>
+      </div>
+    </div>
+
+    <div class="controls info">
+      <span id="adsInfo">E’lonlar yuklanmoqda...</span>
+    </div>
+
     <div id="ads"></div>
+
+    <div class="pagination" id="paginationControls"></div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+      <div class="modal-content">
+        <h3>E’lonni tahrirlash</h3>
+        <input type="text" id="editPhone" placeholder="Telefon raqam">
+        <input type="text" id="editPrice" placeholder="Narx (so‘m)">
+        <input type="text" id="editFrom" placeholder="Qayerdan">
+        <input type="text" id="editTo" placeholder="Qayerga">
+        <select id="editStatus">
+          <option value="pending">Kutilmoqda</option>
+          <option value="approved">Tasdiqlangan</option>
+          <option value="rejected">Rad etilgan</option>
+        </select>
+        <div style="margin-top:8px;">
+          <button class="save-btn" onclick="saveEdit()">Saqlash</button>
+          <button class="cancel-btn" onclick="closeModal()">Bekor qilish</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Modal -->
+    <div class="modal" id="historyModal">
+      <div class="modal-content">
+        <h3>Tasdiqlash tarixi</h3>
+        <div id="historyList"></div>
+        <button class="cancel-btn" onclick="closeHistory()">Yopish</button>
+      </div>
+    </div>
+
   </main>
-
-  <script>
-    // 🧩 Statusni normallashtirish
-    function normalizeStatus(status) {
-      if (!status) return "pending";
-      status = status.toString().toLowerCase().trim();
-      if (status.includes("tasdiq")) return "approved";
-      if (status.includes("rad")) return "rejected";
-      if (status.includes("kut") || status.includes("pend")) return "pending";
-      return status;
-    }
-
-    // 🧩 LocalStorage dan hamma e'lonlarni olish
-    function getAllAds() {
-      const keys = Object.keys(localStorage);
-      let all = [];
-      for (let key of keys) {
-        try {
-          const data = JSON.parse(localStorage.getItem(key));
-          if (Array.isArray(data)) {
-            all = all.concat(data);
-          }
-        } catch (e) {}
-      }
-      return all;
-    }
-
-    // 🧩 Statistika yangilash
-    function updateStats() {
-      const allAds = getAllAds().map(a => ({
-        ...a,
-        status: normalizeStatus(a.status)
-      }));
-
-      const total = allAds.length;
-      const approved = allAds.filter(a => a.status === "approved").length;
-      const pending = allAds.filter(a => a.status === "pending").length;
-      const rejected = allAds.filter(a => a.status === "rejected").length;
-
-      document.getElementById("totalAds").textContent = total;
-      document.getElementById("approvedAds").textContent = approved;
-      document.getElementById("pendingAds").textContent = pending;
-      document.getElementById("rejectedAds").textContent = rejected;
-    }
-
-    // 🧩 Har 2 sekundda yangilab turish
-    setInterval(updateStats, 2000);
-    window.addEventListener("load", updateStats);
-  </script>
 
   <script src="admin.js"></script>
 </body>
