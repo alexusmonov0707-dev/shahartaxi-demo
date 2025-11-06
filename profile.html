@@ -388,6 +388,125 @@ function updateDistricts(prefix) {
   if (regions[region]) regions[region].forEach(d=>districtSelect.add(new Option(d,d)));
 }
 </script>
+<!-- ⭐ Baholash tizimi -->
+<div id="ratingSection" style="margin-top: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+  <h3>⭐ Baholashlar</h3>
+  <div id="ratingSummary" style="margin-bottom: 10px; font-size: 1.1rem; color: #333;">Yuklanmoqda...</div>
+
+  <div id="ratingsList" style="margin-bottom: 15px;"></div>
+
+  <div id="ratingFormContainer" style="display:none;">
+    <h4>Baholash qo‘shish</h4>
+    <div id="starContainer" style="margin-bottom:6px;">
+      <span class="star" data-star="1">☆</span>
+      <span class="star" data-star="2">☆</span>
+      <span class="star" data-star="3">☆</span>
+      <span class="star" data-star="4">☆</span>
+      <span class="star" data-star="5">☆</span>
+    </div>
+    <textarea id="ratingComment" rows="2" placeholder="Izoh yozing (ixtiyoriy)" style="width:100%;border-radius:6px;border:1px solid #ccc;padding:6px;"></textarea>
+    <button onclick="submitRating()" style="margin-top:6px;background:#007bff;color:#fff;border:none;padding:8px 12px;border-radius:6px;">Yuborish</button>
+  </div>
+</div>
+
+<script>
+let selectedStars = 0;
+
+function initRatingSystem(profilePhone) {
+  loadUserRatings(profilePhone);
+  const currentUserPhone = localStorage.getItem("currentUserPhone");
+
+  // Agar kirgan foydalanuvchi o‘zi bo‘lmasa — formani ko‘rsatamiz
+  if (currentUserPhone && currentUserPhone !== profilePhone) {
+    document.getElementById("ratingFormContainer").style.display = "block";
+  }
+
+  // Yulduzlarni bosish eventlari
+  document.querySelectorAll('.star').forEach(star => {
+    star.onclick = () => {
+      selectedStars = parseInt(star.dataset.star);
+      document.querySelectorAll('.star').forEach(s => {
+        s.textContent = parseInt(s.dataset.star) <= selectedStars ? '⭐' : '☆';
+      });
+    };
+  });
+}
+
+function loadUserRatings(profilePhone) {
+  const ratingsData = JSON.parse(localStorage.getItem('userRatings') || '{}');
+  const userRating = ratingsData[profilePhone];
+
+  const summaryEl = document.getElementById("ratingSummary");
+  const listEl = document.getElementById("ratingsList");
+
+  if (!userRating || !userRating.ratings || userRating.ratings.length === 0) {
+    summaryEl.textContent = "Hozircha baho yo‘q.";
+    listEl.innerHTML = "";
+    return;
+  }
+
+  const avg = userRating.average.toFixed(1);
+  const total = userRating.total;
+
+  summaryEl.textContent = `⭐ ${avg} (${total} ta baho)`;
+
+  listEl.innerHTML = userRating.ratings.map(r =>
+    `<div style="border-bottom:1px solid #eee;padding:6px 0;">
+      <strong>${r.from}</strong>: ${r.comment ? `"${r.comment}"` : ""} 
+      <span style="color:#ff9800;">${"⭐".repeat(r.stars)}</span>
+    </div>`
+  ).join('');
+}
+
+function submitRating() {
+  const profilePhone = window.profilePhone || localStorage.getItem("viewingProfile");
+  const currentUser = localStorage.getItem("currentUserPhone");
+  if (!currentUser) {
+    alert("Baholash uchun tizimga kiring!");
+    return;
+  }
+  if (!selectedStars) {
+    alert("Iltimos, yulduz tanlang!");
+    return;
+  }
+
+  const comment = document.getElementById("ratingComment").value.trim();
+  const ratingsData = JSON.parse(localStorage.getItem('userRatings') || '{}');
+  if (!ratingsData[profilePhone]) {
+    ratingsData[profilePhone] = { average: 0, total: 0, ratings: [] };
+  }
+
+  // Agar avval baho bergan bo‘lsa — yangilaymiz
+  const existing = ratingsData[profilePhone].ratings.find(r => r.from === currentUser);
+  if (existing) {
+    existing.stars = selectedStars;
+    existing.comment = comment;
+    existing.date = new Date().toISOString().split('T')[0];
+  } else {
+    ratingsData[profilePhone].ratings.push({
+      from: currentUser,
+      stars: selectedStars,
+      comment,
+      date: new Date().toISOString().split('T')[0]
+    });
+    ratingsData[profilePhone].total++;
+  }
+
+  // O‘rtacha bahoni hisoblaymiz
+  const allStars = ratingsData[profilePhone].ratings.map(r => r.stars);
+  const avg = allStars.reduce((a,b) => a+b, 0) / allStars.length;
+  ratingsData[profilePhone].average = avg;
+
+  localStorage.setItem('userRatings', JSON.stringify(ratingsData));
+
+  alert("Baho saqlandi!");
+  document.getElementById("ratingComment").value = "";
+  selectedStars = 0;
+  document.querySelectorAll('.star').forEach(s => s.textContent = '☆');
+
+  loadUserRatings(profilePhone);
+}
+</script>
 
 </body>
 </html>
