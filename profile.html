@@ -507,6 +507,28 @@ function submitRating() {
   loadUserRatings(profilePhone);
 }
 </script>
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+  // Profil egasining telefon raqamini olish (elonlardan yoki URL’dan)
+  let profilePhone = localStorage.getItem("viewingProfile");
+  
+  // Agar viewingProfile saqlanmagan bo‘lsa, hozirgi foydalanuvchining raqamini olamiz
+  if (!profilePhone) {
+    profilePhone = localStorage.getItem("currentUserPhone");
+  }
+
+  // Global saqlaymiz (boshqa funksiyalar uchun)
+  window.profilePhone = profilePhone;
+
+  // Baholash tizimini ishga tushiramiz
+  if (typeof initRatingSystem === "function") {
+    initRatingSystem(profilePhone);
+  } else {
+    console.error("Baholash tizimi topilmadi (initRatingSystem ishlamadi).");
+  }
+});
+</script>
+
 
 </body>
 </html>
