@@ -35,10 +35,9 @@
     .info { font-size:0.9rem; color:#555; }
     @media (max-width:720px){ .ad { flex-direction:column; } .ad-left{ width:100% } }
 
-    /* Statistika kartalari */
+    /* 📊 Statistikalar */
     #statsSection { display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:16px auto;max-width:1100px; }
     .stat-card { flex:1;min-width:220px;padding:16px;border-radius:10px;text-align:center;color:white; }
-    .stat-card h3 { margin:0;font-size:1.8rem; }
     .blue { background:#007bff; }
     .green { background:#28a745; }
     .yellow { background:#ffc107;color:black; }
@@ -46,6 +45,7 @@
   </style>
 </head>
 <body>
+
   <!-- LOGIN OVERLAY -->
   <div id="loginOverlay" style="display:none;">
     <div class="login-box" style="background:#fff;padding:24px;border-radius:12px;width:360px;margin:auto;">
@@ -59,7 +59,7 @@
 
   <header><h1>🛠 ShaharTaxi - Admin Panel</h1></header>
 
-  <!-- 📊 STATISTIKA QISMI -->
+  <!-- 📊 STATISTIKA KARTALARI -->
   <section id="statsSection">
     <div class="stat-card blue">
       <h3 id="totalAds">0</h3>
@@ -159,29 +159,40 @@
   </main>
 
   <script>
-    // 📊 Statistika funksiyasi
-    function updateStats() {
-      let allAds = [];
-
-      const mainAds = JSON.parse(localStorage.getItem('ads')) || [];
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
-
-      allAds = [...mainAds, ...driverAds, ...passengerAds];
-
-      const total = allAds.length;
-      const approved = allAds.filter(a => a.status === 'approved').length;
-      const pending = allAds.filter(a => a.status === 'pending').length;
-      const rejected = allAds.filter(a => a.status === 'rejected').length;
-
-      document.getElementById('totalAds').textContent = total;
-      document.getElementById('approvedAds').textContent = approved;
-      document.getElementById('pendingAds').textContent = pending;
-      document.getElementById('rejectedAds').textContent = rejected;
+    // 📊 STATISTIKA FUNKSIYALARI
+    function normalizeStatus(status) {
+      if (!status) return "pending";
+      status = status.toString().toLowerCase().trim();
+      if (status.includes("tasdiq")) return "approved";
+      if (status.includes("rad")) return "rejected";
+      if (status.includes("kut") || status.includes("pend")) return "pending";
+      return status;
     }
 
-    setInterval(updateStats, 1500);
-    updateStats();
+    function getAllAds() {
+      const mainAds = JSON.parse(localStorage.getItem("ads")) || [];
+      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
+      return [...mainAds, ...driverAds, ...passengerAds];
+    }
+
+    function updateStats() {
+      const allAds = getAllAds();
+      const normalized = allAds.map(a => ({ ...a, status: normalizeStatus(a.status) }));
+
+      const total = normalized.length;
+      const approved = normalized.filter(a => a.status === "approved").length;
+      const pending = normalized.filter(a => a.status === "pending").length;
+      const rejected = normalized.filter(a => a.status === "rejected").length;
+
+      document.getElementById("totalAds").textContent = total;
+      document.getElementById("approvedAds").textContent = approved;
+      document.getElementById("pendingAds").textContent = pending;
+      document.getElementById("rejectedAds").textContent = rejected;
+    }
+
+    setInterval(updateStats, 4000);
+    window.addEventListener("load", updateStats);
   </script>
 
   <script src="admin.js"></script>
