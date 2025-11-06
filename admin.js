@@ -612,3 +612,15 @@ window.onload = () => {
 // === Helper: search from other scripts can call this ===
 window.adminRefresh = () => { renderAds(); updateStats(); };
 
+function updateStats() {
+  const ads = JSON.parse(localStorage.getItem("ads") || "[]");
+  const total = ads.length;
+  const approved = ads.filter(a => a.status === "approved").length;
+  const pending = ads.filter(a => a.status === "pending").length;
+  const rejected = ads.filter(a => a.status === "rejected").length;
+
+  document.getElementById("totalAds").textContent = total;
+  document.getElementById("approvedAds").textContent = approved;
+  document.getElementById("pendingAds").textContent = pending;
+  document.getElementById("rejectedAds").textContent = rejected;
+}
