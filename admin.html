@@ -159,7 +159,7 @@
   </main>
 
   <script>
-    // 📊 STATISTIKA FUNKSIYALARI
+    // 📊 STATISTIKA FUNKSIYALARI (TO‘G‘RILANGAN)
     function normalizeStatus(status) {
       if (!status) return "pending";
       status = status.toString().toLowerCase().trim();
@@ -170,20 +170,23 @@
     }
 
     function getAllAds() {
-      const mainAds = JSON.parse(localStorage.getItem("ads")) || [];
-      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-      return [...mainAds, ...driverAds, ...passengerAds];
+      try {
+        const mainAds = JSON.parse(localStorage.getItem("ads")) || [];
+        const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
+        const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
+        return [...mainAds, ...driverAds, ...passengerAds];
+      } catch (e) {
+        console.error("Xatolik: e’lonlarni olishda muammo", e);
+        return [];
+      }
     }
 
     function updateStats() {
-      const allAds = getAllAds();
-      const normalized = allAds.map(a => ({ ...a, status: normalizeStatus(a.status) }));
-
-      const total = normalized.length;
-      const approved = normalized.filter(a => a.status === "approved").length;
-      const pending = normalized.filter(a => a.status === "pending").length;
-      const rejected = normalized.filter(a => a.status === "rejected").length;
+      const allAds = getAllAds().map(a => ({ ...a, status: normalizeStatus(a.status) }));
+      const total = allAds.length;
+      const approved = allAds.filter(a => a.status === "approved").length;
+      const pending = allAds.filter(a => a.status === "pending").length;
+      const rejected = allAds.filter(a => a.status === "rejected").length;
 
       document.getElementById("totalAds").textContent = total;
       document.getElementById("approvedAds").textContent = approved;
@@ -191,7 +194,8 @@
       document.getElementById("rejectedAds").textContent = rejected;
     }
 
-    setInterval(updateStats, 4000);
+    // Har safar localStorage o‘zgarsa — statistikani yangilash
+    window.addEventListener("storage", updateStats);
     window.addEventListener("load", updateStats);
   </script>
 
