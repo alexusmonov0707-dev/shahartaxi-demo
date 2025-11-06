@@ -34,6 +34,15 @@
     .small-btn { padding:6px 8px; font-size:0.9rem; }
     .info { font-size:0.9rem; color:#555; }
     @media (max-width:720px){ .ad { flex-direction:column; } .ad-left{ width:100% } }
+
+    /* Statistika kartalari */
+    #statsSection { display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:16px auto;max-width:1100px; }
+    .stat-card { flex:1;min-width:220px;padding:16px;border-radius:10px;text-align:center;color:white; }
+    .stat-card h3 { margin:0;font-size:1.8rem; }
+    .blue { background:#007bff; }
+    .green { background:#28a745; }
+    .yellow { background:#ffc107;color:black; }
+    .red { background:#dc3545; }
   </style>
 </head>
 <body>
@@ -50,21 +59,21 @@
 
   <header><h1>🛠 ShaharTaxi - Admin Panel</h1></header>
 
-  <!-- 📊 Statistik kartalar -->
-  <section id="statsSection" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:16px auto;max-width:1100px;">
-    <div class="stat-card" style="flex:1;min-width:220px;background:#007bff;color:white;padding:16px;border-radius:10px;text-align:center;">
+  <!-- 📊 STATISTIKA QISMI -->
+  <section id="statsSection">
+    <div class="stat-card blue">
       <h3 id="totalAds">0</h3>
       <p>Barcha e’lonlar</p>
     </div>
-    <div class="stat-card" style="flex:1;min-width:220px;background:#28a745;color:white;padding:16px;border-radius:10px;text-align:center;">
+    <div class="stat-card green">
       <h3 id="approvedAds">0</h3>
       <p>Tasdiqlangan</p>
     </div>
-    <div class="stat-card" style="flex:1;min-width:220px;background:#ffc107;color:black;padding:16px;border-radius:10px;text-align:center;">
+    <div class="stat-card yellow">
       <h3 id="pendingAds">0</h3>
       <p>Kutilayotgan</p>
     </div>
-    <div class="stat-card" style="flex:1;min-width:220px;background:#dc3545;color:white;padding:16px;border-radius:10px;text-align:center;">
+    <div class="stat-card red">
       <h3 id="rejectedAds">0</h3>
       <p>Rad etilgan</p>
     </div>
@@ -115,6 +124,7 @@
     </div>
 
     <div id="ads"></div>
+
     <div class="pagination" id="paginationControls"></div>
 
     <!-- Edit Modal -->
@@ -145,7 +155,34 @@
         <button class="cancel-btn" onclick="closeHistory()">Yopish</button>
       </div>
     </div>
+
   </main>
+
+  <script>
+    // 📊 Statistika funksiyasi
+    function updateStats() {
+      let allAds = [];
+
+      const mainAds = JSON.parse(localStorage.getItem('ads')) || [];
+      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
+      const passengerAds = JSON.parse(localStorage.getItem('passengerAds')) || [];
+
+      allAds = [...mainAds, ...driverAds, ...passengerAds];
+
+      const total = allAds.length;
+      const approved = allAds.filter(a => a.status === 'approved').length;
+      const pending = allAds.filter(a => a.status === 'pending').length;
+      const rejected = allAds.filter(a => a.status === 'rejected').length;
+
+      document.getElementById('totalAds').textContent = total;
+      document.getElementById('approvedAds').textContent = approved;
+      document.getElementById('pendingAds').textContent = pending;
+      document.getElementById('rejectedAds').textContent = rejected;
+    }
+
+    setInterval(updateStats, 1500);
+    updateStats();
+  </script>
 
   <script src="admin.js"></script>
 </body>
