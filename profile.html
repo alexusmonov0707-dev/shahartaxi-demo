@@ -202,17 +202,10 @@ function logout() {
 }
 
 function getAds() {
-  const driver = JSON.parse(localStorage.getItem("driverAds")) || [];
-  const passenger = JSON.parse(localStorage.getItem("passengerAds")) || [];
-
-  // Eski e’lonlar uchun comment maydonini avtomatik qo‘shish
-  driver.forEach(ad => { if (!ad.comment) ad.comment = ""; });
-  passenger.forEach(ad => { if (!ad.comment) ad.comment = ""; });
-
-  localStorage.setItem("driverAds", JSON.stringify(driver));
-  localStorage.setItem("passengerAds", JSON.stringify(passenger));
-
-  return { driver, passenger };
+  return {
+    driver: JSON.parse(localStorage.getItem("driverAds")) || [],
+    passenger: JSON.parse(localStorage.getItem("passengerAds")) || []
+  };
 }
 
 function renderUserAds() {
@@ -248,7 +241,10 @@ function renderUserAds() {
     div.className = "ad-box " + (ad.status || "pending");
 
     const createdAt = ad.createdAt ? `<p class="date-info">🕒 Joylangan: ${ad.createdAt}</p>` : "";
-    const commentHTML = ad.comment ? `<div class="comment-box"><b>Izoh:</b> ${ad.comment}</div>` : "";
+
+    const commentHTML = ad.comment
+      ? `<div class="comment-box"><b>Izoh:</b> ${ad.comment}</div>`
+      : "";
 
     div.innerHTML = `
       <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
@@ -388,333 +384,40 @@ function updateDistricts(prefix) {
   if (regions[region]) regions[region].forEach(d=>districtSelect.add(new Option(d,d)));
 }
 </script>
-<!-- ⭐ Baholash tizimi -->
-<div id="ratingSection" style="margin-top: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-  <h3>⭐ Baholashlar</h3>
-  <div id="ratingSummary" style="margin-bottom: 10px; font-size: 1.1rem; color: #333;">Yuklanmoqda...</div>
 
-  <div id="ratingsList" style="margin-bottom: 15px;"></div>
-
-  <div id="ratingFormContainer" style="display:none;">
-    <h4>Baholash qo‘shish</h4>
-    <div id="starContainer" style="margin-bottom:6px;">
-      <span class="star" data-star="1">☆</span>
-      <span class="star" data-star="2">☆</span>
-      <span class="star" data-star="3">☆</span>
-      <span class="star" data-star="4">☆</span>
-      <span class="star" data-star="5">☆</span>
-    </div>
-    <textarea id="ratingComment" rows="2" placeholder="Izoh yozing (ixtiyoriy)" style="width:100%;border-radius:6px;border:1px solid #ccc;padding:6px;"></textarea>
-    <button onclick="submitRating()" style="margin-top:6px;background:#007bff;color:#fff;border:none;padding:8px 12px;border-radius:6px;">Yuborish</button>
-  </div>
-</div>
-
+<!-- ===== Baholash tizimi qo‘shilgan qism ===== -->
 <script>
-let selectedStars = 0;
-
-function initRatingSystem(profilePhone) {
-  loadUserRatings(profilePhone);
-  const currentUserPhone = localStorage.getItem("currentUserPhone");
-
-  // Agar kirgan foydalanuvchi o‘zi bo‘lmasa — formani ko‘rsatamiz
-  if (currentUserPhone && currentUserPhone !== profilePhone) {
-    document.getElementById("ratingFormContainer").style.display = "block";
-  }
-
-  // Yulduzlarni bosish eventlari
-  document.querySelectorAll('.star').forEach(star => {
-    star.onclick = () => {
-      selectedStars = parseInt(star.dataset.star);
-      document.querySelectorAll('.star').forEach(s => {
-        s.textContent = parseInt(s.dataset.star) <= selectedStars ? '⭐' : '☆';
-      });
-    };
-  });
-}
-
-function loadUserRatings(profilePhone) {
-  const ratingsData = JSON.parse(localStorage.getItem('userRatings') || '{}');
-  const userRating = ratingsData[profilePhone];
-
-  const summaryEl = document.getElementById("ratingSummary");
-  const listEl = document.getElementById("ratingsList");
-
-  if (!userRating || !userRating.ratings || userRating.ratings.length === 0) {
-    summaryEl.textContent = "Hozircha baho yo‘q.";
-    listEl.innerHTML = "";
-    return;
-  }
-
-  const avg = userRating.average.toFixed(1);
-  const total = userRating.total;
-
-  summaryEl.textContent = `⭐ ${avg} (${total} ta baho)`;
-
-  listEl.innerHTML = userRating.ratings.map(r =>
-    `<div style="border-bottom:1px solid #eee;padding:6px 0;">
-      <strong>${r.from}</strong>: ${r.comment ? `"${r.comment}"` : ""} 
-      <span style="color:#ff9800;">${"⭐".repeat(r.stars)}</span>
-    </div>`
-  ).join('');
-}
-
-function submitRating() {
-  const profilePhone = window.profilePhone || localStorage.getItem("viewingProfile");
-  const currentUser = localStorage.getItem("currentUserPhone");
-  if (!currentUser) {
-    alert("Baholash uchun tizimga kiring!");
-    return;
-  }
-  if (!selectedStars) {
-    alert("Iltimos, yulduz tanlang!");
-    return;
-  }
-
-  const comment = document.getElementById("ratingComment").value.trim();
-  const ratingsData = JSON.parse(localStorage.getItem('userRatings') || '{}');
-  if (!ratingsData[profilePhone]) {
-    ratingsData[profilePhone] = { average: 0, total: 0, ratings: [] };
-  }
-
-  // Agar avval baho bergan bo‘lsa — yangilaymiz
-  const existing = ratingsData[profilePhone].ratings.find(r => r.from === currentUser);
-  if (existing) {
-    existing.stars = selectedStars;
-    existing.comment = comment;
-    existing.date = new Date().toISOString().split('T')[0];
-  } else {
-    ratingsData[profilePhone].ratings.push({
-      from: currentUser,
-      stars: selectedStars,
-      comment,
-      date: new Date().toISOString().split('T')[0]
-    });
-    ratingsData[profilePhone].total++;
-  }
-
-  // O‘rtacha bahoni hisoblaymiz
-  const allStars = ratingsData[profilePhone].ratings.map(r => r.stars);
-  const avg = allStars.reduce((a,b) => a+b, 0) / allStars.length;
-  ratingsData[profilePhone].average = avg;
-
-  localStorage.setItem('userRatings', JSON.stringify(ratingsData));
-
-  alert("Baho saqlandi!");
-  document.getElementById("ratingComment").value = "";
-  selectedStars = 0;
-  document.querySelectorAll('.star').forEach(s => s.textContent = '☆');
-
-  loadUserRatings(profilePhone);
-}
-</script>
-  <script>
-document.addEventListener("DOMContentLoaded", () => {
-  // Profil egasining telefon raqamini olish (elonlardan yoki URL’dan)
-  let profilePhone = localStorage.getItem("viewingProfile");
-  
-  // Agar viewingProfile saqlanmagan bo‘lsa, hozirgi foydalanuvchining raqamini olamiz
-  if (!profilePhone) {
-    profilePhone = localStorage.getItem("currentUserPhone");
-  }
-
-  // Global saqlaymiz (boshqa funksiyalar uchun)
-  window.profilePhone = profilePhone;
-
-  // Baholash tizimini ishga tushiramiz
-  if (typeof initRatingSystem === "function") {
-    initRatingSystem(profilePhone);
-  } else {
-    console.error("Baholash tizimi topilmadi (initRatingSystem ishlamadi).");
-  }
-});
-</script>
-<!-- ===== PROFILE RATING SYSTEM (PASTE BEFORE </body>) ===== -->
-<script>
-/*
-  Profile rating system
-  - Stores ratings under localStorage key: "profileRatings"
-  - Structure:
-    [
-      { phone: "<profilePhone>", ratings: [ { raterPhone, stars, text, date } ] },
-      ...
-    ]
-*/
-
 function getProfileRatingsStore() {
   return JSON.parse(localStorage.getItem('profileRatings') || '[]');
 }
 function saveProfileRatingsStore(store) {
   localStorage.setItem('profileRatings', JSON.stringify(store));
 }
-
-// return array of ratings for a given profilePhone
-function getRatingsForProfile(profilePhone) {
-  const store = getProfileRatingsStore();
-  const entry = store.find(e => String(e.phone) === String(profilePhone));
-  return entry ? entry.ratings : [];
+function getRatingsForProfile(phone) {
+  const s = getProfileRatingsStore();
+  const e = s.find(x => String(x.phone) === String(phone));
+  return e ? e.ratings : [];
 }
-
-// push a rating { raterPhone, stars, text, date } for a profilePhone
-function addRatingForProfile(profilePhone, rating) {
-  const store = getProfileRatingsStore();
-  let entry = store.find(e => String(e.phone) === String(profilePhone));
-  if (!entry) {
-    entry = { phone: String(profilePhone), ratings: [] };
-    store.push(entry);
-  }
-  entry.ratings.push(rating);
-  saveProfileRatingsStore(store);
+function addRatingForProfile(phone, r) {
+  const s = getProfileRatingsStore();
+  let e = s.find(x => String(x.phone) === String(phone));
+  if (!e) { e = { phone: String(phone), ratings: [] }; s.push(e); }
+  e.ratings.push(r);
+  saveProfileRatingsStore(s);
 }
-
-// compute average
-function computeAverage(ratings) {
-  if (!ratings || ratings.length === 0) return 0;
-  const s = ratings.reduce((sum, r) => sum + (Number(r.stars) || 0), 0);
-  return +(s / ratings.length).toFixed(2);
+function computeAverage(r) {
+  if (!r.length) return 0;
+  return +(r.reduce((a,b)=>a+Number(b.stars||0),0)/r.length).toFixed(2);
 }
-
-/* --- UI renderer: create container if not exists --- */
 function ensureRatingContainer() {
   if (document.getElementById('profileRatingBlock')) return;
-  const container = document.createElement('div');
-  container.id = 'profileRatingBlock';
-  container.style.marginTop = '16px';
-  container.innerHTML = `
-    <hr>
-    <h2 style="color:#007bff;text-align:center;">Foydalanuvchi baholari</h2>
-    <div id="ratingSummary" style="text-align:center;margin-bottom:8px;">Yuklanmoqda...</div>
-    <div id="ratingFormWrap" style="max-width:700px;margin:0 auto 12px;"></div>
-    <div id="ratingList" style="max-width:700px;margin:0 auto;"></div>
-  `;
-  // insert before the end of main container if exists, else append to body
-  const mainC = document.querySelector('.container') || document.body;
-  mainC.appendChild(container);
+  const c=document.createElement('div');
+  c.id='profileRatingBlock';
+  c.innerHTML=`<hr><h2 style="color:#007bff;text-align:center;">Foydalanuvchi baholari</h2>
+  <div id="ratingSummary" style="text-align:center;margin-bottom:8px;">Yuklanmoqda...</div>
+  <div id="ratingFormWrap" style="max-width:700px;margin:0 auto 12px;"></div>
+  <div id="ratingList" style="max-width:700px;margin:0 auto;"></div>`;
+  (document.querySelector('.container')||document.body).appendChild(c);
 }
-
-/* --- render ratings and form --- */
 function renderRatingsUI(profilePhone) {
-  ensureRatingContainer();
-  const ratings = getRatingsForProfile(profilePhone);
-  const summary = document.getElementById('ratingSummary');
-  const list = document.getElementById('ratingList');
-  const formWrap = document.getElementById('ratingFormWrap');
-
-  const avg = computeAverage(ratings);
-  summary.innerHTML = `<strong>O'rtacha baho:</strong> ${avg > 0 ? avg + ' / 5' : 'Hozircha baholashlar yo‘q' } (${ratings.length} ta)`;
-
-  // render list
-  if (!ratings || ratings.length === 0) {
-    list.innerHTML = `<p style="text-align:center;color:#666;">Hozircha baholashlar yo‘q.</p>`;
-  } else {
-    list.innerHTML = ratings.slice().reverse().map(r => {
-      const txt = r.text ? `<div style="margin-top:6px;color:#333;">${escapeHtml(r.text)}</div>` : '';
-      return `
-      <div style="background:#fff;border:1px solid #eee;padding:10px;border-radius:8px;margin-bottom:8px;">
-        <div style="font-weight:600;">⭐ ${r.stars} / 5</div>
-        ${txt}
-        <div style="font-size:12px;color:#666;margin-top:6px;">${escapeHtml(r.raterPhone)} · ${escapeHtml(r.date)}</div>
-      </div>`;
-    }).join('');
-  }
-
-  // render submit form (only if viewer exists and viewer != profile owner)
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-  const viewerPhone = currentUser && currentUser.phone ? String(currentUser.phone) : null;
-  formWrap.innerHTML = '';
-
-  // if no logged in user -> show login hint
-  if (!viewerPhone) {
-    formWrap.innerHTML = `<p style="text-align:center;color:#666;">Baholash qo'shish uchun tizimga kiring.</p>`;
-    return;
-  }
-
-  if (String(viewerPhone) === String(profilePhone)) {
-    formWrap.innerHTML = `<p style="text-align:center;color:#666;">Siz o'zingizni baholay olmaysiz. Boshqalar baholashlari mumkin.</p>`;
-    return;
-  }
-
-  // check if viewer already rated this profile (optional: allow multiple ratings — here we'll block duplicate from same rater)
-  const already = ratings.some(r => String(r.raterPhone) === String(viewerPhone));
-  if (already) {
-    formWrap.innerHTML = `<p style="text-align:center;color:#666;">Siz allaqachon bu foydalanuvchini baholagansiz.</p>`;
-    return;
-  }
-
-  // else show form
-  formWrap.innerHTML = `
-    <div style="background:#f8f9ff;padding:12px;border-radius:8px;border:1px solid #e6eefc;">
-      <label style="display:block;margin-bottom:6px;"><strong>⭐ Baho tanlang</strong></label>
-      <select id="ratingStars" style="padding:8px;border-radius:6px;border:1px solid #ccc;">
-        <option value="5">5 — A’lo</option>
-        <option value="4">4 — Yaxshi</option>
-        <option value="3">3 — O‘rtacha</option>
-        <option value="2">2 — Yomon</option>
-        <option value="1">1 — Juda yomon</option>
-      </select>
-      <textarea id="ratingText" rows="3" placeholder="Ixtiyoriy izoh... (max 500)" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid #ccc;"></textarea>
-      <div style="text-align:center;margin-top:10px;">
-        <button id="submitRatingBtn" style="padding:8px 12px;border-radius:6px;background:#007bff;color:#fff;border:none;cursor:pointer;">Baholashni yuborish</button>
-      </div>
-    </div>
-  `;
-
-  document.getElementById('submitRatingBtn').onclick = () => {
-    const stars = Number(document.getElementById('ratingStars').value) || 5;
-    const text = document.getElementById('ratingText').value.trim();
-    const r = {
-      raterPhone: viewerPhone,
-      stars,
-      text,
-      date: new Date().toLocaleString()
-    };
-    addRatingForProfile(profilePhone, r);
-    // after adding — re-render
-    renderRatingsUI(profilePhone);
-  };
-}
-
-// small helper to avoid HTML injection in displayed text
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/* --- Initialization: detect which profile to show ratings for --- */
-function initRatingSystem(profilePhoneParam) {
-  // Determine profile phone:
-  let profilePhone = profilePhoneParam || window.profilePhone || localStorage.getItem('viewingProfile') || null;
-
-  // If still not found, fallback to currentUser (profile owner)
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
-  if (!profilePhone && currentUser && currentUser.phone) profilePhone = currentUser.phone;
-
-  if (!profilePhone) {
-    // nothing to show
-    console.warn('initRatingSystem: profile phone not found');
-    return;
-  }
-
-  // render UI
-  renderRatingsUI(profilePhone);
-
-  // expose for debugging
-  window._profileRatingPhone = profilePhone;
-}
-
-// auto-init on DOMContentLoaded (safe: will not override if you call explicitly later)
-document.addEventListener('DOMContentLoaded', () => {
-  // if developer already set window.profilePhone before, prefer it
-  const maybeProfile = window.profilePhone || localStorage.getItem('viewingProfile') || null;
-  initRatingSystem(maybeProfile);
-});
-</script>
-<!-- ===== END RATING SYSTEM ===== -->
-
-
-</body>
-</html>
+ 
