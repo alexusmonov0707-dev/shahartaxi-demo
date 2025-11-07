@@ -80,7 +80,6 @@
   </section>
 
   <main>
-    <!-- asosiy boshqaruv paneli -->
     <div class="top-row">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <input type="text" id="searchInput" placeholder="Qidirish: telefon yoki ID..." oninput="onSearchChange()" style="padding:8px;border-radius:6px;border:1px solid #ccc;">
@@ -125,9 +124,10 @@
     </div>
 
     <div id="ads"></div>
+
     <div class="pagination" id="paginationControls"></div>
 
-    <!-- MODALLAR -->
+    <!-- Edit Modal -->
     <div class="modal" id="editModal">
       <div class="modal-content">
         <h3>E’lonni tahrirlash</h3>
@@ -147,6 +147,7 @@
       </div>
     </div>
 
+    <!-- History Modal -->
     <div class="modal" id="historyModal">
       <div class="modal-content">
         <h3>Tasdiqlash tarixi</h3>
@@ -154,48 +155,128 @@
         <button class="cancel-btn" onclick="closeHistory()">Yopish</button>
       </div>
     </div>
+
   </main>
 
+  <!-- NOTE: admin.js should remain the full original file you already have -->
+  <script src="admin.js"></script>
+
+  <!-- ===== ENHANCED STATISTICS (overrides/augments earlier updateStats to avoid "sakrash" and missing items) ===== -->
   <script>
-    // 📊 STATISTIKA FUNKSIYALARI
-    function normalizeStatus(status) {
-      if (!status) return "pending";
-      status = status.toString().toLowerCase().trim();
-      if (status.includes("tasdiq")) return "approved";
-      if (status.includes("rad")) return "rejected";
-      if (status.includes("kut") || status.includes("pend")) return "pending";
-      return status;
-    }
+    (function(){
+      // Normalize status texts robustly (handles different legacy strings)
+      function normalizeStatus(status) {
+        if (status === undefined || status === null) return "pending";
+        status = String(status).toLowerCase().trim();
+        if (status === "approved" || status === "tasdiqlangan" || status.includes("tasdiq") || status.includes("approve")) return "approved";
+        if (status === "rejected" || status === "rad" || status.includes("rad")) return "rejected";
+        if (status === "pending" || status === "kutilmoqda" || status.includes("kut") || status.includes("pend")) return "pending";
+        return status; // unknown — return original lowercased
+      }
 
-    function getAllAds() {
-      const mainAds = JSON.parse(localStorage.getItem("ads")) || [];
-      const driverAds = JSON.parse(localStorage.getItem("driverAds")) || [];
-      const passengerAds = JSON.parse(localStorage.getItem("passengerAds")) || [];
-      return [...mainAds, ...driverAds, ...passengerAds];
-    }
+      // Read all potential storage keys that may contain ads, merge and dedupe by id
+      function getAllAdsUnified() {
+        const keys = ["ads", "driverAds", "passengerAds"];
+        const seen = new Map();
+        keys.forEach(k => {
+          try {
+            const arr = JSON.parse(localStorage.getItem(k)) || [];
+            if (!Array.isArray(arr)) return;
+            arr.forEach(item => {
+              // ensure we have id; if no id create synthetic determinist id to avoid collision
+              let id = item && item.id ? String(item.id) : null;
+              if (!id) {
+                // build fallback id from type+phone+createdAt to be stable across reads
+                id = `${item && item.type ? item.type : 'x'}_${item && item.phone ? item.phone : 'anon'}_${item && item.createdAt ? item.createdAt : 'nodat'}`;
+              }
+              // if same id present, prefer the most complete record (has status/createdAt)
+              if (!seen.has(id)) seen.set(id, {...item, id});
+              else {
+                const prev = seen.get(id);
+                // prefer one with createdAt or status or price (simple heuristics)
+                if ((!prev.createdAt && item.createdAt) || (!prev.status && item.status) || (!prev.price && item.price)) {
+                  seen.set(id, {...prev, ...item, id});
+                } else {
+                  // otherwise keep existing but merge fields where missing
+                  seen.set(id, {...item, ...prev, id});
+                }
+              }
+            });
+          } catch (e) {
+            // ignore bad JSON
+            console.warn("Bad JSON for key", k);
+          }
+        });
+        // return array
+        return Array.from(seen.values());
+      }
 
-    function updateStats() {
-      const allAds = getAllAds();
-      const normalized = allAds.map(a => ({ ...a, status: normalizeStatus(a.status) }));
+      // Reliable updateStats that counts deduped ads and normalizes status
+      function updateStatsReliable() {
+        const all = getAllAdsUnified();
+        // Normalize statuses
+        const normalized = all.map(a => ({...a, status: normalizeStatus(a.status)}));
+        const total = normalized.length;
+        const approved = normalized.filter(a => a.status === "approved").length;
+        const rejected = normalized.filter(a => a.status === "rejected").length;
+        const pending = normalized.filter(a => a.status === "pending").length;
 
-      const total = normalized.length;
-      const approved = normalized.filter(a => a.status === "approved").length;
-      const pending = normalized.filter(a => a.status === "pending").length;
-      const rejected = normalized.filter(a => a.status === "rejected").length;
+        // Update DOM only if elements present
+        const elTotal = document.getElementById("totalAds");
+        const elApproved = document.getElementById("approvedAds");
+        const elPending = document.getElementById("pendingAds");
+        const elRejected = document.getElementById("rejectedAds");
 
-      document.getElementById("totalAds").textContent = total;
-      document.getElementById("approvedAds").textContent = approved;
-      document.getElementById("pendingAds").textContent = pending;
-      document.getElementById("rejectedAds").textContent = rejected;
-    }
+        if (elTotal) elTotal.textContent = total;
+        if (elApproved) elApproved.textContent = approved;
+        if (elPending) elPending.textContent = pending;
+        if (elRejected) elRejected.textContent = rejected;
 
-    // 🧩 SAKRASH YO‘QOLISHI UCHUN — INTERVAL O‘CHIRILGAN
-    window.addEventListener("load", updateStats);
-    window.addEventListener("storage", (e) => {
-      if (["ads","driverAds","passengerAds"].includes(e.key)) updateStats();
-    });
+        // Also try to keep legacy 'stats' localStorage in sync (so other scripts reading it stay consistent)
+        try {
+          const legacyStats = {
+            drivers: (JSON.parse(localStorage.getItem('driverAds')) || []).length,
+            passengers: (JSON.parse(localStorage.getItem('passengerAds')) || []).length,
+            approved,
+            rejected,
+            pending
+          };
+          localStorage.setItem('stats', JSON.stringify(legacyStats));
+        } catch(e) { /* ignore */ }
+
+        return { total, approved, pending, rejected };
+      }
+
+      // Hook into adminRefresh if present so admin.js can trigger stats refresh
+      (function hookAdminRefresh(){
+        const prev = window.adminRefresh;
+        window.adminRefresh = function(){
+          try { if (typeof prev === 'function') prev(); } catch(e){ console.warn(e); }
+          updateStatsReliable();
+        };
+      })();
+
+      // Run on load
+      window.addEventListener('load', () => {
+        // give admin.js a moment to initialize data, then update
+        setTimeout(updateStatsReliable, 150);
+      });
+
+      // Update periodically (keeps numbers stable if something mutates)
+      setInterval(updateStatsReliable, 2500);
+
+      // Update when storage changes (other tabs or scripts)
+      window.addEventListener('storage', (e) => {
+        if (["ads","driverAds","passengerAds","approvalHistory","userNotifications","stats"].includes(e.key)) {
+          // small delay to allow other script writes to finish
+          setTimeout(updateStatsReliable, 80);
+        }
+      });
+
+      // Expose for debugging
+      window.updateStatsReliable = updateStatsReliable;
+    })();
   </script>
 
-  <script src="admin.js"></script>
 </body>
 </html>
