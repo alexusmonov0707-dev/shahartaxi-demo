@@ -34,9 +34,18 @@
     .small-btn { padding:6px 8px; font-size:0.9rem; }
     .info { font-size:0.9rem; color:#555; }
     @media (max-width:720px){ .ad { flex-direction:column; } .ad-left{ width:100% } }
+
+    /* 📊 Statistikalar */
+    #statsSection { display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:16px auto;max-width:1100px; }
+    .stat-card { flex:1;min-width:220px;padding:16px;border-radius:10px;text-align:center;color:white; }
+    .blue { background:#007bff; }
+    .green { background:#28a745; }
+    .yellow { background:#ffc107;color:black; }
+    .red { background:#dc3545; }
   </style>
 </head>
 <body>
+
   <!-- LOGIN OVERLAY -->
   <div id="loginOverlay" style="display:none;">
     <div class="login-box" style="background:#fff;padding:24px;border-radius:12px;width:360px;margin:auto;">
@@ -49,6 +58,27 @@
   </div>
 
   <header><h1>🛠 ShaharTaxi - Admin Panel</h1></header>
+
+  <!-- 📊 STATISTIKA KARTALARI -->
+  <section id="statsSection">
+    <div class="stat-card blue">
+      <h3 id="totalAds">0</h3>
+      <p>Barcha e’lonlar</p>
+    </div>
+    <div class="stat-card green">
+      <h3 id="approvedAds">0</h3>
+      <p>Tasdiqlangan</p>
+    </div>
+    <div class="stat-card yellow">
+      <h3 id="pendingAds">0</h3>
+      <p>Kutilayotgan</p>
+    </div>
+    <div class="stat-card red">
+      <h3 id="rejectedAds">0</h3>
+      <p>Rad etilgan</p>
+    </div>
+  </section>
+
   <main>
     <div class="top-row">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -128,6 +158,121 @@
 
   </main>
 
+  <!--
+    NOTE:
+    admin.js (sening original) yuklanadi — uning ichidagi barcha funksiyalar o'z joyida qoladi.
+    Quyidagi <script> esa faqat statistikani yangilash va barqaror hisoblash uchun qo'shilgan.
+  -->
   <script src="admin.js"></script>
+
+  <script>
+    // ---- Robust stats updater (does NOT remove/change any admin.js logic) ----
+
+    // Normalize status from various legacy forms
+    function _normalizeStatus(s) {
+      if (!s && s !== 0) return 'pending';
+      s = String(s).toLowerCase().trim();
+      if (s === '') return 'pending';
+      if (s.includes('approved') || s.includes('tasdiq') || s.includes('tasdiqlangan') || s === '1' || s === 'true') return 'approved';
+      if (s.includes('rejected') || s.includes('rad') || s.includes('reject')) return 'rejected';
+      if (s.includes('pending') || s.includes('kut') || s.includes('pend')) return 'pending';
+      // fallback: if it's one of allowed statuses
+      if (['approved','rejected','pending'].includes(s)) return s;
+      return 'pending';
+    }
+
+    // Read all ads from known keys and return unique-by-id array
+    function _gatherAllAdsUnique() {
+      const keys = ['ads', 'driverAds', 'passengerAds'];
+      const map = new Map();
+      keys.forEach(k => {
+        try {
+          const arr = JSON.parse(localStorage.getItem(k)) || [];
+          if (Array.isArray(arr)) {
+            arr.forEach(ad => {
+              // If no id present, create a synthetic id based on content (to avoid merging distinct ones)
+              let id = (ad && (ad.id || ad.ID || ad._id)) ? String(ad.id || ad.ID || ad._id) : null;
+              if (!id) {
+                // generate stable-ish id using createdAt+phone+from+to if possible
+                id = 'gen_' + (ad.createdAt || '') + '|' + (ad.phone || '') + '|' + (ad.fromRegion||ad.from||'') + '|' + (ad.toRegion||ad.to||'');
+              }
+              // ensure unique by id: prefer explicit id if available
+              if (!map.has(id)) {
+                map.set(String(id), Object.assign({}, ad, { id: String(id) }));
+              } else {
+                // if duplicate exists, we can merge fields (keep the one that has more data)
+                const existing = map.get(String(id));
+                // prefer object with createdAt or phone if existing lacks
+                const merged = Object.assign({}, existing, ad);
+                map.set(String(id), merged);
+              }
+            });
+          }
+        } catch (e) {
+          console.warn('Stats: could not parse', k, e);
+        }
+      });
+      return Array.from(map.values());
+    }
+
+    function updateStatsUI() {
+      const allAds = _gatherAllAdsUnique();
+
+      // Normalize statuses and count
+      let total = allAds.length;
+      let approved = 0, rejected = 0, pending = 0;
+      allAds.forEach(a => {
+        const st = _normalizeStatus(a.status);
+        if (st === 'approved') approved++;
+        else if (st === 'rejected') rejected++;
+        else pending++;
+      });
+
+      // Update DOM
+      const totalEl = document.getElementById('totalAds');
+      const approvedEl = document.getElementById('approvedAds');
+      const pendingEl = document.getElementById('pendingAds');
+      const rejectedEl = document.getElementById('rejectedAds');
+
+      if (totalEl) totalEl.textContent = total;
+      if (approvedEl) approvedEl.textContent = approved;
+      if (pendingEl) pendingEl.textContent = pending;
+      if (rejectedEl) rejectedEl.textContent = rejected;
+
+      // update info line if exists
+      const info = document.getElementById('adsInfo');
+      if (info) info.textContent = `Topilgan e’lonlar: ${total} (Tasdiqlangan ${approved}, Kutilmoqda ${pending}, Rad etilgan ${rejected})`;
+    }
+
+    // Run on load
+    window.addEventListener('load', () => {
+      // initial run a bit later to allow admin.js to initialize data
+      setTimeout(updateStatsUI, 200);
+    });
+
+    // storage events -> update
+    window.addEventListener('storage', (e) => {
+      // if any ads key changed, update immediately
+      if (['ads','driverAds','passengerAds','approvalHistory','userNotifications'].includes(e.key)) {
+        updateStatsUI();
+      }
+    });
+
+    // periodic safety update
+    setInterval(updateStatsUI, 3000);
+
+    // Also try to chain with adminRefresh if present (so when other scripts call adminRefresh we also update stats)
+    (function chainAdminRefresh() {
+      const orig = window.adminRefresh;
+      window.adminRefresh = function() {
+        try { if (typeof orig === 'function') orig(); } catch(e) { console.warn('adminRefresh orig error', e); }
+        try { updateStatsUI(); } catch(e){ console.warn('updateStatsUI error', e); }
+      };
+    })();
+
+    // expose for debugging
+    window._updateAdminStats = updateStatsUI;
+  </script>
+
 </body>
 </html>
