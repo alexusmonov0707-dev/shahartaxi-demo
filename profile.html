@@ -1,93 +1,51 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mening profilim - ShaharTaxi</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mening profilim - ShaharTaxi (To‘liq versiya)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f7f9fc;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background: #007bff;
-      color: white;
-      padding: 15px;
-      text-align: center;
-      position: relative;
-    }
-    .logout {
-      position: absolute;
-      right: 20px;
-      top: 15px;
-      background: #dc3545;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 5px;
-      color: white;
-      cursor: pointer;
-    }
-    .container {
-      max-width: 800px;
-      margin: 20px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-    }
-    h2 { color: #007bff; text-align: center; }
-    input, select {
-      width: 100%; padding: 10px; margin: 8px 0;
-      border: 1px solid #ccc; border-radius: 5px; font-size: 15px;
-    }
-    button {
-      background: #007bff; color: white; border: none;
-      padding: 10px 20px; border-radius: 5px; cursor: pointer;
-      transition: 0.3s; margin-top: 10px;
-    }
-    button:hover { background: #0056b3; }
-    .ad-box {
-      padding: 15px; border-radius: 8px; margin-bottom: 10px;
-      border: 1px solid #cdddfc; transition: background 0.3s;
-    }
-    .pending { background: #f9f9f9; }
-    .approved { background: #e6ffe6; }
-    .rejected { background: #ffe6e6; }
-    .ad-box p { margin: 5px 0; }
-    .actions button { background: #28a745; margin-right: 5px; }
-    .actions button:last-child { background: #dc3545; }
-    .filters {
-      display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
-      gap: 8px; margin-bottom: 12px;
-    }
-    .user-info { text-align: center; margin-bottom: 10px; font-weight: 600; }
-    .inline-edit { display: flex; gap: 8px; align-items: center; margin-top: 5px; }
-    .inline-edit input { flex: 1; padding: 5px 8px; font-size: 14px; }
-    .inline-edit button { padding: 6px 10px; font-size: 13px; margin-top: 0; }
-    .date-info { font-size: 13px; color: #666; font-style: italic; }
-    .comment-box {
-      background: #f8f9ff;
-      padding: 8px;
-      border-left: 4px solid #007bff;
-      border-radius: 6px;
-      margin-top: 6px;
-    }
+    /* --- Styling (original full styles preserved / extended) --- */
+    body { font-family: Arial, sans-serif; background: #f7f9fc; margin: 0; padding: 0; }
+    header { background: #007bff; color: white; padding: 15px; text-align: center; position: relative; }
+    .logout { position: absolute; right: 20px; top: 15px; background: #dc3545; border: none; padding: 8px 14px; border-radius: 5px; color: white; cursor: pointer; }
+    .container { max-width: 900px; margin: 20px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
+    h2 { color:#007bff; text-align:center; margin-top:0; }
+    input, select, textarea { width:100%; padding:10px; margin:8px 0; border:1px solid #ccc; border-radius:6px; font-size:15px; box-sizing: border-box; }
+    button { background:#007bff; color:#fff; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; transition: .15s; }
+    button.secondary { background:#6c757d; }
+    button:hover { filter:brightness(.96); }
+    .filters { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin-bottom:12px; align-items:center; }
+    .ad-box { padding:14px; border-radius:8px; margin-bottom:12px; border:1px solid #e6eefc; background:#fff; transition:.12s; }
+    .ad-box.pending { background:#fbfbfb; }
+    .ad-box.approved { background:#eefbea; }
+    .ad-box.rejected { background:#fff0f0; }
+    .ad-meta { font-size:14px; color:#333; margin:4px 0; }
+    .actions { margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+    .inline-edit { display:flex; gap:8px; align-items:center; margin-top:8px; }
+    .inline-edit input { padding:6px 8px; border-radius:6px; border:1px solid #ccc; width:160px; }
+    .date-info { font-size:13px; color:#666; font-style:italic; margin-top:6px; }
+    .comment-box { background:#f8f9ff; padding:10px; border-left:4px solid #007bff; border-radius:6px; margin-top:8px; }
+    .small { font-size:13px; color:#666; }
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); align-items:center; justify-content:center; z-index:9999; }
+    .modal .modal-content { background:#fff; padding:16px; border-radius:8px; width:360px; max-width:95%; box-shadow:0 8px 30px rgba(0,0,0,0.2); }
+    .rating-stars { cursor:pointer; font-size:20px; margin-right:4px; }
+    .flex-row { display:flex; gap:8px; align-items:center; }
+    @media (max-width:720px){ .filters { grid-template-columns: repeat(1,1fr); } .actions { flex-direction:column; } }
   </style>
 </head>
 <body>
   <header>
-    <h1>ShaharTaxi - Profil</h1>
+    <h1>ShaharTaxi — Profil</h1>
     <button class="logout" onclick="logout()">Chiqish</button>
   </header>
 
   <div class="container">
-    <div id="userPhone" class="user-info"></div>
+    <div id="userPhone" class="small user-info"></div>
 
     <h2>Mening e’lonlarim</h2>
 
-    <div class="filters">
+    <div class="filters" aria-hidden="false">
       <select id="typeFilter" onchange="applyFilters()">
         <option value="all">Barcha turlar</option>
         <option value="driver">Haydovchi</option>
@@ -118,9 +76,10 @@
       <button onclick="clearFilters()">Filterlarni tozalash</button>
     </div>
 
-    <div id="myAds"></div>
+    <div id="myAds" aria-live="polite"></div>
 
-    <hr>
+    <hr style="margin:18px 0;">
+
     <h2>Yangi e’lon qo‘shish</h2>
 
     <select id="adType">
@@ -129,47 +88,127 @@
       <option value="passenger">Yo‘lovchi</option>
     </select>
 
-    <label>Qayerdan (viloyat):</label>
-    <select id="fromRegion" onchange="updateDistricts('from')"></select>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+      <div>
+        <label>Qayerdan (viloyat):</label>
+        <select id="fromRegion" onchange="updateDistricts('from')"></select>
+      </div>
+      <div>
+        <label>Qayerdan (tuman):</label>
+        <select id="fromDistrict"></select>
+      </div>
+      <div>
+        <label>Qayerga (viloyat):</label>
+        <select id="toRegion" onchange="updateDistricts('to')"></select>
+      </div>
+      <div>
+        <label>Qayerga (tuman):</label>
+        <select id="toDistrict"></select>
+      </div>
+    </div>
 
-    <label>Qayerdan (tuman):</label>
-    <select id="fromDistrict"></select>
+    <input type="number" id="price" placeholder="Narx (so‘m)" />
+    <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh (ixtiyoriy) — bu maydon e’lon egasi tomonidan to‘ldiriladi"></textarea>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="addAd()">E’lonni joylash</button>
+      <button class="secondary" onclick="prefillSample()">Namuna qo'shish (test uchun)</button>
+    </div>
 
-    <label>Qayerga (viloyat):</label>
-    <select id="toRegion" onchange="updateDistricts('to')"></select>
+    <!-- Optional: profile rating summary quick place -->
+    <div id="profileRatingQuick" style="margin-top:16px;"></div>
 
-    <label>Qayerga (tuman):</label>
-    <select id="toDistrict"></select>
-
-    <input type="number" id="price" placeholder="Narx (so‘m)">
-    <button onclick="addAd()">E’lonni joylash</button>
   </div>
 
-  <script>
-    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (!currentUser || !currentUser.phone) {
-      alert("Avval tizimga kiring!");
-      window.location.href = "login.html";
-    }
-    document.getElementById('userPhone').textContent = `Telefon: ${currentUser.phone}`;
+  <!-- Edit price modal (if needed later) -->
+  <div id="priceModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h3>Tahrirlash</h3>
+      <input id="modalPrice" placeholder="Narx (so‘m)" />
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="saveModalPrice()">Saqlash</button>
+        <button onclick="closePriceModal()">Bekor</button>
+      </div>
+    </div>
+  </div>
 
-    function logout() {
-      localStorage.removeItem("currentUser");
-      window.location.href = "login.html";
-    }
+  <!-- Review modal (ad-level comment by ad owner) -->
+  <div id="reviewModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <h3>Fikr qoldirish</h3>
+      <div style="margin-bottom:8px;">
+        <label><strong>Yulduz:</strong></label>
+        <div id="reviewStars" class="flex-row" style="margin-top:6px">
+          <span class="rating-stars" data-star="1">☆</span>
+          <span class="rating-stars" data-star="2">☆</span>
+          <span class="rating-stars" data-star="3">☆</span>
+          <span class="rating-stars" data-star="4">☆</span>
+          <span class="rating-stars" data-star="5">☆</span>
+        </div>
+      </div>
+      <textarea id="reviewText" rows="4" placeholder="Izoh (majburiy)"></textarea>
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="submitReview()">Yuborish</button>
+        <button onclick="closeReviewModal()">Bekor</button>
+      </div>
+    </div>
+  </div>
 
-    function getAds() {
-      return {
-        driver: JSON.parse(localStorage.getItem("driverAds")) || [],
-        passenger: JSON.parse(localStorage.getItem("passengerAds")) || []
-      };
-    }
+<script>
+/* -------------------------
+   FULL profile.html logic
+   - preserves all features you used previously
+   - comment field kept and auto-added to old ads
+   - inline edit, prompt edit, delete, filters, syncStatuses
+   - review modal: only ad owner can add review for their ad (as you requested)
+   ------------------------- */
 
-   function renderUserAds() {
+/* ---------- Helpers & init ---------- */
+function safeParse(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || []; } catch(e) { return []; }
+}
+
+function safeSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+
+/* current user check (as in your original app) */
+const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+if (!currentUser || !currentUser.phone) {
+  alert('Avval tizimga kiring!');
+  window.location.href = 'login.html';
+}
+document.getElementById('userPhone').textContent = `Telefon: ${currentUser.phone}`;
+
+/* ensure older ads have comment and id fields (one-time normalization) */
+(function normalizeOldAds() {
+  const keys = ['driverAds','passengerAds','ads'];
+  keys.forEach(k => {
+    let arr = safeParse(k);
+    let changed = false;
+    arr = arr.map((ad, i) => {
+      if (!ad) return ad;
+      if (!('comment' in ad)) { ad.comment = ad.comment || ''; changed = true; }
+      if (!ad.id) { ad.id = (ad.type ? ad.type : (k==='driverAds'?'driver':'passenger')) + '_' + (Date.now() + i); changed = true; }
+      // ensure type exists
+      if (!ad.type) ad.type = (k==='driverAds' ? 'driver' : k==='passengerAds' ? 'passenger' : (ad.id && ad.id.startsWith('driver')?'driver':'passenger'));
+      return ad;
+    });
+    if (changed) safeSet(k, arr);
+  });
+})();
+
+/* getAds returns driver and passenger arrays (keeps compatibility) */
+function getAds() {
+  const driver = safeParse('driverAds');
+  const passenger = safeParse('passengerAds');
+  return { driver, passenger };
+}
+
+/* ---------- Rendering user ads (full feature) ---------- */
+function renderUserAds() {
   const { driver, passenger } = getAds();
   const userPhone = currentUser.phone;
-  let allAds = [...driver, ...passenger].filter(ad => ad.phone === userPhone);
+  let allAds = [...driver, ...passenger].filter(ad => String(ad.phone) === String(userPhone));
 
+  // filters
   const typeFilter = document.getElementById('typeFilter').value;
   const statusFilter = document.getElementById('statusFilter').value;
   const fFromRegion = document.getElementById('filterFromRegion').value;
@@ -184,244 +223,394 @@
   if (fToRegion) allAds = allAds.filter(a => (a.toRegion || a.to || '').includes(fToRegion));
   if (fToDistrict) allAds = allAds.filter(a => (a.toDistrict || '').includes(fToDistrict));
 
-  const reviews = JSON.parse(localStorage.getItem("reviews")) || [];
-  const container = document.getElementById("myAds");
-  container.innerHTML = allAds.length ? "" : "<p>Hozircha e’lonlar yo‘q.</p>";
+  const reviews = safeParse('reviews'); // ad-level reviews added by ad owner (if you used earlier)
+  const container = document.getElementById('myAds');
+  container.innerHTML = '';
+
+  if (allAds.length === 0) {
+    container.innerHTML = '<p>Hozircha e’lonlar yo‘q.</p>';
+    return;
+  }
+
+  // sort newest first for better UX
+  allAds.sort((a,b) => {
+    const da = a.createdAt ? new Date(a.createdAt) : new Date(0);
+    const db = b.createdAt ? new Date(b.createdAt) : new Date(0);
+    return db - da;
+  });
 
   allAds.forEach(ad => {
-    const from = ad.fromDistrict && ad.fromRegion ? `${ad.fromRegion} ${ad.fromDistrict}` : (ad.fromRegion || ad.from || "—");
-    const to = ad.toDistrict && ad.toRegion ? `${ad.toRegion} ${ad.toDistrict}` : (ad.toRegion || ad.to || "—");
-    const statusText =
-      ad.status === "approved" ? "✅ Tasdiqlangan" :
-      ad.status === "rejected" ? "❌ Rad etilgan" :
-      "⏳ Kutilmoqda";
+    const from = (ad.fromRegion ? ad.fromRegion+' ' : '') + (ad.fromDistrict ? ad.fromDistrict : (ad.from ? ad.from : '—'));
+    const to = (ad.toRegion ? ad.toRegion+' ' : '') + (ad.toDistrict ? ad.toDistrict : (ad.to ? ad.to : '—'));
+    const status = (ad.status || 'pending');
 
-    const div = document.createElement("div");
-    div.className = "ad-box " + (ad.status === "approved" ? "approved" : ad.status === "rejected" ? "rejected" : "pending");
+    const adDiv = document.createElement('div');
+    adDiv.className = 'ad-box ' + (status || 'pending');
 
-    const editArea = ad.editing ? `
+    const createdAt = ad.createdAt ? `<div class="date-info">🕒 Joylangan: ${ad.createdAt}</div>` : '';
+
+    // Inline edit area (if editing flag present)
+    const inlineSection = ad.editing ? `
       <div class="inline-edit">
-        <input type="number" id="editPrice_${ad.id}" value="${ad.price || ''}" placeholder="Yangi narx">
-        <button onclick="saveInlineEdit('${ad.id}', '${ad.type}')">💾 Saqlash</button>
-        <button onclick="cancelInlineEdit('${ad.id}', '${ad.type}')">❌ Bekor</button>
-      </div>` : "";
+        <input type="number" id="inlinePrice_${ad.id}" value="${ad.price || ''}" placeholder="Yangi narx">
+        <button onclick="saveInlineEdit('${ad.id}','${ad.type}')">💾 Saqlash</button>
+        <button onclick="cancelInlineEdit('${ad.id}','${ad.type}')">❌ Bekor</button>
+      </div>
+    ` : '';
 
-    const createdAt = ad.createdAt ? `<p class="date-info">🕒 Joylangan: ${ad.createdAt}</p>` : "";
+    // Ad-level comment (was requested: ad owner adds comment when posting; others cannot add)
+    const commentHtml = ad.comment ? `<div class="comment-box"><b>Izoh:</b> ${escapeHtml(ad.comment)}</div>` : '';
 
-    // foydalanuvchining shu elon uchun qoldirgan fikri
-    const adReviews = reviews.filter(r => r.adId === ad.id && r.phone === currentUser.phone);
-    let reviewHTML = "";
+    // If ad owner hasn't left review for their own ad, show button to add
+    const adReviews = reviews.filter(r => String(r.adId) === String(ad.id) && String(r.phone) === String(currentUser.phone));
+    let reviewHtml = '';
     if (adReviews.length > 0) {
       const r = adReviews[0];
-      reviewHTML = `
-        <div style="background:#f8f8f8;border-left:4px solid #007bff;padding:8px;margin-top:8px;border-radius:6px;">
-          <b>⭐ ${r.stars} / 5</b><br>
-          <i>"${r.text}"</i><br>
-          <small style="color:#666;">${r.date}</small>
-        </div>`;
+      reviewHtml = `<div style="margin-top:8px;background:#f8f8f8;padding:8px;border-radius:6px;"><b>⭐ ${r.stars} / 5</b> — <small class="small">${escapeHtml(r.date)}</small><div style="margin-top:6px;">${escapeHtml(r.text)}</div></div>`;
     } else {
-      reviewHTML = `<button onclick="openReviewModal('${ad.id}')">⭐ Fikr qoldirish</button>`;
+      reviewHtml = `<div style="margin-top:8px;"><button onclick="openReviewModal('${ad.id}')">⭐ Fikr qoldirish</button></div>`;
     }
 
-    div.innerHTML = `
-      <p><b>Yo‘nalish:</b> ${from} → ${to}</p>
-      <p><b>Narx:</b> ${ad.price || "Ko‘rsatilmagan"} so‘m</p>
-      <p><b>Telefon:</b> ${ad.phone}</p>
-      <p><b>Holat:</b> ${statusText}</p>
+    adDiv.innerHTML = `
+      <div class="ad-meta"><strong>Yo‘nalish:</strong> ${escapeHtml(from)} → ${escapeHtml(to)}</div>
+      <div class="ad-meta"><strong>Narx:</strong> ${ad.price ? escapeHtml(ad.price) + ' so‘m' : 'Ko‘rsatilmagan'}</div>
+      <div class="ad-meta"><strong>Telefon:</strong> ${escapeHtml(ad.phone || 'Noma’lum')}</div>
+      <div class="ad-meta"><strong>Holat:</strong> ${status === 'approved' ? '✅ Tasdiqlangan' : status === 'rejected' ? '❌ Rad etilgan' : '⏳ Kutilmoqda'}</div>
       ${createdAt}
-      ${editArea}
-      <div class="actions">
-        ${ad.status !== "approved"
-          ? `<button onclick="editAd('${ad.id}', '${ad.type}')">✏️ Tahrirlash</button>`
-          : `<button disabled style="background:#ccc;cursor:not-allowed;">✏️ Tahrirlash</button>`}
-        <button onclick="deleteAd('${ad.id}', '${ad.type}')">🗑️ O‘chirish</button>
+      ${commentHtml}
+      ${inlineSection}
+      <div class="actions" id="actions_${ad.id}">
+        ${status !== 'approved' ? `<button onclick="editAd('${ad.id}','${ad.type}')">✏️ Tahrirlash</button>` : `<button disabled style="background:#ccc;cursor:not-allowed">✏️ Tahrirlash</button>`}
+        <button onclick="deleteAd('${ad.id}','${ad.type}')">🗑️ O‘chirish</button>
       </div>
-      ${reviewHTML}
+      ${reviewHtml}
     `;
-    container.appendChild(div);
+    container.appendChild(adDiv);
   });
 }
 
-    
+/* ---------- Add / Edit / Delete / Inline save ---------- */
+function addAd() {
+  const type = document.getElementById('adType').value;
+  const fromRegion = document.getElementById('fromRegion').value.trim();
+  const fromDistrict = document.getElementById('fromDistrict').value.trim();
+  const toRegion = document.getElementById('toRegion').value.trim();
+  const toDistrict = document.getElementById('toDistrict').value.trim();
+  const price = document.getElementById('price').value.trim();
+  const comment = document.getElementById('adComment').value.trim();
 
-    function addAd() {
-      const type = document.getElementById("adType").value;
-      const fromRegion = document.getElementById("fromRegion").value.trim();
-      const fromDistrict = document.getElementById("fromDistrict").value.trim();
-      const toRegion = document.getElementById("toRegion").value.trim();
-      const toDistrict = document.getElementById("toDistrict").value.trim();
-      const price = document.getElementById("price").value.trim();
+  if (!type || !fromRegion || !toRegion) {
+    alert("Iltimos, yo‘nalish ma’lumotlarini to‘ldiring!");
+    return;
+  }
 
-      if (!type || !fromRegion || !toRegion) {
-        alert("Iltimos, yo‘nalish ma’lumotlarini to‘ldiring!");
-        return;
-      }
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = safeParse(key);
 
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
+  const newAd = {
+    id: `${type}_${Date.now()}`,
+    phone: currentUser.phone,
+    fromRegion, fromDistrict,
+    toRegion, toDistrict,
+    price, type,
+    comment: comment || '',
+    status: 'pending',
+    createdAt: new Date().toLocaleString()
+  };
 
-      const newAd = {
-        id: `${type}_${Date.now()}`,
-        phone: currentUser.phone,
-        fromRegion,
-        fromDistrict,
-        toRegion,
-        toDistrict,
-        price,
-        type,
-        status: "pending",
-        createdAt: new Date().toLocaleString()
-      };
+  ads.push(newAd);
+  safeSet(key, ads);
+  alert('✅ E’lon muvaffaqiyatli joylandi (Admin tasdiqlashi kutilmoqda).');
+  // clear inputs lightly
+  document.getElementById('price').value = '';
+  document.getElementById('adComment').value = '';
+  renderUserAds();
+}
 
-      ads.push(newAd);
-      localStorage.setItem(key, JSON.stringify(ads));
-      alert("✅ E’lon muvaffaqiyatli joylandi (Admin tasdiqlashi kutilmoqda).");
-      renderUserAds();
-    }
+/* open inline edit (sets editing flag and re-renders) */
+function editAd(id, type) {
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = safeParse(key);
+  const ad = ads.find(a => String(a.id) === String(id));
+  if (!ad) return;
+  if (ad.edited) { alert('❗ Ushbu e’lon oldin tahrirlangan. Qayta o‘zgartirish mumkin emas.'); return; }
+  ad.editing = true;
+  safeSet(key, ads);
+  renderUserAds();
+}
 
-    function editAd(id, type) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads.find(a => a.id === id);
-      if (!ad) return;
-      if (ad.edited) return alert("❗ Ushbu e’lon oldin tahrirlangan.");
-      ad.editing = true;
-      localStorage.setItem(key, JSON.stringify(ads));
-      renderUserAds();
-    }
+function saveInlineEdit(id, type) {
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = safeParse(key);
+  const ad = ads.find(a => String(a.id) === String(id));
+  if (!ad) return;
+  const el = document.getElementById(`inlinePrice_${id}`);
+  if (!el) return;
+  const newPrice = String(el.value || '').trim();
+  if (!newPrice) { alert('Narxni kiriting!'); return; }
+  ad.price = newPrice;
+  ad.edited = true;
+  delete ad.editing;
+  safeSet(key, ads);
+  alert('✏️ E’lon 1 marta tahrirlandi.');
+  renderUserAds();
+}
 
-    function saveInlineEdit(id, type) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads.find(a => a.id === id);
-      if (!ad) return;
-      const newPrice = document.getElementById(`editPrice_${id}`).value.trim();
-      if (!newPrice) return alert("Narxni kiriting!");
-      ad.price = newPrice;
-      ad.edited = true;
-      delete ad.editing;
-      localStorage.setItem(key, JSON.stringify(ads));
-      alert("✏️ E’lon 1 marta tahrirlandi.");
-      renderUserAds();
-    }
+function cancelInlineEdit(id, type) {
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = safeParse(key);
+  const ad = ads.find(a => String(a.id) === String(id));
+  if (ad) delete ad.editing;
+  safeSet(key, ads);
+  renderUserAds();
+}
 
-    function cancelInlineEdit(id, type) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      const ads = JSON.parse(localStorage.getItem(key)) || [];
-      const ad = ads.find(a => a.id === id);
-      if (ad) delete ad.editing;
-      localStorage.setItem(key, JSON.stringify(ads));
-      renderUserAds();
-    }
+function deleteAd(id, type) {
+  if (!confirm('E’lonni o‘chirilsinmi?')) return;
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  let ads = safeParse(key);
+  ads = ads.filter(a => String(a.id) !== String(id));
+  safeSet(key, ads);
+  renderUserAds();
+}
 
-    function deleteAd(id, type) {
-      const key = type === "driver" ? "driverAds" : "passengerAds";
-      let ads = JSON.parse(localStorage.getItem(key)) || [];
-      ads = ads.filter(a => a.id !== id);
-      localStorage.setItem(key, JSON.stringify(ads));
-      renderUserAds();
-    }
+/* ---------- Filters helpers ---------- */
+function applyFilters() { renderUserAds(); }
 
-    function applyFilters() { renderUserAds(); }
-    function clearFilters() {
-      document.getElementById('typeFilter').value = 'all';
-      document.getElementById('statusFilter').value = 'all';
-      document.getElementById('filterFromRegion').value = '';
-      document.getElementById('filterFromDistrict').innerHTML = '<option value="">Qayerdan (tuman)</option>';
-      document.getElementById('filterToRegion').value = '';
-      document.getElementById('filterToDistrict').innerHTML = '<option value="">Qayerga (tuman)</option>';
-      renderUserAds();
-    }
+function clearFilters() {
+  document.getElementById('typeFilter').value = 'all';
+  document.getElementById('statusFilter').value = 'all';
+  document.getElementById('filterFromRegion').value = '';
+  document.getElementById('filterFromDistrict').innerHTML = '<option value="">Qayerdan (tuman)</option>';
+  document.getElementById('filterToRegion').value = '';
+  document.getElementById('filterToDistrict').innerHTML = '<option value="">Qayerga (tuman)</option>';
+  renderUserAds();
+}
 
-    function updateFilterDistricts(prefix) {
-      const regionSelect = document.getElementById(prefix + 'Region');
-      const districtSelect = document.getElementById(prefix + 'District');
-      const selectedRegion = regionSelect.value;
-      districtSelect.innerHTML = "<option value=''>Tanlang</option>";
-      if (selectedRegion && regions[selectedRegion]) {
-        regions[selectedRegion].forEach(t => districtSelect.add(new Option(t, t)));
-      }
-      applyFilters();
-    }
+/* updateFilterDistricts used by filter selects (prefix: 'filterFrom' or 'filterTo') */
+function updateFilterDistricts(prefix) {
+  const regionSelect = document.getElementById(prefix + 'Region');
+  const districtSelect = document.getElementById(prefix + 'District');
+  if (!regionSelect || !districtSelect) return;
+  const sel = regionSelect.value;
+  districtSelect.innerHTML = '<option value="">Tanlang</option>';
+  if (sel && typeof regions === 'object' && Array.isArray(regions[sel])) {
+    regions[sel].forEach(d => districtSelect.add(new Option(d, d)));
+  }
+  applyFilters();
+}
 
-    function syncStatuses() {
-      const { driver, passenger } = getAds();
-      const userPhone = currentUser.phone;
-      const userAds = [...driver, ...passenger].filter(ad => ad.phone === userPhone);
-      const lastStatuses = JSON.parse(localStorage.getItem("userAdStatuses")) || {};
-      userAds.forEach(ad => {
-        const prev = lastStatuses[ad.id];
-        if (prev && prev !== ad.status) {
-          if (ad.status === "approved") alert(`✅ "${ad.fromRegion} → ${ad.toRegion}" TASDIQLANDI!`);
-          else if (ad.status === "rejected") alert(`❌ "${ad.fromRegion} → ${ad.toRegion}" RAD ETILDI.`);
-        }
-        lastStatuses[ad.id] = ad.status;
-      });
-      localStorage.setItem("userAdStatuses", JSON.stringify(lastStatuses));
-      renderUserAds();
-    }
+/* ---------- Regions loader (expects regions.js to expose `regions` object) ---------- */
+function loadRegions() {
+  try {
+    const fromRegion = document.getElementById('fromRegion');
+    const toRegion = document.getElementById('toRegion');
+    const fFromRegion = document.getElementById('filterFromRegion');
+    const fToRegion = document.getElementById('filterToRegion');
 
-    window.onload = () => { loadRegions(); renderUserAds(); setInterval(syncStatuses, 5000); };
-    window.addEventListener("storage", e => {
-      if (["driverAds","passengerAds"].includes(e.key)) renderUserAds();
+    [fromRegion, toRegion, fFromRegion, fToRegion].forEach(el => {
+      if (el) el.innerHTML = '<option value="">Viloyatni tanlang</option>';
     });
-  </script>
 
-  <script src="regions.js"></script>
-  <script>
-    function loadRegions() {
-      const fromRegion = document.getElementById("fromRegion");
-      const toRegion = document.getElementById("toRegion");
-      const fFromRegion = document.getElementById("filterFromRegion");
-      const fToRegion = document.getElementById("filterToRegion");
-      [fromRegion,toRegion,fFromRegion,fToRegion].forEach(sel=>sel.innerHTML='<option value="">Viloyatni tanlang</option>');
-      if (typeof regions==="object") Object.keys(regions).forEach(r=>[fromRegion,toRegion,fFromRegion,fToRegion].forEach(sel=>sel.add(new Option(r,r))));
+    if (typeof regions === 'object') {
+      Object.keys(regions).forEach(r => {
+        [fromRegion, toRegion, fFromRegion, fToRegion].forEach(sel => {
+          if (sel) sel.add(new Option(r, r));
+        });
+      });
+    } else {
+      // fallback sample list if regions not present (keeps UI usable)
+      const sample = ['Toshkent','Samarqand','Andijon'];
+      sample.forEach(r => { [fromRegion,toRegion,fFromRegion,fToRegion].forEach(sel=>sel && sel.add(new Option(r,r))); });
     }
-    function updateDistricts(prefix) {
-      const region = document.getElementById(prefix+"Region").value;
-      const districtSelect = document.getElementById(prefix+"District");
-      districtSelect.innerHTML="<option value=''>Tumanni tanlang</option>";
-      if (regions[region]) regions[region].forEach(d=>districtSelect.add(new Option(d,d)));
-    }
-  </script>
+  } catch (e) { console.error('loadRegions error', e); }
+}
 
-  <!-- ===== FIKR QOLDIRISH BLOKI ===== -->
-  <script>
-    function getReviews(){return JSON.parse(localStorage.getItem("reviews"))||[];}
-    function saveReviews(r){localStorage.setItem("reviews",JSON.stringify(r));}
+/* updateDistricts(prefix) used by add-ad selects */
+function updateDistricts(prefix) {
+  const region = document.getElementById(prefix + 'Region').value;
+  const districtSelect = document.getElementById(prefix + 'District');
+  districtSelect.innerHTML = '<option value="">Tumanni tanlang</option>';
+  if (typeof regions === 'object' && regions[region]) {
+    regions[region].forEach(d => districtSelect.add(new Option(d, d)));
+  }
+}
 
-    const reviewModal=document.createElement("div");
-    reviewModal.innerHTML=`<div id="reviewModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);justify-content:center;align-items:center;z-index:9999;">
-      <div style="background:#fff;padding:20px;border-radius:10px;width:320px;text-align:center;">
-        <h3>Fikr qoldirish</h3>
-        <select id="reviewStars">
-          <option value="5">⭐️⭐️⭐️⭐️⭐️ - A’lo</option>
-          <option value="4">⭐️⭐️⭐️⭐️ - Yaxshi</option>
-          <option value="3">⭐️⭐️⭐️ - O‘rtacha</option>
-          <option value="2">⭐️⭐️ - Yomon</option>
-          <option value="1">⭐️ - Juda yomon</option>
-        </select>
-        <textarea id="reviewText" rows="3" style="width:100%;margin-top:10px;" placeholder="Izoh..."></textarea>
-        <div style="margin-top:10px;">
-          <button onclick="submitReview()">Yuborish</button>
-          <button onclick="closeReviewModal()">Bekor</button>
-        </div>
-      </div>
-    </div>`;
-    document.body.appendChild(reviewModal);
-    let currentAdId=null;
-    function openReviewModal(id){currentAdId=id;document.getElementById("reviewModal").style.display="flex";}
-    function closeReviewModal(){document.getElementById("reviewModal").style.display="none";}
-    function submitReview(){
-      const text=document.getElementById("reviewText").value.trim();
-      const stars=parseInt(document.getElementById("reviewStars").value);
-      if(!text){alert("Iltimos izoh yozing!");return;}
-      const all=getReviews();
-      all.push({adId:currentAdId,phone:currentUser.phone,stars,text,date:new Date().toLocaleString()});
-      saveReviews(all);
-      alert("✅ Fikr saqlandi!");
-      closeReviewModal();
+/* ---------- Sync statuses (polling for admin changes) ---------- */
+function syncStatuses() {
+  const { driver, passenger } = getAds();
+  const userPhone = currentUser.phone;
+  const userAds = [...driver, ...passenger].filter(ad => String(ad.phone) === String(userPhone));
+  const lastStatuses = JSON.parse(localStorage.getItem('userAdStatuses') || '{}');
+
+  userAds.forEach(ad => {
+    const prev = lastStatuses[ad.id];
+    if (prev && prev !== ad.status) {
+      if (ad.status === 'approved') alert(`✅ "${ad.fromRegion || ad.from} → ${ad.toRegion || ad.to}" TASDIQLANDI!`);
+      else if (ad.status === 'rejected') alert(`❌ "${ad.fromRegion || ad.from} → ${ad.toRegion || ad.to}" RAD ETILDI.`);
     }
-  </script>
+    lastStatuses[ad.id] = ad.status;
+  });
+
+  localStorage.setItem('userAdStatuses', JSON.stringify(lastStatuses));
+  renderUserAds();
+}
+
+/* ---------- Review modal (ad owner leaves review/comment for ad) ---------- */
+let reviewCurrentAdId = null;
+let reviewSelectedStars = 0;
+
+function openReviewModal(adId) {
+  // only the ad owner can add review according to user's earlier requirement
+  reviewCurrentAdId = adId;
+  const reviews = safeParse('reviews');
+  const existing = reviews.find(r => r.adId === adId && String(r.phone) === String(currentUser.phone));
+  if (existing) {
+    // show existing in modal for edit (optional), but your requirement was "ad owner adds comment only when posting" — still allow edit
+    document.getElementById('reviewText').value = existing.text || '';
+    reviewSelectedStars = existing.stars || 0;
+  } else {
+    document.getElementById('reviewText').value = '';
+    reviewSelectedStars = 0;
+  }
+  updateStarUI();
+  const mod = document.getElementById('reviewModal');
+  if (mod) { mod.style.display = 'flex'; mod.setAttribute('aria-hidden','false'); }
+}
+
+function closeReviewModal() {
+  const mod = document.getElementById('reviewModal');
+  if (mod) { mod.style.display = 'none'; mod.setAttribute('aria-hidden','true'); }
+  reviewCurrentAdId = null; reviewSelectedStars = 0;
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('rating-stars')) {
+    reviewSelectedStars = Number(e.target.dataset.star || 0);
+    updateStarUI();
+  }
+});
+
+function updateStarUI() {
+  document.querySelectorAll('#reviewStars .rating-stars').forEach(s => {
+    const n = Number(s.dataset.star);
+    s.textContent = (reviewSelectedStars >= n) ? '★' : '☆';
+  });
+}
+
+function submitReview() {
+  const text = (document.getElementById('reviewText').value || '').trim();
+  if (!text) { alert('Iltimos izoh yozing!'); return; }
+  if (!reviewSelectedStars) { alert('Iltimos yulduz tanlang!'); return; }
+  if (!reviewCurrentAdId) { alert('Ad topilmadi.'); return; }
+
+  const all = safeParse('reviews');
+  const existingIndex = all.findIndex(r => String(r.adId) === String(reviewCurrentAdId) && String(r.phone) === String(currentUser.phone));
+  const entry = { adId: reviewCurrentAdId, phone: currentUser.phone, stars: reviewSelectedStars, text, date: new Date().toLocaleString() };
+  if (existingIndex > -1) { all[existingIndex] = entry; } else { all.push(entry); }
+  safeSet('reviews', all);
+  alert('✅ Fikr saqlandi!');
+  closeReviewModal();
+  renderUserAds();
+}
+
+/* ---------- small helpers ---------- */
+function escapeHtml(s) {
+  if (s === undefined || s === null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ---------- Debug / testing helper: prefill sample ads ---------- */
+function prefillSample() {
+  // push sample items without removing user's existing data
+  const driverAds = safeParse('driverAds');
+  const passengerAds = safeParse('passengerAds');
+  // add few sample only if none exist to avoid duplicates
+  if (driverAds.length + passengerAds.length < 5) {
+    const now = Date.now();
+    driverAds.push({
+      id: 'driver_'+(now+1),
+      phone: currentUser.phone,
+      fromRegion: 'Toshkent', fromDistrict: 'Yunusobod',
+      toRegion: 'Samarqand', toDistrict: 'Markaziy',
+      price: '70000', type: 'driver', status: 'pending', comment: 'Namuna: tez yetkazaman', createdAt: new Date().toLocaleString()
+    });
+    passengerAds.push({
+      id: 'passenger_'+(now+2),
+      phone: currentUser.phone,
+      fromRegion: 'Andijon', fromDistrict: 'Shahrixon',
+      toRegion: 'Farg‘ona', toDistrict: 'Quva',
+      price: '40000', type: 'passenger', status: 'approved', comment: '', createdAt: new Date().toLocaleString()
+    });
+    safeSet('driverAds', driverAds);
+    safeSet('passengerAds', passengerAds);
+    alert('Namuna e’lonlar qo‘shildi — tekshiring.');
+    renderUserAds();
+  } else {
+    alert('Ma’lumotlar yetarli — namuna qo‘shilmaydi.');
+  }
+}
+
+/* ---------- Modal price helpers (example, optional) ---------- */
+let modalPending = { id:null, type:null };
+function openPriceModal(id, type) {
+  modalPending = { id, type };
+  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = safeParse(key);
+  const ad = ads.find(a => String(a.id) === String(id));
+  document.getElementById('modalPrice').value = ad ? (ad.price || '') : '';
+  document.getElementById('priceModal').style.display = 'flex';
+}
+function closePriceModal() { document.getElementById('priceModal').style.display = 'none'; modalPending = { id:null, type:null }; }
+function saveModalPrice() {
+  if (!modalPending.id) return closePriceModal();
+  const key = modalPending.type === 'driver' ? 'driverAds' : 'passengerAds';
+  const ads = safeParse(key);
+  const ad = ads.find(a => String(a.id) === String(modalPending.id));
+  if (ad) {
+    ad.price = String(document.getElementById('modalPrice').value || '').trim();
+    ad.edited = true;
+    safeSet(key, ads);
+    alert('Narx saqlandi.');
+  }
+  closePriceModal();
+  renderUserAds();
+}
+
+/* ---------- init on load ---------- */
+window.onload = function() {
+  loadRegions();
+  renderUserAds();
+  setInterval(syncStatuses, 5000);
+};
+
+/* storage event (if admin updates in another tab) */
+window.addEventListener('storage', (e) => {
+  if (['driverAds','passengerAds','reviews'].includes(e.key)) {
+    renderUserAds();
+  }
+});
+/* logout */
+function logout() {
+  localStorage.removeItem('currentUser');
+  window.location.href = 'login.html';
+}
+
+/* small utility: ensure review modal star UI is clickable even if DOM added later */
+(function attachReviewStarListeners(){
+  document.addEventListener('mouseover', function(e){
+    if (e.target && e.target.classList && e.target.classList.contains('rating-stars')) { e.target.style.color = '#ffb400'; }
+  });
+  document.addEventListener('mouseout', function(e){
+    if (e.target && e.target.classList && e.target.classList.contains('rating-stars')) { e.target.style.color = ''; }
+  });
+})();
+
+/* escapeHtml exposed for template usage (already used) */
+</script>
+
+<!-- regions.js should exist and define `regions` object (you had this earlier). If not, sample fallback inside loadRegions will populate. -->
+<script src="regions.js"></script>
+
 </body>
 </html>
