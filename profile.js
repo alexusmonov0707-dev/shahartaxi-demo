@@ -1,664 +1,450 @@
-// profile.js
-// To'liq ishlaydigan skript - ShaharTaxi profile sahifasi
-// Kutilayotgan keys:
-// - localStorage.currentUser  -> { phone, name, photo } (profil egalari uchun)
-// - localStorage.driverAds / passengerAds -> array of ads
-// - localStorage.profileRatings -> array of { phone: profilePhone, ratings: [ { raterPhone, stars, text, date } ] }
+/* profil.js
+   To'liq ishlaydigan fayl — profilingiz sahifasi uchun barcha funksiyalar:
+   - e'lonlar (driverAds / passengerAds) ro'yxati, filtrlash
+   - yangi e'lon qo'shish (telefon validate: raqam)
+   - inline tahrir (faqat 1 marta ruxsat, ad.edited flag)
+   - o'chirish
+   - createdAt parsing / eski formatlarni qo'llab-quvvatlash
+   - izoh (comment) qo'shish / ko'rsatish
+   - rating (profile) tizimi: profileRatings localStorage
+   - sync va storage event handler
+*/
 
-// -----------------------------
-// Helpers & parsers
-// -----------------------------
-function parseAdDate(dateStr) {
-  if (!dateStr) return null;
-  // Try ISO
-  const d = new Date(dateStr);
-  if (!isNaN(d)) return d;
-  // Try "DD.MM.YYYY HH:mm" or "DD.MM.YYYY"
-  const match = String(dateStr).match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
-  if (match) {
-    const [, day, month, year, hour = "0", minute = "0"] = match;
-    return new Date(+year, +month - 1, +day, +hour, +minute);
-  }
-  // Try locale string (fallback)
-  const d2 = new Date(Date.parse(dateStr));
-  return isNaN(d2) ? null : d2;
-}
+(function () {
+  // --- Helper utilities ---
+  function $(id) { return document.getElementById(id); }
 
-function isoDateString(d) {
-  return new Date(d).toLocaleString();
-}
+  function nowISO() { return (new Date()).toLocaleString(); }
 
-function ensureArray(x) { return Array.isArray(x) ? x : []; }
-
-// phone validator: accept +998XXXXXXXXX or 998XXXXXXXXX or 0XXXXXXXXX (common) - but ensure digits length
-function isValidPhone(phone) {
-  if (!phone) return false;
-  const p = String(phone).trim();
-  // remove spaces, dashes
-  const cleaned = p.replace(/[\s-()]/g, '');
-  // +998XXXXXXXXX (12 chars) -> + + 12? Actually +998 + 9 digits => +998XXXXXXXXX length 13? Wait: +998 +9 = 13 incl plus.
-  // We'll accept following numeric forms: +998XXXXXXXXX, 998XXXXXXXXX, 0XXXXXXXXX (9/10 digits)
-  if (/^\+998\d{9}$/.test(cleaned)) return true;
-  if (/^998\d{9}$/.test(cleaned)) return true;
-  if (/^0\d{9}$/.test(cleaned)) return true;
-  return false;
-}
-
-function normalizePhoneForStorage(phone) {
-  if (!phone) return phone;
-  let p = String(phone).trim();
-  p = p.replace(/[\s-()]/g, '');
-  if (/^0\d{9}$/.test(p)) {
-    // convert 0XXXXXXXXX -> +998XXXXXXXXX
-    return '+998' + p.slice(1);
-  }
-  if (/^998\d{9}$/.test(p)) return '+' + p;
-  if (/^\+998\d{9}$/.test(p)) return p;
-  // fallback: return as-is
-  return p;
-}
-
-function uid(prefix = '') {
-  return prefix + Date.now() + '_' + Math.floor(Math.random() * 10000);
-}
-
-// -----------------------------
-// LocalStorage helpers
-// -----------------------------
-function getCurrentUser() {
-  try {
-    return JSON.parse(localStorage.getItem('currentUser') || 'null');
-  } catch (e) {
+  // Parse date string robustly (ISO or "DD.MM.YYYY[ HH:mm]")
+  function parseAdDate(dateStr) {
+    if (!dateStr) return null;
+    // try JS Date parse for ISO-like strings
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d;
+    // try dd.mm.yyyy hh:mm
+    const m = String(dateStr).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10) - 1;
+      const year = parseInt(m[3], 10);
+      const hour = parseInt(m[4] || "0", 10);
+      const minute = parseInt(m[5] || "0", 10);
+      return new Date(year, month, day, hour, minute);
+    }
     return null;
   }
-}
 
-function getDriverAds() {
-  return JSON.parse(localStorage.getItem('driverAds') || '[]');
-}
-function getPassengerAds() {
-  return JSON.parse(localStorage.getItem('passengerAds') || '[]');
-}
-function saveDriverAds(arr) { localStorage.setItem('driverAds', JSON.stringify(arr || [])); }
-function savePassengerAds(arr) { localStorage.setItem('passengerAds', JSON.stringify(arr || [])); }
+  // safe stringify fallback
+  function readJSON(key, fallback) { try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch (e) { return fallback; } }
+  function writeJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
 
-function getProfileRatingsStore() {
-  return JSON.parse(localStorage.getItem('profileRatings') || '[]');
-}
-function saveProfileRatingsStore(store) {
-  localStorage.setItem('profileRatings', JSON.stringify(store || []));
-}
-
-// -----------------------------
-// Profile detection (whose profile page to show)
-// -----------------------------
-function getViewingProfilePhone() {
-  // Priority:
-  // 1) localStorage.viewingProfile (page set by clicking a user's profile)
-  // 2) window.profilePhone (can be set by other scripts)
-  // 3) currentUser.phone
-  const maybe = localStorage.getItem('viewingProfile') || window.profilePhone || null;
-  if (maybe) return String(maybe);
-  const cu = getCurrentUser();
-  if (cu && cu.phone) return String(cu.phone);
-  return null;
-}
-
-// -----------------------------
-// Ratings store (profileRatings)
-// Structure:
-// [ { phone: "<profilePhone>", ratings: [ { raterPhone, stars, text, date } ] }, ... ]
-// -----------------------------
-function getRatingsForProfile(profilePhone) {
-  const store = getProfileRatingsStore();
-  const entry = store.find(e => String(e.phone) === String(profilePhone));
-  return entry ? entry.ratings : [];
-}
-function addRatingForProfile(profilePhone, rating) {
-  const store = getProfileRatingsStore();
-  let entry = store.find(e => String(e.phone) === String(profilePhone));
-  if (!entry) {
-    entry = { phone: String(profilePhone), ratings: [] };
-    store.push(entry);
-  }
-  entry.ratings.push(rating);
-  saveProfileRatingsStore(store);
-}
-function computeAverageRating(ratings) {
-  if (!ratings || ratings.length === 0) {
-    // Per your request: show maximal rating instead of 'no ratings'
-    return 5.0;
-  }
-  const s = ratings.reduce((sum, r) => sum + (Number(r.stars) || 0), 0);
-  return +(s / ratings.length).toFixed(2);
-}
-
-// -----------------------------
-// Rendering: profile header & stats
-// -----------------------------
-function renderProfileHeader(profilePhone) {
-  const cu = getCurrentUser();
-  // determine profile data from stored users if available (we only have phone + maybe name/photo in currentUser)
-  // Try to find an ad belonging to profilePhone to get name/photo fields if they exist
-  const allAds = [...getDriverAds(), ...getPassengerAds()];
-  const sampleAd = allAds.find(a => String(a.phone) === String(profilePhone));
-  const profile = {
-    phone: profilePhone,
-    name: (cu && String(cu.phone) === String(profilePhone) && cu.name) ? cu.name : (sampleAd && sampleAd.name) ? sampleAd.name : 'Foydalanuvchi',
-    photo: (cu && String(cu.phone) === String(profilePhone) && cu.photo) ? cu.photo : (sampleAd && sampleAd.photo) ? sampleAd.photo : 'images/default-avatar.png'
-  };
-
-  const nameEl = document.getElementById('profile-name');
-  const phoneEl = document.getElementById('profile-phone');
-  const photoEl = document.getElementById('profile-photo');
-
-  if (nameEl) nameEl.textContent = profile.name || 'Foydalanuvchi';
-  if (phoneEl) phoneEl.textContent = `Telefon: ${profile.phone || '—'}`;
-  if (photoEl) photoEl.src = profile.photo || 'images/default-avatar.png';
-
-  // rating
-  const ratings = getRatingsForProfile(profilePhone);
-  const avg = computeAverageRating(ratings);
-  const ratingValueEl = document.getElementById('rating-value');
-  if (ratingValueEl) ratingValueEl.textContent = (avg).toFixed(1);
-}
-
-// -----------------------------
-// Ads rendering / stats computation
-// -----------------------------
-function collectAllAds() {
-  // Some older versions may have 'ads' key - include it
-  const mainAds = JSON.parse(localStorage.getItem('ads') || '[]');
-  const driver = getDriverAds();
-  const passenger = getPassengerAds();
-  // ensure each ad has createdAt and type
-  const normalized = [
-    ...ensureArray(mainAds).map(a => ({ ...(a || {}), type: a.type || (a.from && a.to ? 'driver' : 'driver') })),
-    ...ensureArray(driver).map(a => ({ ...(a || {}), type: 'driver' })),
-    ...ensureArray(passenger).map(a => ({ ...(a || {}), type: 'passenger' }))
-  ];
-  return normalized;
-}
-
-function updateProfileStats(profilePhone) {
-  const all = collectAllAds();
-  const profileAds = all.filter(a => String(a.phone) === String(profilePhone));
-
-  // ensure status normalization
-  const norm = profileAds.map(a => {
-    const s = a.status ? String(a.status).toLowerCase() : 'pending';
-    let status = s;
-    if (s.includes('tasdiq') || s.includes('approved')) status = 'approved';
-    else if (s.includes('rad') || s.includes('rejected')) status = 'rejected';
-    else status = 'pending';
-    return { ...a, status };
-  });
-
-  const total = norm.length;
-  const approved = norm.filter(a => a.status === 'approved').length;
-  const rejected = norm.filter(a => a.status === 'rejected').length;
-  const pending = norm.filter(a => a.status === 'pending').length;
-
-  const elTotal = document.getElementById('total-ads');
-  const elApproved = document.getElementById('approved-ads');
-  const elPending = document.getElementById('pending-ads');
-  const elRejected = document.getElementById('rejected-ads');
-  if (elTotal) elTotal.textContent = total;
-  if (elApproved) elApproved.textContent = approved;
-  if (elPending) elPending.textContent = pending;
-  if (elRejected) elRejected.textContent = rejected;
-
-  return norm;
-}
-
-function renderAdsList(profilePhone) {
-  const adsContainer = document.getElementById('ads-list');
-  if (!adsContainer) return;
-  adsContainer.innerHTML = '';
-
-  const norm = updateProfileStats(profilePhone);
-
-  if (!norm || norm.length === 0) {
-    adsContainer.innerHTML = '<p style="color:#666;">Sizda hali eʼlonlar yoʻq.</p>';
-    return;
-  }
-
-  // sort by date desc
-  norm.sort((a, b) => {
-    const da = parseAdDate(a.createdAt) || new Date(0);
-    const db = parseAdDate(b.createdAt) || new Date(0);
-    return db - da;
-  });
-
-  norm.forEach(ad => {
-    // build ad card
-    const card = document.createElement('div');
-    card.className = 'ad-card';
-
-    const from = (ad.fromRegion || ad.from || '') + (ad.fromDistrict ? (' ' + ad.fromDistrict) : '');
-    const to = (ad.toRegion || ad.to || '') + (ad.toDistrict ? (' ' + ad.toDistrict) : '');
-    const priceText = ad.price ? `${ad.price} so‘m` : 'Ko‘rsatilmagan';
-    const createdText = ad.createdAt ? isoDateString(parseAdDate(ad.createdAt) || ad.createdAt) : '—';
-
-    // comment if exists
-    const commentHTML = ad.comment ? `<div style="margin-top:8px;background:#fff;border-left:4px solid #0088cc;padding:8px;border-radius:6px;"><b>Izoh:</b> ${escapeHtml(ad.comment)}</div>` : '';
-
-    // actions: if current user is owner -> show edit/delete
-    const currentUser = getCurrentUser();
-    const isOwner = currentUser && String(currentUser.phone) === String(ad.phone);
-
-    card.innerHTML = `
-      <h4>${escapeHtml(from)} → ${escapeHtml(to)}</h4>
-      <p style="margin-top:6px;color:#444;"><b>Narx:</b> ${escapeHtml(priceText)} &nbsp; • &nbsp; <b>Holat:</b> ${escapeHtml(ad.status || 'pending')}</p>
-      <p style="font-size:13px;color:#666;margin-top:6px;"><b>Joylangan:</b> ${escapeHtml(createdText)}</p>
-      ${commentHTML}
-    `;
-
-    const actionsDiv = document.createElement('div');
-    actionsDiv.style.marginTop = '10px';
-    actionsDiv.className = 'actions';
-
-    if (isOwner) {
-      const editBtn = document.createElement('button');
-      editBtn.textContent = '✏️ Tahrirlash';
-      editBtn.onclick = () => openInlineEdit(ad);
-      actionsDiv.appendChild(editBtn);
-    } else {
-      // show a button to view profile of the ad owner (if not current profile)
-      if (String(ad.phone) !== String(profilePhone)) {
-        const viewProfileBtn = document.createElement('button');
-        viewProfileBtn.textContent = "👤 Foydalanuvchini ko'rish";
-        viewProfileBtn.onclick = () => {
-          // When clicked, set viewingProfile and reload page to view that profile
-          localStorage.setItem('viewingProfile', String(ad.phone));
-          // reload to show that profile (or you could open in new tab)
-          window.location.reload();
-        };
-        actionsDiv.appendChild(viewProfileBtn);
-      }
+  // Get ads, ensure older objects have comment property
+  function getAdsObj() {
+    const driver = readJSON('driverAds', []);
+    const passenger = readJSON('passengerAds', []);
+    // normalize comment and id if missing
+    let changed = false;
+    [ {arr: driver, key:'driver'}, {arr: passenger, key:'passenger'} ].forEach(group=>{
+      group.arr.forEach((ad, i)=>{
+        if (!('comment' in ad)) { ad.comment = ""; changed = true; }
+        if (!ad.type) ad.type = group.key;
+        if (!ad.id) { ad.id = `${group.key}_${Date.now()}_${i}`; changed = true; }
+      });
+    });
+    if (changed) {
+      writeJSON('driverAds', driver);
+      writeJSON('passengerAds', passenger);
     }
+    return { driver, passenger };
+  }
 
-    if (isOwner) {
-      const deleteBtn = document.createElement('button');
-      deleteBtn.textContent = '🗑️ O‘chirish';
-      deleteBtn.onclick = () => {
-        if (!confirm('Eʼlonni oʻchirmoqchimisiz?')) return;
-        deleteAd(ad.id, ad.type);
-      };
-      actionsDiv.appendChild(deleteBtn);
-    } else {
-      // allow any user to leave a rating/comment for the ad owner directly from ad card? 
-      // Per earlier discussion: rating should be between driver & passenger after completed ride.
-      // For now we provide a "Profilga baho qoldirish" button that opens rating form for the ad owner.
-      const rateOwnerBtn = document.createElement('button');
-      rateOwnerBtn.textContent = '⭐ Profilga baho';
-      rateOwnerBtn.onclick = () => {
-        // set viewingProfile to owner then scroll to rating form
-        localStorage.setItem('viewingProfile', String(ad.phone));
-        // re-init rating UI for that profile
-        initRatingsUI(String(ad.phone));
-        // scroll to rating block
-        const rb = document.getElementById('profileRatingBlock') || document.getElementById('ratingFormWrap') || document.getElementById('ratingFormContainer');
-        if (rb) rb.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      };
-      actionsDiv.appendChild(rateOwnerBtn);
-    }
-
-    card.appendChild(actionsDiv);
-    adsContainer.appendChild(card);
-  });
-}
-
-// -----------------------------
-// Edit / Delete ad operations
-// -----------------------------
-function openInlineEdit(ad) {
-  // simple prompt editing (price + comment) to keep UI minimal and safe
-  const newPrice = prompt('Yangi narxni kiriting (bo‘sh qoldirsangiz o‘zgarmaydi):', ad.price || '');
-  if (newPrice !== null) {
-    const key = ad.type === 'driver' ? 'driverAds' : 'passengerAds';
-    const arr = JSON.parse(localStorage.getItem(key) || '[]');
-    const idx = arr.findIndex(a => String(a.id) === String(ad.id));
-    if (idx > -1) {
-      if (String(newPrice).trim() !== '') arr[idx].price = newPrice.trim();
-      arr[idx].edited = true;
-      localStorage.setItem(key, JSON.stringify(arr));
-      renderAll(); // refresh UI
-      alert('✅ E\'lon yangilandi.');
+  // --- UI population for regions/districts ---
+  // If you have regions.js in project, it should define `regions` object.
+  function loadRegionsUI() {
+    const fromRegion = $('fromRegion'), toRegion = $('toRegion'), fFrom = $('filterFromRegion'), fTo = $('filterToRegion');
+    [fromRegion, toRegion, fFrom, fTo].forEach(sel => {
+      if (!sel) return;
+      sel.innerHTML = "<option value=''>Viloyatni tanlang</option>";
+    });
+    if (typeof regions === 'object') {
+      Object.keys(regions).forEach(r => {
+        [fromRegion, toRegion, fFrom, fTo].forEach(sel=>{
+          if (sel) sel.add(new Option(r, r));
+        });
+      });
     }
   }
-}
-
-function deleteAd(id, type) {
-  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-  const arr = JSON.parse(localStorage.getItem(key) || '[]').filter(a => String(a.id) !== String(id));
-  localStorage.setItem(key, JSON.stringify(arr));
-  renderAll();
-}
-
-// -----------------------------
-// Add new ad (profile page contains form in HTML header of original large file; but here we only re-render)
-// For this HTML version, new ad creation UI is in the page; we will attach to a global addAd button if present
-// -----------------------------
-function addAdFromForm() {
-  // if form elements exist
-  const adTypeEl = document.getElementById('adType');
-  if (!adTypeEl) return;
-  const type = adTypeEl.value;
-  const fromRegion = document.getElementById('fromRegion').value || '';
-  const fromDistrict = document.getElementById('fromDistrict').value || '';
-  const toRegion = document.getElementById('toRegion').value || '';
-  const toDistrict = document.getElementById('toDistrict').value || '';
-  const price = document.getElementById('price').value || '';
-  const comment = document.getElementById('adComment') ? document.getElementById('adComment').value : '';
-
-  if (!type || !fromRegion || !toRegion) {
-    alert('Iltimos, yo‘nalish maʼlumotlarini to‘ldiring.');
-    return;
+  function updateDistricts(prefix) {
+    const region = $(prefix + 'Region').value;
+    const districtSelect = $(prefix + 'District');
+    districtSelect.innerHTML = "<option value=''>Tumanni tanlang</option>";
+    if (regions && regions[region]) regions[region].forEach(d => districtSelect.add(new Option(d, d)));
+  }
+  function updateFilterDistricts(prefix) {
+    updateDistricts(prefix);
+    applyFilters();
   }
 
-  const currentUser = getCurrentUser();
-  if (!currentUser || !currentUser.phone) {
-    alert('Eʼlon qo‘yish uchun tizimga kiring.');
-    return;
-  }
+  // --- Render Ads for current user ---
+  function renderUserAds() {
+    const { driver, passenger } = getAdsObj();
+    const currentUser = readJSON('currentUser', null);
+    const userPhone = (currentUser && currentUser.phone) ? String(currentUser.phone) : null;
+    $('userPhone').textContent = userPhone ? `Telefon: ${userPhone}` : 'Telefon: not logged';
 
-  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-  const arr = JSON.parse(localStorage.getItem(key) || '[]');
+    let all = [...driver, ...passenger].filter(a => String(a.phone) === String(userPhone));
 
-  const newAd = {
-    id: `${type}_${Date.now()}`,
-    phone: currentUser.phone,
-    fromRegion, fromDistrict,
-    toRegion, toDistrict,
-    price, type,
-    comment: comment || '',
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  };
+    // filters
+    const typeFilter = $('typeFilter').value;
+    const statusFilter = $('statusFilter').value;
+    const fFromRegion = $('filterFromRegion').value;
+    const fFromDistrict = $('filterFromDistrict').value;
+    const fToRegion = $('filterToRegion').value;
+    const fToDistrict = $('filterToDistrict').value;
 
-  arr.push(newAd);
-  localStorage.setItem(key, JSON.stringify(arr));
-  alert('✅ Eʼlon joylandi. Admin tasdiqlashi kutilmoqda.');
-  // Clear form if exist
-  const priceEl = document.getElementById('price'); if (priceEl) priceEl.value = '';
-  const commentEl = document.getElementById('adComment'); if (commentEl) commentEl.value = '';
-  renderAll();
-}
+    if (typeFilter !== 'all') all = all.filter(a => a.type === typeFilter);
+    if (statusFilter !== 'all') all = all.filter(a => (a.status || 'pending') === statusFilter);
+    if (fFromRegion) all = all.filter(a => (a.fromRegion || '').includes(fFromRegion));
+    if (fFromDistrict) all = all.filter(a => (a.fromDistrict || '').includes(fFromDistrict));
+    if (fToRegion) all = all.filter(a => (a.toRegion || '').includes(fToRegion));
+    if (fToDistrict) all = all.filter(a => (a.toDistrict || '').includes(fToDistrict));
 
-// -----------------------------
-// Ratings UI & Events
-// -----------------------------
-function ensureRatingContainerExists() {
-  if (document.getElementById('profileRatingBlock')) return;
-  // There is a rating section in the HTML (we included a complex one earlier). If not, we create a simple block.
-  const container = document.createElement('div');
-  container.id = 'profileRatingBlock';
-  container.style.marginTop = '18px';
-  const mainC = document.querySelector('.container') || document.body;
-  mainC.appendChild(container);
-}
+    const container = $('myAds');
+    container.innerHTML = all.length ? "" : "<p>Hozircha e'lonlar yo'q.</p>";
 
-function renderRatingsUI(profilePhone) {
-  ensureRatingContainerExists();
-  const target = document.getElementById('profileRatingBlock');
-  if (!target) return;
+    all.forEach(ad=>{
+      const from = (ad.fromRegion ? ad.fromRegion + (ad.fromDistrict ? ` ${ad.fromDistrict}` : '') : (ad.from || '—'));
+      const to = (ad.toRegion ? ad.toRegion + (ad.toDistrict ? ` ${ad.toDistrict}` : '') : (ad.to || '—'));
+      const status = (ad.status || 'pending');
+      const createdAt = ad.createdAt ? (parseAdDate(ad.createdAt) ? parseAdDate(ad.createdAt).toLocaleString() : ad.createdAt) : '—';
+      const cls = status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'pending';
 
-  // build UI
-  const ratings = getRatingsForProfile(profilePhone) || [];
-  const avg = computeAverageRating(ratings);
-  const count = (ratings && ratings.length) ? ratings.length : 0;
-
-  // show summary: per your request, show maximal by default if none
-  const summaryHtml = `<div style="text-align:center;padding:8px 0;">
-    <strong>O'rtacha baho:</strong> ${(avg).toFixed(1)} / 5 &nbsp; <small style="color:#666">(${count} ta)</small>
-  </div>`;
-
-  // list
-  let listHtml = '';
-  if (!ratings || ratings.length === 0) {
-    listHtml = `<p style="text-align:center;color:#666;">Hozircha baholashlar yo‘q. (Sifatli 5.0 ko‘rsatilmoqda)</p>`;
-  } else {
-    listHtml = ratings.slice().reverse().map(r => {
-      const commentPart = r.text ? `<div style="margin-top:6px;color:#333;">${escapeHtml(r.text)}</div>` : '';
-      return `<div style="background:#fff;border:1px solid #eee;padding:10px;border-radius:8px;margin-bottom:8px;">
-        <div style="font-weight:600;">⭐ ${r.stars} / 5</div>
-        ${commentPart}
-        <div style="font-size:12px;color:#666;margin-top:6px;">${escapeHtml(r.raterPhone)} · ${escapeHtml(r.date)}</div>
-      </div>`;
-    }).join('');
-  }
-
-  // form
-  const currentUser = getCurrentUser();
-  const viewerPhone = currentUser && currentUser.phone ? String(currentUser.phone) : null;
-  let formHtml = '';
-  if (!viewerPhone) {
-    formHtml = `<p style="text-align:center;color:#666;">Baholash qoʻshish uchun tizimga kiring.</p>`;
-  } else if (String(viewerPhone) === String(profilePhone)) {
-    formHtml = `<p style="text-align:center;color:#666;">Siz o'zingizni baholay olmaysiz. Boshqalar baholashlari mumkin.</p>`;
-  } else {
-    // check duplicate
-    const already = ratings.some(r => String(r.raterPhone) === String(viewerPhone));
-    if (already) {
-      formHtml = `<p style="text-align:center;color:#666;">Siz allaqachon bu foydalanuvchini baholagansiz.</p>`;
-    } else {
-      formHtml = `
-        <div style="background:#f8f9ff;padding:12px;border-radius:8px;border:1px solid #e6eefc;">
-          <label style="display:block;margin-bottom:6px;"><strong>⭐ Baho tanlang</strong></label>
-          <select id="ratingStars" style="padding:8px;border-radius:6px;border:1px solid #ccc;">
-            <option value="5">5 — A’lo</option>
-            <option value="4">4 — Yaxshi</option>
-            <option value="3">3 — O‘rtacha</option>
-            <option value="2">2 — Yomon</option>
-            <option value="1">1 — Juda yomon</option>
-          </select>
-          <textarea id="ratingText" rows="3" placeholder="Ixtiyoriy izoh... (max 500)" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid #ccc;"></textarea>
-          <div style="text-align:center;margin-top:10px;">
-            <button id="submitRatingBtn" style="padding:8px 12px;border-radius:6px;background:#0088cc;color:#fff;border:none;cursor:pointer;">Baholashni yuborish</button>
-          </div>
-        </div>
+      const div = document.createElement('div');
+      div.className = `ad-box ${cls}`;
+      div.innerHTML = `
+        <div class="ad-meta"><b>Yo'nalish:</b> ${escapeHtml(from)} → ${escapeHtml(to)}</div>
+        <div class="ad-meta"><b>Narx:</b> ${escapeHtml(String(ad.price || 'Ko‘rsatilmagan'))} so'm</div>
+        <div class="ad-meta"><b>Telefon:</b> ${escapeHtml(String(ad.phone || 'Noma\'lum'))}</div>
+        <div class="ad-meta"><b>Holat:</b> ${status === 'approved' ? '✅ Tasdiqlangan' : status === 'rejected' ? '❌ Rad etilgan' : '⏳ Kutilmoqda'}</div>
+        <div class="ad-meta date-info">🕒 Joylangan: ${escapeHtml(createdAt)}</div>
+        ${ad.comment ? `<div class="comment-box"><b>Izoh:</b> ${escapeHtml(ad.comment)}</div>` : ''}
       `;
-    }
-  }
 
-  target.innerHTML = `<hr><h2 style="color:#007bff;text-align:center;">Foydalanuvchi baholari</h2>${summaryHtml}<div id="ratingFormWrap">${formHtml}</div><div id="ratingList" style="margin-top:12px;">${listHtml}</div>`;
+      // actions: edit (disabled if approved or already edited), delete
+      const actions = document.createElement('div');
+      actions.className = 'actions';
 
-  // attach submit handler
-  const submitBtn = document.getElementById('submitRatingBtn');
-  if (submitBtn) {
-    submitBtn.onclick = () => {
-      const stars = Number(document.getElementById('ratingStars').value) || 5;
-      const text = document.getElementById('ratingText').value.trim().slice(0, 500);
-      const r = {
-        raterPhone: viewerPhone,
-        stars,
-        text,
-        date: new Date().toLocaleString()
-      };
-      addRatingForProfile(profilePhone, r);
-      // reload
-      renderRatingsUI(profilePhone);
-      renderProfileHeader(profilePhone); // update avg
-      alert('✅ Baho saqlandi!');
-    };
-  }
-}
-
-function initRatingsUI(profilePhone) {
-  // set viewingProfile to chosen profile phone
-  if (profilePhone) localStorage.setItem('viewingProfile', String(profilePhone));
-  renderProfileHeader(profilePhone);
-  renderRatingsUI(profilePhone);
-}
-
-// -----------------------------
-// Profile edit modal handling
-// -----------------------------
-function openEditModal(profilePhone) {
-  const cu = getCurrentUser();
-  if (!cu) return;
-  // show modal
-  const modal = document.getElementById('editModal');
-  if (!modal) return;
-  document.getElementById('edit-name').value = cu.name || '';
-  document.getElementById('edit-phone').value = cu.phone || '';
-  document.getElementById('edit-photo').value = cu.photo || '';
-  modal.classList.add('active');
-}
-
-function closeEditModal() {
-  const modal = document.getElementById('editModal');
-  if (!modal) return;
-  modal.classList.remove('active');
-}
-
-function saveProfileEdits() {
-  const name = document.getElementById('edit-name').value.trim();
-  const phoneRaw = document.getElementById('edit-phone').value.trim();
-  const photo = document.getElementById('edit-photo').value.trim();
-
-  // Validate phone strictly: must be Uzbek format
-  if (!isValidPhone(phoneRaw)) {
-    alert('Iltimos toʻgʻri telefon raqamini kiriting (masalan: +998901234567 yoki 0901234567).');
-    return;
-  }
-
-  const phone = normalizePhoneForStorage(phoneRaw);
-
-  // update localStorage currentUser
-  const cu = getCurrentUser() || {};
-  cu.name = name || cu.name || 'Foydalanuvchi';
-  cu.phone = phone;
-  cu.photo = photo || cu.photo || 'images/default-avatar.png';
-  localStorage.setItem('currentUser', JSON.stringify(cu));
-
-  // Also update existing ads for this user to reflect new phone? Not automatically changing ad owner phone to avoid identity issues.
-  // But if you want to migrate ads to new phone number, that is a separate flow.
-
-  alert('Profil maʼlumotlari saqlandi.');
-  closeEditModal();
-  // refresh UI and stored viewingProfile if user updated own phone
-  localStorage.setItem('viewingProfile', cu.phone);
-  renderAll();
-}
-
-// -----------------------------
-// Utility & escape
-// -----------------------------
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-// -----------------------------
-// Initialization & binding events
-// -----------------------------
-function bindUI(profilePhone) {
-  // Edit profile button
-  const editBtn = document.getElementById('edit-profile');
-  if (editBtn) {
-    editBtn.onclick = () => {
-      // Only allow editing own profile
-      const cu = getCurrentUser();
-      if (!cu || String(cu.phone) !== String(profilePhone)) {
-        alert('Faqat profil egasi o‘z profilini tahrirlashi mumkin.');
-        return;
+      if (status !== 'approved' && !ad.edited) {
+        const btnEdit = document.createElement('button');
+        btnEdit.className = 'small btn-edit';
+        btnEdit.textContent = '✏️ Tahrirlash';
+        btnEdit.onclick = () => { startInlineEdit(ad.id, ad.type); };
+        actions.appendChild(btnEdit);
+      } else {
+        const disabledBtn = document.createElement('button');
+        disabledBtn.className = 'small';
+        disabledBtn.style.background = '#ccc';
+        disabledBtn.style.cursor = 'not-allowed';
+        disabledBtn.textContent = '✏️ Tahrirlash';
+        actions.appendChild(disabledBtn);
       }
-      openEditModal(profilePhone);
-    };
+
+      const btnDelete = document.createElement('button');
+      btnDelete.className = 'small btn-delete';
+      btnDelete.textContent = '🗑️ O‘chirish';
+      btnDelete.onclick = ()=> { deleteAd(ad.id, ad.type); };
+      actions.appendChild(btnDelete);
+
+      div.appendChild(actions);
+      container.appendChild(div);
+    });
   }
 
-  // Modal buttons
-  const cancelEdit = document.getElementById('cancelEdit');
-  if (cancelEdit) cancelEdit.onclick = closeEditModal;
-  const saveEdit = document.getElementById('saveEdit');
-  if (saveEdit) saveEdit.onclick = saveProfileEdits;
+  // Escape HTML helper
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#039;');
+  }
 
-  // Add ad button (if form present)
-  const addBtn = document.querySelector('[onclick="addAd()"], button[onclick="addAd()"], document.querySelector("#addAdButton")');
-  // Since HTML provided earlier had button onclick="addAd()", we attach a safer listener too:
-  const pageAddBtn = document.querySelector('button[onclick="addAd()"]') || document.querySelector('button:contains("E’lonni joylash"), button:contains("E’lonni joylash")');
-  // But those CSS selectors may not work universally; instead attach to window.addAdFromForm in case addAd in HTML calls it.
-  // We'll also attach handler if there is an element with id 'addAdButton'
-  const explicitAdd = document.getElementById('addAdButton');
-  if (explicitAdd) explicitAdd.onclick = addAdFromForm;
-  // Additionally, if page uses function addAd() we ensure it calls addAdFromForm by exposing a wrapper
-  window.addAd = addAdFromForm;
+  // --- Add Ad ---
+  function addAd() {
+    const type = $('adType').value;
+    const fromRegion = $('fromRegion').value.trim();
+    const fromDistrict = $('fromDistrict').value.trim();
+    const toRegion = $('toRegion').value.trim();
+    const toDistrict = $('toDistrict').value.trim();
+    const price = $('price').value.trim();
+    const comment = $('adComment').value.trim();
+    const adPhone = $('adPhone').value.trim();
 
-  // rating init
-  initRatingsUI(profilePhone);
-}
-
-// -----------------------------
-// Full render (header, ads, ratings, stats)
-// -----------------------------
-function renderAll() {
-  const profilePhone = getViewingProfilePhone();
-  if (!profilePhone) {
-    // Not enough info: redirect to login
-    const cu = getCurrentUser();
-    if (!cu) {
-      alert('Avval tizimga kiring.');
-      window.location.href = 'login.html';
+    // phone validation: must be digits and length 9..13 (simple)
+    if (!/^\d{9,13}$/.test(adPhone)) {
+      alert('Telefon formati noto\'g\'ri. Faqat raqamlar kiriting (masalan: 998901234567 yoki 901234567).');
       return;
     }
-  }
-  const phoneToShow = profilePhone || (getCurrentUser() && getCurrentUser().phone);
-  renderProfileHeader(phoneToShow);
-  renderAdsList(phoneToShow);
-  renderRatingsUI(phoneToShow);
-  updateProfileStats(phoneToShow);
-}
 
-// -----------------------------
-// Synchronization: watch localStorage changes & periodic refresh
-// -----------------------------
-window.addEventListener('storage', (e) => {
-  if (['driverAds', 'passengerAds', 'profileRatings', 'currentUser', 'viewingProfile', 'ads'].includes(e.key)) {
-    // re-render everything to stay in sync
-    try {
-      renderAll();
-    } catch (err) {
-      console.error('Render error on storage event', err);
+    if (!type || !fromRegion || !toRegion) { alert('Iltimos yo\'nalishni to\'liq kiriting'); return; }
+
+    const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+    const ads = readJSON(key, []);
+
+    const newAd = {
+      id: `${type}_${Date.now()}`,
+      phone: adPhone,
+      fromRegion, fromDistrict,
+      toRegion, toDistrict,
+      price: price || '',
+      comment: comment || '',
+      type,
+      status: 'pending',
+      createdAt: new Date().toLocaleString()
+    };
+    ads.push(newAd);
+    writeJSON(key, ads);
+    alert('✅ E\'lon joylandi (Admin tasdiqlashi kutilmoqda).');
+    // clear inputs
+    $('price').value = '';
+    $('adComment').value = '';
+    $('adPhone').value = '';
+    renderUserAds();
+    // optionally update admin stats if admin page reads same localStorage
+    localStorage.setItem('lastChange', Date.now());
+  }
+
+  // --- Inline Edit (only one-time allowed) ---
+  function startInlineEdit(id, type) {
+    // find ad and present inline inputs in the ad-box replaced actions
+    const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+    const ads = readJSON(key, []);
+    const idx = ads.findIndex(a => String(a.id) === String(id));
+    if (idx === -1) return;
+    const ad = ads[idx];
+    if (ad.edited) { alert('❗ Ushbu e\'lon allaqachon tahrirlangan — yana tahrirlash mumkin emas.'); return; }
+    // find DOM node for this ad (by matching createdAt+phone+from maybe)
+    // Simpler: prompt for new price and comment inline
+    const newPrice = prompt('Yangi narxni kiriting (bo\'sh qoldirsangiz bekor qilinadi):', ad.price || '');
+    if (newPrice === null) return; // cancel
+    if (String(newPrice).trim() === '') { alert('Narx kiritilmadi. Bekor qilindi.'); return; }
+    // save
+    ad.price = newPrice.trim();
+    ad.edited = true;
+    // mark that it was edited once (no further inline edits)
+    ads[idx] = ad;
+    writeJSON(key, ads);
+    alert('✏️ E\'lon tahrirlandi (inline).');
+    renderUserAds();
+    localStorage.setItem('lastChange', Date.now());
+  }
+
+  // --- Edit via prompt (older method) ---
+  function editAd(id, type) {
+    const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+    const ads = readJSON(key, []);
+    const idx = ads.findIndex(a => String(a.id) === String(id));
+    if (idx === -1) return;
+    const ad = ads[idx];
+    if (ad.edited) { alert('❗ Ushbu e\'lon allaqachon tahrirlangan.'); return; }
+    const newPrice = prompt('Yangi narxni kiriting:', ad.price || '');
+    if (newPrice === null) return;
+    ad.price = newPrice.trim();
+    ad.edited = true;
+    ads[idx] = ad;
+    writeJSON(key, ads);
+    renderUserAds();
+    localStorage.setItem('lastChange', Date.now());
+  }
+
+  // --- Delete Ad ---
+  function deleteAd(id, type) {
+    if (!confirm('E\'lonni o\'chirmoqchimisiz?')) return;
+    const key = type === 'driver' ? 'driverAds' : 'passengerAds';
+    let ads = readJSON(key, []);
+    ads = ads.filter(a => String(a.id) !== String(id));
+    writeJSON(key, ads);
+    renderUserAds();
+    localStorage.setItem('lastChange', Date.now());
+  }
+
+  // --- Filters helpers ---
+  function applyFilters() { renderUserAds(); }
+  function clearFilters() {
+    $('typeFilter').value = 'all';
+    $('statusFilter').value = 'all';
+    $('filterFromRegion').value = '';
+    $('filterFromDistrict').innerHTML = '<option value="">Qayerdan (tuman)</option>';
+    $('filterToRegion').value = '';
+    $('filterToDistrict').innerHTML = '<option value="">Qayerga (tuman)</option>';
+    renderUserAds();
+  }
+
+  // --- Rating system (profile-level) ---
+  // store structure: profileRatings = [ { phone: "99890...", ratings: [ { raterPhone, stars, text, date } ] }, ... ]
+  function getProfileRatingsStore() { return readJSON('profileRatings', []); }
+  function saveProfileRatingsStore(store) { writeJSON('profileRatings', store); }
+
+  function getRatingsForProfile(profilePhone) {
+    const store = getProfileRatingsStore();
+    const entry = store.find(e => String(e.phone) === String(profilePhone));
+    return entry ? entry.ratings : [];
+  }
+
+  function addRatingForProfile(profilePhone, rating) {
+    const store = getProfileRatingsStore();
+    let entry = store.find(e => String(e.phone) === String(profilePhone));
+    if (!entry) { entry = { phone: String(profilePhone), ratings: [] }; store.push(entry); }
+    // prevent same rater multiple ratings (business rule) -> update existing
+    const already = entry.ratings.find(r => String(r.raterPhone) === String(rating.raterPhone));
+    if (already) {
+      already.stars = rating.stars;
+      already.text = rating.text;
+      already.date = rating.date;
+    } else {
+      entry.ratings.push(rating);
     }
-  }
-});
-
-// Periodic refresh (in case admin changes statuses, etc.)
-setInterval(() => {
-  try {
-    renderAll();
-  } catch (err) {
-    // swallow
-  }
-}, 3000);
-
-// -----------------------------
-// Boot
-// -----------------------------
-document.addEventListener('DOMContentLoaded', () => {
-  // Ensure some basic structures exist in storage (avoid null errors)
-  // Keep existing data; only ensure arrays exist
-  if (!localStorage.getItem('driverAds')) localStorage.setItem('driverAds', JSON.stringify([]));
-  if (!localStorage.getItem('passengerAds')) localStorage.setItem('passengerAds', JSON.stringify([]));
-  if (!localStorage.getItem('profileRatings')) localStorage.setItem('profileRatings', JSON.stringify([]));
-
-  // If currentUser not set, do not force redirect: existing HTML checks and redirects.
-  const profilePhone = getViewingProfilePhone() || (getCurrentUser() && getCurrentUser().phone);
-  if (!profilePhone) {
-    // nothing to render, bail-out (HTML will redirect to login if needed)
-    return;
+    saveProfileRatingsStore(store);
   }
 
-  // Bind UI
-  bindUI(profilePhone);
+  function computeAvg(ratings) {
+    if (!ratings || ratings.length === 0) return 5.00; // requirement: show maximal when no ratings
+    const s = ratings.reduce((acc, r) => acc + (Number(r.stars) || 0), 0);
+    return +(s / ratings.length).toFixed(2);
+  }
 
-  // Render everything
-  renderAll();
-});
+  function renderRatingsUI(profilePhone) {
+    const summaryEl = $('ratingSummary');
+    const formWrap = $('ratingFormWrap');
+    const listEl = $('ratingList');
+
+    const ratings = getRatingsForProfile(profilePhone);
+    const avg = computeAvg(ratings);
+    summaryEl.innerHTML = ratings.length > 0 ? `⭐ ${avg} / 5 (${ratings.length} ta baho)` : `⭐ ${avg} / 5 (0 ta baho — hozircha maksimal ko'rsatildi)`;
+
+    // Render list
+    if (!ratings || ratings.length === 0) {
+      listEl.innerHTML = `<p style="text-align:center;color:#666;">Hozircha baholashlar yo'q.</p>`;
+    } else {
+      listEl.innerHTML = ratings.slice().reverse().map(r =>
+        `<div class="rating-card"><div style="font-weight:700">⭐ ${escapeHtml(String(r.stars))} / 5</div>
+         ${r.text ? `<div style="margin-top:6px;color:#333">${escapeHtml(r.text)}</div>` : ''}
+         <div style="font-size:12px;color:#666;margin-top:6px">${escapeHtml(r.raterPhone)} · ${escapeHtml(r.date)}</div></div>`
+      ).join('');
+    }
+
+    // Render form if viewer exists and viewer != profile owner
+    const currentUser = readJSON('currentUser', null);
+    const viewerPhone = currentUser && currentUser.phone ? String(currentUser.phone) : null;
+    formWrap.innerHTML = '';
+
+    if (!viewerPhone) {
+      formWrap.innerHTML = `<p style="text-align:center;color:#666;">Baholash qo'shish uchun tizimga kiring.</p>`;
+      return;
+    }
+    if (String(viewerPhone) === String(profilePhone)) {
+      formWrap.innerHTML = `<p style="text-align:center;color:#666;">Siz o'zingizni baholay olmaysiz.</p>`;
+      return;
+    }
+    // prevent duplicate rating (business rule)
+    const already = ratings.some(r => String(r.raterPhone) === String(viewerPhone));
+    if (already) {
+      formWrap.innerHTML = `<p style="text-align:center;color:#666;">Siz allaqachon bu foydalanuvchini baholagansiz.</p>`;
+      return;
+    }
+    // show form
+    formWrap.innerHTML = `
+      <div style="background:#f8f9ff;padding:12px;border-radius:8px;border:1px solid #e6eefc;">
+        <label style="display:block;margin-bottom:6px;"><strong>⭐ Baho tanlang</strong></label>
+        <select id="ratingStars" style="padding:8px;border-radius:6px;border:1px solid #ccc;">
+          <option value="5">5 — A’lo</option>
+          <option value="4">4 — Yaxshi</option>
+          <option value="3">3 — O‘rtacha</option>
+          <option value="2">2 — Yomon</option>
+          <option value="1">1 — Juda yomon</option>
+        </select>
+        <textarea id="ratingText" rows="3" placeholder="Ixtiyoriy izoh..." style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid #ccc;"></textarea>
+        <div style="text-align:center;margin-top:10px;">
+          <button id="submitRatingBtn">Baholashni yuborish</button>
+        </div>
+      </div>`;
+    $('submitRatingBtn').onclick = () => {
+      const stars = Number($('ratingStars').value) || 5;
+      const text = $('ratingText').value.trim();
+      const r = { raterPhone: viewerPhone, stars, text, date: new Date().toLocaleString() };
+      addRatingForProfile(profilePhone, r);
+      renderRatingsUI(profilePhone);
+      alert('Baho saqlandi!');
+    };
+  }
+
+  // -----------------------------------------
+  // Initialization: determine profile phone
+  // if viewingProfile exists in localStorage -> show that, else show currentUser
+  function initProfilePage() {
+    const currentUser = readJSON('currentUser', null);
+    const profilePhoneFromStorage = localStorage.getItem('viewingProfile');
+    const profilePhone = profilePhoneFromStorage || (currentUser && currentUser.phone) || null;
+    window.profilePhone = profilePhone;
+
+    // load regions select
+    loadRegionsUI();
+
+    // update districts if prefilled
+    // init event listeners for region selects
+    ['from','to','filterFrom','filterTo'].forEach(pref => {
+      const el = $(pref + 'Region');
+      if (el) {
+        el.addEventListener('change', ()=> updateDistricts(pref));
+      }
+    });
+
+    // render ads and ratings
+    renderUserAds();
+    if (profilePhone) renderRatingsUI(profilePhone);
+
+    // Polling: keep in sync with changes in localStorage (admin actions)
+    setInterval(()=> {
+      renderUserAds();
+      if (profilePhone) renderRatingsUI(profilePhone);
+    }, 4000);
+  }
+
+  // --- Storage event to update across tabs ---
+  window.addEventListener('storage', (e) => {
+    if (["driverAds","passengerAds","profileRatings","currentUser","viewingProfile","lastChange"].includes(e.key)) {
+      renderUserAds();
+      const maybeProfile = window.profilePhone || localStorage.getItem('viewingProfile') || (readJSON('currentUser',null) && readJSON('currentUser',null).phone);
+      if (maybeProfile) renderRatingsUI(maybeProfile);
+    }
+  });
+
+  // --- Expose some functions to global (for inline HTML onclick) ---
+  window.applyFilters = applyFilters;
+  window.clearFilters = clearFilters;
+  window.updateFilterDistricts = updateFilterDistricts;
+  window.updateDistricts = updateDistricts;
+  window.addAd = addAd;
+  window.editAd = editAd;
+  window.deleteAd = deleteAd;
+  window.startInlineEdit = startInlineEdit;
+  window.renderUserAds = renderUserAds;
+
+  // Logout function
+  window.logout = function() {
+    localStorage.removeItem('currentUser');
+    // it's common to store currentUserPhone separate; remove if exists
+    localStorage.removeItem('currentUserPhone');
+    alert('Siz tizimdan chiqdingiz.');
+    window.location.href = 'login.html';
+  };
+
+  // On DOM ready
+  document.addEventListener('DOMContentLoaded', function(){
+    initProfilePage();
+  });
+
+})();
