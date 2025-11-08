@@ -1,130 +1,266 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mening profilim - ShaharTaxi</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profil | ShaharTaxi</title>
+  <link rel="stylesheet" href="style.css" />
   <style>
-    body { font-family: Arial, sans-serif; background: #f7f9fc; margin:0; padding:0; }
-    header { background:#007bff; color:white; padding:15px; position:relative; text-align:center; }
-    .logout { position:absolute; right:16px; top:12px; background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
-    .container { max-width:980px; margin:20px auto; background:white; padding:18px; border-radius:10px; box-shadow:0 4px 18px rgba(0,0,0,0.06); }
-    h2 { color:#007bff; text-align:center; margin-top:0; }
-    .filters { display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin-bottom:12px; }
-    select,input,textarea { width:100%; padding:10px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; font-size:14px; }
-    button { background:#007bff; color:#fff; border:none; padding:10px 14px; border-radius:6px; cursor:pointer; }
-    button.secondary { background:#6c757d; }
-    .ad-box { padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #e6eefc; transition:background .15s; }
-    .ad-meta { font-size:0.95rem; color:#333; margin:4px 0; }
-    .actions { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
-    .approved { background:#e8f8ef; border-color:#c6efd9; }
-    .rejected { background:#fff0f0; border-color:#ffd0d0; }
-    .pending { background:#fbfcff; border-color:#e7f0ff; }
-    .small { padding:6px 8px; font-size:13px; border-radius:6px; cursor:pointer; border:none; }
-    .btn-edit { background:#ffc107; color:#000; }
-    .btn-delete { background:#dc3545; color:#fff; }
-    .btn-ok { background:#28a745; color:#fff; }
-    .inline-edit { display:flex; gap:8px; align-items:center; margin-top:8px; }
-    .date-info { font-size:13px; color:#666; font-style:italic; }
-    .comment-box { background:#f8f9ff; padding:8px; border-left:4px solid #007bff; border-radius:6px; margin-top:8px; }
-    .rating-summary { font-size:1.05rem; margin-bottom:8px; text-align:center; }
-    .ratings-list { margin-top:8px; }
-    .rating-card { border:1px solid #eee; padding:10px; border-radius:8px; margin-bottom:8px; background:#fff; }
-    .profile-actions { display:flex; gap:8px; justify-content:center; margin-bottom:12px; }
-    label.small { font-size:13px; color:#444; display:block; margin-bottom:6px; }
-    .form-row { display:grid; grid-template-columns: 1fr 160px; gap:8px; }
-    @media (max-width:720px) { .form-row { grid-template-columns:1fr } .logout { right:8px; } }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #007bff;
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    .profile-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .profile-info {
+      flex: 1;
+      min-width: 250px;
+    }
+
+    .profile-info h2 {
+      margin: 0 0 10px;
+    }
+
+    .profile-rating {
+      text-align: right;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .rating-star {
+      color: gold;
+      font-size: 22px;
+    }
+
+    .edit-profile, .logout-btn, .add-ad-btn {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 5px;
+    }
+
+    .logout-btn {
+      background: #dc3545;
+    }
+
+    .ads-section {
+      margin-top: 40px;
+    }
+
+    .ads-section h3 {
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 5px;
+    }
+
+    .ad-card {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 15px;
+      margin: 15px 0;
+      background: #fff;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ad-card p {
+      margin: 4px 0;
+    }
+
+    .ad-status {
+      font-weight: bold;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      font-size: 13px;
+    }
+
+    .status-approved {
+      background: #28a745;
+      color: white;
+    }
+
+    .status-rejected {
+      background: #dc3545;
+      color: white;
+    }
+
+    .status-pending {
+      background: #ffc107;
+      color: black;
+    }
+
+    .ad-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .ad-actions button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      color: white;
+    }
+
+    .edit-btn {
+      background: #007bff;
+    }
+
+    .delete-btn {
+      background: #dc3545;
+    }
+
+    .save-btn {
+      background: #28a745;
+    }
+
+    .cancel-btn {
+      background: #6c757d;
+    }
+
+    .add-form {
+      display: none;
+      margin-top: 20px;
+      border-top: 2px solid #007bff;
+      padding-top: 15px;
+    }
+
+    .add-form input, .add-form textarea {
+      width: 100%;
+      margin: 6px 0;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    .add-form button {
+      margin-top: 10px;
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .rating-section {
+      margin-top: 10px;
+    }
+
+    .rating-section span {
+      font-size: 22px;
+      cursor: pointer;
+      color: #ccc;
+    }
+
+    .rating-section span.active {
+      color: gold;
+    }
+
+    .comment-box {
+      margin-top: 10px;
+    }
+
+    .comment-box textarea {
+      width: 100%;
+      min-height: 60px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+
+    .comment-box button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 5px;
+      margin-top: 5px;
+      cursor: pointer;
+    }
+
+    @media(max-width: 600px){
+      .profile-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .profile-rating {
+        text-align: left;
+        margin-top: 10px;
+      }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>ShaharTaxi — Mening profilim</h1>
-    <button class="logout" onclick="logout()">Chiqish</button>
+    <h1>ShaharTaxi - Profil</h1>
   </header>
 
-  <div class="container">
-    <div id="userPhone" style="text-align:center;font-weight:700;margin-bottom:8px;"></div>
-
-    <h2>Mening e'lonlarim</h2>
-
-    <div class="filters" aria-hidden="false">
-      <select id="typeFilter" onchange="applyFilters()">
-        <option value="all">Barcha turlar</option>
-        <option value="driver">Haydovchi</option>
-        <option value="passenger">Yo'lovchi</option>
-      </select>
-
-      <select id="statusFilter" onchange="applyFilters()">
-        <option value="all">Barcha holatlar</option>
-        <option value="pending">Kutilmoqda</option>
-        <option value="approved">Tasdiqlangan</option>
-        <option value="rejected">Rad etilgan</option>
-      </select>
-
-      <select id="filterFromRegion" onchange="updateFilterDistricts('filterFrom')">
-        <option value="">Qayerdan (viloyat)</option>
-      </select>
-      <select id="filterFromDistrict"><option value="">Qayerdan (tuman)</option></select>
-
-      <select id="filterToRegion" onchange="updateFilterDistricts('filterTo')">
-        <option value="">Qayerga (viloyat)</option>
-      </select>
-      <select id="filterToDistrict"><option value="">Qayerga (tuman)</option></select>
-
-      <button onclick="clearFilters()">Filterlarni tozalash</button>
-    </div>
-
-    <div id="myAds"></div>
-
-    <hr style="margin:18px 0;">
-
-    <h2>Yangi e’lon qo’shish</h2>
-    <div style="margin-bottom:8px;">
-      <label class="small">E'lon turi</label>
-      <select id="adType"><option value="">E'lon turini tanlang</option><option value="driver">Haydovchi</option><option value="passenger">Yo'lovchi</option></select>
-    </div>
-
-    <div class="form-row">
-      <div>
-        <label class="small">Qayerdan (viloyat)</label>
-        <select id="fromRegion" onchange="updateDistricts('from')"></select>
-
-        <label class="small">Qayerdan (tuman)</label>
-        <select id="fromDistrict"></select>
-
-        <label class="small">Qayerga (viloyat)</label>
-        <select id="toRegion" onchange="updateDistricts('to')"></select>
-
-        <label class="small">Qayerga (tuman)</label>
-        <select id="toDistrict"></select>
+  <main>
+    <section class="profile-header">
+      <div class="profile-info">
+        <h2 id="profileName">Ism</h2>
+        <p id="profilePhone">Telefon: </p>
+        <p id="profileEmail">Email: </p>
       </div>
-
-      <div>
-        <label class="small">Telefon (faqat raqam)</label>
-        <input id="adPhone" placeholder="0XXXXXXXXX" type="tel" />
-
-        <label class="small">Narx (so'm)</label>
-        <input id="price" type="number" placeholder="Narx (so'm)" />
-
-        <label class="small">Qo'shimcha izoh</label>
-        <textarea id="adComment" rows="4" placeholder="Ixtiyoriy izoh..."></textarea>
+      <div class="profile-rating">
+        <h3>Reyting:</h3>
+        <div id="profileStars"></div>
+        <p id="averageRating">(0.0)</p>
       </div>
+    </section>
+
+    <div style="margin-top:15px;">
+      <button class="edit-profile">Profilni tahrirlash</button>
+      <button class="add-ad-btn">E’lon joylash</button>
+      <button class="logout-btn">Chiqish</button>
     </div>
 
-    <div style="text-align:center;margin-top:8px;">
-      <button onclick="addAd()">E’lonni joylash</button>
-    </div>
+    <form class="add-form" id="addForm">
+      <h3>Yangi e’lon joylash</h3>
+      <input type="text" id="from" placeholder="Qayerdan" required>
+      <input type="text" id="to" placeholder="Qayerga" required>
+      <input type="text" id="price" placeholder="Narx (so‘mda)" required>
+      <textarea id="desc" placeholder="Qo‘shimcha ma’lumot"></textarea>
+      <button type="submit">Joylash</button>
+    </form>
 
-    <!-- RATING section (visible on same page for profile) -->
-    <div id="ratingsBlock" style="margin-top:22px;">
-      <h2>Foydalanuvchi baholari</h2>
-      <div id="ratingSummary" class="rating-summary">Yuklanmoqda...</div>
-      <div id="ratingFormWrap" style="max-width:760px;margin:0 auto 12px;"></div>
-      <div id="ratingList" class="ratings-list"></div>
-    </div>
-  </div>
+    <section class="ads-section">
+      <h3>Mening e’lonlarim</h3>
+      <div id="adsContainer"></div>
+    </section>
+  </main>
 
-  <!-- include script file -->
   <script src="profil.js"></script>
 </body>
 </html>
