@@ -732,3 +732,520 @@
 
   // End of Part 1
 })();
+/* profile.js
+   Part 2 of 3:
+   - Filtering/search UI
+   - Pagination
+   - Rating (baholash) funksiyalari
+   - Izoh modalini yaxshilash
+   - UX/optimizations
+
+   This file expects Part1 to have run already and exposed:
+     window._ShaharTaxiProfile.fetchUserAds
+     window._ShaharTaxiProfile.renderAds
+     window._ShaharTaxiProfile.getState
+*/
+
+(function () {
+  'use strict';
+
+  // Helpers to access global state & firebase
+  const API = window._ShaharTaxiProfile || {};
+  function getState() {
+    if (API.getState) return API.getState();
+    return { currentUser: null, userProfile: null, myAds: [] };
+  }
+
+  // Shortcut to DOM nodes created in Part1
+  const adsContainerEl = document.getElementById('adsContainer');
+  const addFormEl = document.getElementById('addForm');
+  const editFormEl = document.getElementById('editForm');
+
+  // Create filter bar above ads list (inserting into DOM)
+  function createFilterBar() {
+    // if already added, skip
+    if (document.getElementById('filterBarWrap')) return;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'filterBarWrap';
+    wrap.style.display = 'flex';
+    wrap.style.flexWrap = 'wrap';
+    wrap.style.gap = '8px';
+    wrap.style.marginBottom = '12px';
+
+    // Search input
+    const searchInput = document.createElement('input');
+    searchInput.type = 'search';
+    searchInput.placeholder = 'Qidiruv: sarlavha, shahar, narx...';
+    searchInput.id = 'adsSearchInput';
+    searchInput.style.padding = '8px';
+    searchInput.style.borderRadius = '8px';
+    searchInput.style.border = '1px solid #ccc';
+    searchInput.style.minWidth = '200px';
+
+    // Status select
+    const statusSelect = document.createElement('select');
+    statusSelect.id = 'adsStatusFilter';
+    statusSelect.style.padding = '8px';
+    statusSelect.style.borderRadius = '8px';
+    statusSelect.style.border = '1px solid #ccc';
+    const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = 'Barchasi'; statusSelect.appendChild(optAll);
+    const optPending = document.createElement('option'); optPending.value = 'Kutilyapti'; optPending.textContent = 'Kutilyapti'; statusSelect.appendChild(optPending);
+    const optApproved = document.createElement('option'); optApproved.value = 'Tasdiqlangan'; optApproved.textContent = 'Tasdiqlangan'; statusSelect.appendChild(optApproved);
+    const optRejected = document.createElement('option'); optRejected.value = 'Rad etilgan'; optRejected.textContent = 'Rad etilgan'; statusSelect.appendChild(optRejected);
+
+    // Per-page select
+    const perPageSelect = document.createElement('select');
+    perPageSelect.id = 'adsPerPage';
+    perPageSelect.style.padding = '8px';
+    perPageSelect.style.borderRadius = '8px';
+    perPageSelect.style.border = '1px solid #ccc';
+    [6, 10, 12, 20].forEach((n) => {
+      const o = document.createElement('option'); o.value = String(n); o.textContent = `${n} / sahifa`; perPageSelect.appendChild(o);
+    });
+    perPageSelect.value = '12';
+
+    // Add to wrap
+    wrap.appendChild(searchInput);
+    wrap.appendChild(statusSelect);
+    wrap.appendChild(perPageSelect);
+
+    // Insert before adsContainerEl
+    adsContainerEl.parentNode.insertBefore(wrap, adsContainerEl);
+
+    // Event listeners
+    let filterTimer = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(filterTimer);
+      filterTimer = setTimeout(applyFilters, 250);
+    });
+    statusSelect.addEventListener('change', applyFilters);
+    perPageSelect.addEventListener('change', () => {
+      state.perPage = Number(perPageSelect.value);
+      state.page = 1;
+      applyFilters();
+    });
+  }
+
+  // Pagination & filter state (client-side)
+  const state = {
+    page: 1,
+    perPage: 12,
+    query: '',
+    status: '',
+    filteredAds: [],
+  };
+
+  // Apply client-side filters to current ads (from getState())
+  function applyFilters() {
+    const s = document.getElementById('adsSearchInput');
+    const st = document.getElementById('adsStatusFilter');
+    const per = document.getElementById('adsPerPage');
+    state.query = s ? s.value.trim().toLowerCase() : '';
+    state.status = st ? st.value : '';
+    state.perPage = per ? Number(per.value) : state.perPage;
+
+    const stt = getState();
+    let items = (stt.myAds || []).slice();
+
+    // status filter
+    if (state.status) {
+      items = items.filter((a) => (a.status || '').toString() === state.status);
+    }
+
+    // search filter
+    if (state.query) {
+      items = items.filter((a) => {
+        const haystack = `${a.title || ''} ${a.description || ''} ${a.from || ''} ${a.to || ''} ${a.city || ''} ${a.region || ''} ${a.price || ''}`.toLowerCase();
+        return haystack.indexOf(state.query) !== -1;
+      });
+    }
+
+    // sort by createdAt desc if available
+    items.sort((x, y) => {
+      const a = x.createdAt && x.createdAt.seconds ? x.createdAt.seconds : (x.createdAt ? new Date(x.createdAt).getTime() : 0);
+      const b = y.createdAt && y.createdAt.seconds ? y.createdAt.seconds : (y.createdAt ? new Date(y.createdAt).getTime() : 0);
+      return b - a;
+    });
+
+    state.filteredAds = items;
+    state.page = Math.min(state.page, Math.max(1, Math.ceil(items.length / state.perPage)));
+    renderFilteredAdsPage();
+  }
+
+  // Render the page of filteredAds into adsContainerEl
+  function renderFilteredAdsPage() {
+    // clear container
+    while (adsContainerEl.firstChild) adsContainerEl.removeChild(adsContainerEl.firstChild);
+
+    const items = state.filteredAds || [];
+    if (!items || items.length === 0) {
+      const emp = document.createElement('div');
+      emp.className = 'ad-card';
+      emp.textContent = 'Sizga mos e\'lon topilmadi.';
+      adsContainerEl.appendChild(emp);
+      renderPaginationControls();
+      return;
+    }
+
+    const start = (state.page - 1) * state.perPage;
+    const pageItems = items.slice(start, start + state.perPage);
+
+    pageItems.forEach((ad) => {
+      const card = document.createElement('div');
+      card.className = 'ad-card';
+      card.setAttribute('data-id', ad.id);
+
+      // header
+      const header = document.createElement('div');
+      header.className = 'ad-header';
+      const h4 = document.createElement('h4'); h4.textContent = ad.title || 'E\'lon';
+      header.appendChild(h4);
+      header.appendChild(renderStatusSpan(ad.status || 'Kutilyapti'));
+      card.appendChild(header);
+
+      // body
+      const body = document.createElement('div'); body.className = 'ad-body';
+      const route = document.createElement('p'); route.innerHTML = `<strong>Marshrut:</strong> ${safeText(ad.from || '')} → ${safeText(ad.to || '')}`;
+      const price = document.createElement('p'); price.innerHTML = `<strong>Narx:</strong> ${formatCurrency(ad.price)}`;
+      const desc = document.createElement('p'); desc.innerHTML = `<strong>Izoh:</strong> ${safeText(ad.description || '')}`;
+      body.appendChild(route); body.appendChild(price); body.appendChild(desc);
+
+      // rating & actions row
+      const actions = document.createElement('div'); actions.className = 'ad-actions';
+      // Edit button (only if current user is owner)
+      const stt = getState();
+      if (stt.currentUser && ad.userId === stt.currentUser.uid) {
+        const editBtn = document.createElement('button'); editBtn.className = 'edit-btn'; editBtn.textContent = 'Tahrirlash';
+        editBtn.addEventListener('click', () => {
+          // reuse openEditAd from Part1: we call the button click handler from original rendering if exists
+          // but since we replaced original DOM, call the global API to open edit: we will mimic a click by populating form
+          // Reuse Part1's openEditAd if exposed? Not exposed; so we just populate addForm as edit mode
+          addFormEl.dataset.editing = 'true';
+          addFormEl.dataset.adId = ad.id;
+          addFormEl.querySelector('h3').textContent = 'E\'lonni tahrirlash';
+          document.getElementById('from').value = ad.from || '';
+          document.getElementById('to').value = ad.to || '';
+          document.getElementById('price').value = ad.price || '';
+          document.getElementById('desc').value = ad.description || '';
+          addFormEl.style.display = 'block';
+          addFormEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        actions.appendChild(editBtn);
+
+        const delBtn = document.createElement('button'); delBtn.className = 'delete-btn'; delBtn.textContent = 'O\'chirish';
+        delBtn.addEventListener('click', () => {
+          if (!confirm('E\'lonni o\'chirmoqchimisiz?')) return;
+          // Call delete via firebase directly
+          if (window.firebase && firebase.firestore) {
+            firebase.firestore().collection('ads').doc(ad.id).delete().then(() => {
+              // refresh list
+              API.fetchUserAds && API.fetchUserAds(stt.currentUser.uid);
+            }).catch((err) => { console.error(err); alert('O\'chirishda xatolik yuz berdi.'); });
+          } else {
+            // update local state and reapply filters
+            const s = getState();
+            s.myAds = (s.myAds || []).filter((a) => a.id !== ad.id);
+            state.filteredAds = (state.filteredAds || []).filter((a) => a.id !== ad.id);
+            applyFilters();
+          }
+        });
+        actions.appendChild(delBtn);
+      }
+
+      // Rate button (if user is not the owner)
+      const st = getState();
+      if (st.currentUser && ad.userId !== st.currentUser.uid) {
+        const rateBtn = document.createElement('button'); rateBtn.className = 'edit-btn'; rateBtn.textContent = 'Baholash';
+        rateBtn.addEventListener('click', () => rateAdPrompt(ad));
+        actions.appendChild(rateBtn);
+      }
+
+      // Comments button
+      const cBtn = document.createElement('button'); cBtn.className = 'edit-btn'; cBtn.textContent = 'Izoh yozish';
+      cBtn.addEventListener('click', () => openCommentsModalImproved(ad));
+      actions.appendChild(cBtn);
+
+      card.appendChild(body);
+      card.appendChild(actions);
+
+      adsContainerEl.appendChild(card);
+    });
+
+    renderPaginationControls();
+  }
+
+  // Small helper to render status span (used in filtered render)
+  function renderStatusSpan(status) {
+    const span = document.createElement('span');
+    span.className = 'ad-status';
+    span.textContent = status || 'Kutilyapti';
+    if (status === 'Tasdiqlangan') {
+      span.classList.add('status-approved');
+    } else if (status === 'Rad etilgan') {
+      span.classList.add('status-rejected');
+    } else {
+      span.classList.add('status-pending');
+    }
+    return span;
+  }
+
+  // Render pagination controls below adsContainerEl
+  function renderPaginationControls() {
+    // remove existing pager
+    const existing = document.getElementById('adsPager');
+    if (existing) existing.remove();
+
+    const pager = document.createElement('div');
+    pager.id = 'adsPager';
+    pager.style.display = 'flex';
+    pager.style.justifyContent = 'space-between';
+    pager.style.alignItems = 'center';
+    pager.style.marginTop = '12px';
+
+    const total = state.filteredAds.length || 0;
+    const totalPages = Math.max(1, Math.ceil(total / state.perPage));
+    const left = document.createElement('div');
+    left.textContent = `Jami: ${total} e'lon — sahifa ${state.page} / ${totalPages}`;
+
+    const right = document.createElement('div');
+    right.style.display = 'flex';
+    right.style.gap = '8px';
+
+    const prevBtn = document.createElement('button'); prevBtn.textContent = 'Oldingi'; prevBtn.style.padding = '6px 10px';
+    prevBtn.disabled = state.page <= 1;
+    prevBtn.addEventListener('click', () => { state.page = Math.max(1, state.page - 1); renderFilteredAdsPage(); });
+
+    const nextBtn = document.createElement('button'); nextBtn.textContent = 'Keyingi'; nextBtn.style.padding = '6px 10px';
+    nextBtn.disabled = state.page >= totalPages;
+    nextBtn.addEventListener('click', () => { state.page = Math.min(totalPages, state.page + 1); renderFilteredAdsPage(); });
+
+    right.appendChild(prevBtn); right.appendChild(nextBtn);
+    pager.appendChild(left); pager.appendChild(right);
+    adsContainerEl.parentNode.appendChild(pager);
+  }
+
+  // Rating flow: prompt user and store rating in Firestore (or local)
+  async function rateAdPrompt(ad) {
+    const st = getState();
+    if (!st.currentUser) {
+      alert('Baholash uchun tizimga kiring.');
+      return;
+    }
+    const scoreStr = prompt('1dan 5.gacha baho bering (raqam):', '5');
+    if (!scoreStr) return;
+    const score = Number(scoreStr);
+    if (!score || score < 1 || score > 5) {
+      alert('Iltimos 1-5 oralig‘ida qiymat kiriting.');
+      return;
+    }
+    try {
+      if (window.firebase && firebase.firestore) {
+        const comment = {
+          raterId: st.currentUser.uid,
+          score: score,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        // strategy: maintain ratings array (arrayUnion) and compute avg on server or client
+        const adRef = firebase.firestore().collection('ads').doc(ad.id);
+        await adRef.update({
+          ratings: firebase.firestore.FieldValue.arrayUnion(comment)
+        });
+        // After update, recompute avgRating from server snapshot (safer)
+        const snap = await adRef.get();
+        if (snap.exists) {
+          const data = snap.data();
+          const ratings = data.ratings || [];
+          const avg = (ratings.reduce((s, r) => s + (r.score || 0), 0)) / (ratings.length || 1);
+          await adRef.update({ avgRating: avg });
+        }
+        // refresh list
+        API.fetchUserAds && API.fetchUserAds(st.currentUser.uid);
+        alert('Rahmat! Sizning bahongiz qabul qilindi.');
+      } else {
+        // demo offline: update local object
+        const s = getState();
+        s.myAds = (s.myAds || []).map((a) => {
+          if (a.id === ad.id) {
+            const arr = a.ratings ? a.ratings.slice() : [];
+            arr.push({ raterId: st.currentUser.uid, score: score, createdAt: new Date() });
+            const avg = arr.reduce((s2, r) => s2 + (r.score || 0), 0) / arr.length;
+            return Object.assign({}, a, { ratings: arr, avgRating: avg });
+          }
+          return a;
+        });
+        applyFilters();
+        alert('Baho lokal ravishda saqlandi (demo).');
+      }
+    } catch (err) {
+      console.error('rateAd error:', err);
+      alert('Baholashda xatolik yuz berdi.');
+    }
+  }
+
+  // Improved comments modal: list all comments and allow posting
+  function openCommentsModalImproved(ad) {
+    // Build a simple modal using native elements
+    const overlay = document.createElement('div');
+    overlay.style.position = 'fixed';
+    overlay.style.left = '0'; overlay.style.top = '0';
+    overlay.style.right = '0'; overlay.style.bottom = '0';
+    overlay.style.background = 'rgba(0,0,0,0.4)';
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    overlay.style.zIndex = '9999';
+
+    const modal = document.createElement('div');
+    modal.style.width = '90%';
+    modal.style.maxWidth = '720px';
+    modal.style.background = '#fff';
+    modal.style.borderRadius = '12px';
+    modal.style.padding = '16px';
+    modal.style.maxHeight = '80vh';
+    modal.style.overflow = 'auto';
+
+    const title = document.createElement('h3'); title.textContent = 'Izohlar';
+    modal.appendChild(title);
+
+    const list = document.createElement('div'); list.style.marginTop = '10px';
+    const comments = ad.comments ? ad.comments.slice() : [];
+    if (comments.length === 0) {
+      const none = document.createElement('div'); none.textContent = 'Hali izohlar yo‘q.';
+      list.appendChild(none);
+    } else {
+      comments.forEach((c) => {
+        const row = document.createElement('div'); row.style.borderBottom = '1px solid #eee'; row.style.padding = '8px 0';
+        const who = document.createElement('div'); who.innerHTML = `<strong>${safeText(c.author || c.authorId || 'Anonim')}</strong> <small style="color:#666"> — ${formatDate(c.createdAt)}</small>`;
+        const text = document.createElement('div'); text.style.marginTop = '6px'; text.textContent = c.text || '';
+        row.appendChild(who); row.appendChild(text);
+        list.appendChild(row);
+      });
+    }
+    modal.appendChild(list);
+
+    // New comment form
+    const box = document.createElement('div'); box.style.marginTop = '12px';
+    const ta = document.createElement('textarea'); ta.style.width = '100%'; ta.style.minHeight = '80px'; ta.placeholder = 'Yangi izoh yozing...';
+    const btnRow = document.createElement('div'); btnRow.style.display = 'flex'; btnRow.style.justifyContent = 'flex-end'; btnRow.style.gap = '8px'; btnRow.style.marginTop = '8px';
+    const cancelBtn = document.createElement('button'); cancelBtn.className = 'cancel-btn'; cancelBtn.textContent = 'Bekor qilish';
+    const postBtn = document.createElement('button'); postBtn.className = 'save-btn'; postBtn.textContent = 'Yuborish';
+    btnRow.appendChild(cancelBtn); btnRow.appendChild(postBtn);
+    box.appendChild(ta); box.appendChild(btnRow);
+    modal.appendChild(box);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    cancelBtn.addEventListener('click', () => document.body.removeChild(overlay));
+    postBtn.addEventListener('click', async () => {
+      const text = ta.value.trim();
+      if (!text) { alert('Iltimos, izoh yozing.'); return; }
+      // Use postComment from Part1 if available for consistent behavior
+      if (API.postComment) {
+        try {
+          await API.postComment(ad.id, text);
+        } catch (err) {
+          console.error(err);
+          alert('Izoh yuborishda xatolik yuz berdi.');
+          return;
+        }
+      } else {
+        // fallback: direct write
+        const st = getState();
+        if (!st.currentUser) { alert('Izoh yozish uchun tizimga kiring.'); return; }
+        if (window.firebase && firebase.firestore) {
+          const comment = {
+            authorId: st.currentUser.uid,
+            author: st.currentUser.displayName || st.currentUser.email || 'Foydalanuvchi',
+            text: text,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+          try {
+            await firebase.firestore().collection('ads').doc(ad.id).update({
+              comments: firebase.firestore.FieldValue.arrayUnion(comment)
+            });
+            // refresh
+            API.fetchUserAds && API.fetchUserAds(st.currentUser.uid);
+            alert('Izoh yuborildi.');
+            document.body.removeChild(overlay);
+          } catch (err) {
+            console.error(err); alert('Izoh yuborishda xatolik yuz berdi.');
+          }
+        } else {
+          // local fallback
+          const stt = getState();
+          stt.myAds = (stt.myAds || []).map((a) => {
+            if (a.id === ad.id) {
+              const arr = a.comments ? a.comments.slice() : [];
+              arr.unshift({ authorId: stt.currentUser.uid, author: stt.currentUser.displayName || stt.currentUser.email || 'Foydalanuvchi', text: text, createdAt: new Date() });
+              return Object.assign({}, a, { comments: arr });
+            }
+            return a;
+          });
+          applyFilters();
+          alert('Izoh lokal tarzda saqlandi (demo).');
+          document.body.removeChild(overlay);
+        }
+      }
+    });
+  }
+
+  // Wire up initial UI
+  function initPart2() {
+    createFilterBar();
+    // default apply filters after a short delay to allow Part1 to fetch
+    setTimeout(() => {
+      const stt = getState();
+      // set perPage initial
+      const perEl = document.getElementById('adsPerPage');
+      if (perEl) state.perPage = Number(perEl.value);
+      // populate initial filteredAds
+      state.filteredAds = stt.myAds ? stt.myAds.slice() : [];
+      applyFilters();
+    }, 300);
+
+    // Expose some helpers
+    window._ShaharTaxiProfile.applyFilters = applyFilters;
+    window._ShaharTaxiProfile.rateAdPrompt = rateAdPrompt;
+    window._ShaharTaxiProfile.openCommentsModalImproved = openCommentsModalImproved;
+  }
+
+  // Small polyfill: attempt to reuse postComment if Part1 attached it to API; if not, attach a wrapper
+  if (!API.postComment && window._ShaharTaxiProfile) {
+    // try to attach a wrapper that calls global firebase if needed; but keep safe
+    window._ShaharTaxiProfile.postComment = async function (adId, text) {
+      const st = getState();
+      if (!st.currentUser) throw new Error('not-authenticated');
+      if (window.firebase && firebase.firestore) {
+        const comment = {
+          authorId: st.currentUser.uid,
+          author: st.currentUser.displayName || st.currentUser.email || 'Foydalanuvchi',
+          text: text,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        await firebase.firestore().collection('ads').doc(adId).update({
+          comments: firebase.firestore.FieldValue.arrayUnion(comment)
+        });
+        // refresh
+        API.fetchUserAds && API.fetchUserAds(st.currentUser.uid);
+      } else {
+        // local fallback
+        st.myAds = (st.myAds || []).map((a) => {
+          if (a.id === adId) {
+            const arr = a.comments ? a.comments.slice() : [];
+            arr.unshift({ authorId: st.currentUser.uid, author: st.currentUser.displayName || st.currentUser.email || 'Foydalanuvchi', text: text, createdAt: new Date() });
+            return Object.assign({}, a, { comments: arr });
+          }
+          return a;
+        });
+        applyFilters();
+      }
+    };
+  }
+
+  // Run initialization
+  initPart2();
+
+  // End of Part 2
+})();
