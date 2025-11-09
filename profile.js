@@ -1249,3 +1249,177 @@
 
   // End of Part 2
 })();
+/* profile.js
+   Part 3 (Final):
+   - Profil ma'lumotlarini tahrirlash
+   - Internet uzilishi uchun offline rejim
+   - Loading indicator va xatolik handlerlar
+   - Barcha yordamchi funksiyalarni yakunlash
+   - window._ShaharTaxiProfile yakuniy eksport
+*/
+
+(function() {
+  'use strict';
+
+  const API = window._ShaharTaxiProfile || {};
+  const adsContainerEl = document.getElementById('adsContainer');
+  const addFormEl = document.getElementById('addForm');
+
+  // ==============================
+  // 🔹 Loading indicator
+  // ==============================
+  const loadingOverlay = document.createElement('div');
+  loadingOverlay.style.position = 'fixed';
+  loadingOverlay.style.top = '0';
+  loadingOverlay.style.left = '0';
+  loadingOverlay.style.width = '100%';
+  loadingOverlay.style.height = '100%';
+  loadingOverlay.style.background = 'rgba(255,255,255,0.6)';
+  loadingOverlay.style.display = 'none';
+  loadingOverlay.style.alignItems = 'center';
+  loadingOverlay.style.justifyContent = 'center';
+  loadingOverlay.style.zIndex = '9999';
+  loadingOverlay.innerHTML = '<div style="padding:12px 20px;background:#fff;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1)">Yuklanmoqda...</div>';
+  document.body.appendChild(loadingOverlay);
+
+  function showLoading(show = true) {
+    loadingOverlay.style.display = show ? 'flex' : 'none';
+  }
+
+  // ==============================
+  // 🔹 Profilni tahrirlash (ism, telefon)
+  // ==============================
+  function setupProfileEdit() {
+    const nameEl = document.getElementById('profileName');
+    const phoneEl = document.getElementById('profilePhone');
+    const saveBtn = document.getElementById('saveProfileBtn');
+
+    if (!saveBtn || !nameEl || !phoneEl) return;
+
+    saveBtn.addEventListener('click', async () => {
+      const name = nameEl.value.trim();
+      const phone = phoneEl.value.trim();
+      if (!name) return alert('Ismni kiriting');
+      if (!/^[0-9]{8,15}$/.test(phone)) return alert('Telefon raqam xato formatda');
+
+      showLoading(true);
+      try {
+        const st = API.getState ? API.getState() : {};
+        if (!st.currentUser) throw new Error('Tizimga kirmagansiz');
+
+        if (window.firebase && firebase.firestore) {
+          const ref = firebase.firestore().collection('users').doc(st.currentUser.uid);
+          await ref.update({ name, phone });
+          alert('Profil yangilandi');
+        } else {
+          // Demo offline rejim
+          st.userProfile = Object.assign({}, st.userProfile || {}, { name, phone });
+          alert('Profil lokal tarzda saqlandi');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Profilni saqlashda xatolik');
+      } finally {
+        showLoading(false);
+      }
+    });
+  }
+
+  // ==============================
+  // 🔹 Offline rejim tekshiruvi
+  // ==============================
+  function setupOfflineMode() {
+    window.addEventListener('offline', () => {
+      const msg = document.createElement('div');
+      msg.id = 'offlineNotice';
+      msg.textContent = 'Internet aloqasi uzildi. Ma\'lumotlar vaqtincha lokalda saqlanadi.';
+      msg.style.position = 'fixed';
+      msg.style.bottom = '10px';
+      msg.style.left = '10px';
+      msg.style.background = '#ffdddd';
+      msg.style.color = '#b00';
+      msg.style.padding = '8px 12px';
+      msg.style.border = '1px solid #b00';
+      msg.style.borderRadius = '6px';
+      msg.style.zIndex = '9999';
+      document.body.appendChild(msg);
+    });
+
+    window.addEventListener('online', () => {
+      const msg = document.getElementById('offlineNotice');
+      if (msg) msg.remove();
+      alert('Internet tiklandi. Ma\'lumotlar sinxronlanmoqda...');
+      if (API.fetchUserAds && API.getState) {
+        const st = API.getState();
+        if (st.currentUser) API.fetchUserAds(st.currentUser.uid);
+      }
+    });
+  }
+
+  // ==============================
+  // 🔹 Xatolik chiqishlari
+  // ==============================
+  function showError(msg) {
+    const box = document.createElement('div');
+    box.textContent = msg;
+    box.style.position = 'fixed';
+    box.style.top = '10px';
+    box.style.right = '10px';
+    box.style.background = '#f44336';
+    box.style.color = '#fff';
+    box.style.padding = '10px 16px';
+    box.style.borderRadius = '6px';
+    box.style.zIndex = '99999';
+    document.body.appendChild(box);
+    setTimeout(() => box.remove(), 4000);
+  }
+
+  // ==============================
+  // 🔹 Helper funksiyalarni qayta qo‘shish
+  // ==============================
+  function safeText(t) { return (t || '').replace(/[<>]/g, ''); }
+  function formatCurrency(n) {
+    if (!n && n !== 0) return '-';
+    const num = Number(n);
+    if (isNaN(num)) return n;
+    return num.toLocaleString('uz-UZ') + ' so\'m';
+  }
+  function formatDate(d) {
+    try {
+      if (!d) return '';
+      if (d.seconds) return new Date(d.seconds * 1000).toLocaleString('uz-UZ');
+      if (d.toDate) return d.toDate().toLocaleString('uz-UZ');
+      return new Date(d).toLocaleString('uz-UZ');
+    } catch { return ''; }
+  }
+
+  // ==============================
+  // 🔹 Yakuniy init
+  // ==============================
+  function initFinal() {
+    setupProfileEdit();
+    setupOfflineMode();
+
+    // Agar profil hali yuklanmagan bo‘lsa, keyinroq qayta yukla
+    setTimeout(() => {
+      const st = API.getState ? API.getState() : {};
+      if (!st.userProfile && API.fetchUserAds && st.currentUser) {
+        API.fetchUserAds(st.currentUser.uid);
+      }
+    }, 1000);
+  }
+
+  // Eksport
+  window._ShaharTaxiProfile = Object.assign({}, API, {
+    showLoading,
+    showError,
+    safeText,
+    formatCurrency,
+    formatDate,
+  });
+
+  // Ishga tushirish
+  initFinal();
+
+  console.log('%c✅ ShaharTaxi profile.js to‘liq yuklandi (1+2+3-qism).', 'color:green;font-weight:bold;');
+})();
