@@ -1,736 +1,734 @@
-/*
-  profile.js
-  React + Firebase single-file implementation of the "Profil" page for ShaharTaxi.
+/* profile.js
+   Vanilla JavaScript implementation for profile.html (ShaharTaxi).
+   Part 1 of 3:
+   - Firebase init
+   - Auth handling (onAuthStateChanged)
+   - Fetching user's ads, rendering profile header and ads list
+   - Utilities, status badges, basic UI helpers
 
-  - This file contains Firebase initialization (replace config with your values).
-  - Fetches user's ads from Firestore, allows edit (inline modal), delete, search, filter by region/city,
-    pagination, CSV export, image preview, status badges (Tasdiqlangan, Kutilyapti, Rad etilgan),
-    phone validation (numbers-only), file uploads to Firebase Storage, optimistic UI updates,
-    and accessibility considerations.
-
-  NOTE:
-  - Replace the firebaseConfig object with your project's values.
-  - If you prefer a separate firebase.js file, move the initialization there and import { auth, db, storage }.
-
-  This file intentionally includes detailed comments and helper functions to be self-contained and
-  readable. It's long because it implements multiple features and helpful utilities.
+   Make sure to:
+   - Replace firebaseConfig with your project's values.
+   - Include this file after profile.html (script tag at bottom).
 */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  onAuthStateChanged,
-  signOut,
-} from 'firebase/auth';
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  startAfter,
-  getDocs,
-  doc,
-  deleteDoc,
-  updateDoc,
-  addDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from 'firebase/storage';
-import { useNavigate } from 'react-router-dom';
+/* ============================
+   Firebase initialization
+   ============================ */
+/* NOTE: You must include Firebase SDK scripts in your HTML or serve them
+   via bundler. Example CDN (put into your HTML head if not already):
+   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+   This code uses the compat SDK surface for simpler integration with plain JS.
+*/
 
-// =========================
-// Firebase configuration
-// =========================
-// Replace these values with your Firebase project's config.
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
-};
+(function () {
+  'use strict';
 
-// Initialize Firebase app (safe to call multiple times in modern SDK if already initialized)
-let app;
-try {
-  app = initializeApp(firebaseConfig);
-} catch (err) {
-  // If initializeApp is called multiple times in dev HMR, it throws. Ignore.
-  // eslint-disable-next-line no-console
-  console.warn('Firebase app initialize warning (likely already initialized):', err.message);
-}
+  // ---------- CONFIG ----------
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
 
-const auth = getAuth();
-const db = getFirestore();
-const storage = getStorage();
-
-// =========================
-// Helper utilities
-// =========================
-
-const STATUS_OPTIONS = ['Kutilyapti', 'Tasdiqlangan', 'Rad etilgan'];
-
-function formatDate(ts) {
-  if (!ts) return '-';
-  try {
-    // Firestore timestamp has toDate() or seconds
-    if (typeof ts.toDate === 'function') {
-      return ts.toDate().toLocaleString();
-    }
-    if (ts.seconds) {
-      return new Date(ts.seconds * 1000).toLocaleString();
-    }
-    return new Date(ts).toLocaleString();
-  } catch (err) {
-    return String(ts);
+  // Initialize firebase app only if not already initialized
+  if (!window.firebase || !firebase.apps) {
+    console.error('Firebase SDK not found. Please include firebase compat SDK scripts in HTML.');
+    // We don't throw to allow progressive enhancement (or testing without firebase)
   }
-}
 
-function truncate(text, len = 160) {
-  if (!text) return '';
-  return text.length > len ? text.slice(0, len) + '...' : text;
-}
+  try {
+    if (window.firebase && firebase.apps && firebase.apps.length === 0) {
+      firebase.initializeApp(firebaseConfig);
+    } else if (window.firebase && !firebase.apps) {
+      // older environments: try again safely
+      firebase.initializeApp(firebaseConfig);
+    }
+  } catch (err) {
+    // If already initialized, ignore
+    // console.warn('Firebase init warning:', err.message);
+  }
 
-function isNumericString(s) {
-  if (typeof s !== 'string') return false;
-  return /^\d+$/.test(s);
-}
+  // Shortcuts to services if available
+  const auth = (window.firebase && firebase.auth && firebase.auth()) || null;
+  const db = (window.firebase && firebase.firestore && firebase.firestore()) || null;
+  const storage = (window.firebase && firebase.storage && firebase.storage()) || null;
 
-// small debounce util
-function debounce(fn, wait = 300) {
-  let t;
-  return (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), wait);
+  // ---------- DOM references ----------
+  const profileNameEl = document.getElementById('profileName');
+  const profilePhoneEl = document.getElementById('profilePhone');
+  const profileEmailEl = document.getElementById('profileEmail');
+  const starContainerEl = document.getElementById('starContainer');
+  const avgRatingEl = document.getElementById('avgRating');
+
+  const editProfileBtn = document.getElementById('editProfileBtn');
+  const addAdBtn = document.getElementById('addAdBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+
+  const editFormEl = document.getElementById('editForm');
+  const addFormEl = document.getElementById('addForm');
+
+  const adsContainerEl = document.getElementById('adsContainer');
+
+  // Edit form fields
+  const editNameEl = document.getElementById('editName');
+  const editPhoneEl = document.getElementById('editPhone');
+  const editEmailEl = document.getElementById('editEmail');
+
+  // Add ad fields
+  const fromEl = document.getElementById('from');
+  const toEl = document.getElementById('to');
+  const priceEl = document.getElementById('price');
+  const descEl = document.getElementById('desc');
+
+  // State
+  let currentUser = null;
+  let userProfile = null; // will hold profile doc if you store profiles
+  let myAds = []; // array of ad objects retrieved from Firestore
+
+  // UI constants for statuses
+  const STATUS = {
+    PENDING: 'Kutilyapti',
+    APPROVED: 'Tasdiqlangan',
+    REJECTED: 'Rad etilgan'
   };
-}
 
-// CSV exporter
-function toCSV(rows = [], columns = []) {
-  if (!rows || rows.length === 0) return '';
-  const header = columns.join(',');
-  const lines = rows.map((r) =>
-    columns
-      .map((c) => {
-        const cell = r[c] == null ? '' : String(r[c]).replace(/"/g, '""');
-        return `"${cell}"`;
-      })
-      .join(',')
-  );
-  return [header, ...lines].join('\n');
-}
+  // Small utility functions
+  function el(tag, attrs = {}, children = []) {
+    const e = document.createElement(tag);
+    Object.keys(attrs).forEach((k) => {
+      if (k === 'class') e.className = attrs[k];
+      else if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'html') e.innerHTML = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach((c) => {
+      if (typeof c === 'string') e.appendChild(document.createTextNode(c));
+      else if (c instanceof Node) e.appendChild(c);
+    });
+    return e;
+  }
 
-// =========================
-// Small UI subcomponents
-// =========================
+  function safeText(txt) {
+    return (txt === undefined || txt === null) ? '' : String(txt);
+  }
 
-const Icon = ({ name, className = '' }) => {
-  const map = {
-    search: (
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="7"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-    ),
-    edit: (
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 20h9"></path>
-        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-      </svg>
-    ),
-    trash: (
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6L18.333 20.333A2 2 0 0 1 16.333 22H7.667A2 2 0 0 1 5.667 20.333L5 6"></path>
-        <path d="M10 11v6"></path>
-        <path d="M14 11v6"></path>
-      </svg>
-    ),
-    plus: (
-      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 5v14"></path>
-        <path d="M5 12h14"></path>
-      </svg>
-    ),
-  };
-  return <span className={`inline-block align-middle ${className}`}>{map[name] || null}</span>;
-};
+  function formatCurrency(v) {
+    if (v === undefined || v === null || v === '') return '—';
+    const n = Number(v);
+    if (isNaN(n)) return safeText(v);
+    return n.toLocaleString('uz-UZ') + ' so\'m';
+  }
 
-// Status badge component
-const StatusBadge = ({ status }) => {
-  const base = 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium';
-  if (status === 'Tasdiqlangan') return <span className={`${base} bg-green-100 text-green-800`}>{status}</span>;
-  if (status === 'Rad etilgan') return <span className={`${base} bg-red-100 text-red-800`}>{status}</span>;
-  return <span className={`${base} bg-yellow-100 text-yellow-800`}>{status}</span>;
-};
+  function formatDate(ts) {
+    if (!ts) return '';
+    try {
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleString();
+    } catch (err) {
+      return String(ts);
+    }
+  }
 
-// Modal wrapper
-const Modal = ({ open, onClose, title, children }) => {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black opacity-40" onClick={onClose} aria-hidden="true"></div>
-      <div className="relative bg-white rounded-2xl shadow-lg max-w-3xl w-full max-h-[90vh] overflow-auto p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <button onClick={onClose} aria-label="close modal" className="text-gray-500 hover:text-gray-700">✕</button>
-        </div>
-        <div>{children}</div>
-      </div>
-    </div>
-  );
-};
+  // Render status badge (returns element)
+  function renderStatusBadge(status) {
+    const span = el('span', { class: 'ad-status' });
+    span.textContent = status || STATUS.PENDING;
+    span.classList.add('ad-status');
+    if (status === STATUS.APPROVED) {
+      span.classList.add('status-approved');
+    } else if (status === STATUS.REJECTED) {
+      span.classList.add('status-rejected');
+    } else {
+      span.classList.add('status-pending');
+    }
+    return span;
+  }
 
-// =========================
-// Main Profil component
-// =========================
-export default function Profil() {
-  const navigate = useNavigate();
+  // Phone validator (simple)
+  function isValidPhone(phone) {
+    if (!phone) return false;
+    // allow digits, optional + at start; typical Uzbekistan numbers 9-13 digits
+    const cleaned = String(phone).replace(/\s+/g, '');
+    return /^[+]?\\d{8,15}$/.test(cleaned);
+  }
 
-  // auth & user
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
+  // Basic star rendering for average rating
+  function renderStars(avg) {
+    const container = document.createElement('div');
+    container.style.display = 'inline-block';
+    container.style.verticalAlign = 'middle';
+    container.setAttribute('aria-hidden', 'true');
+    const full = Math.floor(avg);
+    const half = avg - full >= 0.5;
+    for (let i = 1; i <= 5; i++) {
+      const span = document.createElement('span');
+      span.style.marginRight = '3px';
+      span.style.fontSize = '18px';
+      if (i <= full) {
+        span.textContent = '★';
+        span.style.color = 'gold';
+      } else if (i === full + 1 && half) {
+        span.textContent = '★';
+        span.style.color = 'gold';
+        // we won't do partial glyphs; half-star not implemented in plain text
+      } else {
+        span.textContent = '☆';
+        span.style.color = '#ccc';
+      }
+      container.appendChild(span);
+    }
+    return container;
+  }
 
-  // ads state
-  const [ads, setAds] = useState([]); // raw fetched ads
-  const [filteredAds, setFilteredAds] = useState([]); // filtered / searched
-  const [loadingAds, setLoadingAds] = useState(true);
+  // ---------- Auth handling ----------
+  function requireAuthAndInit() {
+    if (!auth) {
+      // If firebase not configured, show placeholder UI
+      profileNameEl.textContent = 'Foydalanuvchi (offline)';
+      profilePhoneEl.textContent = 'Telefon: —';
+      profileEmailEl.textContent = 'Email: —';
+      starContainerEl.innerHTML = '';
+      avgRatingEl.textContent = '(0.0)';
+      // Allow local mocked demo mode (optional)
+      console.warn('Firebase Auth not available; running in demo mode.');
+      // still attach UI handlers so dev can test
+      attachUiHandlers();
+      return;
+    }
 
-  // pagination
-  const PAGE_SIZE = 12;
-  const [page, setPage] = useState(1);
-
-  // UI controls
-  const [search, setSearch] = useState('');
-  const [regionFilter, setRegionFilter] = useState('');
-  const [cityFilter, setCityFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortDir, setSortDir] = useState('desc');
-
-  // edit modal
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingAd, setEditingAd] = useState(null);
-  const [saving, setSaving] = useState(false);
-
-  // delete confirmation
-  const [deletingId, setDeletingId] = useState(null);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-
-  // image upload progress
-  const [uploadProgress, setUploadProgress] = useState(0);
-
-  // region/city list derived from ads
-  const regions = useMemo(() => Array.from(new Set(ads.map((a) => a.region).filter(Boolean))), [ads]);
-  const cities = useMemo(() => Array.from(new Set(ads.map((a) => a.city).filter(Boolean))), [ads]);
-
-  // refs for cleanup
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setAuthLoading(false);
+    auth.onAuthStateChanged((u) => {
       if (!u) {
-        // not logged in -> redirect to login page
-        navigate('/login');
+        // redirect to login page if needed (assumes /login)
+        // If you don't want redirect, you can show login prompt instead.
+        window.location.href = '/login';
         return;
       }
-      setUser(u);
-      await loadAds(u.uid);
-    });
-    return () => {
-      mountedRef.current = false;
-      unsub();
-    };
-  }, []);
+      currentUser = u;
+      // Set basic header info
+      profileNameEl.textContent = u.displayName || u.email || 'Foydalanuvchi';
+      profilePhoneEl.textContent = 'Telefon: ' + (u.phoneNumber || '—');
+      profileEmailEl.textContent = 'Email: ' + (u.email || '—');
 
-  // load ads from Firestore for the current user
-  async function loadAds(uid) {
-    setLoadingAds(true);
-    try {
-      const adsCol = collection(db, 'ads');
-      const q = query(adsCol, where('userId', '==', uid), orderBy('createdAt', 'desc'));
-      const snap = await getDocs(q);
-      const items = [];
-      snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
-      if (!mountedRef.current) return;
-      setAds(items);
-      setFilteredAds(items);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Error loading ads:', err);
-    } finally {
-      if (mountedRef.current) setLoadingAds(false);
-    }
+      // Load profile document if you store additional info
+      loadUserProfile(u.uid).then(() => {
+        // load ads after profile
+        fetchUserAds(u.uid);
+      });
+
+      // attach UI handlers (if not already)
+      attachUiHandlers();
+    });
   }
 
-  // Basic client-side search & filters
-  useEffect(() => {
-    // apply search + filters in-memory for responsiveness
-    let items = [...ads];
-    if (search && search.trim()) {
-      const q = search.trim().toLowerCase();
-      items = items.filter((a) => {
-        return (
-          (a.title && a.title.toLowerCase().includes(q)) ||
-          (a.description && a.description.toLowerCase().includes(q)) ||
-          (a.phone && String(a.phone).includes(q)) ||
-          (a.city && a.city.toLowerCase().includes(q)) ||
-          (a.region && a.region.toLowerCase().includes(q))
-        );
-      });
-    }
-    if (regionFilter) items = items.filter((a) => a.region === regionFilter);
-    if (cityFilter) items = items.filter((a) => a.city === cityFilter);
-    if (statusFilter) items = items.filter((a) => a.status === statusFilter);
-
-    // sorting
-    items.sort((x, y) => {
-      const a = x[sortBy];
-      const b = y[sortBy];
-      if (!a && !b) return 0;
-      if (!a) return 1;
-      if (!b) return -1;
-      if (sortDir === 'asc') return a > b ? 1 : a < b ? -1 : 0;
-      return a > b ? -1 : a < b ? 1 : 0;
-    });
-
-    setFilteredAds(items);
-    setPage(1); // reset to first page when filters change
-  }, [ads, search, regionFilter, cityFilter, statusFilter, sortBy, sortDir]);
-
-  // pagination helper
-  const paginated = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return filteredAds.slice(start, start + PAGE_SIZE);
-  }, [filteredAds, page]);
-
-  // ---------- actions ----------
-
-  async function handleDeleteAd(adId, adImagePath) {
-    // adImagePath is optional path in storage to delete
+  // Optional: load user profile stored in Firestore (collection 'users')
+  async function loadUserProfile(uid) {
+    if (!db) return;
     try {
-      // optimistic UI
-      const prev = ads;
-      setAds((cur) => cur.filter((a) => a.id !== adId));
-
-      // delete Firestore doc
-      await deleteDoc(doc(db, 'ads', adId));
-
-      // delete image in storage if provided
-      if (adImagePath) {
-        try {
-          const sRef = storageRef(storage, adImagePath);
-          await deleteObject(sRef);
-        } catch (err) {
-          // image deletion failed; not critical
-          // eslint-disable-next-line no-console
-          console.warn('Failed to delete image from storage:', err.message);
+      const userDoc = await db.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        userProfile = userDoc.data();
+        // override displayed name/phone/email if profile contains them
+        if (userProfile.name) profileNameEl.textContent = userProfile.name;
+        if (userProfile.phone) profilePhoneEl.textContent = 'Telefon: ' + userProfile.phone;
+        if (userProfile.email) profileEmailEl.textContent = 'Email: ' + userProfile.email;
+        // render rating if exists
+        if (typeof userProfile.avgRating === 'number') {
+          starContainerEl.innerHTML = '';
+          starContainerEl.appendChild(renderStars(userProfile.avgRating));
+          avgRatingEl.textContent = `(${userProfile.avgRating.toFixed(1)})`;
         }
       }
     } catch (err) {
-      // rollback on error
-      // eslint-disable-next-line no-console
-      console.error('Delete failed:', err);
-      await loadAds(user.uid);
+      console.error('loadUserProfile error:', err);
     }
   }
 
-  function confirmDelete(ad) {
-    setDeletingId(ad.id);
-    setDeleteConfirmOpen(true);
-  }
-
-  // open inline edit modal with full ad object
-  function openEdit(ad) {
-    setEditingAd({ ...ad });
-    setUploadProgress(0);
-    setEditOpen(true);
-  }
-
-  // save edited ad (updates Firestore)
-  async function saveEdit() {
-    if (!editingAd || !editingAd.id) return;
-    setSaving(true);
+  // ---------- Fetch user's ads ----------
+  async function fetchUserAds(uid) {
+    if (!db) {
+      // demo fallback: render empty state
+      myAds = [];
+      renderAds();
+      return;
+    }
     try {
-      // basic validation
-      if (!editingAd.title || editingAd.title.trim().length < 3) {
-        alert('Iltimos, e\'lon sarlavhasini 3 ta belgidan ko\'proq kiriting.');
-        setSaving(false);
-        return;
-      }
-      if (editingAd.phone && !isNumericString(String(editingAd.phone))) {
-        alert('Telefon faqat raqamlardan iborat bo\'lishi kerak.');
-        setSaving(false);
-        return;
+      // Query: collection 'ads' where userId == uid, order by createdAt desc
+      const qSnap = await db.collection('ads')
+        .where('userId', '==', uid)
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      const items = [];
+      qSnap.forEach((doc) => {
+        const data = doc.data();
+        data.id = doc.id;
+        items.push(data);
+      });
+      myAds = items;
+      renderAds();
+    } catch (err) {
+      console.error('fetchUserAds error:', err);
+      // fallback: empty
+      myAds = [];
+      renderAds();
+    }
+  }
+
+  // ---------- Render ads list ----------
+  function clearAds() {
+    while (adsContainerEl.firstChild) adsContainerEl.removeChild(adsContainerEl.firstChild);
+  }
+
+  function renderAds() {
+    clearAds();
+
+    if (!myAds || myAds.length === 0) {
+      const empty = el('div', { class: 'ad-card' }, [
+        el('p', { text: 'Sizda hali e’lonlar yo‘q.' })
+      ]);
+      adsContainerEl.appendChild(empty);
+      return;
+    }
+
+    myAds.forEach((ad) => {
+      const card = el('div', { class: 'ad-card', 'data-id': ad.id });
+
+      // header with title + status
+      const adHeader = el('div', { class: 'ad-header' });
+      const title = el('h4', { text: ad.title || 'E\'lon' });
+      const statusBadge = renderStatusBadge(ad.status || STATUS.PENDING);
+      adHeader.appendChild(title);
+      adHeader.appendChild(statusBadge);
+
+      // body
+      const adBody = el('div', { class: 'ad-body' });
+      // route line
+      const route = el('p', { html: `<strong>Marshrut:</strong> ${safeText(ad.from || ad.origin || '')} → ${safeText(ad.to || ad.destination || '')}` });
+      // price
+      const price = el('p', { html: `<strong>Narx:</strong> ${formatCurrency(ad.price)}` });
+      // description
+      const desc = el('p', { html: `<strong>Izoh:</strong> ${safeText(ad.description || '')}` });
+      // created date
+      const created = ad.createdAt ? formatDate(ad.createdAt) : '';
+      const createdLine = el('p', { html: `<small>Joylangan: ${created}</small>` });
+
+      adBody.appendChild(route);
+      adBody.appendChild(price);
+      adBody.appendChild(desc);
+      adBody.appendChild(createdLine);
+
+      // actions
+      const actions = el('div', { class: 'ad-actions' });
+
+      const editBtn = el('button', { class: 'edit-btn' , text: 'Tahrirlash' });
+      editBtn.addEventListener('click', () => openEditAd(ad));
+
+      const deleteBtn = el('button', { class: 'delete-btn', text: 'O\'chirish' });
+      deleteBtn.addEventListener('click', () => confirmDeleteAd(ad));
+
+      // rating summary if exists
+      const ratingWrap = el('div', { class: 'rating-section' });
+      if (ad.avgRating) {
+        ratingWrap.appendChild(el('span', { text: 'Bahosi: ' + Number(ad.avgRating).toFixed(1) }));
       }
 
-      const adRef = doc(db, 'ads', editingAd.id);
-      const updateData = {
-        title: editingAd.title,
-        description: editingAd.description || '',
-        phone: editingAd.phone || '',
-        region: editingAd.region || '',
-        city: editingAd.city || '',
-        price: editingAd.price || '',
-        status: editingAd.status || 'Kutilyapti',
-        updatedAt: serverTimestamp(),
+      actions.appendChild(editBtn);
+      actions.appendChild(deleteBtn);
+      actions.appendChild(ratingWrap);
+
+      // comments preview if exists (show last 2)
+      if (Array.isArray(ad.comments) && ad.comments.length > 0) {
+        const commentSection = el('div', { class: 'comment-box' });
+        const titleC = el('div', { html: '<strong>Izohlar:</strong>' });
+        commentSection.appendChild(titleC);
+        const previewCount = Math.min(2, ad.comments.length);
+        for (let i = 0; i < previewCount; i++) {
+          const c = ad.comments[i];
+          const cEl = el('div', { html: `<small><strong>${safeText(c.author || 'Anonim')}:</strong> ${safeText(c.text)}</small>` });
+          commentSection.appendChild(cEl);
+        }
+        // button to show full comments - optional
+        const showAll = el('button', { class: 'edit-btn', text: 'Barcha izohlar' });
+        showAll.addEventListener('click', () => openCommentsModal(ad));
+        commentSection.appendChild(showAll);
+        adBody.appendChild(commentSection);
+      }
+
+      card.appendChild(adHeader);
+      card.appendChild(adBody);
+      card.appendChild(actions);
+
+      adsContainerEl.appendChild(card);
+    });
+  }
+
+  // ---------- UI actions (open edit, delete confirm, comments modal) ----------
+  function openEditAd(ad) {
+    // populate add/edit form with ad values and show tahrirlash UI
+    // We reuse addFormEl for simplicity but show/hide depending on mode
+    // Set a data attribute to indicate edit mode
+    addFormEl.dataset.editing = 'true';
+    addFormEl.dataset.adId = ad.id;
+    addFormEl.querySelector('h3').textContent = 'E\'lonni tahrirlash';
+    fromEl.value = ad.from || ad.origin || '';
+    toEl.value = ad.to || ad.destination || '';
+    priceEl.value = ad.price || '';
+    descEl.value = ad.description || '';
+    // reveal form
+    addFormEl.style.display = 'block';
+    // scroll into view
+    addFormEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function confirmDeleteAd(ad) {
+    // Simple confirm; for better UX replace with custom modal
+    const ok = window.confirm('E\\'lonni o\\'chirmoqchimisiz? Bu amal qaytarilmaydi.');
+    if (!ok) return;
+    deleteAd(ad.id);
+  }
+
+  async function deleteAd(adId) {
+    if (!db) {
+      // offline/demo: remove locally
+      myAds = myAds.filter((a) => a.id !== adId);
+      renderAds();
+      return;
+    }
+    try {
+      await db.collection('ads').doc(adId).delete();
+      myAds = myAds.filter((a) => a.id !== adId);
+      renderAds();
+    } catch (err) {
+      console.error('deleteAd error:', err);
+      alert('E\'lonni o\'chirishda xatolik yuz berdi.');
+    }
+  }
+
+  function openCommentsModal(ad) {
+    // Minimal comments modal using prompt for posting new comment,
+    // and alert for listing all comments. Replace with better UI if needed.
+    const list = (ad.comments || []).map((c) => `${c.author || 'Anonim'}: ${c.text}`).join('\\n\\n');
+    const action = window.prompt('Izohlar:\\n\\n' + (list || '(Hali izoh yo\\'q)') + '\\n\\nYangi izoh yozish uchun matn kiriting (bekor qilish uchun Cancel).', '');
+    if (action && action.trim()) {
+      postComment(ad.id, action.trim());
+    }
+  }
+
+  async function postComment(adId, text) {
+    if (!db || !currentUser) {
+      alert('Izoh yuborish uchun tizimga kirishingiz kerak.');
+      return;
+    }
+    try {
+      const comment = {
+        authorId: currentUser.uid,
+        author: currentUser.displayName || currentUser.email || 'Foydalanuvchi',
+        text: text,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
+      // Two strategies: push to ad.comments array or have 'comments' subcollection
+      // Here we update ad doc with arrayUnion for simplicity
+      await db.collection('ads').doc(adId).update({
+        comments: firebase.firestore.FieldValue.arrayUnion(comment)
+      });
+      // Update local cache optimistically
+      myAds = myAds.map((a) => {
+        if (a.id === adId) {
+          const arr = a.comments ? a.comments.slice() : [];
+          arr.unshift(comment); // push to front
+          return Object.assign({}, a, { comments: arr });
+        }
+        return a;
+      });
+      renderAds();
+    } catch (err) {
+      console.error('postComment error:', err);
+      alert('Izoh yuborishda xatolik yuz berdi.');
+    }
+  }
 
-      // if a new file was chosen and staged as editingAd._newFile, upload it
-      if (editingAd._newFile instanceof File) {
-        const file = editingAd._newFile;
-        const path = `ads/${editingAd.id}/${file.name}`;
-        const sRef = storageRef(storage, path);
-        const uploadTask = uploadBytesResumable(sRef, file);
+  // ---------- Form handlers (edit profile & add/edit ad) ----------
+  function attachUiHandlers() {
+    // avoid attaching multiple times
+    if (attachUiHandlers.attached) return;
+    attachUiHandlers.attached = true;
 
-        await new Promise((resolve, reject) => {
-          uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-              const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-              setUploadProgress(progress);
-            },
-            (error) => reject(error),
-            async () => {
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              updateData.imageUrl = url;
-              updateData.imagePath = path;
-              resolve();
-            }
-          );
+    if (editProfileBtn) {
+      editProfileBtn.addEventListener('click', () => {
+        // toggle edit form
+        if (editFormEl.style.display === 'block') {
+          editFormEl.style.display = 'none';
+        } else {
+          // prefill with current displayed values
+          editNameEl.value = userProfile && userProfile.name ? userProfile.name : (currentUser ? (currentUser.displayName || '') : '');
+          editPhoneEl.value = userProfile && userProfile.phone ? userProfile.phone : (currentUser ? (currentUser.phoneNumber || '') : '');
+          editEmailEl.value = userProfile && userProfile.email ? userProfile.email : (currentUser ? (currentUser.email || '') : '');
+          editFormEl.style.display = 'block';
+          editFormEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        if (!auth) {
+          // demo fallback
+          window.location.href = '/login';
+          return;
+        }
+        auth.signOut().then(() => {
+          window.location.href = '/login';
+        }).catch((err) => {
+          console.error('Sign out error:', err);
+          alert('Chiqishda xatolik yuz berdi.');
         });
+      });
+    }
+
+    if (editFormEl) {
+      editFormEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handleProfileSave();
+      });
+    }
+
+    if (addAdBtn) {
+      addAdBtn.addEventListener('click', () => {
+        // open add form (clear fields)
+        addFormEl.style.display = 'block';
+        addFormEl.removeAttribute('data-editing');
+        addFormEl.removeAttribute('data-ad-id');
+        addFormEl.querySelector('h3').textContent = 'Yangi e\\'lon joylash';
+        fromEl.value = '';
+        toEl.value = '';
+        priceEl.value = '';
+        descEl.value = '';
+        addFormEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+
+    if (addFormEl) {
+      addFormEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        // if addFormEl.dataset.editing is set -> update existing ad
+        const isEdit = addFormEl.dataset.editing === 'true';
+        if (isEdit) {
+          const adId = addFormEl.dataset.adId;
+          await handleAdUpdate(adId);
+        } else {
+          await handleAdCreate();
+        }
+      });
+    }
+
+    // basic input masking for phone in edit form
+    if (editPhoneEl) {
+      editPhoneEl.addEventListener('input', (e) => {
+        // allow digits, +, spaces, dashes; normalize to trimmed form
+        const v = e.target.value.replace(/[^\d+\\s-]/g, '');
+        e.target.value = v;
+      });
+    }
+
+    // price input: allow numbers and optional decimal/comma
+    if (priceEl) {
+      priceEl.addEventListener('input', (e) => {
+        const v = e.target.value.replace(/[^0-9.,]/g, '');
+        e.target.value = v;
+      });
+    }
+  }
+
+  // ---------- Profile save handler ----------
+  async function handleProfileSave() {
+    const newName = editNameEl.value.trim();
+    const newPhone = editPhoneEl.value.trim();
+    const newEmail = editEmailEl.value.trim();
+
+    if (!newName) {
+      alert('Ism maydoni bo\'sh bo\'lishi mumkin emas.');
+      return;
+    }
+    if (!isValidPhone(newPhone)) {
+      alert('Iltimos, to\'g\'ri telefon raqam kiriting.');
+      return;
+    }
+    if (!newEmail || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(newEmail)) {
+      alert('Iltimos, to\'g\'ri email manzil kiriting.');
+      return;
+    }
+
+    // Update Firebase Auth profile (displayName, email) and optional users collection
+    try {
+      if (auth && currentUser) {
+        // update display name and email via Auth API
+        const promises = [];
+        if (currentUser.updateProfile) {
+          promises.push(currentUser.updateProfile({ displayName: newName }));
+        }
+        // email update may require recent login - handle errors gracefully
+        if (currentUser.email !== newEmail && currentUser.updateEmail) {
+          promises.push(currentUser.updateEmail(newEmail));
+        }
+        await Promise.all(promises);
       }
 
-      await updateDoc(adRef, updateData);
+      // Update Firestore 'users' doc for additional fields
+      if (db && currentUser) {
+        await db.collection('users').doc(currentUser.uid).set({
+          name: newName,
+          phone: newPhone,
+          email: newEmail,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
 
-      // update local state
-      setAds((cur) => cur.map((a) => (a.id === editingAd.id ? { ...a, ...updateData } : a)));
-      setEditOpen(false);
-      setEditingAd(null);
+      // update local display
+      profileNameEl.textContent = newName;
+      profilePhoneEl.textContent = 'Telefon: ' + newPhone;
+      profileEmailEl.textContent = 'Email: ' + newEmail;
+      editFormEl.style.display = 'none';
+      alert('Profil ma\'lumotlari saqlandi.');
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to save ad:', err);
-      alert('E\'lonni saqlashda xatolik yuz berdi. Konsolga qarang.');
-    } finally {
-      setSaving(false);
-      setUploadProgress(0);
+      console.error('handleProfileSave error:', err);
+      // Error handling for reauth requirement for email update
+      if (err && err.code === 'auth/requires-recent-login') {
+        alert('Emailni yangilash uchun qayta kirish (reauth) talab qilinadi. Iltimos, qayta tizimga kiring va yana urinib ko\'ring.');
+      } else {
+        alert('Profilni saqlashda xatolik yuz berdi.');
+      }
     }
   }
 
-  // create a new ad inline (optional utility) - convenience function
-  async function createAdSkeleton() {
-    if (!user) return;
+  // ---------- Create new ad ----------
+  async function handleAdCreate() {
+    const fromVal = fromEl.value.trim();
+    const toVal = toEl.value.trim();
+    const priceVal = priceEl.value.trim();
+    const descVal = descEl.value.trim();
+
+    if (!fromVal || !toVal) {
+      alert('Iltimos, qayerdan va qayerga maydonlarini to\'ldiring.');
+      return;
+    }
+    if (!priceVal || isNaN(Number(priceVal))) {
+      alert('Iltimos, to\'g\'ri narx kiriting.');
+      return;
+    }
+    if (!currentUser) {
+      alert('E\'lon joylash uchun tizimga kirishingiz kerak.');
+      return;
+    }
+
+    const newAd = {
+      title: `${fromVal} → ${toVal}`,
+      from: fromVal,
+      to: toVal,
+      price: Number(priceVal),
+      description: descVal || '',
+      userId: currentUser.uid,
+      userEmail: currentUser.email || '',
+      status: STATUS.PENDING,
+      createdAt: firebase ? firebase.firestore.FieldValue.serverTimestamp() : new Date(),
+      comments: [],
+      avgRating: 0
+    };
+
+    if (!db) {
+      // offline/demo: append locally and re-render
+      newAd.id = 'local-' + Date.now();
+      myAds.unshift(newAd);
+      renderAds();
+      addFormEl.style.display = 'none';
+      alert('E\'lon lokal ravishda saqlandi (demo).');
+      return;
+    }
+
     try {
-      const newAd = {
-        title: 'Yangi e\'lon - tahrirlash uchun bosing',
-        description: '',
-        userId: user.uid,
-        phone: '',
-        region: '',
-        city: '',
-        price: '',
-        status: 'Kutilyapti',
-        createdAt: serverTimestamp(),
-      };
-      const docRef = await addDoc(collection(db, 'ads'), newAd);
-      // reload list or append
-      const adObj = { id: docRef.id, ...newAd };
-      setAds((cur) => [adObj, ...cur]);
-      // open editor for new ad
-      openEdit(adObj);
+      const docRef = await db.collection('ads').add(newAd);
+      newAd.id = docRef.id;
+      myAds.unshift(newAd);
+      renderAds();
+      addFormEl.style.display = 'none';
+      alert('E\'lon muvaffaqiyatli joylandi. Administratsiya tez orada ko\'rib chiqadi.');
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Create ad failed:', err);
+      console.error('handleAdCreate error:', err);
+      alert('E\'lonni yaratishda xatolik yuz berdi.');
     }
   }
 
-  // export current filteredAds to CSV
-  function exportCSV() {
-    const columns = ['id', 'title', 'description', 'region', 'city', 'phone', 'price', 'status', 'createdAt'];
-    const rows = filteredAds.map((r) => ({
-      id: r.id,
-      title: r.title,
-      description: r.description,
-      region: r.region,
-      city: r.city,
-      phone: r.phone,
-      price: r.price,
-      status: r.status,
-      createdAt: r.createdAt ? formatDate(r.createdAt) : '',
-    }));
-    const csv = toCSV(rows, columns);
+  // ---------- Update existing ad ----------
+  async function handleAdUpdate(adId) {
+    const fromVal = fromEl.value.trim();
+    const toVal = toEl.value.trim();
+    const priceVal = priceEl.value.trim();
+    const descVal = descEl.value.trim();
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.setAttribute('download', `shahartaxi-ads-${new Date().toISOString()}.csv`);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    if (!fromVal || !toVal) {
+      alert('Iltimos, qayerdan va qayerga maydonlarini to\'ldiring.');
+      return;
+    }
+    if (!priceVal || isNaN(Number(priceVal))) {
+      alert('Iltimos, to\'g\'ri narx kiriting.');
+      return;
+    }
+
+    if (!db) {
+      // offline/demo update
+      myAds = myAds.map((a) => {
+        if (a.id === adId) {
+          return Object.assign({}, a, {
+            from: fromVal,
+            to: toVal,
+            price: Number(priceVal),
+            description: descVal,
+            title: `${fromVal} → ${toVal}`,
+            updatedAt: new Date()
+          });
+        }
+        return a;
+      });
+      renderAds();
+      addFormEl.style.display = 'none';
+      alert('E\'lon lokal ravishda yangilandi (demo).');
+      return;
+    }
+
+    try {
+      const updateData = {
+        from: fromVal,
+        to: toVal,
+        price: Number(priceVal),
+        description: descVal,
+        title: `${fromVal} → ${toVal}`,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      await db.collection('ads').doc(adId).update(updateData);
+      myAds = myAds.map((a) => (a.id === adId ? Object.assign({}, a, updateData) : a));
+      renderAds();
+      addFormEl.style.display = 'none';
+      alert('E\'lon yangilandi.');
+    } catch (err) {
+      console.error('handleAdUpdate error:', err);
+      alert('E\'lonni yangilashda xatolik yuz berdi.');
+    }
   }
 
-  function userSignOut() {
-    signOut(auth)
-      .then(() => navigate('/login'))
-      .catch((err) => console.error('Sign out error:', err));
-  }
+  // Initialize app (auth and UI)
+  requireAuthAndInit();
 
-  // safe input handlers
-  function handlePhoneInputChange(e) {
-    const v = e.target.value;
-    // only allow digits
-    const cleaned = v.replace(/[^0-9]/g, '');
-    setEditingAd((cur) => ({ ...cur, phone: cleaned }));
-  }
+  // Expose a debug API to console for dev convenience
+  window._ShaharTaxiProfile = {
+    fetchUserAds,
+    renderAds,
+    getState: () => ({ currentUser, userProfile, myAds })
+  };
 
-  // debounce search updates to avoid frequent re-renders
-  const debouncedSetSearch = useMemo(() => debounce((v) => setSearch(v), 300), []);
-
-  // ---------- rendering helpers ----------
-  function renderEmptyState() {
-    return (
-      <div className="text-center py-12">
-        <h3 className="text-xl font-semibold mb-2">Hozircha e\'loningiz yo\'q</h3>
-        <p className="text-sm text-gray-500">Yangi e\'lon yaratish uchun tugmani bosing.</p>
-        <div className="mt-4">
-          <button onClick={createAdSkeleton} className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg">
-            <Icon name="plus" /> Yangi e\'lon
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Big list item
-  function AdCard({ ad }) {
-    return (
-      <article className="bg-white rounded-2xl shadow p-4 flex flex-col md:flex-row md:justify-between gap-3">
-        <div className="flex gap-4 items-start md:items-center">
-          <div className="w-24 h-20 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-            {ad.imageUrl ? (
-              <img src={ad.imageUrl} alt={ad.title} className="object-cover w-full h-full" />
-            ) : (
-              <div className="text-xs text-gray-400">Rasm yo\'q</div>
-            )}
-          </div>
-          <div className="min-w-0">
-            <h4 className="text-lg font-semibold truncate">{ad.title}</h4>
-            <div className="text-xs text-gray-500 mt-1">{truncate(ad.description, 180)}</div>
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-              <span>{ad.region} — {ad.city}</span>
-              <span>•</span>
-              <span>{ad.price ? `${ad.price} so'm` : 'Narx yo\'q'}</span>
-            </div>
-            <div className="mt-2">
-              <StatusBadge status={ad.status || 'Kutilyapti'} />
-            </div>
-          </div>
-        </div>
-        <div className="flex gap-2 items-center md:items-start">
-          <button onClick={() => openEdit(ad)} className="px-3 py-1 bg-blue-500 text-white rounded-lg flex items-center gap-2">
-            <Icon name="edit" /> Tahrirlash
-          </button>
-          <button onClick={() => confirmDelete(ad)} className="px-3 py-1 bg-red-500 text-white rounded-lg flex items-center gap-2">
-            <Icon name="trash" /> O'chirish
-          </button>
-        </div>
-      </article>
-    );
-  }
-
-  // ---------- main render ----------
-  return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Mening profil — ShaharTaxi</h1>
-            <p className="text-sm text-gray-500">Foydalanuvchi: {user ? user.email : '...'}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={exportCSV} className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm">CSV export</button>
-            <button onClick={userSignOut} className="px-3 py-2 bg-gray-200 rounded-lg text-sm">Chiqish</button>
-          </div>
-        </header>
-
-        <section className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-3 space-y-2">
-            <label className="sr-only">Qidiruv</label>
-            <div className="relative">
-              <input
-                type="search"
-                placeholder="Sarlavha, tavsif, shahar, raqam..."
-                onChange={(e) => debouncedSetSearch(e.target.value)}
-                className="w-full rounded-xl border p-3 pl-10 bg-white"
-              />
-              <div className="absolute left-3 top-3 text-gray-400"><Icon name="search" /></div>
-            </div>
-
-            <div className="flex gap-2 mt-2">
-              <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} className="rounded-xl border p-2 bg-white">
-                <option value="">Barcha viloyatlar</option>
-                {regions.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-              <select value={cityFilter} onChange={(e) => setCityFilter(e.target.value)} className="rounded-xl border p-2 bg-white">
-                <option value="">Barcha shaharlar</option>
-                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-xl border p-2 bg-white">
-                <option value="">Barcha statuslar</option>
-                {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="md:col-span-1 flex flex-col gap-2">
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-xl border p-2 bg-white">
-              <option value="createdAt">Yaratilgan sana</option>
-              <option value="title">Sarlavha</option>
-              <option value="price">Narx</option>
-            </select>
-            <select value={sortDir} onChange={(e) => setSortDir(e.target.value)} className="rounded-xl border p-2 bg-white">
-              <option value="desc">Teskari</option>
-              <option value="asc">O'suvchi</option>
-            </select>
-            <button onClick={createAdSkeleton} className="mt-auto px-3 py-2 bg-green-600 text-white rounded-lg">Yangi e\'lon</button>
-          </div>
-        </section>
-
-        <main>
-          {loadingAds ? (
-            <div className="text-center py-16">Yuklanmoqda...</div>
-          ) : ads.length === 0 ? (
-            renderEmptyState()
-          ) : (
-            <div className="space-y-4">
-              {paginated.map((ad) => (
-                <AdCard key={ad.id} ad={ad} />
-              ))}
-
-              {/* pagination controls */}
-              <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-gray-500">Jami: {filteredAds.length} e\'lon</div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1 rounded-lg bg-gray-200">Oldingi</button>
-                  <span className="px-3 py-1">{page}</span>
-                  <button onClick={() => setPage((p) => (p * PAGE_SIZE < filteredAds.length ? p + 1 : p))} className="px-3 py-1 rounded-lg bg-gray-200">Keyingi</button>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
-
-        {/* delete confirm modal */}
-        <Modal open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} title="E\'lonni o\'chirish">
-          <p>Haqiqatan ham ushbu e\'lonni o\'chirishni xohlaysizmi? Bu amal qaytarilmaydi.</p>
-          <div className="mt-4 flex gap-2 justify-end">
-            <button onClick={() => setDeleteConfirmOpen(false)} className="px-3 py-1 rounded-lg bg-gray-200">Bekor qilish</button>
-            <button
-              onClick={async () => {
-                setDeleteConfirmOpen(false);
-                const ad = ads.find((x) => x.id === deletingId);
-                if (!ad) return;
-                await handleDeleteAd(ad.id, ad.imagePath);
-              }}
-              className="px-3 py-1 rounded-lg bg-red-600 text-white"
-            >
-              O'chirish
-            </button>
-          </div>
-        </Modal>
-
-        {/* edit modal */}
-        <Modal open={editOpen} onClose={() => { setEditOpen(false); setEditingAd(null); }} title={editingAd ? 'E\'lonni tahrirlash' : 'Tahrirlash'}>
-          {editingAd ? (
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium">Sarlavha</label>
-                <input value={editingAd.title || ''} onChange={(e) => setEditingAd((cur) => ({ ...cur, title: e.target.value }))} className="w-full rounded-lg border p-2" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium">Tavsif</label>
-                <textarea value={editingAd.description || ''} onChange={(e) => setEditingAd((cur) => ({ ...cur, description: e.target.value }))} rows={6} className="w-full rounded-lg border p-2" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-sm font-medium">Viloyat</label>
-                  <input value={editingAd.region || ''} onChange={(e) => setEditingAd((cur) => ({ ...cur, region: e.target.value }))} className="w-full rounded-lg border p-2" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Shahar</label>
-                  <input value={editingAd.city || ''} onChange={(e) => setEditingAd((cur) => ({ ...cur, city: e.target.value }))} className="w-full rounded-lg border p-2" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Telefon</label>
-                  <input value={editingAd.phone || ''} onChange={handlePhoneInputChange} className="w-full rounded-lg border p-2" placeholder="9989xxxxxxx" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div>
-                  <label className="block text-sm font-medium">Narx</label>
-                  <input value={editingAd.price || ''} onChange={(e) => setEditingAd((cur) => ({ ...cur, price: e.target.value }))} className="w-full rounded-lg border p-2" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Status</label>
-                  <select value={editingAd.status || 'Kutilyapti'} onChange={(e) => setEditingAd((cur) => ({ ...cur, status: e.target.value }))} className="w-full rounded-lg border p-2">
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Rasm</label>
-                  <input type="file" accept="image/*" onChange={(e) => {
-                    const file = e.target.files && e.target.files[0];
-                    if (file) {
-                      // store file in special temp field
-                      setEditingAd((cur) => ({ ...cur, _newFile: file, imagePreview: URL.createObjectURL(file) }));
-                    }
-                  }} className="w-full rounded-lg border p-2 bg-white" />
-                  {editingAd.imagePreview || editingAd.imageUrl ? (
-                    <div className="mt-2 w-40 h-28 bg-gray-100 rounded overflow-hidden">
-                      <img src={editingAd.imagePreview || editingAd.imageUrl} alt="preview" className="object-cover w-full h-full" />
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              {uploadProgress > 0 && (
-                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                  <div style={{ width: `${uploadProgress}%` }} className="h-2 bg-green-500"></div>
-                </div>
-              )}
-
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => { setEditOpen(false); setEditingAd(null); }} className="px-3 py-1 bg-gray-200 rounded-lg">Bekor qilish</button>
-                <button onClick={saveEdit} className="px-3 py-1 bg-blue-600 text-white rounded-lg" disabled={saving}>
-                  {saving ? 'Saqlanmoqda...' : 'Saqlash'}
-                </button>
-              </div>
-
-            </div>
-          ) : (
-            <div>Loading...</div>
-          )}
-        </Modal>
-
-        <footer className="mt-8 text-xs text-gray-400">© ShaharTaxi</footer>
-      </div>
-    </div>
-  );
-}
+  // End of Part 1
+})();
