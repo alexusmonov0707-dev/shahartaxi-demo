@@ -104,7 +104,7 @@
       border: 1px solid #ddd;
     }
 
-    .edit-form input, .add-form input, .add-form textarea {
+    .edit-form input, .add-form input, .add-form textarea, .add-form select {
       width: 100%;
       padding: 8px;
       margin: 6px 0;
@@ -299,8 +299,12 @@
 
     <form id="addForm" class="add-form">
       <h3>Yangi e’lon joylash</h3>
-      <input type="text" id="from" placeholder="Qayerdan" required>
-      <input type="text" id="to" placeholder="Qayerga" required>
+      <select id="regionSelect" required>
+        <option value="">Viloyatni tanlang</option>
+      </select>
+      <select id="citySelect" required>
+        <option value="">Shaharni tanlang</option>
+      </select>
       <input type="text" id="price" placeholder="Narx (so‘mda)" required>
       <textarea id="desc" placeholder="Qo‘shimcha ma’lumot (ixtiyoriy)"></textarea>
       <button type="submit">Joylash</button>
@@ -312,8 +316,7 @@
     </section>
   </main>
 
-<script src="profile.js"></script>
-
-
+  <!-- Alohida JS faylga ulanadi -->
+  <script src="profile.js"></script>
 </body>
 </html>
