@@ -3,181 +3,135 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Profil | ShaharTaxi</title>
+  <title>ShaharTaxi - Profil</title>
   <link rel="stylesheet" href="style.css" />
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f2f2f2;
+      font-family: "Poppins", sans-serif;
       margin: 0;
       padding: 0;
+      background: #f5f7fa;
     }
 
     header {
-      background: #007bff;
+      background: #1976d2;
       color: white;
-      padding: 16px;
+      padding: 15px;
       text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
     }
 
-    main {
-      max-width: 1100px;
+    .profile-container {
+      width: 95%;
+      max-width: 900px;
       margin: 30px auto;
       background: white;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       padding: 20px;
     }
 
     .profile-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
+      justify-content: space-between;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
     }
 
-    .profile-info {
-      flex: 1;
-      min-width: 300px;
-    }
-
-    .profile-info h2 {
-      margin: 0 0 8px;
+    .profile-header h2 {
+      margin: 0;
       color: #333;
     }
 
-    .profile-info p {
-      margin: 3px 0;
-      color: #555;
-    }
-
-    .profile-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .profile-actions button {
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    .profile-actions button:hover {
-      background: #0056b3;
-    }
-
     .logout-btn {
-      background: #dc3545;
-    }
-
-    .logout-btn:hover {
-      background: #a71d2a;
-    }
-
-    .rating-display {
-      margin-top: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .rating-display span {
-      color: gold;
-      font-size: 22px;
-    }
-
-    .rating-display small {
-      color: #555;
-    }
-
-    .edit-form, .add-form {
-      display: none;
-      margin-top: 20px;
-      padding: 15px;
-      background: #fafafa;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-    }
-
-    .edit-form input, .add-form input, .add-form textarea, .add-form select {
-      width: 100%;
-      padding: 8px;
-      margin: 6px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-
-    .edit-form button, .add-form button {
-      background: #28a745;
+      background: #e53935;
       color: white;
       border: none;
       padding: 8px 14px;
       border-radius: 6px;
       cursor: pointer;
-      margin-top: 10px;
+      transition: background 0.3s ease;
     }
 
-    .ads-section {
-      margin-top: 35px;
+    .logout-btn:hover {
+      background: #c62828;
     }
 
-    .ads-section h3 {
-      border-bottom: 2px solid #007bff;
-      padding-bottom: 6px;
-      color: #007bff;
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: #eee;
+      border: none;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+
+    .tab-btn.active {
+      background: #1976d2;
+      color: white;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
     }
 
     .ad-card {
-      border: 1px solid #ddd;
-      border-radius: 10px;
+      background: #fafafa;
+      border-radius: 8px;
       padding: 15px;
-      margin: 15px 0;
-      background: #fff;
-      box-shadow: 0 1px 5px rgba(0,0,0,0.05);
-      transition: 0.3s;
+      margin-bottom: 15px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
     }
 
     .ad-card:hover {
-      box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+      transform: translateY(-3px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.15);
     }
 
     .ad-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
+      margin-bottom: 8px;
     }
 
-    .ad-header h4 {
+    .ad-header h3 {
       margin: 0;
-      color: #333;
+      color: #222;
     }
 
-    .ad-status {
-      padding: 4px 10px;
+    .status {
+      padding: 5px 10px;
       border-radius: 6px;
       font-size: 13px;
-      font-weight: bold;
-    }
-
-    .status-approved {
-      background: #28a745;
       color: white;
     }
 
-    .status-pending {
-      background: #ffc107;
-      color: black;
+    .status.pending {
+      background: #ffb300;
     }
-
-    .status-rejected {
-      background: #dc3545;
-      color: white;
+    .status.approved {
+      background: #43a047;
+    }
+    .status.rejected {
+      background: #e53935;
     }
 
     .ad-body p {
@@ -186,137 +140,188 @@
     }
 
     .ad-actions {
-      margin-top: 10px;
       display: flex;
-      flex-wrap: wrap;
+      justify-content: flex-end;
       gap: 10px;
+      margin-top: 10px;
     }
 
-    .ad-actions button {
+    .btn {
       border: none;
+      padding: 7px 12px;
       border-radius: 6px;
-      padding: 6px 12px;
       cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+    }
+
+    .btn.edit {
+      background: #1976d2;
       color: white;
     }
 
-    .edit-btn {
-      background: #007bff;
+    .btn.delete {
+      background: #e53935;
+      color: white;
     }
 
-    .delete-btn {
-      background: #dc3545;
+    .btn.edit:hover {
+      background: #1565c0;
     }
 
-    .save-btn {
-      background: #28a745;
+    .btn.delete:hover {
+      background: #c62828;
     }
 
-    .cancel-btn {
-      background: #6c757d;
+    .no-ads {
+      text-align: center;
+      color: #777;
+      font-style: italic;
+      margin: 20px 0;
     }
 
-    .rating-section {
-      margin-top: 10px;
+    /* Modal form */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
     }
 
-    .rating-section span {
-      font-size: 22px;
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      width: 90%;
+      max-width: 500px;
+      position: relative;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 10px;
       cursor: pointer;
-      color: #ccc;
-      transition: 0.2s;
+      font-size: 18px;
+      color: #333;
     }
 
-    .rating-section span.active {
-      color: gold;
+    form label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 5px;
+      color: #444;
     }
 
-    .comment-box {
-      margin-top: 10px;
-    }
-
-    .comment-box textarea {
+    form input, form select, form textarea {
       width: 100%;
-      min-height: 60px;
-      border: 1px solid #ccc;
+      padding: 8px 10px;
       border-radius: 6px;
-      padding: 6px;
+      border: 1px solid #ccc;
+      margin-bottom: 12px;
+      font-size: 14px;
     }
 
-    .comment-box button {
-      margin-top: 6px;
-      background: #007bff;
+    form button {
+      background: #1976d2;
       color: white;
       border: none;
-      padding: 6px 12px;
+      padding: 10px;
+      width: 100%;
       border-radius: 6px;
       cursor: pointer;
+      transition: 0.3s;
     }
 
-    @media(max-width: 600px){
-      .profile-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .profile-actions {
-        margin-top: 10px;
-      }
+    form button:hover {
+      background: #1565c0;
     }
+
   </style>
 </head>
 
 <body>
-  <header>
-    <h1>ShaharTaxi – Profil sahifasi</h1>
-  </header>
+  <header>ShaharTaxi - Profil sahifasi</header>
 
-  <main>
-    <section class="profile-header">
-      <div class="profile-info">
-        <h2 id="profileName">Foydalanuvchi</h2>
-        <p id="profilePhone">Telefon: </p>
-        <p id="profileEmail">Email: </p>
-        <div class="rating-display">
-          <span id="starContainer"></span>
-          <small id="avgRating">(0.0)</small>
-        </div>
-      </div>
+  <div class="profile-container">
+    <div class="profile-header">
+      <h2 id="usernameDisplay">Foydalanuvchi</h2>
+      <button class="logout-btn" id="logoutBtn">Chiqish</button>
+    </div>
 
-      <div class="profile-actions">
-        <button id="editProfileBtn">Tahrirlash</button>
-        <button id="addAdBtn">E’lon joylash</button>
-        <button class="logout-btn" id="logoutBtn">Chiqish</button>
-      </div>
-    </section>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="adsTab">Mening e’lonlarim</button>
+      <button class="tab-btn" data-tab="addTab">E’lon joylash</button>
+      <button class="tab-btn" data-tab="profileTab">Profil</button>
+    </div>
 
-    <form id="editForm" class="edit-form">
-      <h3>Profil ma’lumotlarini tahrirlash</h3>
-      <input type="text" id="editName" placeholder="Ism" required>
-      <input type="text" id="editPhone" placeholder="Telefon raqam" required>
-      <input type="email" id="editEmail" placeholder="Email" required>
-      <button type="submit">Saqlash</button>
-    </form>
+    <div id="adsTab" class="tab-content active">
+      <div id="adsList"></div>
+    </div>
 
-    <form id="addForm" class="add-form">
-      <h3>Yangi e’lon joylash</h3>
-      <select id="regionSelect" required>
-        <option value="">Viloyatni tanlang</option>
-      </select>
-      <select id="citySelect" required>
-        <option value="">Shaharni tanlang</option>
-      </select>
-      <input type="text" id="price" placeholder="Narx (so‘mda)" required>
-      <textarea id="desc" placeholder="Qo‘shimcha ma’lumot (ixtiyoriy)"></textarea>
-      <button type="submit">Joylash</button>
-    </form>
+    <div id="addTab" class="tab-content">
+      <form id="adForm">
+        <h3>Yangi e’lon joylash</h3>
+        <label for="viloyat">Viloyat</label>
+        <select id="viloyat" required></select>
 
-    <section class="ads-section">
-      <h3>Mening e’lonlarim</h3>
-      <div id="adsContainer"></div>
-    </section>
-  </main>
+        <label for="shahar">Shahar</label>
+        <select id="shahar" required></select>
 
-  <!-- Alohida JS faylga ulanadi -->
+        <label for="yo‘nalish">Yo‘nalish</label>
+        <input type="text" id="yonalish" placeholder="Masalan: Andijon - Toshkent" required />
+
+        <label for="sana">Sana</label>
+        <input type="date" id="sana" required />
+
+        <label for="vaqt">Vaqt</label>
+        <input type="time" id="vaqt" required />
+
+        <label for="telefon">Telefon raqamingiz</label>
+        <input type="tel" id="telefon" pattern="^[0-9]{9}$" placeholder="Masalan: 901234567" required />
+
+        <button type="submit">Joylash</button>
+      </form>
+    </div>
+
+    <div id="profileTab" class="tab-content">
+      <h3>Profil ma’lumotlari</h3>
+      <p>Ism: <span id="profilIsm"></span></p>
+      <p>Telefon: <span id="profilTel"></span></p>
+      <p>E’lonlar soni: <span id="profilCount"></span></p>
+    </div>
+  </div>
+
+  <!-- Modal (edit) -->
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <span class="close-modal" id="closeEdit">&times;</span>
+      <form id="editForm">
+        <h3>E’lonni tahrirlash</h3>
+        <label for="editYonalish">Yo‘nalish</label>
+        <input type="text" id="editYonalish" required />
+
+        <label for="editSana">Sana</label>
+        <input type="date" id="editSana" required />
+
+        <label for="editVaqt">Vaqt</label>
+        <input type="time" id="editVaqt" required />
+
+        <button type="submit">Saqlash</button>
+      </form>
+    </div>
+  </div>
+
   <script src="profile.js"></script>
 </body>
 </html>
