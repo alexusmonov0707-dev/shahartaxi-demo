@@ -359,7 +359,7 @@ function renderAdsList(){
     div.innerHTML = `
       <div><b>Yo'nalish:</b> ${escapeHtml(from)} → ${escapeHtml(to)}</div>
       <div><b>Narx:</b> ${escapeHtml(ad.price || 'Ko‘rsatilmagan')} so'm</div>
-      <div><b>Telefon:</b> ${escapeHtml(ad.phone || 'Noma\\'lum')}</div>
+      <div><b>Telefon:</b> ${escapeHtml(ad.phone || 'Noma\'lum')}</div>
       <div class="date-info">🕒 Joylangan: ${escapeHtml(created)} · Holat: ${escapeHtml(statusText)}</div>
       ${commentHTML}
       <div class="ad-actions">${actionsHTML}</div>
@@ -469,7 +469,7 @@ function saveInlineAdmin(type,id){
   const key = (String(type) === 'driver') ? 'driverAds' : 'passengerAds';
   const arr = getJSON(key) || [];
   const adIdx = arr.findIndex(a => String(a.id) === String(id));
-  if(adIdx === -1){ alert('E\\'lon topilmadi'); return; }
+  if(adIdx === -1){ alert("E'lon topilmadi"); return; }
   const safeId = arr[adIdx].id.replace(/[^a-zA-Z0-9_\-]/g,'_');
   const input = document.getElementById(`inlinePrice_${safeId}`);
   if(!input){ alert('Narx input topilmadi'); return; }
@@ -480,7 +480,7 @@ function saveInlineAdmin(type,id){
   setJSON(key, arr);
   localStorage.removeItem('tempInlineEdit');
   renderAdsList();
-  alert('E\\'lon yangilandi (inline).');
+  alert("E'lon yangilandi (inline).");
 }
 
 function cancelInlineAdmin(){
@@ -498,14 +498,14 @@ function editAd(id,type){
   const idx = arr.findIndex(a => String(a.id) === String(id));
   if(idx === -1) return;
   const ad = arr[idx];
-  if(ad.edited){ alert('❗ Ushbu e\\'lon avval tahrirlangan.'); return; }
+  if(ad.edited){ alert("❗ Ushbu e'lon avval tahrirlangan."); return; }
   const newPrice = prompt('Yangi narxni kiriting:', ad.price || '');
   if(newPrice === null) return;
   ad.price = newPrice.trim();
   ad.edited = true;
   setJSON(key, arr);
   renderAdsList();
-  alert('✏️ E\\'lon yangilandi.');
+  alert("✏️ E'lon yangilandi.");
 }
 
 /* ===========================
@@ -513,7 +513,7 @@ function editAd(id,type){
    =========================== */
 function deleteAd(id,type){
   try { id = decodeURIComponent(id); type = decodeURIComponent(type); } catch(e){}
-  if(!confirm('Haqiqatan o\\'chirilsinmi?')) return;
+  if(!confirm("Haqiqatan o'chirsinmi?")) return;
   const key = (String(type) === 'driver') ? 'driverAds' : 'passengerAds';
   let arr = getJSON(key) || [];
   arr = arr.filter(a => String(a.id) !== String(id));
@@ -526,7 +526,6 @@ function deleteAd(id,type){
    =========================== */
 function contactOwner(phone){
   if(!phone){ alert('Telefon raqam mavjud emas'); return; }
-  // simply show alert with phone; in mobile, `tel:` could be used
   alert(`Telefon: ${phone} — nusxa oling yoki qo'ng'iroq qiling`);
 }
 
@@ -546,11 +545,11 @@ function addAd(){
   const comment = $id('adComment') ? $id('adComment').value.trim() : '';
 
   if(!type || !fromRegion || !toRegion){
-    alert('Iltimos yo‘nalish ma\'lumotlarini to‘ldiring!');
+    alert("Iltimos yo'nalish ma'lumotlarini to'ldiring!");
     return;
   }
 
-  if(price && isNaN(Number(price))){ alert('Iltimos to\'g\'ri narx kiriting'); return; }
+  if(price && isNaN(Number(price))){ alert("Iltimos to'g'ri narx kiriting"); return; }
 
   const key = (type === 'driver') ? 'driverAds' : 'passengerAds';
   const ads = getJSON(key) || [];
@@ -570,7 +569,7 @@ function addAd(){
   ads.push(newAd);
   setJSON(key, ads);
   renderAdsList();
-  alert('✅ Eʼlon joylandi (Admin tasdiqlashi kutilmoqda).');
+  alert("✅ Eʼlon joylandi (Admin tasdiqlashi kutilmoqda).");
   clearAddForm();
 }
 
@@ -589,7 +588,7 @@ function addAdLegacyFromViloyatForm(ev){
   const vaqt = $id('vaqt') ? $id('vaqt').value.trim() : '';
   const tel = $id('telefon') ? $id('telefon').value.trim() : (cu.phone || '');
 
-  if(!vil || !sh || !yon || !sana || !vaqt || !tel){ alert('Iltimos barcha maydonlarni to\'ldiring!'); return; }
+  if(!vil || !sh || !yon || !sana || !vaqt || !tel){ alert("Iltimos barcha maydonlarni to'ldiring!"); return; }
 
   const key = 'passengerAds';
   const ads = getJSON(key) || [];
@@ -612,7 +611,7 @@ function addAdLegacyFromViloyatForm(ev){
   ads.push(newAd);
   setJSON(key, ads);
   renderAdsList();
-  alert('E\'lon joylandi (legacy form)');
+  alert("E'lon joylandi (legacy form)");
   const adForm = $id('adForm');
   if(adForm) adForm.reset();
 }
@@ -660,7 +659,9 @@ function openViewProfile(idOrPhone){
     else {
       vpAdsList.innerHTML = vpAds.map(a=>{
         const created = a.createdAt ? (parseAdDate(a.createdAt) ? parseAdDate(a.createdAt).toLocaleString() : a.createdAt) : '';
-        return `<div style="padding:6px;border-bottom:1px solid #eee;"><b>${a.type === 'driver'? 'Haydovchi' : 'Yo\\'lovchi'}</b> · ${escapeHtml(a.fromRegion||'')} → ${escapeHtml(a.toRegion||'')} · ${escapeHtml(a.price||'')} so'm<br><small class="small">${escapeHtml(created)}</small></div>`;
+        return `<div style="padding:6px;border-bottom:1px solid #eee;
+" + 
+""><b>${a.type === 'driver'? 'Haydovchi' : 'Yo\\'lovchi'}</b> · ${escapeHtml(a.fromRegion||'')} → ${escapeHtml(a.toRegion||'')} · ${escapeHtml(a.price||'')} so'm<br><small class="small">${escapeHtml(created)}</small></div>`;
       }).join('');
     }
   }
@@ -835,7 +836,7 @@ function loginMock(){
     ];
     const passengerAds = [
       { id: 'pass_1', phone: users[2].phone, ownerId: users[2].id, ownerName: users[2].name, type:'passenger', fromRegion:'Samarqand', fromDistrict:'Urgut', toRegion:'Toshkent', toDistrict:'Bektemir', price:'30000', comment:'Iltimos tez', status:'rejected', createdAt: new Date(now.getTime()-86400000*1).toLocaleString() },
-      { id: 'pass_2', phone: users[0].phone, ownerId: users[0].id, ownerName: users[0].name, type:'passenger', fromRegion:'Namangan', fromDistrict:'To\'raqo\'rg\'on', toRegion:'Farg\'ona', toDistrict:'Qo\'qon', price:'20000', comment:'Yuk ham olaman', status:'pending', createdAt: new Date(now.getTime()-86400000*4).toLocaleString() }
+      { id: 'pass_2', phone: users[0].phone, ownerId: users[0].id, ownerName: users[0].name, type:'passenger', fromRegion:'Namangan', fromDistrict:'To\\'raqo\\'rg\'on', toRegion:'Farg\'ona', toDistrict:'Qo\\'qon', price:'20000', comment:'Yuk ham olaman', status:'pending', createdAt: new Date(now.getTime()-86400000*4).toLocaleString() }
     ];
     setJSON('driverAds', driverAds);
     setJSON('passengerAds', passengerAds);
