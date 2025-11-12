@@ -542,15 +542,14 @@ function openEditProfile(){
 }
 
 function closeEditProfile(){ document.getElementById('editProfileModal').style.display = 'none'; }
-
 function saveProfileEdit(){
   const name = document.getElementById('editFullName').value.trim();
   const phone = document.getElementById('editPhoneInput').value.trim();
 
-  // ✅ Telefon raqam formatini tekshirish (faqat raqamlar)
-  const phoneRegex = /^998\d{9}$/; // 998 bilan boshlanib, jami 12 ta raqam
+  // ✅ Faqat +998 bilan boshlanadigan 13 belgili raqamga ruxsat
+  const phoneRegex = /^\+998\d{9}$/;
   if(!phoneRegex.test(phone)){
-    alert("Telefon raqamni to‘g‘ri kiriting! (Masalan: 998901234567)");
+    alert("Telefon raqamni to‘g‘ri kiriting! (Masalan: +998901234567)");
     return;
   }
 
@@ -563,7 +562,8 @@ function saveProfileEdit(){
 
     let uidx = users.findIndex(u => String(u.id) === String(cur.id) || String(u.phone) === String(cur.phone));
     if(uidx > -1){
-      users[uidx].name = name; users[uidx].phone = phone;
+      users[uidx].name = name;
+      users[uidx].phone = phone;
     } else {
       const newid = cur.id || `u_${Date.now()}`;
       users.push({ id: newid, phone, name, active:true });
@@ -579,7 +579,6 @@ function saveProfileEdit(){
   }
   closeEditProfile();
 }
-
 
 /* ---------- View own ads ---------- */
 function viewOwnAds(){
