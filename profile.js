@@ -1,3 +1,27 @@
+// ===================================================
+// 🔥 Firebase sozlamalari (browser uchun to‘g‘rilangan versiya)
+// ===================================================
+
+// Firebase kutubxonalari HTML faylda quyidagicha ulanadi:
+// <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+// <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+// <script src="profile.js"></script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.firebasestorage.app",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
+
+// 🚀 Firebase ishga tushirish
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+
 /*
   To'liq ishlaydigan profile.js (ShaharTaxi)
   - Saqlovchi kalitlar: driverAds, passengerAds, currentUser, users, userNotifications, profileRatings
