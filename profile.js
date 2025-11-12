@@ -546,12 +546,21 @@ function closeEditProfile(){ document.getElementById('editProfileModal').style.d
 function saveProfileEdit(){
   const name = document.getElementById('editFullName').value.trim();
   const phone = document.getElementById('editPhoneInput').value.trim();
-  if(!phone){ alert('Telefon raqam kiriting'); return; }
+
+  // ✅ Telefon raqam formatini tekshirish (faqat raqamlar)
+  const phoneRegex = /^998\d{9}$/; // 998 bilan boshlanib, jami 12 ta raqam
+  if(!phoneRegex.test(phone)){
+    alert("Telefon raqamni to‘g‘ri kiriting! (Masalan: 998901234567)");
+    return;
+  }
+
   let users = getJSON('users') || [];
   const cur = getCurrentUser();
   if(cur){
-    cur.name = name; cur.phone = phone;
+    cur.name = name;
+    cur.phone = phone;
     localStorage.setItem('currentUser', JSON.stringify(cur));
+
     let uidx = users.findIndex(u => String(u.id) === String(cur.id) || String(u.phone) === String(cur.phone));
     if(uidx > -1){
       users[uidx].name = name; users[uidx].phone = phone;
@@ -570,6 +579,7 @@ function saveProfileEdit(){
   }
   closeEditProfile();
 }
+
 
 /* ---------- View own ads ---------- */
 function viewOwnAds(){
