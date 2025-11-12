@@ -1,7 +1,11 @@
-// ===============================
-//  FIREBASE INITIALIZATION
-// ===============================
+/* =========================================================
+      SHAHARTAXI — PROFILE.JS (FIREBASE ONLY VERSION)
+      Qism 1/3 — Firebase Init, Auth, User Profile
+   ========================================================= */
 
+// -----------------------------
+// Firebase config
+// -----------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -12,147 +16,169 @@ const firebaseConfig = {
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-// Firebase ishga tushadi
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-// ===============================
-//  FOYDALANUVCHINI TEKSHIRISH
-// ===============================
+let currentUser = null; // Firebase foydalanuvchi
+let userData = null;    // DB dagi user ma’lumoti
 
-let currentUser = null;
-
-// Auth holatini kuzatamiz
+// =========================================================
+//                AUTH STATE LISTENER
+// =========================================================
 auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    // User ma'lumotini yuklash
-    currentUser = user;
-
-    // Bazada mavjud bo'lmasa yaratib qo'yamiz
-    await db.ref("users/" + user.uid).update({
-      phone: user.phoneNumber || "",
-      name: user.phoneNumber || ""
-    });
-
-    console.log("Kirish muvaffaqiyatli:", user.phoneNumber);
-    initProfileAfterLogin();
-  } else {
-    console.log("Foydalanuvchi tizimga kirmagan");
+  if (!user) {
+    console.warn("❗ User tizimga kirmagan");
+    return;
   }
-});
-// ===============================
-//  PROFIL MA'LUMOTLARINI YUKLASH
-// ===============================
 
-async function initProfileAfterLogin() {
-  if (!currentUser) return;
+  currentUser = user;
 
-  const uid = currentUser.uid;
+  // User bazada bor yoki yo‘qligini tekshiramiz
+  await db.ref("users/" + user.uid).update({
+    phone: user.phoneNumber,
+    name: user.phoneNumber,  // birinchi marta kirganda ism – telefon bo'ladi
+  });
 
-  // Foydalanuvchi ma'lumotlari
-  const userSnap = await db.ref("users/" + uid).once("value");
-  const userData = userSnap.val() || {};
+  // User ma’lumotlarini yuklaymiz
+  const snap = await db.ref("users/" + user.uid).once("value");
+  userData = snap.val() || {};
 
-  // Headerga chiqaramiz
   updateProfileHeader(userData);
 
-  // Foydalanuvchi e’lonlarini yuklaymiz (keyingi qismda yozaman)
-  loadUserAds(uid);
-}
+  // E’lonlarni yuklash (2-qismda to‘liq kodini beraman)
+  loadUserAds(user.uid);
+});
 
-// ===============================
-//  PROFILE HEADER YANGILASH
-// ===============================
-
+// =========================================================
+//          PROFIL HEADERNI YANGILASH
+// =========================================================
 function updateProfileHeader(user) {
   document.getElementById("profileName").textContent = user.name || "Foydalanuvchi";
   document.getElementById("profilePhone").textContent = user.phone || "—";
 
-  // Baholar (keyingi qismlarda real Firebase bilan o‘zgaradi)
-  document.getElementById("profileRatingBig").textContent = user.ratingAvg || "—";
-  document.getElementById("profileRatingCount").textContent =
-    user.ratingCount ? `${user.ratingCount} ta baho` : "Hozircha baholar yo‘q";
-
-  // Tahrirlash tugmasi faqat o'ziga ko'rinadi
-  document.getElementById("editProfileBtn").style.display = "inline-block";
+  if (user.ratingAvg) {
+    document.getElementById("profileRatingBig").textContent = user.ratingAvg;
+    document.getElementById("profileRatingCount").textContent =
+      `${user.ratingCount || 0} ta baho`;
+  } else {
+    document.getElementById("profileRatingBig").textContent = "—";
+    document.getElementById("profileRatingCount").textContent = "Hozircha baholar yo‘q";
+  }
 }
 
-// ===============================
-//  PROFILNI TAHRIRLASH
-// ===============================
-
+// =========================================================
+//               PROFIL TAHRIR MODALI
+// =========================================================
 function openEditProfile() {
   if (!currentUser) return;
 
-  db.ref("users/" + currentUser.uid)
-    .once("value")
-    .then((snap) => {
-      const data = snap.val() || {};
+  document.getElementById("editFullName").value = userData.name || "";
+  document.getElementById("editPhoneInput").value = userData.phone || "";
 
-      document.getElementById("editFullName").value = data.name || "";
-      document.getElementById("editPhoneInput").value = data.phone || "";
-      document.getElementById("editProfileModal").style.display = "flex";
-    });
+  document.getElementById("editProfileModal").style.display = "flex";
 }
 
 function closeEditProfile() {
   document.getElementById("editProfileModal").style.display = "none";
 }
 
+// =========================================================
+//              PROFILNI SAQLASH (+998 validation)
+// =========================================================
 async function saveProfileEdit() {
-  const name = document.getElementById("editFullName").value.trim();
+  const fullName = document.getElementById("editFullName").value.trim();
   const phone = document.getElementById("editPhoneInput").value.trim();
 
-  // Telefonni faqat +998 bilan
   const phoneRegex = /^\+998\d{9}$/;
   if (!phoneRegex.test(phone)) {
-    alert("Telefon raqamni to'g'ri kiriting (+998901234567)");
+    alert("Telefon raqamni +998 bilan to‘g‘ri kiriting!");
     return;
   }
 
   await db.ref("users/" + currentUser.uid).update({
-    name: name,
+    name: fullName,
     phone: phone
   });
 
-  alert("Profil saqlandi!");
+  userData.name = fullName;
+  userData.phone = phone;
 
-  updateProfileHeader({ name, phone });
-
+  updateProfileHeader(userData);
   closeEditProfile();
-}
-// ===============================
-//  YANGI E'LON QO‘SHISH
-// ===============================
 
+  alert("✔ Profil yangilandi!");
+}
+
+// =========================================================
+//                 REGIONLARNI YUKLASH
+// =========================================================
+const regions = {
+  "Toshkent": ["Bektemir","Chilonzor","Mirzo Ulug'bek","Mirobod"],
+  "Samarqand": ["Bulungur","Ishtixon","Urgut","Kattaqo'rg'on"],
+  "Namangan": ["Pop","Chust","To'raqo'rg'on"],
+  "Andijon": ["Asaka","Andijon sh.","Marhamat"],
+  "Farg'ona": ["Qo'qon","Qo'rg'ontepa","Beshariq"],
+  "Buxoro": ["Buxoro sh.","G‘ijduvon","Jondor"],
+  "Xorazm": ["Urgench","Xiva","Shovot"],
+  "Qashqadaryo": ["Qarshi","G‘uzor","Kitob"]
+};
+
+function loadRegionsToSelects() {
+  ["fromRegion","toRegion","filterFromRegion","filterToRegion"].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = `<option value="">Viloyatni tanlang</option>`;
+    Object.keys(regions).forEach(r => {
+      sel.innerHTML += `<option value="${r}">${r}</option>`;
+    });
+  });
+}
+
+function updateDistricts(prefix) {
+  const region = document.getElementById(prefix + "Region").value;
+  const distSel = document.getElementById(prefix + "District");
+  distSel.innerHTML = `<option value="">Tumanni tanlang</option>`;
+  if (region) {
+    regions[region].forEach(d => {
+      distSel.innerHTML += `<option value="${d}">${d}</option>`;
+    });
+  }
+}
+/* =========================================================
+      SHAHARTAXI — PROFILE.JS (FIREBASE ONLY VERSION)
+      Qism 2/3 — Ads: add, realtime, render, edit, delete
+   ========================================================= */
+
+
+/* =========================================================
+      1) Yangi e’lon qo‘shish (Firebase Realtime DB)
+   ========================================================= */
 async function addAd() {
   if (!currentUser) {
-    alert("Avval tizimga kiring!");
+    alert("Iltimos tizimga kiring!");
     return;
   }
 
-  const uid = currentUser.uid;
-
   const type = document.getElementById("adType").value;
-  const fromRegion = document.getElementById("fromRegion").value.trim();
-  const fromDistrict = document.getElementById("fromDistrict").value.trim();
-  const toRegion = document.getElementById("toRegion").value.trim();
-  const toDistrict = document.getElementById("toDistrict").value.trim();
+  const fromRegion = document.getElementById("fromRegion").value;
+  const fromDistrict = document.getElementById("fromDistrict").value;
+  const toRegion = document.getElementById("toRegion").value;
+  const toDistrict = document.getElementById("toDistrict").value;
   const price = document.getElementById("price").value.trim();
   const comment = document.getElementById("adComment").value.trim();
 
   if (!type || !fromRegion || !toRegion) {
-    alert("Iltimos barcha asosiy maydonlarni to‘ldiring!");
+    alert("Iltimos yo‘nalish maydonlarini to‘ldiring!");
     return;
   }
 
-  // Unique ID
   const adId = Date.now().toString();
 
   const adData = {
     id: adId,
-    ownerUid: uid,
+    ownerUid: currentUser.uid,
     ownerPhone: currentUser.phoneNumber,
     type,
     fromRegion,
@@ -165,385 +191,169 @@ async function addAd() {
     createdAt: new Date().toISOString()
   };
 
-  // 1) Foydalanuvchi bo‘limiga yozamiz
-  await db.ref(`ads/${uid}/${adId}`).set(adData);
+  // Foydalanuvchi bo‘limiga yozamiz
+  await db.ref(`ads/${currentUser.uid}/${adId}`).set(adData);
 
-  // 2) Admin tasdiqlashi uchun alohida joyga ham yozamiz
+  // Admin tasdiqlashi uchun navbatga qo‘yamiz
   await db.ref(`pendingAds/${adId}`).set(adData);
 
   clearAddForm();
-  alert("✅ E’lon yuborildi. Admin tasdiqlashini kuting!");
+  alert("✔ E’lon yuborildi. Admin tasdiqlashini kuting.");
 }
-// ===============================
-//   FOYDALANUVCHI E'LONLARINI YUKLASH (REALTIME)
-// ===============================
 
+
+/* =========================================================
+      2) Realtime user ads listener (Admin status o‘zgarishi)
+   ========================================================= */
 function loadUserAds(uid) {
-  const adsRef = db.ref("ads/" + uid);
+  const ref = db.ref("ads/" + uid);
 
-  // Real-time listener (admin status o'zgartirsa – darhol ko‘rinadi)
-  adsRef.on("value", (snapshot) => {
-    const ads = snapshot.val() || {};
-    const list = Object.values(ads);
-    renderAdsList(list);
+  ref.on("value", (snap) => {
+    const ads = snap.val() ? Object.values(snap.val()) : [];
+    renderAdsList(ads);
   });
 }
 
-// ===============================
-//   E'LONLARNI RENDER QILISH
-// ===============================
 
+/* =========================================================
+      3) E’lonlar ro‘yxatini chizish
+   ========================================================= */
 function renderAdsList(ads) {
-  const container = document.getElementById("myAds");
-  container.innerHTML = "";
+  const box = document.getElementById("myAds");
+  box.innerHTML = "";
 
   if (!ads || ads.length === 0) {
-    container.innerHTML = "<p>Hozircha e’lonlar yo‘q.</p>";
+    box.innerHTML = "<p>Hozircha e’lonlar yo‘q.</p>";
     return;
   }
 
-  // Sort: eng yangi e’lon tepada
+  // Eng yangi e’lonlar tepada
   ads.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  ads.forEach((ad) => {
+  ads.forEach(ad => {
     const div = document.createElement("div");
-    div.className = "ad-box " + ad.status;
+    div.className = `ad-box ${ad.status}`;
 
     const from = `${ad.fromRegion || ""} ${ad.fromDistrict || ""}`;
     const to = `${ad.toRegion || ""} ${ad.toDistrict || ""}`;
-    const created = new Date(ad.createdAt).toLocaleString();
+
     const statusText =
-      ad.status === "approved"
-        ? "✅ Tasdiqlangan"
-        : ad.status === "rejected"
-        ? "❌ Rad etilgan"
-        : "⏳ Kutilmoqda";
+      ad.status === "approved" ? "✅ Tasdiqlangan" :
+      ad.status === "rejected" ? "❌ Rad etilgan" :
+      "⏳ Kutilmoqda";
 
     div.innerHTML = `
-      <div><b>Yo'nalish:</b> ${from} → ${to}</div>
-      <div><b>Narx:</b> ${ad.price || "—"} so'm</div>
+      <div><b>Yo‘nalish:</b> ${from} → ${to}</div>
+      <div><b>Narx:</b> ${ad.price || "—"} so‘m</div>
       <div><b>Telefon:</b> ${ad.ownerPhone}</div>
-      <div class="date-info">🕒 Joylangan: ${created} · Holat: ${statusText}</div>
-      ${
-        ad.comment
-          ? `<div class="comment-box"><b>Izoh:</b> ${escapeHtml(ad.comment)}</div>`
-          : ""
-      }
-
+      <div class="date-info">🕒 ${new Date(ad.createdAt).toLocaleString()} · ${statusText}</div>
+      ${ad.comment ? `<div class="comment-box"><b>Izoh:</b> ${escapeHtml(ad.comment)}</div>` : ""}
       <div class="actions">
-        ${
-          ad.status === "approved"
+        ${ ad.status === "approved"
             ? `<button disabled style="background:#ccc">Tahrirlab bo‘lmaydi</button>`
-            : `<button onclick="startEditAd('${ad.id}')">✏️ Tahrirlash</button>`
+            : `<button onclick="openEditAd('${ad.id}')">✏️ Tahrirlash</button>`
         }
-        <button onclick="deleteAd('${ad.id}')">🗑️ O‘chirish</button>
+        <button onclick="deleteAd('${ad.id}')">🗑 O‘chirish</button>
       </div>
     `;
 
-    container.appendChild(div);
+    box.appendChild(div);
   });
 }
-// ===================================
-//     E'LONNI TAHRIRLASH
-// ===================================
 
-let EDITING_AD_ID = null;
 
-function startEditAd(adId) {
-  EDITING_AD_ID = adId;
+/* =========================================================
+      4) E’lonni o‘chirish
+   ========================================================= */
+async function deleteAd(adId) {
+  if (!confirm("E’lonni o‘chirilsinmi?")) return;
 
-  db.ref(`ads/${currentUser.uid}/${adId}`)
-    .once("value")
-    .then((snap) => {
-      const ad = snap.val();
-      if (!ad) return;
+  await db.ref(`ads/${currentUser.uid}/${adId}`).remove();
+  await db.ref(`pendingAds/${adId}`).remove();
 
-      // Eğer e'lon tasdiqlangan bo'lsa, tahrirlab bo'lmaydi
-      if (ad.status === "approved") {
-        alert("Tasdiqlangan e’londagi ma’lumotlarni o‘zgartirib bo‘lmaydi!");
-        return;
-      }
+  alert("🗑 E’lon o‘chirildi!");
+}
 
-      // Modalga ma'lumotlarni joylashtiramiz
-      document.getElementById("editFromRegion").value = ad.fromRegion;
-      document.getElementById("editFromDistrict").value = ad.fromDistrict;
-      document.getElementById("editToRegion").value = ad.toRegion;
-      document.getElementById("editToDistrict").value = ad.toDistrict;
-      document.getElementById("editPrice").value = ad.price;
-      document.getElementById("editComment").value = ad.comment || "";
 
-      document.getElementById("editAdModal").style.display = "flex";
-    });
+/* =========================================================
+      5) E’lonni tahrirlash modalini ochish
+   ========================================================= */
+async function openEditAd(adId) {
+  const snap = await db.ref(`ads/${currentUser.uid}/${adId}`).once("value");
+  const ad = snap.val();
+
+  if (!ad) return;
+
+  if (ad.status === "approved") {
+    alert("Tasdiqlangan e’londagi ma’lumotni o‘zgartirish mumkin emas!");
+    return;
+  }
+
+  document.getElementById("editFromRegion").value = ad.fromRegion;
+  document.getElementById("editFromDistrict").value = ad.fromDistrict;
+  document.getElementById("editToRegion").value = ad.toRegion;
+  document.getElementById("editToDistrict").value = ad.toDistrict;
+  document.getElementById("editPrice").value = ad.price;
+  document.getElementById("editComment").value = ad.comment || "";
+
+  window._editingAdId = adId;
+  document.getElementById("editAdModal").style.display = "flex";
 }
 
 function closeEditAd() {
   document.getElementById("editAdModal").style.display = "none";
-  EDITING_AD_ID = null;
+  window._editingAdId = null;
 }
 
-async function saveEditedAd() {
-  if (!EDITING_AD_ID) return;
 
-  const newData = {
-    fromRegion: document.getElementById("editFromRegion").value.trim(),
-    fromDistrict: document.getElementById("editFromDistrict").value.trim(),
-    toRegion: document.getElementById("editToRegion").value.trim(),
-    toDistrict: document.getElementById("editToDistrict").value.trim(),
-    price: document.getElementById("editPrice").value.trim(),
-    comment: document.getElementById("editComment").value.trim(),
-    status: "pending", // tahrirdan so‘ng yana admin tekshiradi
+/* =========================================================
+      6) E’lon tahririni saqlash
+   ========================================================= */
+async function saveEditedAd() {
+  const adId = window._editingAdId;
+  if (!adId) return;
+
+  const updated = {
+    fromRegion: document.getElementById("editFromRegion").value,
+    fromDistrict: document.getElementById("editFromDistrict").value,
+    toRegion: document.getElementById("editToRegion").value,
+    toDistrict: document.getElementById("editToDistrict").value,
+    price: document.getElementById("editPrice").value,
+    comment: document.getElementById("editComment").value,
+    status: "pending", // qayta ko‘rib chiqish uchun
     editedAt: new Date().toISOString()
   };
 
-  await db.ref(`ads/${currentUser.uid}/${EDITING_AD_ID}`).update(newData);
-
-  // Admin tekshirishi uchun update yuboramiz
-  await db.ref(`pendingAds/${EDITING_AD_ID}`).update(newData);
+  await db.ref(`ads/${currentUser.uid}/${adId}`).update(updated);
+  await db.ref(`pendingAds/${adId}`).update(updated);
 
   closeEditAd();
-  alert("✏️ E’lon yangilandi! Admin tasdiqlashini kuting.");
-}
-// ===================================
-//     PROFILGA BAHO QO'YISH
-// ===================================
-
-async function submitProfileRating(targetUid) {
-  if (!currentUser) {
-    alert("Baholash uchun tizimga kiring!");
-    return;
-  }
-
-  const raterUid = currentUser.uid;
-
-  const stars = Number(document.getElementById("vpRatingStars").value);
-  const text = document.getElementById("vpRatingText").value.trim();
-  const date = new Date().toISOString();
-
-  if (raterUid === targetUid) {
-    alert("O'zingizga baho qo‘yolmaysiz!");
-    return;
-  }
-
-  // Bitta user ikkinchi userni faqat 1 marta baholashi mumkin
-  const existing = await db
-    .ref(`ratings/${targetUid}/${raterUid}`)
-    .once("value");
-
-  if (existing.exists()) {
-    alert("Siz bu foydalanuvchini allaqachon baholagansiz.");
-    return;
-  }
-
-  // Rating yozamiz
-  await db.ref(`ratings/${targetUid}/${raterUid}`).set({
-    stars,
-    text,
-    date,
-    raterUid
-  });
-
-  alert("⭐ Baho yuborildi!");
-
-  // Profilni qayta yuklash
-  openViewProfileForRealtime(targetUid);
-}
-// ===================================
-//     PROFIL BAHOLARINI O'QISH
-// ===================================
-
-function listenUserRatings(uid, callback) {
-  const ref = db.ref("ratings/" + uid);
-  ref.on("value", (snap) => {
-    const ratings = snap.val() || {};
-    const list = Object.values(ratings);
-
-    // O'rtacha baho
-    let avg = 0;
-    if (list.length > 0) {
-      avg =
-        list.reduce((sum, r) => sum + Number(r.stars || 0), 0) / list.length;
-      avg = avg.toFixed(1);
-    }
-
-    callback({
-      ratings: list,
-      avg: avg,
-      count: list.length
-    });
-  });
-}
-// ===================================
-//     PROFILNI KO'RISH (REALTIME)
-// ===================================
-
-function openViewProfile(uid) {
-  openViewProfileForRealtime(uid);
-}
-
-async function openViewProfileForRealtime(uid) {
-  if (!uid) return;
-
-  document.getElementById("viewProfileModal").style.display = "flex";
-
-  // 1) Foydalanuvchi ma'lumotlari
-  const userSnap = await db.ref("users/" + uid).once("value");
-  const user = userSnap.val() || {};
-
-  document.getElementById("vpName").textContent = user.name || "Foydalanuvchi";
-  document.getElementById("vpPhone").textContent = user.phone || "";
-
-  // 2) Realtime Rating Listener
-  listenUserRatings(uid, (data) => {
-    document.getElementById("vpRatingSummary").innerHTML =
-      `<strong>${data.avg || "—"} / 5</strong> — ${data.count} ta baho`;
-  });
-
-  // 3) Baholash bo‘limi (faqat boshqalar uchun)
-  if (!currentUser || currentUser.uid === uid) {
-    document.getElementById("vpRateSection").innerHTML =
-      `<div class="small">Siz o'zingizni baholay olmaysiz.</div>`;
-  } else {
-    document.getElementById("vpRateSection").innerHTML = `
-      <div style="margin-top:8px;">
-        <label><b>⭐ Baho tanlang</b></label>
-        <div style="margin-top:6px;">
-          <select id="vpRatingStars">
-            <option value="5">5</option>
-            <option value="4">4</option>
-            <option value="3">3</option>
-            <option value="2">2</option>
-            <option value="1">1</option>
-          </select>
-        </div>
-        <textarea id="vpRatingText" placeholder="Ixtiyoriy izoh..." rows="2"></textarea>
-        <button style="margin-top:8px;" onclick="submitProfileRating('${uid}')">Yuborish</button>
-      </div>
-    `;
-  }
-
-  // 4) Ushbu userning e’lonlari (keyingi qismda yangilanadi)
-  loadOtherUserAds(uid);
-}
-// ===================================
-//    BOSHQA FOYDALANUVCHI E'LONLARI
-// ===================================
-
-function loadOtherUserAds(uid) {
-  db.ref("ads/" + uid).once("value").then((snap) => {
-    const ads = Object.values(snap.val() || {});
-
-    const box = document.getElementById("vpAdsList");
-
-    if (!ads.length) {
-      box.innerHTML = "<p class='small'>E’lonlari yo‘q.</p>";
-      return;
-    }
-
-    box.innerHTML = ads
-      .map((a) => {
-        return `
-        <div style="padding:6px;border-bottom:1px solid #eee;">
-          <b>${a.type === "driver" ? "Haydovchi" : "Yo‘lovchi"}</b> 
-          · ${a.fromRegion} → ${a.toRegion}  
-          · ${a.price} so'm
-          <br>
-          <small>${new Date(a.createdAt).toLocaleString()}</small>
-        </div>
-        `;
-      })
-      .join("");
-  });
-}
-driverAds/
-    adId1/
-       ownerId: ...
-       phone: ...
-       ...
-passengerAds/
-    adId2/
-       ownerId: ...
-       phone: ...
-       ...
-function listenAllAdsRealtime() {
-  firebase.database().ref("driverAds").on("value", snapshot => {
-    window._driverAds = snapshot.val() ? Object.values(snapshot.val()) : [];
-    renderAdsList();
-  });
-
-  firebase.database().ref("passengerAds").on("value", snapshot => {
-    window._passengerAds = snapshot.val() ? Object.values(snapshot.val()) : [];
-    renderAdsList();
-  });
-}
-function addAd(){
-  const cu = getCurrentUser();
-  if(!cu){ alert('Avval tizimga kiring!'); return; }
-
-  const type = document.getElementById('adType').value;
-  const fromRegion = document.getElementById('fromRegion').value.trim();
-  const fromDistrict = document.getElementById('fromDistrict').value.trim();
-  const toRegion = document.getElementById('toRegion').value.trim();
-  const toDistrict = document.getElementById('toDistrict').value.trim();
-  const price = document.getElementById('price').value.trim();
-  const comment = document.getElementById('adComment').value.trim();
-
-  if(!type || !fromRegion || !toRegion){
-    alert('Iltimos yo‘nalish ma\'lumotlarini to‘ldiring!');
-    return;
-  }
-
-  const id = `${type}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
-
-  const newAd = {
-    id,
-    ownerId: cu.id,
-    phone: cu.phone,
-    type,
-    fromRegion, fromDistrict,
-    toRegion, toDistrict,
-    price,
-    comment,
-    status: 'pending',
-    createdAt: new Date().toLocaleString()
-  };
-
-  firebase.database().ref(`${type}Ads/${id}`).set(newAd)
-    .then(() => {
-      alert("✅ E’lon Firebase-ga saqlandi (admin tasdiqlasin)");
-      clearAddForm();
-    });
-}
-function editAd(id,type){
-  const newPrice = prompt("Yangi narx:", "");
-  if(!newPrice) return;
-
-  firebase.database().ref(`${type}Ads/${id}`).update({
-    price: newPrice,
-    edited: true
-  }).then(() => {
-    alert("✏️ E’lon yangilandi");
-  });
-}
-function deleteAd(id,type){
-  if(!confirm("Haqiqatan o‘chirilsinmi?")) return;
-
-  firebase.database().ref(`${type}Ads/${id}`).remove()
-    .then(() => {
-      alert("🗑️ O‘chirildi");
-    });
+  alert("✏️ E’lon tahrirlandi. Admin tasdiqlashi kutilyapti.");
 }
 
 
+/* =========================================================
+      7) Formani tozalash
+   ========================================================= */
+function clearAddForm() {
+  document.getElementById("adType").value = "";
+  document.getElementById("fromRegion").value = "";
+  document.getElementById("fromDistrict").innerHTML = "<option value=''>Tumanni tanlang</option>";
+  document.getElementById("toRegion").value = "";
+  document.getElementById("toDistrict").innerHTML = "<option value=''>Tumanni tanlang</option>";
+  document.getElementById("price").value = "";
+  document.getElementById("adComment").value = "";
+}
+/* =========================================================
+      SHAHARTAXI — PROFILE.JS — QISM 3/3
+      Profil ko‘rish, baholash, regionlar, onLoad
+   ========================================================= */
 
-/*
-  To'liq ishlaydigan profile.js (ShaharTaxi)
-  - Saqlovchi kalitlar: driverAds, passengerAds, currentUser, users, userNotifications, profileRatings
-  - View other user's profile: "Profilni ko'rish" (har bir e'lon qatori uchun qo'shing)
-  - Rating: faqat boshqa foydalanuvchilar baholaydi; takroriy baho qoldirib bo'lmaydi
-  - Regions: ichida objects (agar sizning regions.js bo'lsa uni o'zgartirish shart emas)
-*/
 
-/* ---------- REGIONS DATA ---------- */
+/* =========================================================
+      1) Region-selectlarni to‘ldirish
+   ========================================================= */
+
 const regions = {
   "Toshkent": ["Bektemir","Chilonzor","Mirzo Ulug'bek","Mirobod"],
   "Samarqand": ["Bulungur","Ishtixon","Urgut","Kattaqo'rg'on"],
@@ -555,685 +365,213 @@ const regions = {
   "Qashqadaryo": ["Qarshi","G'uzor","Kitob"]
 };
 
-/* ---------- Helpers: storage wrappers ---------- */
-function getJSON(key){ try{ return JSON.parse(localStorage.getItem(key)) || []; } catch(e){ return []; } }
-function setJSON(key,val){ localStorage.setItem(key, JSON.stringify(val)); }
-
-/* ---------- Current user detection ---------- */
-function getCurrentUser(){
-  const cu = JSON.parse(localStorage.getItem('currentUser') || 'null');
-  if(cu && cu.phone) return cu;
-  const users = getJSON('users') || [];
-  const active = users.find(u=>u.active) || null;
-  if(active) return active;
-  return null;
-}
-
-/* Test helper: create a mock login user and sample ads if none exist */
-function loginMock(){
-  let users = getJSON('users');
-  if(users.length === 0){
-    users = [
-      { id: 'u1', phone: '998901112233', name: 'Ali', active: true },
-      { id: 'u2', phone: '998909998877', name: 'Vali', active: false },
-      { id: 'u3', phone: '998971234567', name: 'Dilor', active: false }
-    ];
-    setJSON('users', users);
-  }
-  const currentUser = users[0];
-  localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-  if(getJSON('driverAds').length === 0 && getJSON('passengerAds').length === 0){
-    const now = new Date();
-    const driverAds = [
-      { id: 'driver_1', phone: users[0].phone, ownerId: users[0].id, type:'driver', fromRegion:'Toshkent', fromDistrict:'Chilonzor', toRegion:'Samarqand', toDistrict:'Ishtixon', price:'25000', comment:'Haydovchi 24/7', status:'approved', createdAt: new Date(now.getTime()-86400000*2).toLocaleString() },
-      { id: 'driver_2', phone: users[1].phone, ownerId: users[1].id, type:'driver', fromRegion:'Toshkent', fromDistrict:'Mirzo Ulug\'bek', toRegion:'Namangan', toDistrict:'Pop', price:'80000', comment:'Katta yukga bo\'sh joy', status:'pending', createdAt: new Date(now.getTime()-86400000*10).toLocaleString() }
-    ];
-    const passengerAds = [
-      { id: 'pass_1', phone: users[2].phone, ownerId: users[2].id, type:'passenger', fromRegion:'Samarqand', fromDistrict:'Urgut', toRegion:'Toshkent', toDistrict:'Bektemir', price:'30000', comment:'Iltimos tez', status:'rejected', createdAt: new Date(now.getTime()-86400000*1).toLocaleString() },
-      { id: 'pass_2', phone: users[0].phone, ownerId: users[0].id, type:'passenger', fromRegion:'Namangan', fromDistrict:'To\'raqo\'rg\'on', toRegion:'Farg\'ona', toDistrict:'Qo\'qon', price:'20000', comment:'Yuk ham olaman', status:'pending', createdAt: new Date(now.getTime()-86400000*4).toLocaleString() }
-    ];
-    setJSON('driverAds', driverAds);
-    setJSON('passengerAds', passengerAds);
-  }
-}
-
-/* ---------- Utility: parse date safely ---------- */
-function parseAdDate(dateStr){
-  if(!dateStr) return null;
-  const d = new Date(dateStr);
-  if(!isNaN(d)) return d;
-  const m = String(dateStr).match(/^(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?$/);
-  if(m){
-    const [_,day,mon,yr,h,mn] = m;
-    return new Date(+yr, +mon-1, +day, +(h||0), +(mn||0));
-  }
-  return null;
-}
-
-/* ---------- Ensure comments & ownerId exist on old ads ---------- */
-function normalizeOldAds(){
-  ['driverAds','passengerAds'].forEach(key=>{
-    const ads = getJSON(key);
-    let changed=false;
-    ads.forEach(a=>{
-      if(!('comment' in a)){ a.comment = ''; changed=true; }
-      if(!a.ownerId && a.phone){
-        const users = getJSON('users') || [];
-        const u = users.find(x=>String(x.phone)===String(a.phone));
-        if(u){ a.ownerId = u.id; changed=true; }
-      }
-      if(!a.createdAt){
-        a.createdAt = new Date().toLocaleString();
-        changed=true;
-      }
-    });
-    if(changed) setJSON(key, ads);
-  });
-}
-/* ---------- RENDER PROFILE HEADER ---------- */
-function renderProfileHeader(profileUser){
-  document.getElementById('profileName').textContent = profileUser.name || 'Foydalanuvchi';
-  document.getElementById('profilePhone').textContent = profileUser.phone || '—';
-
-  const ratings = getRatingsForProfile(profileUser.id || profileUser.phone);
-  const avg = computeAverage(ratings);
-  document.getElementById('profileRatingBig').textContent = avg>0 ? `${avg} / 5` : '—';
-  document.getElementById('profileRatingCount').textContent = ratings.length ? `${ratings.length} ta baho` : 'Hozircha baholar yo‘q';
-
-  const cu = getCurrentUser();
-  const editBtn = document.getElementById('editProfileBtn');
-  if(cu && (String(cu.id) === String(profileUser.id) || String(cu.phone) === String(profileUser.phone))){
-    editBtn.style.display = 'inline-block';
-  } else {
-    editBtn.style.display = 'none';
-  }
-}
-
-/* ---------- RENDER ADS LIST ---------- */
-function renderAdsList(){
-  normalizeOldAds();
-  const cu = getCurrentUser();
-  const viewingProfile = window.viewingProfile || (cu? (cu.id||cu.phone) : null);
-
-  const q = (document.getElementById('searchAdInput').value || '').toLowerCase().trim();
-  const typeFilter = document.getElementById('filterType').value;
-  const statusFilter = document.getElementById('filterStatus').value;
-  const fFromRegion = document.getElementById('filterFromRegion').value;
-  const fFromDistrict = document.getElementById('filterFromDistrict').value;
-  const fToRegion = document.getElementById('filterToRegion').value;
-  const fToDistrict = document.getElementById('filterToDistrict').value;
-
-  const driver = getJSON('driverAds') || [];
-  const passenger = getJSON('passengerAds') || [];
-  let all = [...driver.map(a=>({...a,type:'driver'})), ...passenger.map(a=>({...a,type:'passenger'}))];
-
-  if(viewingProfile){
-    all = all.filter(a => String(a.ownerId || a.phone) === String(viewingProfile) || String(a.phone) === String(viewingProfile));
-  } else {
-    const cu2 = getCurrentUser();
-    if(cu2) all = all.filter(a => String(a.phone) === String(cu2.phone) || String(a.ownerId) === String(cu2.id));
-  }
-
-  if(typeFilter !== 'all') all = all.filter(a => a.type === typeFilter);
-  if(statusFilter !== 'all') all = all.filter(a => (a.status||'pending') === statusFilter);
-  if(fFromRegion) all = all.filter(a => (a.fromRegion || '').includes(fFromRegion));
-  if(fFromDistrict) all = all.filter(a => (a.fromDistrict || '').includes(fFromDistrict));
-  if(fToRegion) all = all.filter(a => (a.toRegion || '').includes(fToRegion));
-  if(fToDistrict) all = all.filter(a => (a.toDistrict || '').includes(fToDistrict));
-  if(q) all = all.filter(a => (String(a.phone||'')+String(a.id||'')+String(a.comment||'')).toLowerCase().includes(q));
-
-  all.sort((a,b)=>{
-    const da = parseAdDate(a.createdAt) || new Date(0);
-    const db = parseAdDate(b.createdAt) || new Date(0);
-    return db - da;
-  });
-
-  const container = document.getElementById('myAds');
-  container.innerHTML = '';
-  if(all.length === 0){
-    container.innerHTML = '<p>Hozircha e’lonlar yo‘q.</p>';
-    return;
-  }
-
-  all.forEach(ad=>{
-    const div = document.createElement('div');
-    div.className = 'ad-box ' + ((ad.status && ad.status.toLowerCase()) || 'pending');
-
-    const from = (ad.fromRegion? ad.fromRegion+' ':'') + (ad.fromDistrict? ad.fromDistrict:'');
-    const to = (ad.toRegion? ad.toRegion+' ':'') + (ad.toDistrict? ad.toDistrict:'');
-    const created = ad.createdAt ? (parseAdDate(ad.createdAt) ? parseAdDate(ad.createdAt).toLocaleString() : ad.createdAt) : '—';
-    const statusText = ad.status === 'approved' ? '✅ Tasdiqlangan' : ad.status === 'rejected' ? '❌ Rad etilgan' : '⏳ Kutilmoqda';
-    const ownerId = ad.ownerId || ad.phone;
-    const cu2 = getCurrentUser();
-    const isOwner = cu2 && (String(cu2.phone) === String(ad.phone) || String(cu2.id) === String(ad.ownerId));
-
-    let actionsHTML = '';
-    if(isOwner){
-      if(ad.status !== 'approved'){
-        actionsHTML += `<button onclick="startInlineEdit('${ad.type}','${ad.id}')">Inline tahrir</button>`;
-        actionsHTML += `<button onclick="editAd('${ad.id}','${ad.type}')">✏️ Tahrirlash</button>`;
-      } else {
-        actionsHTML += `<button disabled style="background:#ccc;cursor:not-allowed;">✏️ Tahrirlash</button>`;
-      }
-      actionsHTML += `<button onclick="deleteAd('${ad.id}','${ad.type}')">🗑️ O'chirish</button>`;
-    } else {
-      actionsHTML += `<button class="view-profile-btn" onclick="openViewProfile('${ownerId}')">🔎 Profilni ko'rish</button>`;
-      actionsHTML += `<button onclick="contactOwner('${ad.phone}')">📞 Telefon</button>`;
-    }
-
-    const commentHTML = ad.comment ? `<div class="comment-box"><b>Izoh:</b> ${escapeHtml(ad.comment)}</div>` : '';
-    div.innerHTML = `
-      <div><b>Yo'nalish:</b> ${escapeHtml(from)} → ${escapeHtml(to)}</div>
-      <div><b>Narx:</b> ${escapeHtml(ad.price || 'Ko‘rsatilmagan')} so'm</div>
-      <div><b>Telefon:</b> ${escapeHtml(ad.phone || 'Noma\'lum')}</div>
-      <div class="date-info">🕒 Joylangan: ${escapeHtml(created)} · Holat: ${escapeHtml(statusText)}</div>
-      ${commentHTML}
-      <div class="actions">${actionsHTML}</div>
-    `;
-    container.appendChild(div);
-  });
-}
-
-/* ---------- ADD NEW AD ---------- */
-function addAd(){
-  const cu = getCurrentUser();
-  if(!cu){ alert('Avval tizimga kiring!'); return; }
-
-  const type = document.getElementById('adType').value;
-  const fromRegion = document.getElementById('fromRegion').value.trim();
-  const fromDistrict = document.getElementById('fromDistrict').value.trim();
-  const toRegion = document.getElementById('toRegion').value.trim();
-  const toDistrict = document.getElementById('toDistrict').value.trim();
-  const price = document.getElementById('price').value.trim();
-  const comment = document.getElementById('adComment').value.trim();
-
-  if(!type || !fromRegion || !toRegion){
-    alert('Iltimos yo‘nalish ma\'lumotlarini to‘ldiring!');
-    return;
-  }
-
-  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-  const ads = getJSON(key);
-  const id = `${type}_${Date.now()}_${Math.floor(Math.random()*1000)}`;
-  const newAd = {
-    id,
-    phone: cu.phone,
-    ownerId: cu.id || cu.phone,
-    type,
-    fromRegion, fromDistrict, toRegion, toDistrict,
-    price, comment: comment || '',
-    status: 'pending',
-    createdAt: new Date().toLocaleString()
-  };
-  ads.push(newAd);
-  setJSON(key, ads);
-
-  renderAdsList();
-  alert('✅ E’lon joylandi (Admin tasdiqlashi kutilmoqda).');
-  clearAddForm();
-}
-
-/* ---------- EDIT AD ---------- */
-function editAd(id,type){
-  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-  const ads = getJSON(key);
-  const ad = ads.find(a=>String(a.id) === String(id));
-  if(!ad) return;
-  if(ad.edited){ alert('❗ Ushbu e\'lon avval tahrirlangan.'); return; }
-  const newPrice = prompt('Yangi narxni kiriting:', ad.price || '');
-  if(newPrice === null) return;
-  ad.price = newPrice;
-  ad.edited = true;
-  setJSON(key, ads);
-  renderAdsList();
-  alert('✏️ E\'lon yangilandi.');
-}
-
-/* ---------- DELETE AD ---------- */
-function deleteAd(id,type){
-  if(!confirm('Haqiqatan o\'chirilsinmi?')) return;
-  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-  let ads = getJSON(key);
-  ads = ads.filter(a => String(a.id) !== String(id));
-  setJSON(key, ads);
-  renderAdsList();
-}
-/* ---------- INLINE EDIT START ---------- */
-function startInlineEdit(type,id){
-  const temp = { type, id };
-  localStorage.setItem('tempInlineEdit', JSON.stringify(temp));
-  renderAdsListWithInline();
-}
-
-function renderAdsListWithInline(){
-  normalizeOldAds();
-  const temp = JSON.parse(localStorage.getItem('tempInlineEdit') || 'null');
-  const cu = getCurrentUser();
-  const viewingProfile = window.viewingProfile || (cu? (cu.id||cu.phone) : null);
-
-  const q = (document.getElementById('searchAdInput').value || '').toLowerCase().trim();
-  const typeFilter = document.getElementById('filterType').value;
-  const statusFilter = document.getElementById('filterStatus').value;
-  const fFromRegion = document.getElementById('filterFromRegion').value;
-  const fFromDistrict = document.getElementById('filterFromDistrict').value;
-  const fToRegion = document.getElementById('filterToRegion').value;
-  const fToDistrict = document.getElementById('filterToDistrict').value;
-
-  const driver = getJSON('driverAds') || [];
-  const passenger = getJSON('passengerAds') || [];
-  let all = [...driver.map(a=>({...a,type:'driver'})), ...passenger.map(a=>({...a,type:'passenger'}))];
-
-  if(viewingProfile){
-    all = all.filter(a => String(a.ownerId || a.phone) === String(viewingProfile) || String(a.phone) === String(viewingProfile));
-  } else {
-    const cu2 = getCurrentUser();
-    if(cu2) all = all.filter(a => String(a.phone) === String(cu2.phone) || String(a.ownerId) === String(cu2.id));
-  }
-
-  if(typeFilter !== 'all') all = all.filter(a => a.type === typeFilter);
-  if(statusFilter !== 'all') all = all.filter(a => (a.status||'pending') === statusFilter);
-  if(fFromRegion) all = all.filter(a => (a.fromRegion || '').includes(fFromRegion));
-  if(fFromDistrict) all = all.filter(a => (a.fromDistrict || '').includes(fFromDistrict));
-  if(fToRegion) all = all.filter(a => (a.toRegion || '').includes(fToRegion));
-  if(fToDistrict) all = all.filter(a => (a.toDistrict || '').includes(fToDistrict));
-  if(q) all = all.filter(a => (String(a.phone||'')+String(a.id||'')+String(a.comment||'')).toLowerCase().includes(q));
-
-  all.sort((a,b)=>{
-    const da = parseAdDate(a.createdAt) || new Date(0);
-    const db = parseAdDate(b.createdAt) || new Date(0);
-    return db - da;
-  });
-
-  const container = document.getElementById('myAds');
-  container.innerHTML = '';
-  if(all.length === 0){ container.innerHTML = '<p>Hozircha e’lonlar yo‘q.</p>'; return; }
-
-  all.forEach(ad=>{
-    const div = document.createElement('div');
-    div.className = 'ad-box ' + ((ad.status && ad.status.toLowerCase()) || 'pending');
-    const from = (ad.fromRegion? ad.fromRegion+' ':'') + (ad.fromDistrict? ad.fromDistrict:'');
-    const to = (ad.toRegion? ad.toRegion+' ':'') + (ad.toDistrict? ad.toDistrict:'');
-    const created = ad.createdAt ? (parseAdDate(ad.createdAt) ? parseAdDate(ad.createdAt).toLocaleString() : ad.createdAt) : '—';
-    const statusText = ad.status === 'approved' ? '✅ Tasdiqlangan' : ad.status === 'rejected' ? '❌ Rad etilgan' : '⏳ Kutilmoqda';
-    const ownerId = ad.ownerId || ad.phone;
-    const cu2 = getCurrentUser();
-    const isOwner = cu2 && (String(cu2.phone) === String(ad.phone) || String(cu2.id) === String(ad.ownerId));
-
-    let actionsHTML = '';
-    if(isOwner){
-      if(temp && temp.type === ad.type && String(temp.id) === String(ad.id)){
-        actionsHTML = `
-          <div class="inline-edit">
-            <input id="inlinePrice_${ad.id}" type="number" placeholder="Narx" value="${escapeHtml(ad.price || '')}" />
-            <button onclick="saveInlineAdmin('${ad.type}','${ad.id}')">💾 Saqlash</button>
-            <button onclick="cancelInlineAdmin()">❌ Bekor</button>
-          </div>
-        `;
-      } else {
-        if(ad.status !== 'approved'){
-          actionsHTML += `<button onclick="startInlineEdit('${ad.type}','${ad.id}')">Inline tahrir</button>`;
-          actionsHTML += `<button onclick="editAd('${ad.id}','${ad.type}')">✏️ Tahrirlash</button>`;
-        } else {
-          actionsHTML += `<button disabled style="background:#ccc;cursor:not-allowed;">✏️ Tahrirlash</button>`;
-        }
-        actionsHTML += `<button onclick="deleteAd('${ad.id}','${ad.type}')">🗑️ O'chirish</button>`;
-      }
-    } else {
-      actionsHTML += `<button class="view-profile-btn" onclick="openViewProfile('${ownerId}')">🔎 Profilni ko'rish</button>`;
-      actionsHTML += `<button onclick="contactOwner('${ad.phone}')">📞 Telefon</button>`;
-    }
-
-    const commentHTML = ad.comment ? `<div class="comment-box"><b>Izoh:</b> ${escapeHtml(ad.comment)}</div>` : '';
-    div.innerHTML = `
-      <div><b>Yo'nalish:</b> ${escapeHtml(from)} → ${escapeHtml(to)}</div>
-      <div><b>Narx:</b> ${escapeHtml(ad.price || 'Ko‘rsatilmagan')} so'm</div>
-      <div><b>Telefon:</b> ${escapeHtml(ad.phone || 'Noma\'lum')}</div>
-      <div class="date-info">🕒 Joylangan: ${escapeHtml(created)} · Holat: ${escapeHtml(statusText)}</div>
-      ${commentHTML}
-      <div class="actions">${actionsHTML}</div>
-    `;
-    container.appendChild(div);
-  });
-}
-
-function saveInlineAdmin(type,id){
-  const key = type === 'driver' ? 'driverAds' : 'passengerAds';
-  const ads = getJSON(key);
-  const ad = ads.find(a=>String(a.id) === String(id));
-  if(!ad) return;
-  const val = document.getElementById(`inlinePrice_${id}`).value.trim();
-  if(!val){ alert('Narx kiriting'); return; }
-  ad.price = val;
-  ad.edited = true;
-  setJSON(key, ads);
-  localStorage.removeItem('tempInlineEdit');
-  renderAdsList();
-  alert('E\'lon yangilandi (inline).');
-}
-
-function cancelInlineAdmin(){
-  localStorage.removeItem('tempInlineEdit');
-  renderAdsList();
-}
-
-/* ---------- CONTACT OWNER ---------- */
-function contactOwner(phone){
-  if(!phone){ alert('Telefon raqam mavjud emas'); return; }
-  alert(`Telefon: ${phone} (telefonni nusxa oling yoki qo'ng'iroq qiling)`);
-}
-
-/* ---------- CLEAR ADD FORM ---------- */
-function clearAddForm(){
-  document.getElementById('adType').value = '';
-  document.getElementById('fromRegion').value = '';
-  document.getElementById('fromDistrict').innerHTML = '<option value="">Tumanni tanlang</option>';
-  document.getElementById('toRegion').value = '';
-  document.getElementById('toDistrict').innerHTML = '<option value="">Tumanni tanlang</option>';
-  document.getElementById('price').value = '';
-  document.getElementById('adComment').value = '';
-}
-/* ---------- Filters: populate regions/district selects ---------- */
-function loadRegionsToSelects(){
-  ['fromRegion','toRegion','filterFromRegion','filterToRegion'].forEach(id=>{
+function loadRegions() {
+  const regionFields = ["fromRegion","toRegion","editFromRegion","editToRegion"];
+  regionFields.forEach(id => {
     const sel = document.getElementById(id);
-    if(!sel) return;
-    sel.innerHTML = '<option value="">Viloyatni tanlang</option>';
-    Object.keys(regions).forEach(r=>{
-      const opt = document.createElement('option'); opt.value = r; opt.textContent = r;
-      sel.appendChild(opt);
+    if (!sel) return;
+    sel.innerHTML = `<option value="">Viloyat</option>`;
+    Object.keys(regions).forEach(r => {
+      sel.innerHTML += `<option value="${r}">${r}</option>`;
     });
   });
 }
 
-function updateDistricts(prefix){
-  const region = document.getElementById(prefix+'Region').value;
-  const districtSel = document.getElementById(prefix+'District');
-  districtSel.innerHTML = '<option value="">Tumanni tanlang</option>';
-  if(region && regions[region]){
+function updateDistricts(prefix) {
+  const region = document.getElementById(prefix + "Region").value;
+  const distSel = document.getElementById(prefix + "District");
+  distSel.innerHTML = `<option value="">Tuman</option>`;
+
+  if (regions[region]) {
     regions[region].forEach(d => {
-      const opt = document.createElement('option'); opt.value = d; opt.textContent = d;
-      districtSel.appendChild(opt);
+      distSel.innerHTML += `<option value="${d}">${d}</option>`;
     });
   }
 }
 
-function updateFilterDistricts(prefix){
-  const region = document.getElementById(prefix+'Region').value;
-  const districtSel = document.getElementById(prefix+'District');
-  districtSel.innerHTML = '<option value="">Tanlang</option>';
-  if(region && regions[region]){
-    regions[region].forEach(d => districtSel.add(new Option(d,d)));
-  }
-  renderAdsList();
-}
 
-/* ---------- Profile viewing modal & rating ---------- */
-function openViewProfile(idOrPhone){
-  const users = getJSON('users') || [];
-  let user = users.find(u => String(u.id) === String(idOrPhone) || String(u.phone) === String(idOrPhone));
-  if(!user){
-    const ads = [...getJSON('driverAds'), ...getJSON('passengerAds')];
-    const ad = ads.find(a => String(a.ownerId) === String(idOrPhone) || String(a.phone) === String(idOrPhone));
-    if(ad) user = { id: ad.ownerId || ad.phone, phone: ad.phone, name: ad.ownerName || ad.phone };
-  }
-  if(!user){ alert('Foydalanuvchi topilmadi'); return; }
-  window.viewingProfile = user.id || user.phone;
+/* =========================================================
+      2) Boshqa user profilini ochish (Realtime)
+   ========================================================= */
+async function openViewProfile(uid) {
+  document.getElementById("viewProfileModal").style.display = "flex";
 
-  document.getElementById('vpName').textContent = user.name || 'Foydalanuvchi';
-  document.getElementById('vpPhone').textContent = user.phone || '—';
+  // 1) User ma'lumotlari
+  const userSnap = await db.ref("users/" + uid).once("value");
+  const user = userSnap.val() || {};
 
-  const ratings = getRatingsForProfile(user.id || user.phone);
-  const avg = computeAverage(ratings);
-  document.getElementById('vpRatingSummary').innerHTML = `<strong>${avg>0 ? avg+' / 5' : 'Hozircha baho yo‘q'}</strong> — ${ratings.length} ta baho`;
+  document.getElementById("vpName").textContent = user.name || "Foydalanuvchi";
+  document.getElementById("vpPhone").textContent = user.phone || "";
 
-  const vpAds = [...getJSON('driverAds'), ...getJSON('passengerAds')].filter(a => String(a.ownerId) === String(user.id) || String(a.phone) === String(user.phone));
-  const vpList = document.getElementById('vpAdsList');
-  if(vpAds.length === 0) vpList.innerHTML = '<p class="small">Ushbu foydalanuvchining e\'lonlari mavjud emas.</p>';
-  else {
-    vpList.innerHTML = vpAds.map(a => {
-      const created = a.createdAt? (parseAdDate(a.createdAt)? parseAdDate(a.createdAt).toLocaleString() : a.createdAt) : '';
-      return `<div style="padding:6px;border-bottom:1px solid #eee;"><b>${a.type === 'driver'? 'Haydovchi' : 'Yo\'lovchi'}</b> · ${escapeHtml(a.fromRegion||'')} → ${escapeHtml(a.toRegion||'')} · ${escapeHtml(a.price||'')} so'm<br><small class="small">${escapeHtml(created)}</small></div>`;
-    }).join('');
-  }
+  // 2) Realtime rating listener
+  listenUserRatings(uid, (data) => {
+    document.getElementById("vpRatingSummary").innerHTML =
+      `<b>${data.avg || "—"} / 5</b> — ${data.count} ta baho`;
+  });
 
-  const cur = getCurrentUser();
-  const vpRateSection = document.getElementById('vpRateSection');
-  vpRateSection.innerHTML = '';
-  if(!cur){
-    vpRateSection.innerHTML = '<div class="small">Baholash uchun tizimga kiring.</div>';
-  } else if(String(cur.id) === String(user.id) || String(cur.phone) === String(user.phone)){
-    vpRateSection.innerHTML = '<div class="small">Siz o\'zingizni baholay olmaysiz.</div>';
+  // 3) Reyting berish bo‘limi
+  const section = document.getElementById("vpRateSection");
+  if (!currentUser || currentUser.uid === uid) {
+    section.innerHTML = `<div class="small">O'zingizni baholay olmaysiz.</div>`;
   } else {
-    const ratingsStore = getProfileRatingsStore();
-    const existing = (ratingsStore.find(e=>String(e.phone)===String(user.id)) || {ratings:[]}).ratings || [];
-    const already = existing.some(r=>String(r.raterPhone)===String(cur.phone));
-    if(already){
-      vpRateSection.innerHTML = '<div class="small">Siz allaqachon bu foydalanuvchini baholagansiz.</div>';
-    } else {
-      vpRateSection.innerHTML = `
-        <div style="margin-top:8px;">
-          <label><b>⭐ Baho tanlang</b></label>
-          <div style="margin-top:6px;">
-            <select id="vpRatingStars">
-              <option value="5">5</option><option value="4">4</option><option value="3">3</option><option value="2">2</option><option value="1">1</option>
-            </select>
-          </div>
-          <div style="margin-top:6px;"><textarea id="vpRatingText" rows="2" placeholder="Ixtiyoriy izoh..."></textarea></div>
-          <div style="margin-top:8px;text-align:right;"><button onclick="submitProfileRating('${user.id||user.phone}')">Yuborish</button></div>
-        </div>
-      `;
-    }
+    section.innerHTML = `
+      <div>
+        <label><b>⭐ Baho tanlang:</b></label>
+        <select id="vpRatingStars">
+          <option value="5">5</option>
+          <option value="4">4</option>
+          <option value="3">3</option>
+          <option value="2">2</option>
+          <option value="1">1</option>
+        </select>
+
+        <textarea id="vpRatingText" rows="2" placeholder="Izoh (ixtiyoriy)"></textarea>
+        <button style="margin-top:8px" onclick="submitProfileRating('${uid}')">Yuborish</button>
+      </div>`;
   }
 
-  document.getElementById('viewProfileModal').style.display = 'flex';
+  // 4) User e’lonlari
+  loadOtherUserAds(uid);
 }
 
-function closeViewProfile(){
-  document.getElementById('viewProfileModal').style.display = 'none';
+function closeViewProfile() {
+  document.getElementById("viewProfileModal").style.display = "none";
 }
 
-/* ---------- PROFILE RATING STORE ---------- */
-function getProfileRatingsStore(){ return JSON.parse(localStorage.getItem('profileRatings') || '[]'); }
-function saveProfileRatingsStore(store){ localStorage.setItem('profileRatings', JSON.stringify(store)); }
-function getRatingsForProfile(profileId){
-  if(!profileId) return [];
-  const store = getProfileRatingsStore();
-  const e = store.find(it=>String(it.phone)===String(profileId));
-  return e? e.ratings : [];
-}
-function addRatingForProfile(profileId, rating){
-  const store = getProfileRatingsStore();
-  let entry = store.find(it=>String(it.phone)===String(profileId));
-  if(!entry){ entry = { phone: String(profileId), ratings: [] }; store.push(entry); }
-  entry.ratings.push(rating);
-  saveProfileRatingsStore(store);
-}
-function computeAverage(ratings){
-  if(!ratings || ratings.length === 0) return 0;
-  const s = ratings.reduce((sum,r)=> sum + (Number(r.stars)||0), 0);
-  return +(s / ratings.length).toFixed(2);
+
+/* =========================================================
+      3) Ushbu userning e’lonlarini yuklash
+   ========================================================= */
+function loadOtherUserAds(uid) {
+  db.ref("ads/" + uid)
+    .once("value")
+    .then(snap => {
+      const list = Object.values(snap.val() || {});
+      const box = document.getElementById("vpAdsList");
+
+      if (!list.length) {
+        box.innerHTML = "<p class='small'>E’lonlari yo‘q.</p>";
+        return;
+      }
+
+      box.innerHTML = list.map(ad => `
+        <div style="padding:6px;border-bottom:1px solid #eee;">
+          <b>${ad.type === "driver" ? "Haydovchi" : "Yo‘lovchi"}</b> ·
+          ${ad.fromRegion} → ${ad.toRegion} · ${ad.price} so’m
+          <br>
+          <small>${new Date(ad.createdAt).toLocaleString()}</small>
+        </div>
+      `).join("");
+    });
 }
 
-function submitProfileRating(profileId){
-  const cur = getCurrentUser();
-  if(!cur){ alert('Baholash uchun tizimga kiring!'); return; }
-  const stars = Number(document.getElementById('vpRatingStars').value) || 5;
-  const text = (document.getElementById('vpRatingText').value || '').trim();
-  const existing = getRatingsForProfile(profileId);
-  if(existing.some(r=>String(r.raterPhone) === String(cur.phone))){ alert('Siz allaqachon baho berdingiz'); return; }
-  const r = { raterPhone: cur.phone, stars, text, date: new Date().toLocaleString() };
-  addRatingForProfile(profileId, r);
-  alert('✅ Baho saqlandi!');
-  if(window.viewingProfile) openViewProfile(window.viewingProfile);
-  renderProfileHeader({ id: profileId, phone: profileId, name: '' });
+
+/* =========================================================
+      4) User reytigini real-time o‘qish
+   ========================================================= */
+function listenUserRatings(uid, callback) {
+  db.ref("ratings/" + uid).on("value", snap => {
+    const ratings = snap.val() ? Object.values(snap.val()) : [];
+
+    let avg = 0;
+    if (ratings.length > 0) {
+      avg = ratings.reduce((s, r) => s + Number(r.stars), 0) / ratings.length;
+      avg = avg.toFixed(1);
+    }
+
+    callback({
+      ratings,
+      avg,
+      count: ratings.length
+    });
+  });
 }
 
-/* ---------- Profile edit ---------- */
-function openEditProfile(){
-  const cu = getCurrentUser();
-  if(!cu){ alert('Tizimga kiring!'); return; }
-  document.getElementById('editFullName').value = cu.name || '';
-  document.getElementById('editPhoneInput').value = cu.phone || '';
-  document.getElementById('editProfileModal').style.display = 'flex';
-}
 
-function closeEditProfile(){ document.getElementById('editProfileModal').style.display = 'none'; }
-function saveProfileEdit(){
-  const name = document.getElementById('editFullName').value.trim();
-  const phone = document.getElementById('editPhoneInput').value.trim();
-
-  // ✅ Faqat +998 bilan boshlanadigan 13 belgili raqamga ruxsat
-  const phoneRegex = /^\+998\d{9}$/;
-  if(!phoneRegex.test(phone)){
-    alert("Telefon raqamni to‘g‘ri kiriting! (Masalan: +998901234567)");
+/* =========================================================
+      5) Userga baho berish
+   ========================================================= */
+async function submitProfileRating(targetUid) {
+  if (!currentUser) {
+    alert("Avval tizimga kiring!");
     return;
   }
 
-  let users = getJSON('users') || [];
-  const cur = getCurrentUser();
-  if(cur){
-    cur.name = name;
-    cur.phone = phone;
-    localStorage.setItem('currentUser', JSON.stringify(cur));
-
-    let uidx = users.findIndex(u => String(u.id) === String(cur.id) || String(u.phone) === String(cur.phone));
-    if(uidx > -1){
-      users[uidx].name = name;
-      users[uidx].phone = phone;
-    } else {
-      const newid = cur.id || `u_${Date.now()}`;
-      users.push({ id: newid, phone, name, active:true });
-      cur.id = newid;
-      localStorage.setItem('currentUser', JSON.stringify(cur));
-    }
-    setJSON('users', users);
-    alert('Profil saqlandi');
-    renderProfileHeader(cur);
-    renderAdsList();
-  } else {
-    alert('Foydalanuvchi topilmadi');
+  if (currentUser.uid === targetUid) {
+    alert("O‘zingizga baho berolmaysiz!");
+    return;
   }
-  closeEditProfile();
-}
 
-/* ---------- View own ads ---------- */
-function viewOwnAds(){
-  const cu = getCurrentUser();
-  if(!cu) return;
-  window.viewingProfile = cu.id || cu.phone;
-  renderAdsList();
-}
+  const stars = Number(document.getElementById("vpRatingStars").value);
+  const text = document.getElementById("vpRatingText").value.trim();
+  const raterUid = currentUser.uid;
 
-/* ---------- Sync statuses ---------- */
-function syncStatuses(){
-  const cu = getCurrentUser();
-  if(!cu) return;
-  const driver = getJSON('driverAds') || [];
-  const passenger = getJSON('passengerAds') || [];
-  const userAds = [...driver, ...passenger].filter(a => String(a.ownerId) === String(cu.id) || String(a.phone) === String(cu.phone));
-  const lastStatuses = JSON.parse(localStorage.getItem('userAdStatuses') || '{}');
-  userAds.forEach(ad=>{
-    const prev = lastStatuses[ad.id];
-    if(prev && prev !== ad.status){
-      if(ad.status === 'approved') alert(`✅ E'loningiz tasdiqlandi: ${ad.fromRegion || ad.from} → ${ad.toRegion || ad.to}`);
-      else if(ad.status === 'rejected') alert(`❌ E'loningiz rad etildi: ${ad.fromRegion || ad.from} → ${ad.toRegion || ad.to}`);
-    }
-    lastStatuses[ad.id] = ad.status;
+  // Takror baho bermaslik
+  const exists = await db.ref(`ratings/${targetUid}/${raterUid}`).once("value");
+  if (exists.exists()) {
+    alert("Siz allaqachon baho bergansiz.");
+    return;
+  }
+
+  await db.ref(`ratings/${targetUid}/${raterUid}`).set({
+    stars,
+    text,
+    date: new Date().toISOString(),
+    raterUid
   });
-  localStorage.setItem('userAdStatuses', JSON.stringify(lastStatuses));
+
+  alert("⭐ Baho yuborildi!");
 }
 
-/* ---------- Helper: Escape HTML ---------- */
-function escapeHtml(str){
-  if(!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-}
 
-/* ---------- INIT PROFILE ON LOAD (YANGILANGAN) ---------- */
-function initProfileOnLoad(){
-  normalizeOldAds();
-  loadRegionsToSelects();
+/* =========================================================
+      6) OnLoad — hammasini ishga tushirish
+   ========================================================= */
+function initProfileOnLoad() {
+  loadRegions();
 
-  const maybeProfile = window.profilePhone || localStorage.getItem('viewingProfile') || null;
-  let profileUser = null;
-
-  if(maybeProfile){
-    const users = getJSON('users') || [];
-    profileUser = users.find(u=>String(u.id)===String(maybeProfile) || String(u.phone)===String(maybeProfile));
-    if(!profileUser){
-      const ads = [...getJSON('driverAds'), ...getJSON('passengerAds')];
-      const ad = ads.find(a => String(a.ownerId)===String(maybeProfile) || String(a.phone)===String(maybeProfile));
-      if(ad) profileUser = { id: ad.ownerId||ad.phone, phone: ad.phone, name: ad.ownerName || ad.phone };
+  // Tizimga kirgan user bo‘lsa — e’lonlari realtime ochiladi  
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loadUserAds(user.uid);
     }
-  }
-
-  const cu = getCurrentUser();
-  if(!profileUser && cu) profileUser = cu;
-
-  if(!profileUser){
-    document.getElementById('profileName').textContent = 'Tizimga kiring';
-    document.getElementById('profilePhone').textContent = '—';
-  } else {
-    renderProfileHeader(profileUser);
-    window.viewingProfile = profileUser.id || profileUser.phone;
-  }
-
-  // 💡 Birinchi marta ro‘yxatni yuklaymiz
-  renderAdsList();
-
-  // 💫 Har 5 soniyada sinxronlikni avtomatik tekshirib turamiz
-  setInterval(() => {
-    // Agar localStorage’da o‘zgarish bo‘lsa, e’lonlarni qayta yuklaymiz
-    const prevData = localStorage.getItem('__lastAdsState') || '';
-    const currentData = JSON.stringify({
-      driverAds: getJSON('driverAds'),
-      passengerAds: getJSON('passengerAds')
-    });
-
-    if (prevData !== currentData) {
-      localStorage.setItem('__lastAdsState', currentData);
-      renderAdsList();
-    }
-
-    // 🔔 Admin tomonidan status o‘zgarishlarini tekshiramiz
-    syncStatuses();
-  }, 5000);
+  });
 }
 
 
-/* ---------- LOGOUT ---------- */
-function logout(){
-  localStorage.removeItem('currentUser');
-  alert('Chiqdingiz.');
+/* =========================================================
+      7) Logout
+   ========================================================= */
+function logout() {
+  auth.signOut();
+  alert("Chiqdingiz.");
   location.reload();
 }
 
-/* ---------- ON LOAD ---------- */
-document.addEventListener('DOMContentLoaded', ()=>{
-  const activeId = localStorage.getItem('activeUserId');
-  if(!localStorage.getItem('currentUser') && activeId){
-    const users = getJSON('users') || [];
-    const u = users.find(x=> String(x.id) === String(activeId));
-    if(u) localStorage.setItem('currentUser', JSON.stringify(u));
-  }
 
-  loadRegionsToSelects();
+/* =========================================================
+      8) XSS dan himoya
+   ========================================================= */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+
+/* =========================================================
+      9) DOM tayyor bo‘lganda ishga tushirish
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", () => {
+  loadRegions();
   initProfileOnLoad();
-  listenAllAdsRealtime();   // 👈 YANGI QATOR
 
-  document.querySelectorAll('.modal').forEach(m=>{
-    m.addEventListener('click', e=>{
-      if(e.target === m) m.style.display = 'none';
+  document.querySelectorAll(".modal").forEach(m => {
+    m.addEventListener("click", (e) => {
+      if (e.target === m) m.style.display = "none";
     });
   });
 });
-
-/* ---------- Debug helpers ---------- */
-window._debug = {
-  getDriverAds: ()=>getJSON('driverAds'),
-  getPassengerAds: ()=>getJSON('passengerAds'),
-  getUsers: ()=>getJSON('users'),
-  getRatings: ()=>getProfileRatingsStore(),
-  loginMock
-};
