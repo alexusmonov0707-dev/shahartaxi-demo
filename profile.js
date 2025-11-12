@@ -613,12 +613,14 @@ function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 }
 
-/* ---------- INIT PROFILE ON LOAD ---------- */
+/* ---------- INIT PROFILE ON LOAD (YANGILANGAN) ---------- */
 function initProfileOnLoad(){
   normalizeOldAds();
   loadRegionsToSelects();
+
   const maybeProfile = window.profilePhone || localStorage.getItem('viewingProfile') || null;
   let profileUser = null;
+
   if(maybeProfile){
     const users = getJSON('users') || [];
     profileUser = users.find(u=>String(u.id)===String(maybeProfile) || String(u.phone)===String(maybeProfile));
@@ -628,8 +630,10 @@ function initProfileOnLoad(){
       if(ad) profileUser = { id: ad.ownerId||ad.phone, phone: ad.phone, name: ad.ownerName || ad.phone };
     }
   }
+
   const cu = getCurrentUser();
   if(!profileUser && cu) profileUser = cu;
+
   if(!profileUser){
     document.getElementById('profileName').textContent = 'Tizimga kiring';
     document.getElementById('profilePhone').textContent = '—';
@@ -637,9 +641,29 @@ function initProfileOnLoad(){
     renderProfileHeader(profileUser);
     window.viewingProfile = profileUser.id || profileUser.phone;
   }
+
+  // 💡 Birinchi marta ro‘yxatni yuklaymiz
   renderAdsList();
-  setInterval(syncStatuses, 5000);
+
+  // 💫 Har 5 soniyada sinxronlikni avtomatik tekshirib turamiz
+  setInterval(() => {
+    // Agar localStorage’da o‘zgarish bo‘lsa, e’lonlarni qayta yuklaymiz
+    const prevData = localStorage.getItem('__lastAdsState') || '';
+    const currentData = JSON.stringify({
+      driverAds: getJSON('driverAds'),
+      passengerAds: getJSON('passengerAds')
+    });
+
+    if (prevData !== currentData) {
+      localStorage.setItem('__lastAdsState', currentData);
+      renderAdsList();
+    }
+
+    // 🔔 Admin tomonidan status o‘zgarishlarini tekshiramiz
+    syncStatuses();
+  }, 5000);
 }
+
 
 /* ---------- LOGOUT ---------- */
 function logout(){
