@@ -435,7 +435,7 @@ async function openViewProfile(uid){
     const ads = adsSnap.val() ? Object.values(adsSnap.val()) : [];
     const vpList = $id('vpAdsList');
     if(vpList){
-      if(!ads.length) vpList.innerHTML = '<p class="small">E\\'lonlari yo\\'q.</p>';
+      if(!ads.length) vpList.innerHTML = `<p class="small">E'lonlari yo'q.</p>`;
       else {
         vpList.innerHTML = ads.map(a=>{
           return `<div style="padding:6px;border-bottom:1px solid #eee;"><b>${a.type==='driver'?'Haydovchi':'Yo\'lovchi'}</b> · ${escapeHtml(a.fromRegion||'')} → ${escapeHtml(a.toRegion||'')} · ${escapeHtml(a.price||'')} so'm<br><small class="small">${new Date(a.createdAt).toLocaleString()}</small></div>`;
@@ -577,7 +577,7 @@ async function openViewProfile(uid){
     const ads = snap.val() ? Object.values(snap.val()) : [];
     const vpList = $id('vpAdsList');
     if(vpList){
-      if(!ads.length) vpList.innerHTML = '<p class="small">E\'lonlari yo\'q.</p>';
+      if(!ads.length) vpList.innerHTML = `<p class="small">E'lonlari yo'q.</p>`;
       else {
         vpList.innerHTML = ads.map(a=>{
           return `
