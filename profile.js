@@ -1,11 +1,11 @@
-import {
-  initializeAppCheck,
-  ReCaptchaV3Provider
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app-check.js";
 
 // ===============================
 //  FIREBASE 9 — MODULAR IMPORTS
 // ===============================
+import {
+  initializeAppCheck,
+  ReCaptchaV3Provider
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app-check.js";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
@@ -46,6 +46,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
+
+// AppCheck (RECAPTCHA v3)
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider(
+    "6Leq7QosAAAAAACWDged1Z1i1b5sdmasTRfW-8Toq"   // 🔥 SENING SITE KEYING
+  ),
+  isTokenAutoRefreshEnabled: true
+});
 
 // ===============================
 //  GLOBAL VARIABLES
