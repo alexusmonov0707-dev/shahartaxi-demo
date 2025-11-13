@@ -51,7 +51,7 @@
   <script type="module">
 
     // ===== IMPORTLAR =====
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+
     import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
     import { initializeAppCheck, ReCaptchaV3Provider }
       from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app-check.js";
@@ -70,10 +70,7 @@
     const app = initializeApp(firebaseConfig);
 
     // APP CHECK (Shart! Aks holda SMS ishlamaydi)
-    initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider("6Leq7QosAAAAAACWDged1Z1i1b5sdmasTrfW-8Toq4"), // 🔥 SENING SITE KEYING
-      isTokenAutoRefreshEnabled: true
-    });
+   
 
     const auth = getAuth(app);
 
