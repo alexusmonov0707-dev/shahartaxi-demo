@@ -1,3 +1,8 @@
+import {
+  initializeAppCheck,
+  ReCaptchaV3Provider
+} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app-check.js";
+
 // ===============================
 //  FIREBASE 9 — MODULAR IMPORTS
 // ===============================
