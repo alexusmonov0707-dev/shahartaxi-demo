@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Login — ShaharTaxi</title>
-
   <style>
     body{font-family:Arial,Helvetica,sans-serif;background:#f7f9fc;margin:0;padding:0}
     .wrap{max-width:420px;margin:60px auto;padding:20px;background:#fff;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.06)}
@@ -20,43 +19,40 @@
   </style>
 </head>
 <body>
-
   <div class="wrap">
     <h2>ShaharTaxi — Tizimga kirish</h2>
 
-    <label>Telefon raqam (+998901234567)</label>
-    <input id="phoneInput" placeholder="+998901234567" />
-    <div class="small muted">SMS kod qabul qilinadi. Faqat +998 bilan kiriting.</div>
+    <div>
+      <label>Telefon raqam (format: +998901234567)</label>
+      <input id="phoneInput" placeholder="+998901234567" />
+      <div class="small muted">SMS kod qabul qilinadi. Faqat +998 bilan kiriting.</div>
 
-    <div id="recaptcha-container"></div>
+      <div id="recaptcha-container"></div>
 
-    <button id="sendBtn">Kod yuborish (SMS)</button>
+      <button id="sendBtn">Kod yuborish (SMS)</button>
 
-    <div id="smsSection" style="display:none;">
-      <label>SMS kodni kiriting</label>
-      <input id="codeInput" placeholder="123456" />
-      <button id="verifyBtn">Tasdiqlash</button>
+      <div id="smsSection" style="display:none;">
+        <label>SMS kodni kiriting</label>
+        <input id="codeInput" placeholder="123456" />
+        <button id="verifyBtn">Tasdiqlash</button>
+      </div>
+
+      <div id="status" class="err" style="display:none;"></div>
+
+      <div class="link">
+        <a href="profile.html">Profilga qaytish (profilga kirish uchun avval login kerak)</a>
+      </div>
     </div>
-
-    <div id="status" class="err" style="display:none;"></div>
-
-    <div class="link">
-      <a href="profile.html">Profilga qaytish</a>
-    </div>
-
   </div>
 
-
-  <!-- FIREBASE -->
+  <!-- Firebase (modular) -->
   <script type="module">
+    // --- IMPORT ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, RecaptchaVerifier, signInWithPhoneNumber }
+      from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-    // ===== IMPORTLAR =====
-
-    import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-    import { initializeAppCheck, ReCaptchaV3Provider }
-      from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app-check.js";
-
-    // ===== CONFIG =====
+    // --- CONFIG ---
     const firebaseConfig = {
       apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
       authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -66,45 +62,43 @@
       appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
     };
 
-    // ===== INIT =====
+    // --- INIT ---
     const app = initializeApp(firebaseConfig);
-
-    // APP CHECK (Shart! Aks holda SMS ishlamaydi)
-   
-
     const auth = getAuth(app);
 
-    // ===== ELEMENTLAR =====
-    const phoneInput = document.getElementById("phoneInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const smsSection = document.getElementById("smsSection");
-    const codeInput = document.getElementById("codeInput");
-    const verifyBtn = document.getElementById("verifyBtn");
-    const statusBox = document.getElementById("status");
+    // DOM
+    const phoneInput = document.getElementById('phoneInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const smsSection = document.getElementById('smsSection');
+    const codeInput = document.getElementById('codeInput');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const statusBox = document.getElementById('status');
 
     let confirmationResult = null;
     let recaptchaVerifier = null;
 
-    // ===== reCAPTCHA faqat 1 marta render bo‘lsin =====
+    // reCAPTCHA INIT (AppCheck emas!)
     function initRecaptcha() {
-      if (!recaptchaVerifier) {
-        recaptchaVerifier = new RecaptchaVerifier(
-          "recaptcha-container",
-          { size: "invisible" },
-          auth
-        );
+      if (recaptchaVerifier) return;
 
-        recaptchaVerifier.render();
-      }
+      recaptchaVerifier = new RecaptchaVerifier(
+        'recaptcha-container',
+        { size: 'invisible' },
+        auth
+      );
+
+      recaptchaVerifier.render().catch(e => {
+        console.warn("reCAPTCHA render xatosi:", e);
+      });
     }
 
-    // ===== SMS YUBORISH =====
-    sendBtn.onclick = async () => {
-      statusBox.style.display = "none";
-
+    // SEND SMS
+    sendBtn.addEventListener('click', async () => {
+      statusBox.style.display = 'none';
       const phone = phoneInput.value.trim();
+
       if (!/^\+998\d{9}$/.test(phone)) {
-        showError("Telefon raqam noto‘g‘ri.");
+        showError("Telefon raqamni to'g'ri kiriting (misol: +998901234567)");
         return;
       }
 
@@ -112,52 +106,71 @@
 
       try {
         confirmationResult = await signInWithPhoneNumber(auth, phone, recaptchaVerifier);
-        smsSection.style.display = "block";
-        showStatus("📩 SMS yuborildi.");
+        smsSection.style.display = 'block';
+        showStatus("✅ SMS yuborildi. Kodni kiriting.");
       } catch (err) {
-        console.error(err);
-        showError("SMS yuborilmadi: " + err.message);
+        console.error("send SMS error", err);
+
+        if (recaptchaVerifier?.clear) recaptchaVerifier.clear();
+        recaptchaVerifier = null;
+        initRecaptcha();
+
+        showError("SMS yuborilmadi: " + (err.message || err));
       }
-    };
+    });
 
-    // ===== KODNI TASDIQLASH =====
-    verifyBtn.onclick = async () => {
-      statusBox.style.display = "none";
-
+    // VERIFY CODE
+    verifyBtn.addEventListener('click', async () => {
       const code = codeInput.value.trim();
-      if (!code) return showError("Kod kiriting.");
+
+      if (!code) { showError("Kod kiriting."); return; }
+      if (!confirmationResult) { showError("SMS yuborilmagan."); return; }
 
       try {
-        const userCredential = await confirmationResult.confirm(code);
-        const user = userCredential.user;
+        const result = await confirmationResult.confirm(code);
+        const user = result.user;
 
-        localStorage.setItem("currentUser", JSON.stringify({
-          id: user.uid,
-          phone: user.phoneNumber
-        }));
+        const localUser = {
+          id: user.uid || user.phoneNumber,
+          phone: user.phoneNumber,
+          name: user.phoneNumber
+        };
 
-        showStatus("🎉 Kirish muvaffaqiyatli!");
+        localStorage.setItem("currentUser", JSON.stringify(localUser));
+        showStatus("✅ Kirish muvaffaqiyatli!...");
         setTimeout(() => location.href = "profile.html", 800);
-
       } catch (err) {
-        console.error(err);
-        showError("Kod xato.");
+        console.error("verify error", err);
+        showError("Kod noto‘g‘ri yoki xatolik: " + (err.message || err));
       }
-    };
+    });
 
-    // ===== HELPERLAR =====
+    // Helpers
     function showError(msg) {
-      statusBox.style.display = "block";
-      statusBox.className = "err";
+      statusBox.style.display = 'block';
+      statusBox.className = 'err';
       statusBox.textContent = msg;
     }
+
     function showStatus(msg) {
-      statusBox.style.display = "block";
-      statusBox.className = "small";
+      statusBox.style.display = 'block';
+      statusBox.className = 'small';
       statusBox.textContent = msg;
     }
 
-  </script>
+    // Auto detect user
+    auth.onAuthStateChanged(u => {
+      if (u) {
+        localStorage.setItem("currentUser", JSON.stringify({
+          id: u.uid,
+          phone: u.phoneNumber,
+          name: u.phoneNumber
+        }));
+      }
+    });
 
+    // First render
+    initRecaptcha();
+  </script>
 </body>
 </html>
