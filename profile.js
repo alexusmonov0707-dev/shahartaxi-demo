@@ -1,108 +1,92 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-  getAuth, onAuthStateChanged, signOut 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getDatabase, ref, set, push, onValue
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+// profile.js — modular Firebase v9
+// Replace firebaseConfig values below with your project settings
+
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getDatabase, ref, set, get, update, push, onValue, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
 
 const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.firebasestorage.app",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+authDomain: "shahartaxi-demo.firebaseapp.com",
+databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+projectId: "shahartaxi-demo",
+storageBucket: "shahartaxi-demo.firebasestorage.app",
+messagingSenderId: "874241795701",
+appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
+
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// REGIONS
+
+// --- Regions (simple sample list) ---
 const regions = {
-  "Toshkent": ["Bektemir","Chilonzor","Sergeli","Mirobod","Yakkasaroy"],
-  "Samarqand": ["Bulung‘ur","Kattaqo‘rg‘on","Urgut"],
-  "Namangan": ["Pop","Norin","Chust"],
-  "Farg‘ona": ["Oltiariq","Dang‘ara","Beshariq"],
+"Toshkent": ["Bektemir","Chilonzor","Mirzo Ulug'bek","Mirobod"],
+"Samarqand": ["Bulungur","Ishtixon","Urgut","Kattaqo'rg'on"],
+"Namangan": ["Pop","Chust","To'raqo'rg'on"],
+"Andijon": ["Asaka","Andijon sh.","Marhamat"],
+"Farg'ona": ["Qo'qon","Qo'rg'ontepa","Beshariq"],
+"Buxoro": ["Buxoro sh.","G'ijduvon","Jondor"],
+"Xorazm": ["Urganch","Xiva","Shovot"],
+"Qashqadaryo": ["Qarshi","G'uzor","Kitob"]
 };
 
-// DROPDOWNSNI TOʻLDIRISH
-function loadRegions() {
-  for (let r in regions) {
-    fromRegion.innerHTML += `<option>${r}</option>`;
-    toRegion.innerHTML += `<option>${r}</option>`;
-  }
+
+let currentUser = null;
+let lastStatuses = {};
+
+
+function $id(id){ return document.getElementById(id); }
+function escapeHtml(s){ if(s===undefined||s===null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+
+
+// --- AUTH STATE ---
+onAuthStateChanged(auth, async user => {
+currentUser = user;
+if(user){
+// ensure user record exists
+try{
+await update(ref(db, `users/${user.uid}`), {
+phone: user.phoneNumber || '',
+name: user.displayName || (user.phoneNumber || ''),
+});
+}catch(e){
+await set(ref(db, `users/${user.uid}`), {
+phone: user.phoneNumber || '',
+name: user.displayName || (user.phoneNumber || ''),
+role: 'driver' // default during demo — registration should set this
+});
 }
 
-fromRegion.onchange = () => loadDistricts("from");
-toRegion.onchange = () => loadDistricts("to");
 
-function loadDistricts(type) {
-  const r = (type === "from") ? fromRegion.value : toRegion.value;
-  const target = (type === "from") ? fromDistrict : toDistrict;
-
-  target.innerHTML = "";
-  regions[r].forEach(d => {
-    target.innerHTML += `<option>${d}</option>`;
-  });
+loadUserProfile();
+loadUserAds();
+startStatusSync();
+} else {
+// clear UI
+if($id('profileName')) $id('profileName').textContent = 'Foydalanuvchi';
+if($id('profilePhone')) $id('profilePhone').textContent = '—';
+if($id('myAds')) $id('myAds').innerHTML = '<p class="muted">Hozircha e\'lonlar yo\'q.</p>';
 }
-
-// USER KIRGANINI TEKSHIRAMIZ
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    location.href = "login.html";
-    return;
-  }
-  
-  loadRegions();
-  loadMyAds(user.uid);
 });
 
-// E’LON YOZISH
-window.addAd = async function () {
-  const user = auth.currentUser;
-  if (!user) return;
 
-  const ad = {
-    type: adType.value,
-    fromRegion: fromRegion.value,
-    fromDistrict: fromDistrict.value,
-    toRegion: toRegion.value,
-    toDistrict: toDistrict.value,
-    price: price.value,
-    comment: adComment.value,
-    userId: user.uid,
-    time: Date.now()
-  };
+// --- Profile functions ---
+async function loadUserProfile(){
+if(!currentUser) return;
+try{
+const snap = await get(ref(db, `users/${currentUser.uid}`));
+const data = snap.val() || {};
+if($id('profileName')) $id('profileName').textContent = data.name || 'Foydalanuvchi';
+if($id('profilePhone')) $id('profilePhone').textContent = data.phone || '—';
+if($id('profileRole')) $id('profileRole').textContent = (data.role || '—').toUpperCase();
+if($id('profileRatingBig')) $id('profileRatingBig').textContent = data.ratingAvg ? `${data.ratingAvg} / 5` : '—';
+if($id('profileRatingCount')) $id('profileRatingCount').textContent = data.ratingCount ? `${data.ratingCount} ta baho` : '—';
+if($id('profileAvatar')) $id('profileAvatar').src = data.avatar || '';
 
-  await push(ref(db, "ads/"), ad);
 
-  alert("E’lon joylandi!");
-};
-
-// Mening e’lonlarimni chiqarish
-function loadMyAds(uid) {
-  onValue(ref(db, "ads/"), snap => {
-    myAds.innerHTML = "";
-    snap.forEach(ch => {
-      const ad = ch.val();
-      if (ad.userId === uid) {
-        myAds.innerHTML += `
-          <div style="padding:10px;border:1px solid #ddd;margin-top:8px;border-radius:6px">
-            <b>${ad.type}</b><br>
-            ${ad.fromRegion}, ${ad.fromDistrict} → 
-            ${ad.toRegion}, ${ad.toDistrict}
-            <br> Narx: ${ad.price}
-            <br> Izoh: ${ad.comment}
-          </div>
-        `;
-      }
-    });
-  });
-}
-
-// LOGOUT
-window.logout = function () {
-  signOut(auth);
-};
+if(!/^\+998\d{9}$/.test(phone)) return alert('Telefonni t
