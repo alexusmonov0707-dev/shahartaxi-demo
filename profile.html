@@ -1,59 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mening profilim</title>
-
-  <style>
-    :root{--blue:#007bff;--green:#28a745;--red:#dc3545;--muted:#666;--card:#fff;--bg:#f7f9fc}
-    body{font-family:Arial;background:var(--bg);margin:0;padding:0}
-    header{background:var(--blue);color:#fff;padding:14px 16px;position:relative}
-    .logout{position:absolute;right:14px;top:10px;background:var(--red);padding:8px 12px;border:none;color:#fff;border-radius:6px;cursor:pointer}
-    .container{max-width:960px;margin:20px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.1)}
-    select,input,textarea{width:100%;padding:10px;margin-top:10px;border:1px solid #ccc;border-radius:6px}
-    button{padding:10px 14px;background:var(--blue);border:none;color:#fff;border-radius:6px;cursor:pointer}
-    button.secondary{background:#6c757d}
-  </style>
-
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Profil — ShaharTaxi</title>
+<style>
+:root{--blue:#0b5ed7;--muted:#667;--card:#fff;--bg:#f6f8fb}
+body{font-family:Inter,Arial,Helvetica,sans-serif;background:var(--bg);margin:0;color:#222}
+header{background:var(--blue);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between}
+.container{max-width:980px;margin:18px auto;padding:18px;background:var(--card);border-radius:10px;box-shadow:0 8px 30px rgba(12,25,44,0.06)}
+h2{color:var(--blue);margin:8px 0}
+.grid{display:grid;gap:10px}
+.row{display:flex;gap:8px;align-items:center}
+select,input,textarea,button{font-size:14px}
+select,input,textarea{width:100%;padding:8px;border:1px solid #d9e2ef;border-radius:8px;background:#fff}
+button{padding:8px 12px;border-radius:8px;border:0;background:var(--blue);color:#fff;cursor:pointer}
+button.secondary{background:#6c757d}
+.ad-box{padding:12px;border-radius:8px;border:1px solid #eef6ff;background:#fff;margin-bottom:10px}
+.muted{color:var(--muted);font-size:13px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;z-index:999}
+.modal .content{background:#fff;padding:16px;border-radius:10px;width:420px;max-width:94%}
+.flex{display:flex;gap:8px;align-items:center}
+footer{margin:12px;text-align:center;color:var(--muted);font-size:13px}
+</style>
 </head>
-
 <body>
-
 <header>
-  <h2>ShaharTaxi — Profil</h2>
-  <button class="logout" onclick="logout()">Chiqish</button>
+<div style="display:flex;gap:12px;align-items:center">
+<div style="font-weight:700">ShaharTaxi</div>
+<div class="muted">— Profil</div>
+</div>
+<div>
+<button onclick="logout()" id="logoutBtn" class="secondary">Chiqish</button>
+</div>
 </header>
 
+
 <div class="container">
-  
-  <h3>Mening e'lonlarim</h3>
-  <div id="myAds"></div>
-
-  <hr>
-
-  <h3>Yangi e'lon qo‘shish</h3>
-
-  <select id="adType">
-    <option value="">E'lon turi</option>
-    <option value="driver">Haydovchi</option>
-    <option value="passenger">Yo‘lovchi</option>
-  </select>
-
-  <select id="fromRegion"></select>
-  <select id="fromDistrict"></select>
-
-  <select id="toRegion"></select>
-  <select id="toDistrict"></select>
-
-  <input id="price" type="number" placeholder="Narx (so'm)">
-  <textarea id="adComment" placeholder="Qo‘shimcha izoh"></textarea>
-
-  <button onclick="addAd()">E'lonni joylash</button>
-
+<!-- PROFILE HEADER -->
+<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+<div style="flex:1;min-width:220px">
+<div style="display:flex;gap:12px;align-items:center">
+<img id="profileAvatar" src="" alt="avatar" style="width:68px;height:68px;border-radius:12px;background:#f0f2f5;object-fit:cover" />
+<div>
+<div id="profileName" style="font-size:18px;font-weight:700">Foydalanuvchi</div>
+<div id="profilePhone" class="muted">—</div>
+<div id="profileRole" class="muted" style="margin-top:6px">—</div>
+</div>
+</div>
+</div>
+<div style="text-align:center;min-width:180px">
+<div id="profileRatingBig" style="font-size:20px;font-weight:700">—</div>
+<div id="profileRatingCount" class="muted">—</div>
+<div style="margin-top:8px"><button onclick="openEditProfile()" class="secondary">Profilni tahrirlash</button></div>
+</div>
 </div>
 
-<script type="module" src="profile.js?v=10001"></script>
 
-</body>
+<hr style="margin:14px 0" />
+
+
+<!-- ADS LIST -->
+<h2>Mening e'lonlarim</h2>
+<div id="myAds"></div>
 </html>
