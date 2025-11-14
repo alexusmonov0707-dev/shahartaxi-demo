@@ -1,125 +1,92 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ShaharTaxi — Tizimga kirish</title>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShaharTaxi — Kirish</title>
   <style>
-    body{font-family:Arial;background:#f0f2f5;margin:0;padding:0}
-    .box{
-      max-width:380px;margin:60px auto;background:#fff;
-      padding:22px;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.1);
-    }
-    input{
-      width:100%;padding:10px;border:1px solid #ccc;border-radius:6px;
-      font-size:15px;box-sizing:border-box;margin-top:10px;
-    }
-    button{
-      width:100%;padding:10px;background:#007bff;color:#fff;
-      border:none;border-radius:6px;margin-top:14px;cursor:pointer;font-size:15px;
-    }
-    button:hover{opacity:.9}
-    #verifyBox{display:none;margin-top:14px}
+    body{font-family:Arial;background:#f2f4f8;margin:0;padding:0}
+    .card{max-width:360px;margin:40px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.1)}
+    input{width:100%;padding:10px;margin-top:10px;border:1px solid #ccc;border-radius:6px;font-size:15px}
+    button{width:100%;padding:10px;margin-top:10px;background:#007bff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer}
   </style>
 </head>
 
 <body>
 
-<div class="box">
-  <h2 style="text-align:center;color:#007bff">ShaharTaxi — Tizimga kirish</h2>
+<div class="card">
+    <h2 style="text-align:center;color:#007bff">ShaharTaxi — Tizimga kirish</h2>
 
-  <label>Telefon raqam</label>
-  <input id="phone" placeholder="+998901234567" />
+    <input id="phone" placeholder="+998901234567" />
 
-  <button id="sendCodeBtn" onclick="sendSMS()">SMS kod yuborish</button>
+    <button onclick="sendCode()">SMS kod yuborish</button>
 
-  <div id="verifyBox">
-    <input id="smsCode" placeholder="SMS kod">
-    <button onclick="verifyCode()">Kodni tasdiqlash</button>
-  </div>
+    <div id="verifyBox" style="display:none">
+        <input id="smsCode" placeholder="SMS kod" />
+        <button onclick="verifyCode()">Kirish</button>
+    </div>
 
-  <div id="recaptcha-container"></div>
+    <div id="recaptcha-container"></div>
 </div>
 
-
-<!-- FIREBASE + LOGIN LOGIKA -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-  import { getAuth, RecaptchaVerifier, signInWithPhoneNumber,
-           onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.firebasestorage.app",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
-};
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { 
+    getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged 
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+  // FIREBASE CONFIG — TO‘G‘RI VARIANT
+  const firebaseConfig = {
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.firebasestorage.app",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+  };
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-
-  // -------------------------------------------------
-  //  AUTO LOGIN — agar user oldin kirgan bo‘lsa → PROFILE
-  // -------------------------------------------------
-  onAuthStateChanged(auth, (user) => {
+  // AGAR USER AVVAL KIRGAN BO'LSA → TO‘G‘RI PROFILGA OTADI
+  onAuthStateChanged(auth, user => {
     if (user) {
       window.location.href = "profile.html";
     }
   });
 
+  // RECAPTCHA
+  window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+    size: "invisible"
+  });
 
-  // -------------------------------------------------
-  //  INVISIBLE RECAPTCHA
-  // -------------------------------------------------
-  window.recaptchaVerifier = new RecaptchaVerifier(
-    "sendCodeBtn",
-    { size: "invisible" },
-    auth
-  );
+  // SMS YUBORISH
+  window.sendCode = async function () {
+    const phone = document.getElementById("phone").value;
 
+    try {
+      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+      window.confirmationResult = confirmation;
 
-  // -------------------------------------------------
-  //  SMS YUBORISH
-  // -------------------------------------------------
-  window.sendSMS = function () {
-    const phone = document.getElementById("phone").value.trim();
+      document.getElementById("verifyBox").style.display = "block";
+      alert("SMS kod yuborildi!");
 
-    if (!phone.startsWith("+998") || phone.length < 13) {
-      alert("Telefon raqam noto‘g‘ri!");
-      return;
+    } catch (e) {
+      alert("Xatolik: " + e.message);
     }
-
-    const appVerifier = window.recaptchaVerifier;
-
-    signInWithPhoneNumber(auth, phone, appVerifier)
-      .then((confirmationResult) => {
-        window.confirmationResult = confirmationResult;
-        document.getElementById("verifyBox").style.display = "block";
-      })
-      .catch((err) => {
-        alert("Xatolik: " + err.message);
-      });
   };
 
+  // KODNI TASDIQLASH
+  window.verifyCode = async function () {
+    const code = document.getElementById("smsCode").value;
 
-  // -------------------------------------------------
-  //  KODNI TASDIQLASH
-  // -------------------------------------------------
-  window.verifyCode = function () {
-    const code = document.getElementById("smsCode").value.trim();
-
-    confirmationResult.confirm(code)
-      .then(() => {
-        window.location.href = "profile.html";
-      })
-      .catch(() => {
-        alert("Kod noto‘g‘ri!");
-      });
+    try {
+      await window.confirmationResult.confirm(code);
+      window.location.href = "profile.html";
+    } catch (e) {
+      alert("Kod noto‘g‘ri!");
+    }
   };
 
 </script>
