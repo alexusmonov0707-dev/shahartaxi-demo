@@ -1,87 +1,74 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi — Kirish</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShaharTaxi — Tizimga kirish</title>
   <style>
-    body {
-      font-family: Arial;
-      background: #f2f4f8;
-      margin: 0;
-      padding: 0;
+    body{
+      background:#f2f4f8;
+      font-family:Arial;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      margin:0;
     }
-    .card {
-      max-width: 360px;
-      margin: 40px auto;
-      background: #fff;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, .1);
+    .box{
+      width:350px;
+      background:white;
+      padding:25px;
+      border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,.1);
+      text-align:center;
     }
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 15px;
+    input{
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border:1px solid #ccc;
+      border-radius:6px;
+      font-size:16px;
     }
-    button {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-      background: #007bff;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
+    button{
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      background:#007bff;
+      border:none;
+      color:white;
+      border-radius:6px;
+      font-size:17px;
+      cursor:pointer;
     }
   </style>
 </head>
 
 <body>
 
-<div class="card">
-    <h2 style="text-align:center;color:#007bff">
-      ShaharTaxi — Tizimga kirish
-    </h2>
+<div class="box">
+  <h2 style="color:#007bff">ShaharTaxi — Tizimga kirish</h2>
 
-    <input id="phone" placeholder="+998901234567" />
+  <input id="phone" value="+998" placeholder="Telefon raqam">
+  <button onclick="sendCode()">SMS kod yuborish</button>
 
-    <button onclick="sendCode()">SMS kod yuborish</button>
+  <div id="verifyBox" style="display:none">
+    <input id="smsCode" placeholder="SMS kod">
+    <button onclick="verifyCode()">Kirish</button>
+  </div>
 
-    <div id="verifyBox" style="display:none">
-        <input id="smsCode" placeholder="SMS kod" />
-        <button onclick="verifyCode()">Kirish</button>
-    </div>
-
-    <div id="recaptcha-container"></div>
+  <div id="recaptcha-container"></div>
 </div>
+
+
 
 <script type="module">
 
-  // ==============================
-  // FIREBASE IMPORTS
-  // ==============================
-  import { initializeApp } from 
-  "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { 
-    getAuth, RecaptchaVerifier, signInWithPhoneNumber
-  } from 
-  "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    getAuth, RecaptchaVerifier, signInWithPhoneNumber 
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  import {
-    getDatabase, ref, set, get
-  } from 
-  "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-  // ==============================
-  // FIREBASE CONFIG
-  // ==============================
   const firebaseConfig = {
     apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
     authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -94,67 +81,59 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getDatabase(app);
 
-  // ==============================
-  // INVISIBLE RECAPTCHA
-  // ==============================
-  window.recaptchaVerifier = new RecaptchaVerifier(
-    auth,
-    "recaptcha-container",
-    { size: "invisible" }
-  );
+  // =======================
+  // RECAPTCHA
+  // =======================
+  window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+    size: "invisible"
+  });
 
-  // ==============================
+  // =======================
   // SMS YUBORISH
-  // ==============================
-  window.sendCode = async function() {
+  // =======================
+  window.sendCode = async function () {
     const phone = document.getElementById("phone").value;
 
-    try {
-      const confirmation = await signInWithPhoneNumber(
-        auth,
-        phone,
-        window.recaptchaVerifier
-      );
+    console.log("SMS yuborilmoqda:", phone);
 
+    try {
+      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
       window.confirmationResult = confirmation;
+
       document.getElementById("verifyBox").style.display = "block";
       alert("SMS kod yuborildi!");
 
     } catch (e) {
+      console.error("SMS yuborish xatosi:", e);
       alert("Xatolik: " + e.message);
     }
   };
 
-  // ==============================
-  // KODNI TASDIQLASH + USER YARATISH
-  // ==============================
-  window.verifyCode = async function() {
+  // =======================
+  // KODNI TEKSHIRISH
+  // =======================
+  window.verifyCode = async function () {
     const code = document.getElementById("smsCode").value;
+
+    console.log("Kiritilgan kod:", code);
+    console.log("confirmationResult:", window.confirmationResult);
+
+    if (!window.confirmationResult) {
+      alert("SMS avval yuborilishi kerak!");
+      return;
+    }
 
     try {
       const result = await window.confirmationResult.confirm(code);
-      const user = result.user;
+      console.log("Kirish muvaffaqiyatli:", result);
 
-      // Firebase DB ga yozish (faqat birinchi marta)
-      const userRef = ref(db, "users/" + user.uid);
-      const snap = await get(userRef);
-
-      if (!snap.exists()) {
-        await set(userRef, {
-          fullName: "Foydalanuvchi",
-          phone: user.phoneNumber,
-          avatar: "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png",
-          rating: 0,
-          createdAt: Date.now()
-        });
-      }
-
+      alert("Muvaffaqiyatli kirildi!");
       window.location.href = "profile.html";
 
     } catch (e) {
-      alert("Kod noto‘g‘ri!");
+      console.error("Kod tasdiqlash xatosi:", e);
+      alert("Xatolik: " + e.message);
     }
   };
 
