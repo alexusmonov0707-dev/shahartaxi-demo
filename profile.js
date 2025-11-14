@@ -1,92 +1,97 @@
-// profile.js — modular Firebase v9
-// Replace firebaseConfig values below with your project settings
+// === FIREBASE IMPORTLAR ===
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+  getAuth, onAuthStateChanged, signOut 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  getDatabase, ref, get, update
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-import { getDatabase, ref, set, get, update, push, onValue, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-
+// === FIREBASE CONFIG (TO‘G‘RI VARIANT) ===
 const firebaseConfig = {
-apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-authDomain: "shahartaxi-demo.firebaseapp.com",
-databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-projectId: "shahartaxi-demo",
-storageBucket: "shahartaxi-demo.firebasestorage.app",
-messagingSenderId: "874241795701",
-appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.firebasestorage.app",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
 
+// === INIT ===
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
 
-// --- Regions (simple sample list) ---
-const regions = {
-"Toshkent": ["Bektemir","Chilonzor","Mirzo Ulug'bek","Mirobod"],
-"Samarqand": ["Bulungur","Ishtixon","Urgut","Kattaqo'rg'on"],
-"Namangan": ["Pop","Chust","To'raqo'rg'on"],
-"Andijon": ["Asaka","Andijon sh.","Marhamat"],
-"Farg'ona": ["Qo'qon","Qo'rg'ontepa","Beshariq"],
-"Buxoro": ["Buxoro sh.","G'ijduvon","Jondor"],
-"Xorazm": ["Urganch","Xiva","Shovot"],
-"Qashqadaryo": ["Qarshi","G'uzor","Kitob"]
+// === AUTH LISTENER ===
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  loadUserProfile(user.uid);
+});
+
+
+// === PROFIL MA’LUMOTINI YUKLASH ===
+async function loadUserProfile(uid) {
+  const snap = await get(ref(db, "users/" + uid));
+
+  if (!snap.exists()) return;
+
+  const u = snap.val();
+
+  document.getElementById("fullName").textContent = u.fullName || "No name";
+  document.getElementById("phone").textContent = u.phone || "";
+  document.getElementById("avatar").src = u.avatar || "https://i.ibb.co/YcMtB5H/user.png";
+
+  loadMyAds(uid);
+}
+
+
+// === ELONLARNI YUKLASH (hozircha bo‘sh) ===
+async function loadMyAds(uid) {
+  document.getElementById("myAds").innerHTML = `
+    <div style="color:#777;font-size:14px">Hozircha e’lon yo‘q.</div>
+  `;
+}
+
+
+// === PROFILNI TAHRIRLASH ===
+window.openEditProfile = function () {
+  document.getElementById("editProfileModal").style.display = "flex";
+};
+
+window.closeEditProfile = function () {
+  document.getElementById("editProfileModal").style.display = "none";
 };
 
 
-let currentUser = null;
-let lastStatuses = {};
+// === SAQLASH ===
+window.saveProfile = async function () {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const fullName = document.getElementById("editName").value.trim();
+  const avatar = document.getElementById("editAvatar").value.trim();
+
+  await update(ref(db, "users/" + user.uid), {
+    fullName,
+    avatar
+  });
+
+  closeEditProfile();
+  loadUserProfile(user.uid);
+};
 
 
-function $id(id){ return document.getElementById(id); }
-function escapeHtml(s){ if(s===undefined||s===null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
-
-
-// --- AUTH STATE ---
-onAuthStateChanged(auth, async user => {
-currentUser = user;
-if(user){
-// ensure user record exists
-try{
-await update(ref(db, `users/${user.uid}`), {
-phone: user.phoneNumber || '',
-name: user.displayName || (user.phoneNumber || ''),
-});
-}catch(e){
-await set(ref(db, `users/${user.uid}`), {
-phone: user.phoneNumber || '',
-name: user.displayName || (user.phoneNumber || ''),
-role: 'driver' // default during demo — registration should set this
-});
-}
-
-
-loadUserProfile();
-loadUserAds();
-startStatusSync();
-} else {
-// clear UI
-if($id('profileName')) $id('profileName').textContent = 'Foydalanuvchi';
-if($id('profilePhone')) $id('profilePhone').textContent = '—';
-if($id('myAds')) $id('myAds').innerHTML = '<p class="muted">Hozircha e\'lonlar yo\'q.</p>';
-}
-});
-
-
-// --- Profile functions ---
-async function loadUserProfile(){
-if(!currentUser) return;
-try{
-const snap = await get(ref(db, `users/${currentUser.uid}`));
-const data = snap.val() || {};
-if($id('profileName')) $id('profileName').textContent = data.name || 'Foydalanuvchi';
-if($id('profilePhone')) $id('profilePhone').textContent = data.phone || '—';
-if($id('profileRole')) $id('profileRole').textContent = (data.role || '—').toUpperCase();
-if($id('profileRatingBig')) $id('profileRatingBig').textContent = data.ratingAvg ? `${data.ratingAvg} / 5` : '—';
-if($id('profileRatingCount')) $id('profileRatingCount').textContent = data.ratingCount ? `${data.ratingCount} ta baho` : '—';
-if($id('profileAvatar')) $id('profileAvatar').src = data.avatar || '';
-
-
-if(!/^\+998\d{9}$/.test(phone)) return alert('Telefonni t
+// === LOGOUT (muammo shu edi!) ===
+window.logout = async function () {
+  await signOut(auth);
+  window.location.href = "login.html";
+};
