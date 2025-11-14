@@ -5,7 +5,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { 
   getAuth, onAuthStateChanged, signOut 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
 import {
   getDatabase, ref, get, set, update, push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -59,11 +58,11 @@ async function loadUserProfile(uid) {
 // REGIONS & DISTRICTS
 // ===============================
 const regions = {
-    "Toshkent": ["Bektemir", "Sergeli", "Olmazor", "Chilonzor", "Shayxontohur"],
-    "Samarqand": ["Urgut", "Bulung‘ur", "Narpay", "Ishtixon"],
-    "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Oltiariq", "Beshariq"],
-    "Namangan": ["Kosonsoy", "Uchqo‘rg‘on", "Chortoq", "Namangan sh."],
-    "Buxoro": ["G‘ijduvon", "Qorako‘l", "Vobkent", "Buxoro sh."]
+  "Toshkent": ["Bektemir", "Sergeli", "Olmazor", "Chilonzor", "Shayxontohur"],
+  "Samarqand": ["Urgut", "Bulung‘ur", "Narpay", "Ishtixon"],
+  "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Oltiariq", "Beshariq"],
+  "Namangan": ["Kosonsoy", "Uchqo‘rg‘on", "Chortoq", "Namangan sh."],
+  "Buxoro": ["G‘ijduvon", "Qorako‘l", "Vobkent", "Buxoro sh."]
 };
 
 
@@ -71,19 +70,19 @@ const regions = {
 // VILOYAT → TUMAN TO‘LDIRISH
 // ===============================
 window.updateDistricts = function(type) {
-    const region = document.getElementById(type + "Region").value;
-    const district = document.getElementById(type + "District");
+  const region = document.getElementById(type + "Region").value;
+  const district = document.getElementById(type + "District");
 
-    district.innerHTML = "";
+  district.innerHTML = "";
 
-    if (!regions[region]) return;
+  if (!regions[region]) return;
 
-    regions[region].forEach(t => {
-        const opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        district.appendChild(opt);
-    });
+  regions[region].forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    district.appendChild(opt);
+  });
 };
 
 
@@ -145,8 +144,16 @@ window.clearAddForm = function () {
 
 
 // ===============================
-// PROFIL TAHRIRLASH
+// PROFIL TAHRIRLASH | ⭐ KIRITILMAGAN EDI – TUZATILDI
 // ===============================
+window.openEditProfile = function () {
+  document.getElementById("editProfileModal").style.display = "flex";
+};
+
+window.closeEditProfile = function () {
+  document.getElementById("editProfileModal").style.display = "none";
+};
+
 window.saveProfileEdit = async function() {
   const name = document.getElementById("editFullName").value;
   const phone = document.getElementById("editPhoneInput").value;
