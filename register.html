@@ -1,136 +1,87 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ro‘yxatdan o‘tish - ShaharTaxi</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShaharTaxi — Ro‘yxatdan o‘tish</title>
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #f0f2f5, #d9e4f5);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
+    body{
+      font-family: Arial;
+      background:#f2f4f8;
+      padding:0;margin:0;
+      display:flex;justify-content:center;align-items:center;height:100vh;
     }
-    .register-box {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      width: 350px;
+
+    .card{
+      background:#fff;
+      width:350px;
+      padding:25px;
+      border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,.1);
+      text-align:center;
     }
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #007bff;
+
+    .role-btn{
+      width:100%;
+      padding:15px;
+      margin-top:10px;
+      font-size:18px;
+      border:none; 
+      background:#007bff;
+      color:white;
+      border-radius:8px;
+      cursor:pointer;
+      transition:.2s;
     }
-    input, select {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-size: 15px;
+    .role-btn:hover{ background:#0267d8; }
+
+    input, select{
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      font-size:15px;
     }
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #007bff;
-      border: none;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-      transition: 0.3s;
+
+    #extraFields{ display:none; margin-top:15px; }
+
+    button{
+      width:100%;
+      padding:12px;
+      background:#007bff;
+      border:none;
+      margin-top:12px;
+      color:white;
+      font-size:18px;
+      border-radius:8px;
+      cursor:pointer;
     }
-    button:hover { background: #0056b3; }
-    p { text-align: center; margin-top: 12px; }
-    .error { color: red; text-align: center; font-size: 14px; }
-    .success { color: green; text-align: center; font-size: 14px; }
   </style>
 </head>
+
 <body>
-  <div class="register-box">
-    <h2>Ro‘yxatdan o‘tish</h2>
-    <input type="text" id="name" placeholder="Ism" required>
-    <input type="text" id="phone" placeholder="Telefon raqam (masalan: +998901234567)" required>
-    <input type="password" id="password" placeholder="Parol" required>
-    <select id="userType" required>
-      <option value="">Rolni tanlang</option>
-      <option value="driver">Haydovchi</option>
-      <option value="passenger">Yo‘lovchi</option>
-    </select>
-    <button onclick="registerUser()">Ro‘yxatdan o‘tish</button>
-    <p class="error" id="registerError"></p>
-    <p class="success" id="registerSuccess"></p>
-    <p>Hisobingiz bormi? <a href="login.html">Kirish</a></p>
+
+<div class="card">
+
+  <h2>Ro‘yxatdan o‘tish</h2>
+  <p id="selectedRole" style="font-weight:bold;"></p>
+
+  <button class="role-btn" onclick="selectRole('driver')">🚕 Men Haydovchiman</button>
+  <button class="role-btn" onclick="selectRole('passenger')">🚶‍♂️ Men Yo‘lovchiman</button>
+
+  <div id="extraFields">
+      <input id="fullName" placeholder="Ism Familiya">
+      <input id="phone" placeholder="Telefon raqam" disabled>
+      <input id="carModel" placeholder="Mashina modeli" style="display:none">
+      <input id="license" placeholder="Prava raqami" style="display:none">
+      <button onclick="saveRole()">Saqlash</button>
   </div>
 
-  <script>
-    function registerUser() {
-      const name = document.getElementById('name').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const userType = document.getElementById('userType').value;
-      const error = document.getElementById('registerError');
-      const success = document.getElementById('registerSuccess');
+</div>
 
-      error.textContent = '';
-      success.textContent = '';
+<script type="module" src="register.js?v=1001"></script>
 
-      // Maydonlar to‘ldirilganligini tekshirish
-      if (!name || !phone || !password || !userType) {
-        error.textContent = '⚠️ Iltimos, barcha maydonlarni to‘ldiring!';
-        return;
-      }
-
-      // Telefon raqam formati tekshiruvi
-      const phoneRegex = /^\+998\d{9}$/;
-      if (!phoneRegex.test(phone)) {
-        error.textContent = '📞 Telefon raqamini to‘g‘ri kiriting! (+998 bilan boshlansin)';
-        return;
-      }
-
-      let users = JSON.parse(localStorage.getItem('users')) || [];
-
-      // Raqam allaqachon ro‘yxatdan o‘tganligini tekshirish
-      if (users.some(u => u.phone === phone)) {
-        error.textContent = '❌ Bu telefon raqam allaqachon ro‘yxatdan o‘tgan!';
-        return;
-      }
-
-      // Yangi foydalanuvchi obyektini yaratish
-      const newUser = {
-        name,
-        phone,
-        password,
-        userType,
-        createdAt: new Date().toLocaleString()
-      };
-      users.push(newUser);
-
-      // Ma’lumotlarni saqlash
-      localStorage.setItem('users', JSON.stringify(users));
-
-      // Tizimga avtomatik kirish (currentUser)
-      localStorage.setItem('currentUser', JSON.stringify({
-        name,
-        phone,
-        userType
-      }));
-
-      // Muvaffaqiyatli xabar
-      success.textContent = '✅ Muvaffaqiyatli ro‘yxatdan o‘tildi!';
-      setTimeout(() => {
-        if (userType === 'driver') {
-          window.location.href = 'driver.html';
-        } else {
-          window.location.href = 'passenger.html';
-        }
-      }, 1500);
-    }
-  </script>
 </body>
 </html>
