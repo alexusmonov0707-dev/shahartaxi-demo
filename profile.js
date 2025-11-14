@@ -7,7 +7,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  getDatabase, ref, get, update, push
+  getDatabase, ref, get, set, update, push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -33,7 +33,7 @@ onAuthStateChanged(auth, user => {
     window.location.href = "login.html";
   } else {
     loadUserProfile(user.uid);
-    loadRegions(); // viloyatlarni yuklaymiz
+    loadRegions();  // viloyatlarni yuklash
   }
 });
 
@@ -47,7 +47,7 @@ async function loadUserProfile(uid) {
 
   const u = snap.val();
 
-  document.getElementById("fullName").textContent = u.fullName || "Ism kiritilmagan";
+  document.getElementById("fullName").textContent = u.fullName || "Ism ko‘rsatilmagan";
   document.getElementById("phone").textContent = u.phone || "";
 
   document.getElementById("avatar").src =
@@ -57,60 +57,63 @@ async function loadUserProfile(uid) {
 
 
 // ===============================
-// REGIONS & DISTRICTS
+// REGIONLAR RO‘YXATI
 // ===============================
-const regions = {
-  "Toshkent": ["Bektemir", "Sergeli", "Olmazor", "Chilonzor", "Shayxontohur"],
-  "Samarqand": ["Urgut", "Bulung‘ur", "Narpay", "Ishtixon"],
-  "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Oltiariq", "Beshariq"],
-  "Namangan": ["Kosonsoy", "Uchqo‘rg‘on", "Chortoq", "Namangan sh."],
-  "Buxoro": ["G‘ijduvon", "Qorako‘l", "Vobkent", "Buxoro sh."]
+const regionsData = {
+  "Toshkent": ["Bektemir", "Chilonzor", "Yunusobod", "Sergeli"],
+  "Samarqand": ["Urgut", "Ishtixon", "Narpay", "Payariq"],
+  "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Beshariq", "Oltiariq"],
+  "Buxoro": ["Vobkent", "G‘ijduvon", "Qorako‘l", "Romitan"],
+  "Namangan": ["Kosonsoy", "Chortoq", "Uchqo‘rg‘on", "Namangan sh."]
 };
 
 
 // ===============================
-// VILOYATLARNI SELECT GA YUKLASH
+// VILOYATLARNI YUKLASH
 // ===============================
 function loadRegions() {
-  const lists = ["fromRegion", "toRegion"];
+  const fromRegion = document.getElementById("fromRegion");
+  const toRegion = document.getElementById("toRegion");
 
-  lists.forEach(id => {
-    const sel = document.getElementById(id);
-    sel.innerHTML = `<option value="">Viloyatni tanlang</option>`;
+  Object.keys(regionsData).forEach(region => {
+    let opt1 = document.createElement("option");
+    opt1.value = region;
+    opt1.textContent = region;
+    fromRegion.appendChild(opt1);
 
-    Object.keys(regions).forEach(r => {
-      const o = document.createElement("option");
-      o.value = r;
-      o.textContent = r;
-      sel.appendChild(o);
-    });
+    let opt2 = document.createElement("option");
+    opt2.value = region;
+    opt2.textContent = region;
+    toRegion.appendChild(opt2);
   });
 }
 
 
 // ===============================
-// VILOYAT → TUMAN TO‘LDIRISH
+//   VILOYAT → TUMAN
 // ===============================
 window.updateDistricts = function(type) {
-  const region = document.getElementById(type + "Region").value;
-  const district = document.getElementById(type + "District");
+  let regionSelect = document.getElementById(type + "Region");
+  let districtSelect = document.getElementById(type + "District");
 
-  district.innerHTML = `<option value="">Tuman</option>`;
+  let region = regionSelect.value;
 
-  if (!regions[region]) return;
+  districtSelect.innerHTML = "";
 
-  regions[region].forEach(t => {
-    const opt = document.createElement("option");
-    opt.value = t;
-    opt.textContent = t;
-    district.appendChild(opt);
+  if (!regionsData[region]) return;
+
+  regionsData[region].forEach(d => {
+    let opt = document.createElement("option");
+    opt.value = d;
+    opt.textContent = d;
+    districtSelect.appendChild(opt);
   });
 };
 
 
 
 // ===============================
-//   E’LON QO‘SHISH
+// E’LON QO‘SHISH
 // ===============================
 window.addAd = async function () {
   const type = document.getElementById("adType").value;
@@ -139,12 +142,12 @@ window.addAd = async function () {
     price: price || 0,
     comment,
     approved: false,
-    time: Date.now()
+    createdAt: Date.now()
   };
 
   await push(ref(db, "ads"), ad);
 
-  alert("E’lon joylandi!");
+  alert("E’lon muvaffaqiyatli joylandi!");
   clearAddForm();
 };
 
@@ -156,9 +159,9 @@ window.addAd = async function () {
 window.clearAddForm = function () {
   document.getElementById("adType").value = "";
   document.getElementById("fromRegion").value = "";
-  document.getElementById("fromDistrict").innerHTML = `<option value="">Tuman</option>`;
+  document.getElementById("fromDistrict").innerHTML = "";
   document.getElementById("toRegion").value = "";
-  document.getElementById("toDistrict").innerHTML = `<option value="">Tuman</option>`;
+  document.getElementById("toDistrict").innerHTML = "";
   document.getElementById("price").value = "";
   document.getElementById("adComment").value = "";
 };
@@ -166,12 +169,11 @@ window.clearAddForm = function () {
 
 
 // ===============================
-// PROFILNI TAHRIRLASH
+// PROFIL TAHRIRLASH MODAL
 // ===============================
-window.openEditProfile = function () {
+window.openEditProfile = function() {
   document.getElementById("editModal").style.display = "flex";
 
-  // hozirgi user ma’lumotlarini inputga qo‘yamiz
   document.getElementById("editFullName").value =
     document.getElementById("fullName").textContent;
 
@@ -179,10 +181,14 @@ window.openEditProfile = function () {
     document.getElementById("phone").textContent;
 };
 
-window.closeEditProfile = function () {
+window.closeEditProfile = function() {
   document.getElementById("editModal").style.display = "none";
 };
 
+
+// ===============================
+// PROFILNI SAQLASH
+// ===============================
 window.saveProfileEdit = async function () {
   const name = document.getElementById("editFullName").value;
   const phone = document.getElementById("editPhoneInput").value;
@@ -195,14 +201,14 @@ window.saveProfileEdit = async function () {
     phone: phone
   });
 
-  alert("Profil saqlandi!");
+  alert("Profil muvaffaqiyatli saqlandi!");
   window.location.reload();
 };
 
 
 
 // ===============================
-//   CHIQISH
+// CHIQISH
 // ===============================
 window.logout = function () {
   signOut(auth);
