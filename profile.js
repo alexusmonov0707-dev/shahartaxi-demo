@@ -1,201 +1,108 @@
-// Firebase imports
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+  getAuth, onAuthStateChanged, signOut 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getDatabase, ref, set, push, onValue
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40yUC9aCsE9MOLXwLcYgRihREWvc",
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
   projectId: "shahartaxi-demo",
   storageBucket: "shahartaxi-demo.firebasestorage.app",
   messagingSenderId: "874241795701",
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-
-// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// Helper
-const $ = id => document.getElementById(id);
-
-// Regions + districts
+// REGIONS
 const regions = {
-  "Toshkent": ["Bektemir","Chilonzor","Mirzo Ulug'bek","Mirobod"],
-  "Samarqand": ["Bulung'ur","Ishtixon","Urgut","Kattaqo'rg'on"],
-  "Namangan": ["Pop","Chust","Norin","To'raqo'rg'on"],
-  "Andijon": ["Asaka","Andijon sh.","Marhamat"],
-  "Farg'ona": ["Qo'qon","Qo'rg'ontepa","Beshariq"],
-  "Buxoro": ["Buxoro sh.","G'ijduvon","Jondor"],
-  "Xorazm": ["Urganch","Xiva","Shovot"],
-  "Qashqadaryo": ["Qarshi","G'uzor","Kitob"]
+  "Toshkent": ["Bektemir","Chilonzor","Sergeli","Mirobod","Yakkasaroy"],
+  "Samarqand": ["Bulung‘ur","Kattaqo‘rg‘on","Urgut"],
+  "Namangan": ["Pop","Norin","Chust"],
+  "Farg‘ona": ["Oltiariq","Dang‘ara","Beshariq"],
 };
 
-// Load regions into selects
+// DROPDOWNSNI TOʻLDIRISH
 function loadRegions() {
-  let r1 = "", r2 = "";
-  Object.keys(regions).forEach(r => {
-    r1 += `<option value="${r}">${r}</option>`;
-    r2 += `<option value="${r}">${r}</option>`;
-  });
-  $("#fromRegion").innerHTML = r1;
-  $("#toRegion").innerHTML = r2;
+  for (let r in regions) {
+    fromRegion.innerHTML += `<option>${r}</option>`;
+    toRegion.innerHTML += `<option>${r}</option>`;
+  }
 }
 
-// Update districts
-function updateDistricts(type) {
-  const region = type === "from"
-    ? $("#fromRegion").value
-    : $("#toRegion").value;
+fromRegion.onchange = () => loadDistricts("from");
+toRegion.onchange = () => loadDistricts("to");
 
-  const select = type === "from" ? $("#fromDistrict") : $("#toDistrict");
+function loadDistricts(type) {
+  const r = (type === "from") ? fromRegion.value : toRegion.value;
+  const target = (type === "from") ? fromDistrict : toDistrict;
 
-  select.innerHTML = "";
-
-  if (!region) return;
-
-  regions[region].forEach(t => {
-    select.innerHTML += `<option value="${t}">${t}</option>`;
+  target.innerHTML = "";
+  regions[r].forEach(d => {
+    target.innerHTML += `<option>${d}</option>`;
   });
 }
 
-window.updateDistricts = updateDistricts;
-
-// Current user
-let currentUser = null;
-
-// Auth listener
-onAuthStateChanged(auth, async user => {
-  if (user) {
-    currentUser = user;
-    loadRegions();
-    loadMyProfile();
-    loadMyAds();
-  } else {
-    window.location.href = "login.html";
-  }
-});
-
-// Load profile info
-async function loadMyProfile() {
-  const snap = await get(ref(db, "users/" + currentUser.uid));
-
-  if (snap.exists()) {
-    const u = snap.val();
-    $("#profileName").innerText = u.displayName || "Foydalanuvchi";
-    $("#profilePhone").innerText = u.phoneNumber || "—";
-  }
-}
-
-// ---------- ADD AD ----------
-async function addAd() {
-  if (!currentUser) return alert("Avval tizimga kiring!");
-
-  const type = $("#adType").value;
-  const fromRegion = $("#fromRegion").value;
-  const fromDistrict = $("#fromDistrict").value;
-  const toRegion = $("#toRegion").value;
-  const toDistrict = $("#toDistrict").value;
-  const price = $("#price").value;
-  const comment = $("#adComment").value;
-
-  if (!type || !fromRegion || !fromDistrict || !toRegion || !toDistrict) {
-    return alert("Hamma maydonlarni to‘ldiring!");
-  }
-
-  const adId = Date.now();
-  const data = {
-    id: adId,
-    userId: currentUser.uid,
-    type,
-    fromRegion,
-    fromDistrict,
-    toRegion,
-    toDistrict,
-    price,
-    comment,
-    status: "pending",
-    createdAt: new Date().toISOString()
-  };
-
-  await set(ref(db, "ads/" + adId), data);
-
-  alert("E’lon yuborildi! Admin tasdiqlashi kerak.");
-  clearAddForm();
-  loadMyAds();
-}
-
-window.addAd = addAd;
-
-// ---------- CLEAR FORM ----------
-function clearAddForm() {
-  $("#adType").value = "";
-  $("#fromRegion").value = "";
-  $("#fromDistrict").innerHTML = "";
-  $("#toRegion").value = "";
-  $("#toDistrict").innerHTML = "";
-  $("#price").value = "";
-  $("#adComment").value = "";
-}
-
-window.clearAddForm = clearAddForm;
-
-// ---------- LOAD MY ADS ----------
-async function loadMyAds() {
-  const snap = await get(ref(db, "ads"));
-  const box = $("#myAds");
-  box.innerHTML = "";
-
-  if (!snap.exists()) {
-    box.innerHTML = "<p>Hozircha e’lonlar yo‘q</p>";
+// USER KIRGANINI TEKSHIRAMIZ
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    location.href = "login.html";
     return;
   }
+  
+  loadRegions();
+  loadMyAds(user.uid);
+});
 
-  snap.forEach(s => {
-    const ad = s.val();
-    if (ad.userId !== currentUser.uid) return;
+// E’LON YOZISH
+window.addAd = async function () {
+  const user = auth.currentUser;
+  if (!user) return;
 
-    const item = document.createElement("div");
-    item.className = "ad-box";
-    item.innerHTML = `
-      <div><b>${ad.type === "driver" ? "Haydovchi" : "Yo‘lovchi"}</b></div>
-      <div>${ad.fromRegion} → ${ad.toRegion}</div>
-      <div>${ad.fromDistrict} → ${ad.toDistrict}</div>
-      <div>Narx: ${ad.price} so‘m</div>
-      <div class="date-info">${ad.createdAt}</div>
-      <div class="date-info">Holat: ${ad.status}</div>
-    `;
-    box.appendChild(item);
+  const ad = {
+    type: adType.value,
+    fromRegion: fromRegion.value,
+    fromDistrict: fromDistrict.value,
+    toRegion: toRegion.value,
+    toDistrict: toDistrict.value,
+    price: price.value,
+    comment: adComment.value,
+    userId: user.uid,
+    time: Date.now()
+  };
+
+  await push(ref(db, "ads/"), ad);
+
+  alert("E’lon joylandi!");
+};
+
+// Mening e’lonlarimni chiqarish
+function loadMyAds(uid) {
+  onValue(ref(db, "ads/"), snap => {
+    myAds.innerHTML = "";
+    snap.forEach(ch => {
+      const ad = ch.val();
+      if (ad.userId === uid) {
+        myAds.innerHTML += `
+          <div style="padding:10px;border:1px solid #ddd;margin-top:8px;border-radius:6px">
+            <b>${ad.type}</b><br>
+            ${ad.fromRegion}, ${ad.fromDistrict} → 
+            ${ad.toRegion}, ${ad.toDistrict}
+            <br> Narx: ${ad.price}
+            <br> Izoh: ${ad.comment}
+          </div>
+        `;
+      }
+    });
   });
 }
 
-// ---------- PROFILE EDIT ----------
-window.openEditProfile = () => {
-  $("#editProfileModal").style.display = "flex";
+// LOGOUT
+window.logout = function () {
+  signOut(auth);
 };
-
-window.closeEditProfile = () => {
-  $("#editProfileModal").style.display = "none";
-};
-
-window.saveProfileEdit = async () => {
-  const name = $("#editFullName").value.trim();
-  const phone = $("#editPhoneInput").value.trim();
-
-  if (!name || !phone) return alert("Ism va telefonni kiriting!");
-
-  await update(ref(db, "users/" + currentUser.uid), {
-    displayName: name,
-    phoneNumber: phone
-  });
-
-  closeEditProfile();
-  loadMyProfile();
-};
-
-// ---------- LOGOUT ----------
-window.logout = () => signOut(auth);
