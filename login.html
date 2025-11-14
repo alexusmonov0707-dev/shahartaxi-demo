@@ -4,18 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShaharTaxi — Kirish</title>
+
   <style>
-    body{font-family:Arial;background:#f2f4f8;margin:0;padding:0}
-    .card{max-width:360px;margin:40px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.1)}
-    input{width:100%;padding:10px;margin-top:10px;border:1px solid #ccc;border-radius:6px;font-size:15px}
-    button{width:100%;padding:10px;margin-top:10px;background:#007bff;color:#fff;border:none;border-radius:6px;font-size:16px;cursor:pointer}
+    body {
+      font-family: Arial;
+      background: #f2f4f8;
+      margin: 0;
+      padding: 0;
+    }
+    .card {
+      max-width: 360px;
+      margin: 40px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .1);
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+    }
   </style>
 </head>
 
 <body>
 
 <div class="card">
-    <h2 style="text-align:center;color:#007bff">ShaharTaxi — Tizimga kirish</h2>
+    <h2 style="text-align:center;color:#007bff">
+      ShaharTaxi — Tizimga kirish
+    </h2>
 
     <input id="phone" placeholder="+998901234567" />
 
@@ -31,46 +63,62 @@
 
 <script type="module">
 
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  // ==============================
+  // FIREBASE IMPORTS
+  // ==============================
+  import { initializeApp } from 
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
   import { 
-    getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged 
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    getAuth, RecaptchaVerifier, signInWithPhoneNumber
+  } from 
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  // FIREBASE CONFIG — TO‘G‘RI VARIANT
+  import {
+    getDatabase, ref, set, get
+  } from 
+  "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ==============================
+  // FIREBASE CONFIG
+  // ==============================
   const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com", 
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.firebasestorage.app",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
-};
-
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.firebasestorage.app",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+  };
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
+  const db = getDatabase(app);
 
-  // AGAR USER AVVAL KIRGAN BO'LSA → TO‘G‘RI PROFILGA OTADI
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      window.location.href = "profile.html";
-    }
-  });
+  // ==============================
+  // INVISIBLE RECAPTCHA
+  // ==============================
+  window.recaptchaVerifier = new RecaptchaVerifier(
+    auth,
+    "recaptcha-container",
+    { size: "invisible" }
+  );
 
-  // RECAPTCHA
-  window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-    size: "invisible"
-  });
-
+  // ==============================
   // SMS YUBORISH
-  window.sendCode = async function () {
+  // ==============================
+  window.sendCode = async function() {
     const phone = document.getElementById("phone").value;
 
     try {
-      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-      window.confirmationResult = confirmation;
+      const confirmation = await signInWithPhoneNumber(
+        auth,
+        phone,
+        window.recaptchaVerifier
+      );
 
+      window.confirmationResult = confirmation;
       document.getElementById("verifyBox").style.display = "block";
       alert("SMS kod yuborildi!");
 
@@ -79,13 +127,32 @@
     }
   };
 
-  // KODNI TASDIQLASH
-  window.verifyCode = async function () {
+  // ==============================
+  // KODNI TASDIQLASH + USER YARATISH
+  // ==============================
+  window.verifyCode = async function() {
     const code = document.getElementById("smsCode").value;
 
     try {
-      await window.confirmationResult.confirm(code);
+      const result = await window.confirmationResult.confirm(code);
+      const user = result.user;
+
+      // Firebase DB ga yozish (faqat birinchi marta)
+      const userRef = ref(db, "users/" + user.uid);
+      const snap = await get(userRef);
+
+      if (!snap.exists()) {
+        await set(userRef, {
+          fullName: "Foydalanuvchi",
+          phone: user.phoneNumber,
+          avatar: "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png",
+          rating: 0,
+          createdAt: Date.now()
+        });
+      }
+
       window.location.href = "profile.html";
+
     } catch (e) {
       alert("Kod noto‘g‘ri!");
     }
