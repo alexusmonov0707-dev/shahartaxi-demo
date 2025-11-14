@@ -57,11 +57,12 @@
       <option value="passenger">Yo‘lovchi</option>
     </select>
 
-    <select id="fromRegion"></select>
-    <select id="fromDistrict"></select>
+   <select id="fromRegion" onchange="updateDistricts('from')"></select>
+<select id="fromDistrict"></select>
 
-    <select id="toRegion"></select>
-    <select id="toDistrict"></select>
+<select id="toRegion" onchange="updateDistricts('to')"></select>
+<select id="toDistrict"></select>
+
 
     <input id="price" type="number" placeholder="Narx (so'm)">
   </div>
