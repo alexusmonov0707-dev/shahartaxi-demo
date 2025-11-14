@@ -97,3 +97,87 @@ window.logout = async function () {
   await signOut(auth);
   window.location.href = "login.html";
 };
+
+// ======================================
+//  TUMANLAR RO‘YXATI
+// ======================================
+const regions = {
+  "Toshkent viloyati": ["Chirchiq", "Olmaliq", "Bekobod", "Parkent", "Oqqo‘rg‘on"],
+  "Samarqand": ["Samarqand sh.", "Urgut", "Ishtixon", "Narpay"],
+  "Farg‘ona": ["Farg‘ona sh.", "Qo‘qon", "Marg‘ilon"],
+  "Namangan": ["Namangan sh.", "Chortoq", "Uchqo‘rg‘on"],
+  "Buxoro": ["Buxoro sh.", "G‘ijduvon", "Qorako‘l"]
+};
+
+// ======================================
+//  VILOYAT → TUMANLARNI YUKLASH
+// ======================================
+window.updateDistricts = function(type) {
+    const region = document.getElementById(type + "Region").value;
+    const districtSelect = document.getElementById(type + "District");
+
+    districtSelect.innerHTML = "";
+
+    if (!regions[region]) return;
+
+    regions[region].forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        districtSelect.appendChild(opt);
+    });
+};
+
+
+// ======================================
+//  E'LON QO‘SHISH
+// ======================================
+window.addAd = async function () {
+    const type = document.getElementById("adType").value;
+    const fromRegion = document.getElementById("fromRegion").value;
+    const fromDistrict = document.getElementById("fromDistrict").value;
+    const toRegion = document.getElementById("toRegion").value;
+    const toDistrict = document.getElementById("toDistrict").value;
+    const price = document.getElementById("price").value;
+    const comment = document.getElementById("adComment").value;
+
+    if (!type || !fromRegion || !fromDistrict || !toRegion || !toDistrict) {
+        alert("Iltimos, barcha maydonlarni to‘ldiring!");
+        return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) return alert("Login qiling!");
+
+    const ad = {
+        type,
+        fromRegion,
+        fromDistrict,
+        toRegion,
+        toDistrict,
+        price: price || 0,
+        comment,
+        userId: user.uid,
+        time: Date.now(),
+        approved: false
+    };
+
+    await push(ref(db, "ads"), ad);
+
+    alert("E’lon joylandi (Admin tasdiqlashi kerak)");
+    clearAddForm();
+};
+
+
+// ======================================
+//  FORMANI TOZALASH
+// ======================================
+window.clearAddForm = function () {
+    document.getElementById("adType").value = "";
+    document.getElementById("fromRegion").value = "";
+    document.getElementById("fromDistrict").innerHTML = "";
+    document.getElementById("toRegion").value = "";
+    document.getElementById("toDistrict").innerHTML = "";
+    document.getElementById("price").value = "";
+    document.getElementById("adComment").value = "";
+};
