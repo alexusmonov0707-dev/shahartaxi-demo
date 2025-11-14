@@ -123,10 +123,10 @@ window.verifyCode = async function () {
     const result = await window.confirmationResult.confirm(code);
     const user = result.user;
 
-    // ----------- Yangi user bo'lsa — database'ga yozamiz -----------
     const userRef = ref(db, "users/" + user.uid);
     const snap = await get(userRef);
 
+    // === AGAR USER MA'LUMOTLARI YO'Q BO'LSA — YOZAMIZ ===
     if (!snap.exists()) {
       await set(userRef, {
         fullName: "",
@@ -135,6 +135,19 @@ window.verifyCode = async function () {
         role: "",
         car: "",
         created: Date.now()
+      });
+    } 
+
+    // === AGAR USER BOR LEKIN MA'LUMOTLARI TO'LIQ EMAS — TO'LDIRAMIZ ===
+    else {
+      let u = snap.val();
+      await set(userRef, {
+        fullName: u.fullName || "",
+        phone: u.phone || user.phoneNumber,
+        avatar: u.avatar || "",
+        role: u.role || "",
+        car: u.car || "",
+        created: u.created || Date.now()
       });
     }
 
@@ -145,6 +158,7 @@ window.verifyCode = async function () {
     alert("Kod noto‘g‘ri yoki xato: " + err.message);
   }
 };
+
 
 </script>
 
