@@ -265,23 +265,31 @@ function renderAdsListFromLocal(){
 // Edit / delete functions (simple flows)
 // -----------------------
 async function startEditAd(adId){
-  if(!currentUser) return alert('Tizimga kiring');
-  try{
+  if(!currentUser) { alert('Tizimga kiring'); return; }
+
+  try {
     const snap = await get(ref(db, `userAds/${currentUser.uid}/${adId}`));
     const ad = snap.val();
-    if(!ad) return alert("E'lon topilmadi");
-    if(ad.status === 'approved') return alert("Tasdiqlangan e'lonni o'zgartirib bo'lmaydi");
-    const newPrice = prompt("Yangi narx kiriting:", ad.price || '');
-    if(newPrice === null) return;
+    if(!ad) return alert("E'lon topilmadi"); // bu yerda double quotes ishlatildi
+    if(ad.status === 'approved') return alert("Tasdiqlangan e'londa o'zgartirish mumkin emas");
+
+    const newPrice = prompt("Yangi narxni kiriting:", ad.price || '');
+    if(newPrice === null) return; // cancel
+
     const updates = { price: newPrice, edited: true, status: 'pending', editedAt: new Date().toISOString() };
+
+    // update main / user / pending
     await update(ref(db, `ads/${adId}`), updates).catch(()=>{});
     await update(ref(db, `userAds/${currentUser.uid}/${adId}`), updates).catch(()=>{});
     await update(ref(db, `pendingAds/${adId}`), updates).catch(()=>{});
+
     alert("E'lon yangilandi. Admin tasdiqlashini kuting.");
   } catch(e){
-    console.error('startEditAd error', e); alert('E'lonni tahrirlashda xatolik');
+    console.error('startEditAd error', e);
+    alert("E'lonni tahrirlashda xatolik");
   }
 }
+
 
 async function deleteAd(adId){
   if(!currentUser) return alert('Tizimga kiring');
