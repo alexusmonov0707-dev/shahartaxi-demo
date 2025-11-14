@@ -1,52 +1,55 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShaharTaxi — Profil</title>
 
   <style>
-    body { font-family: Arial; background:#f2f4f8; margin:0; padding:0; }
-    header { background:#006cff; padding:15px; color:#fff; font-size:22px; }
-    .card { max-width:900px; margin:20px auto; background:white; padding:20px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,.1);}
-    .avatar { width:70px; height:70px; border-radius:10px; }
-    select, input, textarea { width:100%; padding:10px; margin-top:8px; border:1px solid #ccc; border-radius:6px; }
-    button { padding:10px 20px; border:none; border-radius:6px; cursor:pointer; }
+    body{font-family:Arial;background:#f2f4f8;margin:0;padding:0}
+    header{background:#007bff;color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}
+    .container{max-width:900px;margin:20px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.1)}
+
+    .profile-box{display:flex;align-items:center;gap:15px}
+    .profile-box img{width:70px;height:70px;border-radius:12px;object-fit:cover;background:#e6e6e6}
+
+    select,input,textarea{
+      width:100%;padding:10px;border-radius:6px;border:1px solid #ccc;
+      margin-top:10px;font-size:15px;
+    }
+    button{padding:10px 16px;border:none;border-radius:6px;cursor:pointer}
+    .blue-btn{background:#007bff;color:#fff}
+    .gray-btn{background:#6c757d;color:#fff}
   </style>
 </head>
 
 <body>
 
 <header>
-  ShaharTaxi — Profil  
-  <button onclick="logout()" style="float:right;background:#ff4444;color:white;">Chiqish</button>
+  <h2>ShaharTaxi — Profil</h2>
+  <button onclick="logout()" class="gray-btn">Chiqish</button>
 </header>
 
-<div class="card">
+<div class="container">
 
-  <div style="display:flex;gap:20px;align-items:center;">
-    <img id="avatar" class="avatar" src="">
+  <div class="profile-box">
+    <img id="avatar" src="">
     <div>
-      <div id="fullName" style="font-size:20px;font-weight:bold;">—</div>
-      <div id="phone">—</div>
+      <div id="fullName" style="font-size:20px;font-weight:bold">—</div>
+      <div id="phone" style="color:#555">—</div>
     </div>
 
-    <button onclick="openEditProfile()" 
-            style="margin-left:auto;background:#555;color:white;">
-            Profilni tahrirlash
+    <button onclick="openEditProfile()" class="gray-btn" style="margin-left:auto">
+      Proflini tahrirlash
     </button>
   </div>
 
-</div>
+  <hr>
 
-
-<!-- ========== E'LON QO‘SHISH ========== -->
-<div class="card">
-
-  <h2 style="text-align:center;color:#007aff">Yangi e’lon qo‘shish</h2>
+  <h2 style="text-align:center;color:#007bff">Yangi e’lon qo‘shish</h2>
 
   <select id="adType">
-    <option value="">E’lon turini tanlang</option>
+    <option value="">E’lon turi</option>
     <option value="driver">Haydovchi</option>
     <option value="passenger">Yo‘lovchi</option>
   </select>
@@ -67,41 +70,32 @@
     <option value="">Tuman</option>
   </select>
 
-  <input id="price" type="number" placeholder="Narx (so‘m)">
-  <textarea id="adComment" placeholder="Qo‘shimcha izoh" rows="3"></textarea>
+  <input id="price" placeholder="Narx (so'm)">
+  <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
-  <button onclick="addAd()" 
-          style="background:#007bff;color:white;margin-top:10px;">
-          E’lonni joylash
-  </button>
+  <button onclick="addAd()" class="blue-btn">E’lonni joylash</button>
+  <button onclick="clearAddForm()" class="gray-btn">Tozalash</button>
+
 </div>
 
-
-<!-- ========== PROFIL TAHRIR MODAL ========== -->
-<div id="editProfileModal" 
-     style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;
-     background:rgba(0,0,0,.4);justify-content:center;align-items:center;">
+<!-- PROFIL EDIT MODAL -->
+<div id="editModal" 
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+            justify-content:center;align-items:center;">
   
-  <div style="background:white;padding:20px;border-radius:10px;
-              width:320px;box-shadow:0 4px 10px rgba(0,0,0,.3);">
-
+  <div style="background:#fff;padding:20px;border-radius:10px;width:320px">
     <h3>Profilni tahrirlash</h3>
 
     <input id="editFullName" placeholder="Ism">
     <input id="editPhoneInput" placeholder="Telefon">
 
-    <button onclick="saveProfileEdit()" 
-            style="background:#007bff;color:white;margin-top:10px;width:100%;">Saqlash</button>
-
-    <button onclick="closeEditProfile()" 
-            style="background:#aaa;color:white;margin-top:10px;width:100%;">Bekor qilish</button>
-
+    <button onclick="saveProfileEdit()" class="blue-btn" style="margin-top:10px;width:100%">Saqlash</button>
+    <button onclick="closeEditProfile()" class="gray-btn" style="margin-top:10px;width:100%">Bekor qilish</button>
   </div>
 
 </div>
 
-
-<script type="module" src="profile.js?v=10013"></script>
+<script type="module" src="profile.js?v=9999"></script>
 
 </body>
 </html>
