@@ -48,7 +48,9 @@ async function loadUserProfile(uid) {
 
   document.getElementById("fullName").textContent = u.fullName || "No name";
   document.getElementById("phone").textContent = u.phone || "";
-  document.getElementById("avatar").src = u.avatar || "https://i.ibb.co/YcMtB5H/user.png";
+  document.getElementById("avatar").src =
+  u.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
+
 
   loadMyAds(uid);
 }
