@@ -1,98 +1,59 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mening profilim - ShaharTaxi</title>
+  <title>Mening profilim</title>
 
   <style>
-    body { font-family: Arial; background:#f7f9fc; margin:0; padding:0; color:#222; }
-    header { background:#007bff; color:#fff; padding:14px; display:flex; justify-content:space-between; align-items:center; }
-    header h1 { margin:0; }
-    button { padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
-    .secondary{ background:#6c757d; color:#fff }
-    .logout{ background:#dc3545;color:#fff }
-    .container{ max-width:950px; margin:20px auto; background:#fff; padding:20px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,.05); }
-    select,input,textarea{ width:100%; padding:8px; margin-top:6px; border-radius:6px; border:1px solid #ccc; }
-    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; margin-top:10px; }
-    .modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); justify-content:center; align-items:center; }
-    .modal-content{ background:#fff; padding:20px; border-radius:10px; width:350px; }
+    :root{--blue:#007bff;--green:#28a745;--red:#dc3545;--muted:#666;--card:#fff;--bg:#f7f9fc}
+    body{font-family:Arial;background:var(--bg);margin:0;padding:0}
+    header{background:var(--blue);color:#fff;padding:14px 16px;position:relative}
+    .logout{position:absolute;right:14px;top:10px;background:var(--red);padding:8px 12px;border:none;color:#fff;border-radius:6px;cursor:pointer}
+    .container{max-width:960px;margin:20px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.1)}
+    select,input,textarea{width:100%;padding:10px;margin-top:10px;border:1px solid #ccc;border-radius:6px}
+    button{padding:10px 14px;background:var(--blue);border:none;color:#fff;border-radius:6px;cursor:pointer}
+    button.secondary{background:#6c757d}
   </style>
+
 </head>
+
 <body>
 
 <header>
-  <h1>ShaharTaxi — Profil</h1>
+  <h2>ShaharTaxi — Profil</h2>
   <button class="logout" onclick="logout()">Chiqish</button>
 </header>
 
 <div class="container">
-
-  <div style="display:flex;justify-content:space-between">
-    <div>
-      <div id="profileName" style="font-size:18px;font-weight:bold">Foydalanuvchi</div>
-      <div id="profilePhone" style="color:#666;font-size:13px">—</div>
-    </div>
-    <div style="text-align:right">
-      <div id="profileRatingBig" style="font-size:20px;font-weight:bold">—</div>
-      <div id="profileRatingCount" style="font-size:13px;color:#777">—</div>
-    </div>
-  </div>
-
-  <button class="secondary" style="margin-top:10px" onclick="openEditProfile()">Profilni tahrirlash</button>
-
-  <hr>
-
-  <h2 style="text-align:center;color:#007bff">Mening e’lonlarim</h2>
+  
+  <h3>Mening e'lonlarim</h3>
   <div id="myAds"></div>
 
   <hr>
 
-  <h2 style="text-align:center;color:#007bff">Yangi e’lon qo‘shish</h2>
+  <h3>Yangi e'lon qo‘shish</h3>
 
-  <div class="grid">
-    <select id="adType">
-      <option value="">E’lon turini tanlang</option>
-      <option value="driver">Haydovchi</option>
-      <option value="passenger">Yo‘lovchi</option>
-    </select>
+  <select id="adType">
+    <option value="">E'lon turi</option>
+    <option value="driver">Haydovchi</option>
+    <option value="passenger">Yo‘lovchi</option>
+  </select>
 
-   <select id="fromRegion" onchange="updateDistricts('from')"></select>
-<select id="fromDistrict"></select>
+  <select id="fromRegion"></select>
+  <select id="fromDistrict"></select>
 
-<select id="toRegion" onchange="updateDistricts('to')"></select>
-<select id="toDistrict"></select>
+  <select id="toRegion"></select>
+  <select id="toDistrict"></select>
 
+  <input id="price" type="number" placeholder="Narx (so'm)">
+  <textarea id="adComment" placeholder="Qo‘shimcha izoh"></textarea>
 
-    <input id="price" type="number" placeholder="Narx (so'm)">
-  </div>
-
-  <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh" style="margin-top:10px"></textarea>
-
-  <div style="margin-top:10px;display:flex;gap:10px">
-    <button onclick="addAd()">E’lonni joylash</button>
-    <button class="secondary" onclick="clearAddForm()">Tozalash</button>
-    <span style="margin-left:auto;color:#777;font-size:13px">⚠️ Admin tasdiqlashi kerak</span>
-  </div>
+  <button onclick="addAd()">E'lonni joylash</button>
 
 </div>
 
-<!-- EDIT PROFILE MODAL -->
-<div id="editProfileModal" class="modal">
-  <div class="modal-content">
-    <h3>Profilni tahrirlash</h3>
-    <input id="editFullName" placeholder="Ism">
-    <input id="editPhoneInput" placeholder="Telefon" style="margin-top:10px">
-    <div style="margin-top:10px;text-align:right">
-      <button onclick="saveProfileEdit()">Saqlash</button>
-      <button class="secondary" onclick="closeEditProfile()">Bekor</button>
-    </div>
-  </div>
-</div>
-
-<footer style="text-align:center;margin-top:20px;color:#777">ShaharTaxi — lokal demo</footer>
-
-<script type="module" src="./profile.js?v=10005"></script>
+<script type="module" src="profile.js?v=10001"></script>
 
 </body>
 </html>
