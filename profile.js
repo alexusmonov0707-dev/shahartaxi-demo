@@ -5,8 +5,9 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { 
   getAuth, onAuthStateChanged, signOut 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
 import {
-  getDatabase, ref, get, set, update, push
+  getDatabase, ref, get, update, push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -32,6 +33,7 @@ onAuthStateChanged(auth, user => {
     window.location.href = "login.html";
   } else {
     loadUserProfile(user.uid);
+    loadRegions(); // viloyatlarni yuklaymiz
   }
 });
 
@@ -67,13 +69,33 @@ const regions = {
 
 
 // ===============================
+// VILOYATLARNI SELECT GA YUKLASH
+// ===============================
+function loadRegions() {
+  const lists = ["fromRegion", "toRegion"];
+
+  lists.forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="">Viloyatni tanlang</option>`;
+
+    Object.keys(regions).forEach(r => {
+      const o = document.createElement("option");
+      o.value = r;
+      o.textContent = r;
+      sel.appendChild(o);
+    });
+  });
+}
+
+
+// ===============================
 // VILOYAT → TUMAN TO‘LDIRISH
 // ===============================
 window.updateDistricts = function(type) {
   const region = document.getElementById(type + "Region").value;
   const district = document.getElementById(type + "District");
 
-  district.innerHTML = "";
+  district.innerHTML = `<option value="">Tuman</option>`;
 
   if (!regions[region]) return;
 
@@ -134,9 +156,9 @@ window.addAd = async function () {
 window.clearAddForm = function () {
   document.getElementById("adType").value = "";
   document.getElementById("fromRegion").value = "";
-  document.getElementById("fromDistrict").innerHTML = "";
+  document.getElementById("fromDistrict").innerHTML = `<option value="">Tuman</option>`;
   document.getElementById("toRegion").value = "";
-  document.getElementById("toDistrict").innerHTML = "";
+  document.getElementById("toDistrict").innerHTML = `<option value="">Tuman</option>`;
   document.getElementById("price").value = "";
   document.getElementById("adComment").value = "";
 };
@@ -144,17 +166,24 @@ window.clearAddForm = function () {
 
 
 // ===============================
-// PROFIL TAHRIRLASH | ⭐ KIRITILMAGAN EDI – TUZATILDI
+// PROFILNI TAHRIRLASH
 // ===============================
 window.openEditProfile = function () {
-  document.getElementById("editProfileModal").style.display = "flex";
+  document.getElementById("editModal").style.display = "flex";
+
+  // hozirgi user ma’lumotlarini inputga qo‘yamiz
+  document.getElementById("editFullName").value =
+    document.getElementById("fullName").textContent;
+
+  document.getElementById("editPhoneInput").value =
+    document.getElementById("phone").textContent;
 };
 
 window.closeEditProfile = function () {
-  document.getElementById("editProfileModal").style.display = "none";
+  document.getElementById("editModal").style.display = "none";
 };
 
-window.saveProfileEdit = async function() {
+window.saveProfileEdit = async function () {
   const name = document.getElementById("editFullName").value;
   const phone = document.getElementById("editPhoneInput").value;
 
