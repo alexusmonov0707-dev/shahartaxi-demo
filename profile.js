@@ -5,7 +5,7 @@ import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/fire
 
 // Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40yUC9aCsE9MOLxwLcYgRihREWvc",
+  apiKey: "AIzaSyApWUG40yUC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
   databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
   projectId: "shahartaxi-demo",
