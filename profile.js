@@ -1,87 +1,200 @@
-// GLOBAL EXPORT — HTML onclick() uchun
-window.openEditProfile = openEditProfile;
-window.closeEditProfile = closeEditProfile;
-window.saveProfileEdit = saveProfileEdit;
-window.addAd = addAd;
-window.clearAddForm = clearAddForm;
-window.logout = logout;
+// Firebase imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// Regions (toza, ishlaydigan)
-const regions = {
-  "Toshkent": ["Bektemir", "Chilonzor", "Yakkasaroy", "Mirzo Ulug‘bek"],
-  "Samarqand": ["Bulung‘ur", "Ishtixon", "Urgut"],
-  "Buxoro": ["Buxoro sh.", "Jondor", "G‘ijduvon"],
-  "Xorazm": ["Urganch", "Xiva", "Shovot"]
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyApIU4G0vC9aCSEM9OLvxLCyGRiHeRWcv",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.firebasestorage.app",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3ead2ad8ceba3c"
 };
 
-const $ = document.getElementById.bind(document);
+// Init
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
-// --- DROPDOWN to‘ldirish ---
-function fillRegions() {
-  const fr = $("fromRegion");
-  const tr = $("toRegion");
+// Helper
+const $ = id => document.getElementById(id);
 
-  fr.innerHTML = "<option value=''>Viloyat</option>";
-  tr.innerHTML = "<option value=''>Viloyat</option>";
+// Regions + districts
+const regions = {
+  "Toshkent": ["Bektemir","Chilonzor","Mirzo Ulug'bek","Mirobod"],
+  "Samarqand": ["Bulung'ur","Ishtixon","Urgut","Kattaqo'rg'on"],
+  "Namangan": ["Pop","Chust","Norin","To'raqo'rg'on"],
+  "Andijon": ["Asaka","Andijon sh.","Marhamat"],
+  "Farg'ona": ["Qo'qon","Qo'rg'ontepa","Beshariq"],
+  "Buxoro": ["Buxoro sh.","G'ijduvon","Jondor"],
+  "Xorazm": ["Urganch","Xiva","Shovot"],
+  "Qashqadaryo": ["Qarshi","G'uzor","Kitob"]
+};
 
-  for (let r in regions) {
-    fr.innerHTML += `<option value="${r}">${r}</option>`;
-    tr.innerHTML += `<option value="${r}">${r}</option>`;
-  }
+// Load regions into selects
+function loadRegions() {
+  let r1 = "", r2 = "";
+  Object.keys(regions).forEach(r => {
+    r1 += `<option value="${r}">${r}</option>`;
+    r2 += `<option value="${r}">${r}</option>`;
+  });
+  $("#fromRegion").innerHTML = r1;
+  $("#toRegion").innerHTML = r2;
 }
 
+// Update districts
 function updateDistricts(type) {
-  const reg = $(type + "Region").value;
-  const dst = $(type + "District");
+  const region = type === "from"
+    ? $("#fromRegion").value
+    : $("#toRegion").value;
 
-  dst.innerHTML = "<option value=''>Tuman</option>";
+  const select = type === "from" ? $("#fromDistrict") : $("#toDistrict");
 
-  if (regions[reg]) {
-    regions[reg].forEach(t => {
-      dst.innerHTML += `<option value="${t}">${t}</option>`;
-    });
-  }
+  select.innerHTML = "";
+
+  if (!region) return;
+
+  regions[region].forEach(t => {
+    select.innerHTML += `<option value="${t}">${t}</option>`;
+  });
 }
 
 window.updateDistricts = updateDistricts;
 
-// ---------------- MODAL ----------------
+// Current user
+let currentUser = null;
 
-function openEditProfile() {
-  $("editProfileModal").style.display = "flex";
+// Auth listener
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    currentUser = user;
+    loadRegions();
+    loadMyProfile();
+    loadMyAds();
+  } else {
+    window.location.href = "login.html";
+  }
+});
+
+// Load profile info
+async function loadMyProfile() {
+  const snap = await get(ref(db, "users/" + currentUser.uid));
+
+  if (snap.exists()) {
+    const u = snap.val();
+    $("#profileName").innerText = u.displayName || "Foydalanuvchi";
+    $("#profilePhone").innerText = u.phoneNumber || "—";
+  }
 }
 
-function closeEditProfile() {
-  $("editProfileModal").style.display = "none";
+// ---------- ADD AD ----------
+async function addAd() {
+  if (!currentUser) return alert("Avval tizimga kiring!");
+
+  const type = $("#adType").value;
+  const fromRegion = $("#fromRegion").value;
+  const fromDistrict = $("#fromDistrict").value;
+  const toRegion = $("#toRegion").value;
+  const toDistrict = $("#toDistrict").value;
+  const price = $("#price").value;
+  const comment = $("#adComment").value;
+
+  if (!type || !fromRegion || !fromDistrict || !toRegion || !toDistrict) {
+    return alert("Hamma maydonlarni to‘ldiring!");
+  }
+
+  const adId = Date.now();
+  const data = {
+    id: adId,
+    userId: currentUser.uid,
+    type,
+    fromRegion,
+    fromDistrict,
+    toRegion,
+    toDistrict,
+    price,
+    comment,
+    status: "pending",
+    createdAt: new Date().toISOString()
+  };
+
+  await set(ref(db, "ads/" + adId), data);
+
+  alert("E’lon yuborildi! Admin tasdiqlashi kerak.");
+  clearAddForm();
+  loadMyAds();
 }
 
-function saveProfileEdit() {
-  alert("Saqlash ishladi (demo)");
-  closeEditProfile();
-}
+window.addAd = addAd;
 
-// ---------------- ADD AD ----------------
-
+// ---------- CLEAR FORM ----------
 function clearAddForm() {
-  $("adType").value = "";
-  $("fromRegion").value = "";
-  $("fromDistrict").innerHTML = "";
-  $("toRegion").value = "";
-  $("toDistrict").innerHTML = "";
-  $("price").value = "";
-  $("adComment").value = "";
+  $("#adType").value = "";
+  $("#fromRegion").value = "";
+  $("#fromDistrict").innerHTML = "";
+  $("#toRegion").value = "";
+  $("#toDistrict").innerHTML = "";
+  $("#price").value = "";
+  $("#adComment").value = "";
 }
 
-function addAd() {
-  alert("E’lon qo‘shildi (demo)");
+window.clearAddForm = clearAddForm;
+
+// ---------- LOAD MY ADS ----------
+async function loadMyAds() {
+  const snap = await get(ref(db, "ads"));
+  const box = $("#myAds");
+  box.innerHTML = "";
+
+  if (!snap.exists()) {
+    box.innerHTML = "<p>Hozircha e’lonlar yo‘q</p>";
+    return;
+  }
+
+  snap.forEach(s => {
+    const ad = s.val();
+    if (ad.userId !== currentUser.uid) return;
+
+    const item = document.createElement("div");
+    item.className = "ad-box";
+    item.innerHTML = `
+      <div><b>${ad.type === "driver" ? "Haydovchi" : "Yo‘lovchi"}</b></div>
+      <div>${ad.fromRegion} → ${ad.toRegion}</div>
+      <div>${ad.fromDistrict} → ${ad.toDistrict}</div>
+      <div>Narx: ${ad.price} so‘m</div>
+      <div class="date-info">${ad.createdAt}</div>
+      <div class="date-info">Holat: ${ad.status}</div>
+    `;
+    box.appendChild(item);
+  });
 }
 
-// ---------------- AUTH ----------------
+// ---------- PROFILE EDIT ----------
+window.openEditProfile = () => {
+  $("#editProfileModal").style.display = "flex";
+};
 
-function logout() {
-  alert("Chiqdingiz (demo)");
-}
+window.closeEditProfile = () => {
+  $("#editProfileModal").style.display = "none";
+};
 
-// ---------------- STARTUP ----------------
+window.saveProfileEdit = async () => {
+  const name = $("#editFullName").value.trim();
+  const phone = $("#editPhoneInput").value.trim();
 
-fillRegions();
+  if (!name || !phone) return alert("Ism va telefonni kiriting!");
+
+  await update(ref(db, "users/" + currentUser.uid), {
+    displayName: name,
+    phoneNumber: phone
+  });
+
+  closeEditProfile();
+  loadMyProfile();
+};
+
+// ---------- LOGOUT ----------
+window.logout = () => signOut(auth);
