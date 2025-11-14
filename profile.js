@@ -5,14 +5,15 @@ import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/fire
 
 // Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyApIU4G0vC9aCSEM9OLvxLCyGRiHeRWcv",
+  apiKey: "AIzaSyApWUG40yUC9aCsE9MOLxwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
   databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
   projectId: "shahartaxi-demo",
   storageBucket: "shahartaxi-demo.firebasestorage.app",
   messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3ead2ad8ceba3c"
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
+
 
 // Init
 const app = initializeApp(firebaseConfig);
