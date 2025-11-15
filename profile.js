@@ -373,19 +373,33 @@ async function loadMyAds() {
     div.style = `
       padding:12px;
       border:1px solid #ddd;
-      border-radius:8px;
-      margin-bottom:10px;
+      border-radius:10px;
+      margin-bottom:12px;
+      background:#f8faff;
     `;
 
     div.innerHTML = `
-      <b>${ad.type}</b><br>
-      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
-      Narx: <b>${ad.price || "-"} so‘m</b><br>
-      Jo‘nash vaqti: ${formatDatetime(ad.departureTime)}<br>
-      Qo‘shimcha: ${ad.comment || "-"}<br>
-      <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small><br>
-      <button onclick='openEditAd("${child.key}", ${JSON.stringify(ad)})'
-        style="padding:6px 12px;margin-top:10px;">Tahrirlash</button>
+      <b style="color:#0069d9;">${ad.type}</b><br>
+      <span style="color:#333;">${ad.fromRegion}, ${ad.fromDistrict}</span>
+      →
+      <span style="color:#333;">${ad.toRegion}, ${ad.toDistrict}</span><br>
+
+      Narx: <b style="color:#28a745;">${ad.price || "-"} so‘m</b><br>
+      Jo‘nash vaqti: <span style="color:#ff8800;">${formatDatetime(ad.departureTime)}</span><br>
+      Qo‘shimcha: <i>${ad.comment || "-"}</i><br>
+      <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
+
+      <div style="margin-top:10px; display:flex; gap:8px;">
+        <button onclick='openEditAd("${child.key}", ${JSON.stringify(ad)})'
+          style="background:#0069d9; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">
+            Tahrirlash
+        </button>
+
+        <button onclick='deleteAd("${child.key}")'
+          style="background:#ff4444; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">
+            O‘chirish
+        </button>
+      </div>
     `;
 
     box.appendChild(div);
