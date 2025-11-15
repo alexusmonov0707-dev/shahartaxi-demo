@@ -36,19 +36,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-
-// ===============================
-// VILOYATLAR
-// ===============================
-const regionsData = {
-  "Toshkent": ["Bektemir", "Chilonzor", "Yunusobod", "Sergeli"],
-  "Samarqand": ["Urgut", "Ishtixon", "Narpay", "Payariq"],
-  "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Beshariq", "Oltiariq"],
-  "Buxoro": ["Vobkent", "G‘ijduvon", "Qorako‘l", "Romitan"],
-  "Namangan": ["Kosonsoy", "Chortoq", "Uchqo‘rg‘on", "Namangan sh."]
-};
-
-
 // ===============================
 // LOGIN TEKSHIRUV
 // ===============================
