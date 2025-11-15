@@ -36,8 +36,23 @@
     .blue-btn { background:#0069d9; color:#fff; }
     .gray-btn { background:#ccc; }
 
+    /* MY ADS ITEMS */
+    .ad-box {
+      border:1px solid #ddd;
+      border-radius:10px;
+      padding:12px;
+      margin-bottom:12px;
+    }
+    .ad-actions {
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+    }
+    .edit-btn { background:#00a65a; color:#fff; }
+    .delete-btn { background:#d9534f; color:#fff; }
+
     /* MODAL */
-    #editModal {
+    #editModal, #editAdModal {
       position:fixed; left:0; top:0; right:0; bottom:0;
       background:rgba(0,0,0,0.6); display:none;
       justify-content:center; align-items:center;
@@ -62,8 +77,7 @@
     <img id="avatar" onclick="chooseAvatar()"
          src="https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png">
 
-    <!-- TOG‘RI: FAQAT BIR MARTA avatarInput -->
-<input id="avatarInput" type="file" accept="image/*" style="display:none">
+    <input id="avatarInput" type="file" accept="image/*" style="display:none">
 
     <div>
       <div id="fullName" style="font-size:20px; font-weight:bold;">Yuklanmoqda...</div>
@@ -79,12 +93,6 @@
   <!-- ADD AD SECTION -->
   <div class="card">
     <div class="title">Yangi e’lon qo‘shish</div>
-
-    <select id="adType">
-      <option value="">Haydovchi / Yo‘lovchi</option>
-      <option value="Haydovchi">Haydovchi</option>
-      <option value="Yo‘lovchi">Yo‘lovchi</option>
-    </select>
 
     <select id="fromRegion" onchange="updateDistricts('from')">
       <option value="">Qayerdan (Viloyat)</option>
@@ -103,8 +111,8 @@
     </select>
 
     <input id="price" placeholder="Narx (so‘m)">
- <input id="departureTime" type="datetime-local" placeholder="Jo'nash vaqti">
-<input id="seats" type="number" min="1" placeholder="Yo‘lovchilar soni (faqat yo‘lovchilar uchun)">
+    <input id="departureTime" type="datetime-local" placeholder="Jo'nash vaqti">
+    <input id="seats" type="number" min="1" placeholder="Yo‘lovchilar soni (faqat yo‘lovchi uchun)">
     <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
     <button onclick="addAd()" class="blue-btn" style="margin-top:15px;">E’lonni joylash</button>
@@ -112,37 +120,52 @@
   </div>
 
   <!-- MY ADS SECTION -->
-<div class="card" id="myAdsBox" style="margin-top:25px;">
-  <div class="title">Mening e’lonlarim</div>
-  <div id="myAdsList" style="margin-top:15px;">
-      Yuklanmoqda...
+  <div class="card" id="myAdsBox" style="margin-top:25px;">
+    <div class="title">Mening e’lonlarim</div>
+    <div id="myAdsList" style="margin-top:15px;">Yuklanmoqda...</div>
   </div>
-</div>
 
-  <!-- EDIT PROFILE MODAL -->
+
+  <!-- PROFILE EDIT MODAL -->
   <div id="editModal">
     <div class="modal-box">
       <h3>Profilni tahrirlash</h3>
 
       <input id="editFullName" placeholder="Ism">
       <input id="editPhoneInput" placeholder="Telefon" readonly>
-      
-      <h3 style="margin-top:15px;">Avtomobil ma’lumotlari</h3>
 
-<input id="carModel" placeholder="Model (Nexia 3, Malibu...)">
-<input id="carNumber" placeholder="Davlat raqami (01A123BC)">
-<input id="carColor" placeholder="Rangi (Oq, qora...)">
-<input id="seatCount" placeholder="O‘rindiqlar soni" type="number" min="1">
+      <h3 style="margin-top:15px;">Avtomobil ma’lumotlari</h3>
+      <input id="carModel" placeholder="Model (Nexia 3, Malibu...)">
+      <input id="carNumber" placeholder="Davlat raqami (01A123BC)">
+      <input id="carColor" placeholder="Rangi (Oq, qora...)">
+      <input id="seatCount" placeholder="O‘rindiqlar soni" type="number" min="1">
 
       <button onclick="saveProfileEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
       <button onclick="closeEditProfile()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
     </div>
   </div>
 
-  <!-- JS -->
+
+  <!-- EDIT AD MODAL -->
+  <div id="editAdModal">
+    <div class="modal-box">
+      <h3>E’lonni tahrirlash</h3>
+
+      <input id="editFrom" placeholder="Qayerdan">
+      <input id="editTo" placeholder="Qayerga">
+      <input id="editPrice" placeholder="Narx">
+      <input id="editTime" type="datetime-local">
+
+      <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
+
+      <button onclick="saveAdEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
+      <button onclick="closeEditAd()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
+    </div>
+  </div>
+
+
 <script src="regions.js?v=1"></script>
 <script type="module" src="profile.js?v=3001"></script>
-
 
 </body>
 </html>
