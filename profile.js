@@ -315,13 +315,14 @@ async function loadMyAds() {
     `;
 
     div.innerHTML = `
-      <b>${ad.type}</b><br>
-      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
-      Narx: <b>${ad.price || "-"} so‘m</b><br>
-      Jo‘nash vaqti: <b>${formatDatetime(ad.departureTime)}</b><br>
-      Qo‘shimcha: ${ad.comment || "-"}<br>
-      <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
-    `;
+    <b>${ad.type}</b><br>
+    ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
+    Narx: <b>${ad.price || "-"} so‘m</b><br>
+    Jo‘nash vaqti: ${formatDatetime(ad.startTime)}<br>
+    Qo‘shimcha: ${ad.comment || "-"}<br>
+    <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
+`;
+
 
     box.appendChild(div);
   });
