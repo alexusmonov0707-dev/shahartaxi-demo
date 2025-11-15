@@ -2,21 +2,23 @@
 // FIREBASE INIT
 // ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-  getAuth, onAuthStateChanged, signOut 
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-import { 
-  getDatabase, ref, get, set, update, push 
+import {
+  getDatabase,
+  ref,
+  get,
+  set,
+  update,
+  push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// STORAGE (keyinchalik ishlatamiz)
-import {
-  getStorage, ref as storageRef, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+import regionsData from "./regions.js?v=3001";
 
-
-// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -30,11 +32,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
-const storage = getStorage(app);
+
+// ImgBB API KEY
+const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
 
 
 // ===============================
-// USER CHECK
+// LOGIN TEKSHIRUV
 // ===============================
 onAuthStateChanged(auth, user => {
   if (!user) {
@@ -48,148 +52,190 @@ onAuthStateChanged(auth, user => {
 
 
 // ===============================
-// LOAD PROFILE
+// USER PROFILINI YUKLASH
 // ===============================
 async function loadUserProfile(uid) {
-  const snap = await get(ref(db, "users/" + uid));
+  try {
+    const snap = await get(ref(db, "users/" + uid));
 
-  if (!snap.exists()) {
-    await set(ref(db, "users/" + uid), {
-      fullName: "Ism kiritilmagan",
-      phone: "",
-      avatar: ""
-    });
+    if (!snap.exists()) {
+      await set(ref(db, "users/" + uid), {
+        fullName: "Ism kiritilmagan",
+        phone: "",
+        avatar: "",
+        carModel: "",
+        carNumber: "",
+        carColor: "",
+        seatCount: ""
+      });
+    }
+
+    const u = snap.val() || {};
+
+    document.getElementById("fullName").textContent = u.fullName || "Ism ko‘rsatilmagan";
+    document.getElementById("phone").textContent = u.phone || "";
+    document.getElementById("avatar").src = u.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
+
+    // Modalga joylash
+    document.getElementById("editFullName").value = u.fullName || "";
+    document.getElementById("editPhoneInput").value = u.phone || "";
+    document.getElementById("carModel").value = u.carModel || "";
+    document.getElementById("carNumber").value = u.carNumber || "";
+    document.getElementById("carColor").value = u.carColor || "";
+    document.getElementById("seatCount").value = u.seatCount || "";
+
+  } catch (err) {
+    console.error(err);
   }
-
-  const u = snap.val() || {};
-
-  document.getElementById("fullName").textContent = u.fullName || "Ism ko‘rsatilmagan";
-  document.getElementById("phone").textContent = u.phone || "";
-
-  document.getElementById("avatar").src =
-    u.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
 }
 
 
+
 // ===============================
-// LOAD REGIONS
+// VILOYATLARNI YUKLASH
 // ===============================
 function loadRegions() {
   const fromRegion = document.getElementById("fromRegion");
   const toRegion = document.getElementById("toRegion");
 
-  fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
-  toRegion.innerHTML   = `<option value="">Qayerga (Viloyat)</option>`;
+  fromRegion.innerHTML = '<option value="">Qayerdan (Viloyat)</option>';
+  toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
 
-  Object.keys(window.regionsData).forEach(region => {
-    let o1 = document.createElement("option");
-    o1.value = region; o1.textContent = region;
-    fromRegion.appendChild(o1);
-
-    let o2 = document.createElement("option");
-    o2.value = region; o2.textContent = region;
-    toRegion.appendChild(o2);
+  Object.keys(regionsData).forEach(region => {
+    fromRegion.innerHTML += `<option value="${region}">${region}</option>`;
+    toRegion.innerHTML += `<option value="${region}">${region}</option>`;
   });
 }
 
 
+
 // ===============================
-// REGION → DISTRICT
+// VILOYAT → TUMAN
 // ===============================
-window.updateDistricts = type => {
+window.updateDistricts = function(type) {
   const region = document.getElementById(type + "Region").value;
   const districtSelect = document.getElementById(type + "District");
 
-  districtSelect.innerHTML = `<option value="">Tuman</option>`;
+  districtSelect.innerHTML = '<option value="">Tuman</option>';
 
-  if (!region || !window.regionsData[region]) return;
-
-  window.regionsData[region].forEach(d => {
-    let opt = document.createElement("option");
-    opt.value = d; opt.textContent = d;
-    districtSelect.appendChild(opt);
-  });
+  if (regionsData[region]) {
+    regionsData[region].forEach(t => {
+      districtSelect.innerHTML += `<option value="${t}">${t}</option>`;
+    });
+  }
 };
 
 
+
 // ===============================
-// ADD AD
+// E’LON QO‘SHISH
 // ===============================
 window.addAd = async function () {
-  const user = auth.currentUser;
-  if (!user) return;
+  try {
+    const type = adType.value;
+    const fromRegionValue = fromRegion.value;
+    const fromDistrictValue = fromDistrict.value;
+    const toRegionValue = toRegion.value;
+    const toDistrictValue = toDistrict.value;
+    const priceVal = price.value;
+    const commentVal = adComment.value;
 
-  const ad = {
-    userId: user.uid,
-    type: adType.value,
-    fromRegion: fromRegion.value,
-    fromDistrict: fromDistrict.value,
-    toRegion: toRegion.value,
-    toDistrict: toDistrict.value,
-    price: price.value || 0,
-    comment: adComment.value,
-    approved: false,
-    createdAt: Date.now()
-  };
+    if (!type || !fromRegionValue || !fromDistrictValue || !toRegionValue || !toDistrictValue) {
+      alert("Barcha maydonlarni to‘ldiring!");
+      return;
+    }
 
-  if (!ad.type || !ad.fromRegion || !ad.fromDistrict || !ad.toRegion || !ad.toDistrict) {
-    alert("Barcha maydonlarni to‘ldiring!");
-    return;
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const ad = {
+      userId: user.uid,
+      type,
+      fromRegion: fromRegionValue,
+      fromDistrict: fromDistrictValue,
+      toRegion: toRegionValue,
+      toDistrict: toDistrictValue,
+      price: priceVal || 0,
+      comment: commentVal,
+      approved: false,
+      createdAt: Date.now()
+    };
+
+    await push(ref(db, "ads"), ad);
+
+    alert("E’lon muvaffaqiyatli qo‘shildi!");
+    clearAddForm();
+
+  } catch (err) {
+    console.error(err);
+    alert("Xatolik!");
   }
-
-  await push(ref(db, "ads"), ad);
-
-  alert("E’lon joylandi!");
-  clearAddForm();
 };
 
 
-// CLEAR FORM
-window.clearAddForm = () => {
+
+// ===============================
+// FORM TOZALASH
+// ===============================
+window.clearAddForm = function () {
   adType.value = "";
   fromRegion.value = "";
+  fromDistrict.innerHTML = '<option value="">Tuman</option>';
   toRegion.value = "";
-  fromDistrict.innerHTML = "<option>Tuman</option>";
-  toDistrict.innerHTML = "<option>Tuman</option>";
+  toDistrict.innerHTML = '<option value="">Tuman</option>';
   price.value = "";
   adComment.value = "";
 };
 
 
+
 // ===============================
-// PROFILE EDIT
+// PROFIL MODAL
 // ===============================
-window.openEditProfile = () => {
-  editModal.style.display = "flex";
-  editFullName.value = fullName.textContent;
-  editPhoneInput.value = phone.textContent;
+window.openEditProfile = function () {
+  document.getElementById("editModal").style.display = "flex";
 };
 
-window.closeEditProfile = () => {
-  editModal.style.display = "none";
-};
-
-window.saveProfileEdit = async () => {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  await update(ref(db, "users/" + user.uid), {
-    fullName: editFullName.value,
-    phone: editPhoneInput.value   // hozircha o‘zgaraveradi
-  });
-
-  alert("Saqlandi!");
-  closeEditProfile();
-  loadUserProfile(user.uid);
+window.closeEditProfile = function () {
+  document.getElementById("editModal").style.display = "none";
 };
 
 
-// ===============================
-// AVATAR — ImgBB (default)
-// ===============================
 
-const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
+// ===============================
+// PROFILNI SAQLASH
+// ===============================
+window.saveProfileEdit = async function () {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
 
+    const updates = {
+      fullName: document.getElementById("editFullName").value,
+      phone: document.getElementById("editPhoneInput").value,
+      carModel: document.getElementById("carModel").value,
+      carNumber: document.getElementById("carNumber").value,
+      carColor: document.getElementById("carColor").value,
+      seatCount: document.getElementById("seatCount").value
+    };
+
+    await update(ref(db, "users/" + user.uid), updates);
+
+    alert("Profil saqlandi!");
+    closeEditProfile();
+    loadUserProfile(user.uid);
+
+  } catch (err) {
+    console.error(err);
+    alert("Xatolik!");
+  }
+};
+
+
+
+// ===============================
+// AVATAR YUKLASH — ImgBB
+// ===============================
 document.getElementById("avatar").onclick = () => {
   document.getElementById("avatarInput").click();
 };
@@ -199,40 +245,48 @@ document.getElementById("avatarInput").addEventListener("change", async function
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = async e => {
-    const base64 = e.target.result.split(",")[1];
 
-    const form = new FormData();
-    form.append("key", imgbbApiKey);
-    form.append("image", base64);
+  reader.onload = async function (event) {
+    try {
+      const base64 = event.target.result.split(",")[1];
 
-    const res = await fetch("https://api.imgbb.com/1/upload", {
-      method: "POST",
-      body: form
-    });
+      const formData = new FormData();
+      formData.append("key", imgbbApiKey);
+      formData.append("image", base64);
 
-    const result = await res.json();
+      const uploadRes = await fetch("https://api.imgbb.com/1/upload", {
+        method: "POST",
+        body: formData
+      });
 
-    if (!result.success) {
-      alert("Rasm yuklashda xato");
-      return;
+      const result = await uploadRes.json();
+
+      if (result.success) {
+        const url = result.data.url;
+        const user = auth.currentUser;
+
+        await update(ref(db, "users/" + user.uid), { avatar: url });
+        document.getElementById("avatar").src = url;
+
+        alert("Rasm muvaffaqiyatli yuklandi!");
+      } else {
+        alert("Rasm yuklashda xatolik!");
+      }
+
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik: rasm yuklanmadi.");
     }
-
-    const url = result.data.url;
-
-    const user = auth.currentUser;
-    await update(ref(db, "users/" + user.uid), { avatar: url });
-
-    document.getElementById("avatar").src = url;
-
-    alert("Rasm yuklandi!");
   };
 
   reader.readAsDataURL(file);
 });
 
 
+
 // ===============================
-// LOG OUT
+// CHIQISH
 // ===============================
-window.logout = () => signOut(auth);
+window.logout = function () {
+  signOut(auth);
+};
