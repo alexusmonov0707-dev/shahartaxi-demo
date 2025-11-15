@@ -31,12 +31,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// ImgBB API
 const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
 
 
 // ===============================
-// LOGIN STATE
+// LOGIN
 // ===============================
 onAuthStateChanged(auth, user => {
   if (!user) {
@@ -51,13 +50,13 @@ onAuthStateChanged(auth, user => {
 
 
 // ===============================
-// DATETIME FORMAT FUNCTION
+// DATETIME FORMAT
 // ===============================
 function formatDatetime(dt) {
   if (!dt) return "—";
 
   const d = new Date(dt);
-  if (isNaN(d)) return "—";
+  if (isNaN(d)) return dt;
 
   return d.toLocaleString("uz-UZ", {
     year: "numeric",
@@ -70,7 +69,7 @@ function formatDatetime(dt) {
 
 
 // ===============================
-// PROFIL YUKLASH
+// USER PROFILE
 // ===============================
 async function loadUserProfile(uid) {
   const snap = await get(ref(db, "users/" + uid));
@@ -97,7 +96,7 @@ async function loadUserProfile(uid) {
   editFullName.value = u.fullName || "";
   editPhoneInput.value = u.phone || "";
 
-  // haydovchi bo‘lsa mashina maydonlarini ko‘rsatamiz
+  // Haydovchi bo'lsa mashina maydonlarini ko’rsatish
   const carFields = ["carModel", "carNumber", "carColor", "seatCount"];
   carFields.forEach(id => {
     document.getElementById(id).style.display = u.role === "driver" ? "block" : "none";
@@ -113,7 +112,7 @@ async function loadUserProfile(uid) {
 
 
 // ===============================
-// VILOYATLARNI YUKLASH
+// REGIONS
 // ===============================
 function loadRegions() {
   fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
@@ -126,26 +125,22 @@ function loadRegions() {
 }
 
 
-// ===============================
-// TUMANLARNI YUKLASH
-// ===============================
 window.updateDistricts = function (type) {
   const region = document.getElementById(type + "Region").value;
-  const districtSelect = document.getElementById(type + "District");
+  const select = document.getElementById(type + "District");
 
-  districtSelect.innerHTML = '<option value="">Tuman</option>';
+  select.innerHTML = '<option value="">Tuman</option>';
 
   if (window.regionsData[region]) {
     window.regionsData[region].forEach(t => {
-      districtSelect.innerHTML += `<option value="${t}">${t}</option>`;
+      select.innerHTML += `<option value="${t}">${t}</option>`;
     });
   }
 };
 
 
-
 // ===============================
-// E'LON QO‘SHISH
+// ADD AD
 // ===============================
 window.addAd = async function () {
   const user = auth.currentUser;
@@ -153,19 +148,14 @@ window.addAd = async function () {
 
   let extraInfo = {};
 
-  // ROLGA QARAB QO‘SHIMCHA MA’LUMOT
+  // Yo'lovchi / Haydovchi
   if (window.userRole === "driver") {
     extraInfo.seatCount = seatCount.value;
   } else {
-    extraInfo.passengerCount = passengerCount.value || "";
+    extraInfo.passengerCount = document.getElementById("seats").value || "";
   }
 
-  // JO‘NASH VAQTINI ISO FORMATDA SAQLAYMIZ
-  let dep = departureTime.value;
-  let fixedTime = "";
-  if (dep) fixedTime = new Date(dep).toISOString();
-
-  extraInfo.departureTime = fixedTime;
+  extraInfo.departureTime = document.getElementById("departureTime").value || "";
 
   const ad = {
     userId: user.uid,
@@ -189,7 +179,7 @@ window.addAd = async function () {
 
 
 // ===============================
-// CLEAR FORM
+// CLEAR
 // ===============================
 window.clearAddForm = function () {
   fromRegion.value = "";
@@ -198,20 +188,20 @@ window.clearAddForm = function () {
   toDistrict.innerHTML = '<option value="">Tuman</option>';
   price.value = "";
   adComment.value = "";
-  passengerCount.value = "";
   departureTime.value = "";
+  seats.value = "";
 };
 
 
 // ===============================
-// PROFIL MODAL
+// PROFILE MODAL
 // ===============================
 window.openEditProfile = () => editModal.style.display = "flex";
 window.closeEditProfile = () => editModal.style.display = "none";
 
 
 // ===============================
-// PROFIL SAQLASH
+// SAVE PROFILE
 // ===============================
 window.saveProfileEdit = async function () {
   const user = auth.currentUser;
@@ -227,7 +217,8 @@ window.saveProfileEdit = async function () {
   };
 
   await update(ref(db, "users/" + user.uid), updates);
-  alert("Saqlandi!");
+
+  alert("Profil saqlandi!");
   closeEditProfile();
   loadUserProfile(user.uid);
 };
@@ -270,9 +261,8 @@ avatarInput.addEventListener("change", async function () {
 });
 
 
-
 // ===============================
-// MENING E’LONLARIM
+// MY ADS
 // ===============================
 async function loadMyAds() {
   const user = auth.currentUser;
@@ -280,10 +270,11 @@ async function loadMyAds() {
 
   const snap = await get(ref(db, "ads"));
   const box = document.getElementById("myAdsList");
+
   box.innerHTML = "";
 
   if (!snap.exists()) {
-    box.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+    box.innerHTML = "<p>Hozircha e’lon yo‘q</p>";
     return;
   }
 
