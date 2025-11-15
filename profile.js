@@ -392,6 +392,17 @@ async function loadMyAds() {
   });
 }
 
+// ===============================
+// E’LON O‘CHIRISH
+// ===============================
+window.deleteAd = async function (adId) {
+  if (!confirm("Rostdan o‘chirilsinmi?")) return;
+
+  await update(ref(db, "ads/" + adId), null);
+
+  alert("E’lon o‘chirildi!");
+  loadMyAds();
+};
 
 
 // ===============================
