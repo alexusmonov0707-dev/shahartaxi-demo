@@ -17,8 +17,6 @@ import {
   push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-import regionsData from "./regions.js?v=3001";
-
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -33,12 +31,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// ImgBB API KEY
+// ImgBB API
 const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
 
 
 // ===============================
-// LOGIN TEKSHIRUV
+// LOGIN
 // ===============================
 onAuthStateChanged(auth, user => {
   if (!user) {
@@ -52,61 +50,50 @@ onAuthStateChanged(auth, user => {
 
 
 // ===============================
-// USER PROFILINI YUKLASH
+// PROFIL YUKLASH
 // ===============================
 async function loadUserProfile(uid) {
-  try {
-    const snap = await get(ref(db, "users/" + uid));
+  const snap = await get(ref(db, "users/" + uid));
 
-    if (!snap.exists()) {
-      await set(ref(db, "users/" + uid), {
-        fullName: "Ism kiritilmagan",
-        phone: "",
-        avatar: "",
-        carModel: "",
-        carNumber: "",
-        carColor: "",
-        seatCount: ""
-      });
-    }
-
-    const u = snap.val() || {};
-
-    document.getElementById("fullName").textContent = u.fullName || "Ism ko‘rsatilmagan";
-    document.getElementById("phone").textContent = u.phone || "";
-    document.getElementById("avatar").src = u.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
-
-    // Modalga joylash
-    document.getElementById("editFullName").value = u.fullName || "";
-    document.getElementById("editPhoneInput").value = u.phone || "";
-    document.getElementById("carModel").value = u.carModel || "";
-    document.getElementById("carNumber").value = u.carNumber || "";
-    document.getElementById("carColor").value = u.carColor || "";
-    document.getElementById("seatCount").value = u.seatCount || "";
-
-  } catch (err) {
-    console.error(err);
+  if (!snap.exists()) {
+    await set(ref(db, "users/" + uid), {
+      fullName: "",
+      phone: "",
+      avatar: "",
+      carModel: "",
+      carNumber: "",
+      carColor: "",
+      seatCount: ""
+    });
   }
-}
 
+  const u = snap.val();
+
+  fullName.textContent = u.fullName || "";
+  phone.textContent = u.phone || "";
+  avatar.src = u.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
+
+  editFullName.value = u.fullName || "";
+  editPhoneInput.value = u.phone || "";
+  carModel.value = u.carModel || "";
+  carNumber.value = u.carNumber || "";
+  carColor.value = u.carColor || "";
+  seatCount.value = u.seatCount || "";
+}
 
 
 // ===============================
 // VILOYATLARNI YUKLASH
 // ===============================
 function loadRegions() {
-  const fromRegion = document.getElementById("fromRegion");
-  const toRegion = document.getElementById("toRegion");
+  fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
+  toRegion.innerHTML = `<option value="">Qayerga (Viloyat)</option>`;
 
-  fromRegion.innerHTML = '<option value="">Qayerdan (Viloyat)</option>';
-  toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
-
-  Object.keys(regionsData).forEach(region => {
+  Object.keys(window.regionsData).forEach(region => {
     fromRegion.innerHTML += `<option value="${region}">${region}</option>`;
     toRegion.innerHTML += `<option value="${region}">${region}</option>`;
   });
 }
-
 
 
 // ===============================
@@ -118,64 +105,43 @@ window.updateDistricts = function(type) {
 
   districtSelect.innerHTML = '<option value="">Tuman</option>';
 
-  if (regionsData[region]) {
-    regionsData[region].forEach(t => {
+  if (window.regionsData[region]) {
+    window.regionsData[region].forEach(t => {
       districtSelect.innerHTML += `<option value="${t}">${t}</option>`;
     });
   }
 };
 
 
-
 // ===============================
 // E’LON QO‘SHISH
 // ===============================
 window.addAd = async function () {
-  try {
-    const type = adType.value;
-    const fromRegionValue = fromRegion.value;
-    const fromDistrictValue = fromDistrict.value;
-    const toRegionValue = toRegion.value;
-    const toDistrictValue = toDistrict.value;
-    const priceVal = price.value;
-    const commentVal = adComment.value;
+  const user = auth.currentUser;
+  if (!user) return;
 
-    if (!type || !fromRegionValue || !fromDistrictValue || !toRegionValue || !toDistrictValue) {
-      alert("Barcha maydonlarni to‘ldiring!");
-      return;
-    }
+  const ad = {
+    userId: user.uid,
+    type: adType.value,
+    fromRegion: fromRegion.value,
+    fromDistrict: fromDistrict.value,
+    toRegion: toRegion.value,
+    toDistrict: toDistrict.value,
+    price: price.value,
+    comment: adComment.value,
+    approved: false,
+    createdAt: Date.now()
+  };
 
-    const user = auth.currentUser;
-    if (!user) return;
+  await push(ref(db, "ads"), ad);
 
-    const ad = {
-      userId: user.uid,
-      type,
-      fromRegion: fromRegionValue,
-      fromDistrict: fromDistrictValue,
-      toRegion: toRegionValue,
-      toDistrict: toDistrictValue,
-      price: priceVal || 0,
-      comment: commentVal,
-      approved: false,
-      createdAt: Date.now()
-    };
-
-    await push(ref(db, "ads"), ad);
-
-    alert("E’lon muvaffaqiyatli qo‘shildi!");
-    clearAddForm();
-
-  } catch (err) {
-    console.error(err);
-    alert("Xatolik!");
-  }
+  alert("E’lon joylandi!");
+  clearAddForm();
 };
 
 
-
 // ===============================
-// FORM TOZALASH
+// CLEAR FORM
 // ===============================
 window.clearAddForm = function () {
   adType.value = "";
@@ -188,104 +154,82 @@ window.clearAddForm = function () {
 };
 
 
-
 // ===============================
 // PROFIL MODAL
 // ===============================
 window.openEditProfile = function () {
-  document.getElementById("editModal").style.display = "flex";
+  editModal.style.display = "flex";
 };
 
 window.closeEditProfile = function () {
-  document.getElementById("editModal").style.display = "none";
+  editModal.style.display = "none";
 };
 
 
-
 // ===============================
-// PROFILNI SAQLASH
+// PROFIL SAQLASH
 // ===============================
 window.saveProfileEdit = async function () {
-  try {
-    const user = auth.currentUser;
-    if (!user) return;
+  const user = auth.currentUser;
+  if (!user) return;
 
-    const updates = {
-      fullName: document.getElementById("editFullName").value,
-      phone: document.getElementById("editPhoneInput").value,
-      carModel: document.getElementById("carModel").value,
-      carNumber: document.getElementById("carNumber").value,
-      carColor: document.getElementById("carColor").value,
-      seatCount: document.getElementById("seatCount").value
-    };
+  const updates = {
+    fullName: editFullName.value,
+    phone: editPhoneInput.value,
+    carModel: carModel.value,
+    carNumber: carNumber.value,
+    carColor: carColor.value,
+    seatCount: seatCount.value
+  };
 
-    await update(ref(db, "users/" + user.uid), updates);
-
-    alert("Profil saqlandi!");
-    closeEditProfile();
-    loadUserProfile(user.uid);
-
-  } catch (err) {
-    console.error(err);
-    alert("Xatolik!");
-  }
+  await update(ref(db, "users/" + user.uid), updates);
+  alert("Saqlandi!");
+  closeEditProfile();
+  loadUserProfile(user.uid);
 };
 
 
-
 // ===============================
-// AVATAR YUKLASH — ImgBB
+// AVATAR — ImgBB
 // ===============================
-document.getElementById("avatar").onclick = () => {
-  document.getElementById("avatarInput").click();
+window.chooseAvatar = function () {
+  avatarInput.click();
 };
 
-document.getElementById("avatarInput").addEventListener("change", async function () {
+avatarInput.addEventListener("change", async function () {
   const file = this.files[0];
   if (!file) return;
 
   const reader = new FileReader();
 
-  reader.onload = async function (event) {
-    try {
-      const base64 = event.target.result.split(",")[1];
+  reader.onload = async function (e) {
+    const base64 = e.target.result.split(",")[1];
 
-      const formData = new FormData();
-      formData.append("key", imgbbApiKey);
-      formData.append("image", base64);
+    const form = new FormData();
+    form.append("key", imgbbApiKey);
+    form.append("image", base64);
 
-      const uploadRes = await fetch("https://api.imgbb.com/1/upload", {
-        method: "POST",
-        body: formData
-      });
+    const res = await fetch("https://api.imgbb.com/1/upload", {
+      method: "POST",
+      body: form
+    });
 
-      const result = await uploadRes.json();
+    const result = await res.json();
+    if (!result.success) return alert("Xatolik!");
 
-      if (result.success) {
-        const url = result.data.url;
-        const user = auth.currentUser;
+    const url = result.data.url;
+    await update(ref(db, "users/" + auth.currentUser.uid), { avatar: url });
 
-        await update(ref(db, "users/" + user.uid), { avatar: url });
-        document.getElementById("avatar").src = url;
-
-        alert("Rasm muvaffaqiyatli yuklandi!");
-      } else {
-        alert("Rasm yuklashda xatolik!");
-      }
-
-    } catch (err) {
-      console.error(err);
-      alert("Xatolik: rasm yuklanmadi.");
-    }
+    avatar.src = url;
+    alert("Rasm yuklandi!");
   };
 
   reader.readAsDataURL(file);
 });
 
 
-
 // ===============================
-// CHIQISH
+// LOGOUT
 // ===============================
 window.logout = function () {
   signOut(auth);
