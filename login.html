@@ -85,19 +85,16 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// ❗ LOGIN SAHIFASIDA auto redirect bo‘lmasligi kerak
-// ❗ Shuning uchun onAuthStateChanged butunlay olib tashlandi
-
-// ======================
-// Invisible Recaptcha
-// ======================
+// =============================
+// INVISIBLE RECAPTCHA
+// =============================
 window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
   size: "invisible"
 });
 
-// ======================
-// SMS KOD YUBORISH
-// ======================
+// =============================
+// SMS YUBORISH
+// =============================
 window.sendCode = async function () {
   const phone = document.getElementById("phone").value;
 
@@ -106,13 +103,14 @@ window.sendCode = async function () {
     window.confirmationResult = confirmation;
     alert("SMS kod yuborildi!");
   } catch (e) {
+    console.error(e);
     alert("Xatolik: " + e.message);
   }
 };
 
-// ======================
+// =============================
 // KODNI TASDIQLASH
-// ======================
+// =============================
 window.verifyCode = async function () {
   const code = document.getElementById("smsCode").value;
 
@@ -120,7 +118,6 @@ window.verifyCode = async function () {
     const result = await window.confirmationResult.confirm(code);
     const user = result.user;
 
-    // USER DATABASEDA BOR-YO‘QLIGINI TEKSHIRISH
     const snap = await get(ref(db, "users/" + user.uid));
 
     if (snap.exists()) {
