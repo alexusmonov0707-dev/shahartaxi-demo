@@ -211,7 +211,6 @@ window.saveProfileEdit = async function () {
 
   await update(ref(db, "users/" + user.uid), {
     fullName: editFullName.value,
-    phone: editPhoneInput.value,
 
     // 🚗 MASHINA MA’LUMOTLARINI SAQLAYMIZ
     carModel: carModel.value,
