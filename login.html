@@ -62,10 +62,9 @@
 
 <!-- ====================== FIREBASE LOGIN JS ======================== -->
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
-  getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged 
+  getAuth, RecaptchaVerifier, signInWithPhoneNumber
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
@@ -86,52 +85,34 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+// ❗ LOGIN SAHIFASIDA auto redirect bo‘lmasligi kerak
+// ❗ Shuning uchun onAuthStateChanged butunlay olib tashlandi
 
-// =======================================
-//    AUTO LOGIN CHECK
-// =======================================
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    const u = await get(ref(db, "users/" + user.uid));
-
-    if (u.exists()) {
-      window.location.href = "profile.html";
-    } else {
-      window.location.href = "register.html";
-    }
-  }
-});
-
-
-// =======================================
-//    RECAPTCHA
-// =======================================
+// ======================
+// Invisible Recaptcha
+// ======================
 window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
   size: "invisible"
 });
 
-
-// =======================================
-//   SEND CODE
-// =======================================
+// ======================
+// SMS KOD YUBORISH
+// ======================
 window.sendCode = async function () {
   const phone = document.getElementById("phone").value;
 
   try {
     const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
     window.confirmationResult = confirmation;
-
     alert("SMS kod yuborildi!");
-
   } catch (e) {
     alert("Xatolik: " + e.message);
   }
 };
 
-
-// =======================================
-//   VERIFY CODE
-// =======================================
+// ======================
+// KODNI TASDIQLASH
+// ======================
 window.verifyCode = async function () {
   const code = document.getElementById("smsCode").value;
 
@@ -152,9 +133,8 @@ window.verifyCode = async function () {
     alert("Kod noto‘g‘ri!");
   }
 };
-
-
 </script>
+
 
 </body>
 </html>
