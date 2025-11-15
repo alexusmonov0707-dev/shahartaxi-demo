@@ -264,17 +264,19 @@ avatarInput.addEventListener("change", async function () {
 // ===============================
 // MY ADS
 // ===============================
+// ===============================
+// MENING E’LONLARIM
+// ===============================
 async function loadMyAds() {
   const user = auth.currentUser;
   if (!user) return;
 
   const snap = await get(ref(db, "ads"));
   const box = document.getElementById("myAdsList");
-
   box.innerHTML = "";
 
   if (!snap.exists()) {
-    box.innerHTML = "<p>Hozircha e’lon yo‘q</p>";
+    box.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
     return;
   }
 
@@ -290,18 +292,25 @@ async function loadMyAds() {
       margin-bottom:10px;
     `;
 
+    // 🔥 Faqat departureTime ishlatiladi
+    const formattedTime = formatDatetime(ad.departureTime);
+
     div.innerHTML = `
       <b>${ad.type}</b><br>
-      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
+      ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → 
+      ${ad.toRegion || ""}, ${ad.toDistrict || ""}<br>
       Narx: <b>${ad.price || "-"} so‘m</b><br>
-      Jo‘nash vaqti: ${formatDatetime(ad.departureTime)}<br>
+      Jo‘nash vaqti: ${formattedTime}<br>
       Qo‘shimcha: ${ad.comment || "-"}<br>
-      <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
+      <small style="color:#777;">
+        ${new Date(ad.createdAt).toLocaleString()}
+      </small>
     `;
 
     box.appendChild(div);
   });
 }
+
 
 
 // ===============================
