@@ -53,32 +53,25 @@ onAuthStateChanged(auth, user => {
 // ===============================
 // DATETIME FORMAT
 // ===============================
-function formatDatetime(value) {
-  if (!value) return "—";
+function formatDatetime(dt) {
+  if (!dt) return "—";
 
-  // ISO shaklini to'g'ri o‘qish
-  let date = new Date(value);
+  // Ba'zi browserlar "2025 M11 17 14:49" formatini tanimaydi → tozalaymiz
+  dt = dt.replace("M", "-").replace(/\s+/g, " ");
 
-  // Agar brauzer noto‘g‘ri parse qilsa (Invalid Date)
-  if (isNaN(date.getTime())) {
-    // qo‘lda parse qilamiz
-    try {
-      const [full, y, m, d, hh, mm] = value.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/) || [];
-      date = new Date(y, m - 1, d, hh, mm);
-    } catch {
-      return value;
-    }
-  }
+  const d = new Date(dt);
 
-  return date.toLocaleDateString("uz-UZ", {
-    day: "numeric",
+  if (isNaN(d)) return dt; // agar hamon o‘qilmasa — originalni qaytaramiz
+
+  return d.toLocaleString("uz-UZ", {
+    year: "numeric",
     month: "long",
-    year: "numeric"
-  }) + " " + date.toLocaleTimeString("uz-UZ", {
+    day: "numeric",
     hour: "2-digit",
     minute: "2-digit"
   });
 }
+
 
 // ===============================
 // PROFIL YUKLASH
