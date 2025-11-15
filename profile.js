@@ -165,7 +165,15 @@ window.addAd = async function () {
   }
 
   // Jo‘nash vaqti
-  extraInfo.departureTime = document.getElementById("departureTime").value || "";
+const rawTime = document.getElementById("departureTime").value;
+
+let fixedTime = "";
+if (rawTime) {
+    // Browserdan kelgan formatni ISO formatga o‘tkazamiz
+    fixedTime = new Date(rawTime).toISOString();
+}
+
+extraInfo.departureTime = fixedTime;
 
   const ad = {
     userId: user.uid,
