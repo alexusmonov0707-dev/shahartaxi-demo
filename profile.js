@@ -51,17 +51,13 @@ onAuthStateChanged(auth, user => {
 
 
 // ===============================
-// DATETIME FORMAT
+// DATETIME FORMAT FUNCTION
 // ===============================
 function formatDatetime(dt) {
   if (!dt) return "—";
 
-  // Ba'zi browserlar "2025 M11 17 14:49" formatini tanimaydi → tozalaymiz
-  dt = dt.replace("M", "-").replace(/\s+/g, " ");
-
   const d = new Date(dt);
-
-  if (isNaN(d)) return dt; // agar hamon o‘qilmasa — originalni qaytaramiz
+  if (isNaN(d)) return "—";
 
   return d.toLocaleString("uz-UZ", {
     year: "numeric",
@@ -101,7 +97,7 @@ async function loadUserProfile(uid) {
   editFullName.value = u.fullName || "";
   editPhoneInput.value = u.phone || "";
 
-  // Haydovchi bo‘lsa mashina ma’lumotlari ko‘rinadi
+  // haydovchi bo‘lsa mashina maydonlarini ko‘rsatamiz
   const carFields = ["carModel", "carNumber", "carColor", "seatCount"];
   carFields.forEach(id => {
     document.getElementById(id).style.display = u.role === "driver" ? "block" : "none";
@@ -157,23 +153,19 @@ window.addAd = async function () {
 
   let extraInfo = {};
 
-  // Role bo‘yicha farqlar
+  // ROLGA QARAB QO‘SHIMCHA MA’LUMOT
   if (window.userRole === "driver") {
     extraInfo.seatCount = seatCount.value;
   } else {
-    extraInfo.passengerCount = document.getElementById("passengerCount")?.value || "";
+    extraInfo.passengerCount = passengerCount.value || "";
   }
 
-  // Jo‘nash vaqti
-const rawTime = document.getElementById("departureTime").value;
+  // JO‘NASH VAQTINI ISO FORMATDA SAQLAYMIZ
+  let dep = departureTime.value;
+  let fixedTime = "";
+  if (dep) fixedTime = new Date(dep).toISOString();
 
-let fixedTime = "";
-if (rawTime) {
-    // Browserdan kelgan formatni ISO formatga o‘tkazamiz
-    fixedTime = new Date(rawTime).toISOString();
-}
-
-extraInfo.departureTime = fixedTime;
+  extraInfo.departureTime = fixedTime;
 
   const ad = {
     userId: user.uid,
@@ -196,7 +188,6 @@ extraInfo.departureTime = fixedTime;
 };
 
 
-
 // ===============================
 // CLEAR FORM
 // ===============================
@@ -207,14 +198,9 @@ window.clearAddForm = function () {
   toDistrict.innerHTML = '<option value="">Tuman</option>';
   price.value = "";
   adComment.value = "";
-
-  if (document.getElementById("passengerCount"))
-    document.getElementById("passengerCount").value = "";
-
-  if (document.getElementById("departureTime"))
-    document.getElementById("departureTime").value = "";
+  passengerCount.value = "";
+  departureTime.value = "";
 };
-
 
 
 // ===============================
@@ -222,7 +208,6 @@ window.clearAddForm = function () {
 // ===============================
 window.openEditProfile = () => editModal.style.display = "flex";
 window.closeEditProfile = () => editModal.style.display = "none";
-
 
 
 // ===============================
@@ -246,7 +231,6 @@ window.saveProfileEdit = async function () {
   closeEditProfile();
   loadUserProfile(user.uid);
 };
-
 
 
 // ===============================
@@ -315,21 +299,18 @@ async function loadMyAds() {
       margin-bottom:10px;
     `;
 
-   div.innerHTML = `
-    <b>${ad.type}</b><br>
-    ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
-    Narx: <b>${ad.price || "-"} so‘m</b><br>
-    Jo‘nash vaqti: ${formatDatetime(ad.departureTime)}<br>
-    Qo‘shimcha: ${ad.comment || "-"}<br>
-    <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
-`;
-
-
+    div.innerHTML = `
+      <b>${ad.type}</b><br>
+      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
+      Narx: <b>${ad.price || "-"} so‘m</b><br>
+      Jo‘nash vaqti: ${formatDatetime(ad.departureTime)}<br>
+      Qo‘shimcha: ${ad.comment || "-"}<br>
+      <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
+    `;
 
     box.appendChild(div);
   });
 }
-
 
 
 // ===============================
