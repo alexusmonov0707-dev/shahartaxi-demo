@@ -284,6 +284,59 @@ window.uploadAvatar = async function () {
   }
 };
 
+// ===============================
+// PROFIL RASMINI YUKLASH — ImgBB
+// ===============================
+
+const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
+
+document.getElementById("avatar").onclick = () => {
+  document.getElementById("avatarInput").click();
+};
+
+document.getElementById("avatarInput").addEventListener("change", async function () {
+  const file = this.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function (event) {
+    try {
+      const base64 = event.target.result.split(",")[1];
+
+      // ImgBB ga yuklash
+      const formData = new FormData();
+      formData.append("key", imgbbApiKey);
+      formData.append("image", base64);
+
+      const uploadRes = await fetch("https://api.imgbb.com/1/upload", {
+        method: "POST",
+        body: formData
+      });
+
+      const result = await uploadRes.json();
+
+      if (result.success) {
+        const imageUrl = result.data.url;
+
+        // Firebase ga saqlash
+        const user = auth.currentUser;
+        await update(ref(db, "users/" + user.uid), { avatar: imageUrl });
+
+        document.getElementById("avatar").src = imageUrl;
+
+        alert("Rasm muvaffaqiyatli yuklandi!");
+      } else {
+        alert("Rasm yuklashda xatolik!");
+      }
+
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Xatolik: rasm yuklanmadi.");
+    }
+  };
+
+  reader.readAsDataURL(file);
+});
 
 
 // ===============================
