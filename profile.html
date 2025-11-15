@@ -1,132 +1,520 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi — Profil</title>
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ShaharTaxi — Mening profilim (Variant B)</title>
   <style>
-    body { font-family: Arial; background:#f2f4f8; margin:0; }
-    .topbar {
-      background:#0069d9; color:#fff; padding:14px 20px; font-size:20px;
-      display:flex; justify-content:space-between; align-items:center;
+    :root{
+      --bg:#f5f7fb; --card:#ffffff; --muted:#6b7280;
+      --accent:#0b63d4; --danger:#dc3545; --radius:12px;
+      --glass: rgba(255,255,255,0.6);
     }
-    .logout { background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
-      color:#fff; cursor:pointer; font-size:15px; }
-
-    .card {
-      max-width:900px; margin:20px auto; background:#fff; padding:20px;
-      border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    }
-    .profile { display:flex; align-items:center; gap:20px; }
-
-    .profile img {
-      width:90px; height:90px; border-radius:12px;
-      object-fit:cover; cursor:pointer; border:3px solid #ddd;
-    }
-
-    .title { text-align:center; font-size:24px; margin-top:10px; color:#0069d9; }
-
-    select, input, textarea {
-      width:100%; padding:10px; margin-top:8px; border-radius:6px;
-      border:1px solid #ccc; font-size:15px;
-    }
-
-    button { padding:10px 20px; border:none; border-radius:6px; cursor:pointer; }
-    .blue-btn { background:#0069d9; color:#fff; }
-    .gray-btn { background:#ccc; }
-
-    /* MODAL */
-    #editModal {
-      position:fixed; left:0; top:0; right:0; bottom:0;
-      background:rgba(0,0,0,0.6); display:none;
-      justify-content:center; align-items:center;
-    }
-    .modal-box {
-      background:#fff; padding:20px; border-radius:12px; width:350px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.3);
-    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#f7fbff 0%,var(--bg)100%);font-family:Inter,Arial,Helvetica,sans-serif;color:#111}
+    .wrap{max-width:1100px;margin:28px auto;padding:18px}
+    .topbar{display:flex;align-items:center;gap:16px;background:linear-gradient(90deg,#0b63d4,#0a51a8);color:#fff;padding:14px 18px;border-radius:14px}
+    .brand{font-weight:700;font-size:18px}
+    .logout{margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,0.16);padding:8px 12px;border-radius:10px;color:#fff;cursor:pointer}
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;margin-top:18px}
+    /* left column (profile + form) */
+    .panel{background:var(--card);border-radius:var(--radius);padding:16px;box-shadow:0 6px 18px rgba(8,15,40,0.06)}
+    .profile-row{display:flex;gap:12px;align-items:center}
+    .avatar{width:84px;height:84px;border-radius:12px;object-fit:cover;border:1px solid #eee}
+    .pname{font-size:18px;font-weight:700}
+    .psub{color:var(--muted);font-size:13px;margin-top:4px}
+    .edit-btn{margin-left:auto;background:#111827;color:#fff;padding:8px 12px;border-radius:10px;border:none;cursor:pointer}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+    select,input,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #e6edf8;font-size:14px;background:#fbfdff}
+    textarea{min-height:84px;resize:vertical}
+    .btn{display:inline-block;padding:10px 14px;border-radius:10px;border:none;cursor:pointer}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-ghost{background:transparent;border:1px solid #e6edf8}
+    .small{font-size:13px;color:var(--muted)}
+    /* right column (ads list) */
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    .search{flex:1;padding:10px;border-radius:10px;border:1px solid #e6edf8}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+    .card{background:linear-gradient(180deg,white,var(--glass));border-radius:12px;padding:12px;border:1px solid #eef6ff;box-shadow:0 6px 18px rgba(8,15,40,0.04)}
+    .card .meta{font-size:12px;color:var(--muted);margin-top:8px}
+    .card .actions{display:flex;gap:8px;margin-top:10px}
+    .pill{padding:6px 8px;border-radius:999px;background:#f1f5f9;font-size:12px}
+    .status-approved{background:#e6ffef;color:#075f3f;padding:6px 8px;border-radius:8px;font-weight:600}
+    .status-pending{background:#fff6e6;color:#8a5a00;padding:6px 8px;border-radius:8px;font-weight:600}
+    .no-ads{color:var(--muted);padding:18px;text-align:center}
+    /* modal */
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(4,10,22,0.45);z-index:999}
+    .modal-box{width:420px;background:var(--card);padding:18px;border-radius:12px}
+    @media(max-width:880px){ .grid{grid-template-columns:1fr; } .cards{grid-template-columns:1fr 1fr} }
+    @media(max-width:520px){ .cards{grid-template-columns:1fr} }
   </style>
 </head>
-
 <body>
 
-  <div class="topbar">
-    <div>ShaharTaxi — Profil</div>
-    <button class="logout" onclick="logout()">Chiqish</button>
-  </div>
-
-  <!-- PROFILE SECTION -->
-  <div class="card profile">
-    <!-- 📌 YANGI: onclick + id="avatarInput" bilan bog‘langan -->
-    <img id="avatar" onclick="chooseAvatar()"
-         src="https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png">
-
-    <input type="file" id="avatarInput" accept="image/*" style="display:none">
-
-    <!-- 📌 YANGI: yashirin rasm tanlash input -->
-    <input id="avatarInput" type="file" accept="image/*"
-           style="display:none" onchange="uploadAvatar()">
-
-    <div>
-      <div id="fullName" style="font-size:20px; font-weight:bold;">Yuklanmoqda...</div>
-      <div id="phone" style="color:#555;"></div>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">ShaharTaxi — Mening profilim</div>
+      <div class="small">Variant B — Kartochkali dizayn</div>
+      <button class="logout" onclick="logout()">Chiqish</button>
     </div>
 
-    <button onclick="openEditProfile()" 
-      style="margin-left:auto; background:#444; color:white; padding:10px 18px; border-radius:8px;">
-      Profilni tahrirlash
-    </button>
+    <div class="grid">
+      <!-- LEFT: profile & add form -->
+      <div>
+        <div class="panel">
+          <div class="profile-row">
+            <img id="avatar" class="avatar" src="https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png" alt="avatar">
+            <div>
+              <div id="fullName" class="pname">Yuklanmoqda...</div>
+              <div id="phone" class="psub">—</div>
+              <div class="psub" style="margin-top:8px">E'lonlar va profil sozlamalari shu yerda.</div>
+            </div>
+            <button class="edit-btn" onclick="openEditModal()">Tahrirlash</button>
+          </div>
+        </div>
+
+        <div style="height:14px"></div>
+
+        <div class="panel">
+          <div style="font-weight:700;margin-bottom:8px">Yangi e’lon qo‘shish</div>
+
+          <label>Tur</label>
+          <select id="adType">
+            <option value="">Haydovchi / Yo‘lovchi</option>
+            <option value="Haydovchi">Haydovchi</option>
+            <option value="Yo‘lovchi">Yo‘lovchi</option>
+          </select>
+
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <div style="flex:1">
+              <label>Qayerdan (viloyat)</label>
+              <select id="fromRegion" onchange="updateDistricts('from')">
+                <option value="">Viloyatni tanlang</option>
+              </select>
+            </div>
+            <div style="width:140px">
+              <label>Tuman</label>
+              <select id="fromDistrict"><option value="">Tumanni tanlang</option></select>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <div style="flex:1">
+              <label>Qayerga (viloyat)</label>
+              <select id="toRegion" onchange="updateDistricts('to')">
+                <option value="">Viloyatni tanlang</option>
+              </select>
+            </div>
+            <div style="width:140px">
+              <label>Tuman</label>
+              <select id="toDistrict"><option value="">Tumanni tanlang</option></select>
+            </div>
+          </div>
+
+          <label style="margin-top:8px">Narx (so'm)</label>
+          <input id="price" type="number" placeholder="Misol: 50000" />
+
+          <label style="margin-top:8px">Izoh (ixtiyoriy)</label>
+          <textarea id="adComment" placeholder="Qo'shimcha ma'lumot..."></textarea>
+
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="btn btn-primary" onclick="addAd()">E’lonni joylash</button>
+            <button class="btn btn-ghost" onclick="clearForm()">Tozalash</button>
+            <div style="margin-left:auto" class="small">🔒 Admin tasdiqlashi kerak</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: search + cards -->
+      <div>
+        <div class="panel" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <input id="searchInput" class="search" placeholder="E'lon qidirish (viloyat, narx, ID)..." oninput="renderAds()" />
+            <select id="filterType" onchange="renderAds()">
+              <option value="all">Barchasi</option>
+              <option value="Haydovchi">Haydovchi</option>
+              <option value="Yo‘lovchi">Yo‘lovchi</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="adsWrap" class="cards">
+          <!-- cards go here -->
+        </div>
+
+        <div id="noAds" class="no-ads" style="display:none;">Hozircha e'lonlar yo'q.</div>
+      </div>
+    </div>
   </div>
 
-  <!-- ADD AD SECTION -->
-  <div class="card">
-    <div class="title">Yangi e’lon qo‘shish</div>
-
-    <select id="adType">
-      <option value="">Haydovchi / Yo‘lovchi</option>
-      <option value="Haydovchi">Haydovchi</option>
-      <option value="Yo‘lovchi">Yo‘lovchi</option>
-    </select>
-
-    <select id="fromRegion" onchange="updateDistricts('from')">
-      <option value="">Qayerdan (Viloyat)</option>
-    </select>
-
-    <select id="fromDistrict">
-      <option value="">Tuman</option>
-    </select>
-
-    <select id="toRegion" onchange="updateDistricts('to')">
-      <option value="">Qayerga (Viloyat)</option>
-    </select>
-
-    <select id="toDistrict">
-      <option value="">Tuman</option>
-    </select>
-
-    <input id="price" placeholder="Narx (so‘m)">
-    <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
-
-    <button onclick="addAd()" class="blue-btn" style="margin-top:15px;">E’lonni joylash</button>
-    <button onclick="clearAddForm()" class="gray-btn" style="margin-top:5px;">Tozalash</button>
-  </div>
-
-  <!-- EDIT PROFILE MODAL -->
-  <div id="editModal">
+  <!-- EDIT MODAL -->
+  <div id="editModal" class="modal" onclick="if(event.target===this) closeEditModal()">
     <div class="modal-box">
       <h3>Profilni tahrirlash</h3>
-
-      <input id="editFullName" placeholder="Ism">
-      <input id="editPhoneInput" placeholder="Telefon">
-
-      <button onclick="saveProfileEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
-      <button onclick="closeEditProfile()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
+      <label>Ism</label>
+      <input id="editFullName" placeholder="Ism va familiya" />
+      <label style="margin-top:8px">Telefon (+998...)</label>
+      <input id="editPhone" placeholder="+998901234567" />
+      <label style="margin-top:8px">Avatar URL (ixtiyoriy)</label>
+      <input id="editAvatar" placeholder="https://..." />
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-primary" onclick="saveProfile()">Saqlash</button>
+        <button class="btn btn-ghost" onclick="closeEditModal()">Bekor</button>
+      </div>
     </div>
   </div>
 
-  <!-- JS -->
-  <script type="module" src="./profile.js?v=3001"></script>
+<script type="module">
+/*
+  Profile B — kartochkali UI
+  - Fallback: localStorage (works without Firebase)
+  - Optional: Firebase (v10) — agar quyidagi firebaseConfig o'zgartirilsa, ma'lumotlar DB ga yoziladi.
+*/
 
+/* ==================== OPTIONAL FIREBASE SETUP ====================
+If you want to store ads & profile in Firebase Realtime Database,
+paste your firebaseConfig object below (replace the null). Then
+uncomment the import lines and initialization block.
+
+Example:
+const firebaseConfig = { apiKey: "...", authDomain: "...", databaseURL: "...", projectId: "..." }
+
+Then uncomment import lines below and init code.
+================================================================= */
+
+// --- If you WILL use firebase, set config here (or keep null to use localStorage) ---
+const firebaseConfig = null; // <-- replace null with your config object to enable Firebase
+
+// If firebaseConfig provided, we'll dynamically import the libs and init them:
+let firebaseEnabled = false;
+let db = null;
+let auth = null;
+let firebaseApp = null;
+
+async function tryInitFirebase(cfg){
+  if(!cfg) return;
+  try {
+    const modApp = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const modDB  = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+    const modAuth= await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+    firebaseApp = modApp.initializeApp(cfg);
+    db = modDB.getDatabase(firebaseApp);
+    auth = modAuth.getAuth(firebaseApp);
+    firebaseEnabled = true;
+    console.log('Firebase enabled');
+  } catch(e){
+    console.warn('Firebase init error',e);
+    firebaseEnabled = false;
+  }
+}
+
+/* ==================== DATA LAYER (Firebase OR localStorage) ==================== */
+
+function storageKey(k){ return 'shahartaxi_demo_v2_' + k; }
+
+async function saveProfileToStorage(uid, profile){
+  // if firebase enabled and db available, write under users/{uid}
+  if(firebaseEnabled && db && uid){
+    const modDB = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+    const ref = modDB.ref;
+    await modDB.set(ref(db, 'users/' + uid), profile);
+    return;
+  }
+  // fallback: save to localStorage by uid (or global if uid null)
+  const key = storageKey('profile_' + (uid || 'local'));
+  localStorage.setItem(key, JSON.stringify(profile));
+}
+async function loadProfileFromStorage(uid){
+  if(firebaseEnabled && db && uid){
+    try {
+      const modDB = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+      const snapshot = await modDB.get(modDB.ref(db, 'users/' + uid));
+      return snapshot.exists() ? snapshot.val() : null;
+    } catch(e){ console.warn(e); return null; }
+  }
+  const key = storageKey('profile_' + (uid || 'local'));
+  const raw = localStorage.getItem(key);
+  return raw ? JSON.parse(raw) : null;
+}
+
+async function saveAdToStorage(ad, id){
+  if(firebaseEnabled && db){
+    const modDB = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+    const newRef = modDB.push(modDB.ref(db, 'ads'));
+    // if id provided, write to that path
+    await modDB.set(newRef, ad);
+    return;
+  }
+  // local fallback: array
+  const key = storageKey('ads');
+  const list = JSON.parse(localStorage.getItem(key) || '[]');
+  if(id){
+    // update
+    const idx = list.findIndex(x=>x.id===id);
+    if(idx>=0) list[idx]=Object.assign(list[idx], ad);
+    else list.push(ad);
+  } else {
+    ad.id = 'loc_' + Date.now() + '_' + Math.floor(Math.random()*999);
+    list.unshift(ad);
+  }
+  localStorage.setItem(key, JSON.stringify(list));
+}
+
+async function loadAdsFromStorage(){
+  if(firebaseEnabled && db){
+    try {
+      const modDB = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+      const snap = await modDB.get(modDB.ref(db, 'ads'));
+      if(!snap.exists()) return [];
+      const obj = snap.val();
+      // convert to array
+      return Object.keys(obj).reverse().map(k=> Object.assign({id:k}, obj[k]) );
+    } catch(e){ console.warn(e); return []; }
+  }
+  const key = storageKey('ads');
+  return JSON.parse(localStorage.getItem(key) || '[]');
+}
+
+/* ==================== REGIONS DATA ==================== */
+const regions = {
+  "Toshkent": ["Bektemir","Olmazor","Chilonzor","Mirzo Ulug'bek","Yunusobod","Sergeli"],
+  "Samarqand": ["Urgut","Bulungur","Ishtixon","Narpay","Paxtachi","Kattaqo'rg'on"],
+  "Farg'ona": ["Qo'qon","Marg'ilon","Beshariq","Oltiariq"],
+  "Namangan": ["Namangan sh.","Kosonsoy","Chortoq","Uchqo'rg'on"],
+  "Buxoro": ["Buxoro sh.","G'ijduvon","Vobkent","Romitan"]
+};
+
+/* ==================== UI / APP LOGIC ==================== */
+
+let APP_USER_ID = null; // if you have auth, set real uid. For local demo we use 'local'
+
+async function init(){
+  // try init firebase if configured
+  if(firebaseConfig) await tryInitFirebase(firebaseConfig);
+
+  // For demo fallback: APP_USER_ID = 'local'
+  APP_USER_ID = 'local';
+
+  // load profile (from storage)
+  const p = await loadProfileFromStorage(APP_USER_ID);
+  if(p){
+    document.getElementById('fullName').textContent = p.fullName || 'Ism ko‘rsatilmagan';
+    document.getElementById('phone').textContent = p.phone || '';
+    document.getElementById('avatar').src = p.avatar || document.getElementById('avatar').src;
+  } else {
+    // not exist -> keep defaults
+  }
+
+  // populate region selects
+  populateRegionSelects();
+
+  // render ads
+  await renderAds();
+}
+
+function populateRegionSelects(){
+  const from = document.getElementById('fromRegion');
+  const to = document.getElementById('toRegion');
+  if(!from || !to) return;
+  // clear (keep first option)
+  const keepFrom = from.querySelector('option') ? from.querySelector('option').outerHTML : '<option value="">Viloyatni tanlang</option>';
+  const keepTo = to.querySelector('option') ? to.querySelector('option').outerHTML : '<option value="">Viloyatni tanlang</option>';
+  from.innerHTML = keepFrom;
+  to.innerHTML = keepTo;
+  Object.keys(regions).forEach(r=>{
+    const o1 = document.createElement('option'); o1.value = r; o1.textContent = r; from.appendChild(o1);
+    const o2 = document.createElement('option'); o2.value = r; o2.textContent = r; to.appendChild(o2);
+  });
+}
+
+window.updateDistricts = function(prefix){
+  try {
+    const regionSel = document.getElementById(prefix + 'Region');
+    const districtSel = document.getElementById(prefix + 'District');
+    if(!regionSel || !districtSel) return;
+    const region = regionSel.value;
+    districtSel.innerHTML = '<option value="">Tumanni tanlang</option>';
+    if(!region || !regions[region]) return;
+    regions[region].forEach(d=>{
+      const opt = document.createElement('option'); opt.value = d; opt.textContent = d; districtSel.appendChild(opt);
+    });
+  } catch(e){ console.error(e); }
+};
+
+async function addAd(){
+  const type = document.getElementById('adType').value.trim();
+  const fromRegion = document.getElementById('fromRegion').value.trim();
+  const fromDistrict = document.getElementById('fromDistrict').value.trim();
+  const toRegion = document.getElementById('toRegion').value.trim();
+  const toDistrict = document.getElementById('toDistrict').value.trim();
+  const price = document.getElementById('price').value.trim();
+  const comment = document.getElementById('adComment').value.trim();
+
+  if(!type || !fromRegion || !fromDistrict || !toRegion || !toDistrict){
+    alert("Iltimos: barcha majburiy maydonlarni to'ldiring (tur, viloyat, tuman).");
+    return;
+  }
+
+  const ad = {
+    userId: APP_USER_ID,
+    type,
+    fromRegion, fromDistrict,
+    toRegion, toDistrict,
+    price: price ? Number(price) : 0,
+    comment,
+    status: 'pending',
+    createdAt: Date.now()
+  };
+
+  await saveAdToStorage(ad);
+  alert('E\'lon muvaffaqiyatli qo\'shildi — admin tasdiqlashi kerak.');
+  clearForm();
+  await renderAds();
+}
+
+function clearForm(){
+  document.getElementById('adType').value = '';
+  document.getElementById('fromRegion').value = '';
+  document.getElementById('fromDistrict').innerHTML = '<option value="">Tumanni tanlang</option>';
+  document.getElementById('toRegion').value = '';
+  document.getElementById('toDistrict').innerHTML = '<option value="">Tumanni tanlang</option>';
+  document.getElementById('price').value = '';
+  document.getElementById('adComment').value = '';
+}
+
+/* Render ads list */
+async function renderAds(){
+  const wrap = document.getElementById('adsWrap');
+  const noAds = document.getElementById('noAds');
+  wrap.innerHTML = '';
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  const filter = document.getElementById('filterType')?.value || 'all';
+
+  const list = await loadAdsFromStorage();
+  let filtered = list.slice();
+
+  if(filter !== 'all') filtered = filtered.filter(a=> a.type === filter);
+  if(q) filtered = filtered.filter(a=>{
+    return (a.fromRegion||'').toLowerCase().includes(q) ||
+           (a.toRegion||'').toLowerCase().includes(q) ||
+           String(a.price||'').toLowerCase().includes(q) ||
+           (a.comment||'').toLowerCase().includes(q) ||
+           (a.id||'').toLowerCase().includes(q);
+  });
+
+  if(filtered.length === 0){
+    noAds.style.display = 'block';
+    return;
+  } else noAds.style.display = 'none';
+
+  filtered.forEach(ad=>{
+    const c = document.createElement('div'); c.className = 'card';
+    c.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:center">
+        <div style="flex:1">
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+            <div style="font-weight:700">${escapeHtml(ad.type || '')}</div>
+            <div class="${ad.status==='approved' ? 'status-approved' : 'status-pending'}">${ad.status==='approved' ? 'Tasdiqlangan' : 'Kutilmoqda'}</div>
+          </div>
+          <div style="margin-top:8px;font-size:15px">${escapeHtml(ad.fromRegion||'')} ${escapeHtml(ad.fromDistrict||'')} → ${escapeHtml(ad.toRegion||'')} ${escapeHtml(ad.toDistrict||'')}</div>
+          <div style="margin-top:8px;font-weight:700">${ad.price ? ad.price + " so'm" : 'Narx: —'}</div>
+          <div class="meta">${escapeHtml(ad.comment||'')}</div>
+          <div class="meta" style="margin-top:6px">Joylangan: ${new Date(ad.createdAt).toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost" onclick="viewProfileOf('${ad.userId}')">Profil</button>
+        <button class="btn" style="background:#ef4444;color:#fff" onclick="removeLocalAd('${ad.id}')">O'chirish</button>
+      </div>
+    `;
+    wrap.appendChild(c);
+  });
+}
+
+/* helper: escapeHtml */
+function escapeHtml(s){
+  if(s===undefined || s===null) return '';
+  return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#039;");
+}
+
+/* view profile of ad author (for demo: loads local profile) */
+async function viewProfileOf(uid){
+  const p = await loadProfileFromStorage(uid);
+  if(p){
+    alert(`Ism: ${p.fullName || '—'}\nTelefon: ${p.phone || '—'}`);
+  } else {
+    alert('Foydalanuvchi profili topilmadi.');
+  }
+}
+
+/* delete local ad (works for localStorage-only ads) */
+async function removeLocalAd(id){
+  if(!confirm('E\'lonni o\'chirishni xohlaysizmi?')) return;
+  if(firebaseEnabled && db){
+    try {
+      const modDB = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+      await modDB.remove(modDB.ref(db, 'ads/' + id));
+      alert('E\'lon o\'chirildi (Firebase).');
+      await renderAds();
+      return;
+    } catch(e){ console.warn(e); }
+  }
+  const key = storageKey('ads');
+  const list = JSON.parse(localStorage.getItem(key) || '[]');
+  const filtered = list.filter(x=> x.id !== id);
+  localStorage.setItem(key, JSON.stringify(filtered));
+  await renderAds();
+}
+
+/* EDIT PROFILE modal logic */
+function openEditModal(){
+  const pName = document.getElementById('fullName').textContent || '';
+  const pPhone = document.getElementById('phone').textContent || '';
+  const pAvatar = document.getElementById('avatar').src || '';
+  document.getElementById('editFullName').value = pName;
+  document.getElementById('editPhone').value = pPhone;
+  document.getElementById('editAvatar').value = pAvatar;
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal(){ document.getElementById('editModal').style.display = 'none'; }
+
+async function saveProfile(){
+  const name = document.getElementById('editFullName').value.trim();
+  const phone = document.getElementById('editPhone').value.trim();
+  const avatar = document.getElementById('editAvatar').value.trim();
+
+  const profile = { fullName: name || 'Ism ko‘rsatilmagan', phone: phone || '', avatar: avatar || document.getElementById('avatar').src };
+
+  // save
+  await saveProfileToStorage(APP_USER_ID, profile);
+
+  // update UI
+  document.getElementById('fullName').textContent = profile.fullName;
+  document.getElementById('phone').textContent = profile.phone;
+  document.getElementById('avatar').src = profile.avatar;
+
+  closeEditModal();
+  alert('Profil saqlandi');
+}
+
+/* Auth/Logout stub */
+function logout(){
+  // If Firebase auth used, you can call auth.signOut(); otherwise just reload and clear local demo
+  if(firebaseEnabled && auth){
+    auth.signOut().then(()=> window.location.href='login.html').catch(()=> window.location.href='login.html');
+  } else {
+    // local demo: redirect to login.html (if exists) or reload
+    window.location.href = 'login.html';
+  }
+}
+
+/* helper: removeAll local ads (dev) */
+window._clearAllLocalAds = function(){ localStorage.removeItem(storageKey('ads')); renderAds(); };
+
+/* init app */
+init();
+
+</script>
 </body>
 </html>
