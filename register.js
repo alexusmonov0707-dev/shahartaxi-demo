@@ -1,14 +1,19 @@
-// ===============================
+// =======================
 // FIREBASE INIT
-// ===============================
+// =======================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-  getAuth, onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  getDatabase, ref, set, get
+  getAuth,
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  getDatabase,
+  ref,
+  set,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+// FIREBASE CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -23,81 +28,89 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+// ============================
+// GLOBAL ROLE
+// ============================
+let selectedRole = null;
 
-// USER LOGIN HOLATINI TEKSHIRAMIZ
-let currentUid = "";
-let selectedRole = "";
-
-onAuthStateChanged(auth, async user => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  currentUid = user.uid;
-  document.getElementById("phone").value = user.phoneNumber;
-
-  // AGAR USER OLDIN REGISTR BO‘LGAN BO‘LSA → PROFILGA O‘TKAZAMIZ
-  const snap = await get(ref(db, "users/" + currentUid));
-  if (snap.exists()) {
-    window.location.href = "profile.html";
-  }
-});
-
-
-// ROLE TANLASH
-window.selectRole = function(role){
+// ============================
+// 1) ROLE TANLASH
+// ============================
+window.selectRole = function (role) {
   selectedRole = role;
 
   document.getElementById("selectedRole").textContent =
-    role === "driver" ? "Tanlangan rol: Haydovchi" : "Tanlangan rol: Yo‘lovchi";
+    role === "driver" ? "🚕 Siz Haydovchisiz" : "🚶‍♂️ Siz Yo‘lovchisiz";
 
   document.getElementById("extraFields").style.display = "block";
 
-  // Haydovchiga qo‘shimcha maydonlar
-  if (role === "driver") {
-    document.getElementById("carModel").style.display = "block";
-    document.getElementById("license").style.display = "block";
-  } else {
-    document.getElementById("carModel").style.display = "none";
-    document.getElementById("license").style.display = "none";
-  }
-}
+  // Telefon raqami Firebase userdan olinadi
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      document.getElementById("phone").value = user.phoneNumber || "";
+    }
+  });
+
+  // Haydovchiga mashina va prava maydoni ochiladi
+  document.getElementById("carModel").style.display =
+    role === "driver" ? "block" : "none";
+
+  document.getElementById("license").style.display =
+    role === "driver" ? "block" : "none";
+};
 
 
-// SAQLASH
+// ============================
+// 2) SAQLASH – YAKUNIY REGISTRATSIYA
+// ============================
 window.saveRole = async function () {
-  const fullName = document.getElementById("fullName").value;
-  const phone = document.getElementById("phone").value;
-  const carModel = document.getElementById("carModel").value;
-  const license = document.getElementById("license").value;
+  const fullName = document.getElementById("fullName").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const carModel = document.getElementById("carModel").value.trim();
+  const license = document.getElementById("license").value.trim();
 
   if (!selectedRole) {
-    alert("Avval rolni tanlang!");
+    alert("Avval rol tanlang!");
     return;
   }
 
   if (!fullName) {
-    alert("Ismingizni kiriting!");
+    alert("Ismni kiriting!");
     return;
   }
 
-  const data = {
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Xatolik! User topilmadi.");
+    return;
+  }
+
+  const userRef = ref(db, "users/" + user.uid);
+
+  const userData = {
     fullName,
     phone,
     role: selectedRole,
-    createdAt: Date.now(),
-    avatar: ""
+    avatar: "",
   };
 
-  // HAYDOVCHI BO'LSA
+  // Haydovchi bo‘lsa qo‘shimcha malumotlar qo‘shiladi
   if (selectedRole === "driver") {
-    data.carModel = carModel || "";
-    data.license = license || "";
+    userData.carModel = carModel;
+    userData.license = license;
+    userData.seatCount = 4; // keyin o‘zgartirish mumkin
   }
 
-  await set(ref(db, "users/" + currentUid), data);
+  try {
+    await set(userRef, userData);
 
-  alert("Muvaffaqiyatli saqlandi!");
-  window.location.href = "profile.html";
+    alert("Registratsiya muvaffaqiyatli!");
+
+    // Profilga o‘tish
+    window.location.href = "profile.html";
+
+  } catch (e) {
+    console.error(e);
+    alert("Xatolik!");
+  }
 };
