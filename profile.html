@@ -18,7 +18,7 @@
       border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);
     }
     .profile { display:flex; align-items:center; gap:20px; }
-    .profile img { width:90px; height:90px; border-radius:12px; object-fit:cover; }
+    .profile img { width:90px; height:90px; border-radius:12px; object-fit:cover; cursor:pointer; }
 
     .title { text-align:center; font-size:24px; margin-top:10px; color:#0069d9; }
 
@@ -32,7 +32,6 @@
     .blue-btn { background:#0069d9; color:#fff; }
     .gray-btn { background:#ccc; }
 
-    /* MODAL */
     #editModal {
       position:fixed; left:0; top:0; right:0; bottom:0;
       background:rgba(0,0,0,0.6); display:none;
@@ -43,7 +42,6 @@
       box-shadow:0 4px 12px rgba(0,0,0,0.3);
     }
   </style>
-
 </head>
 
 <body>
@@ -55,7 +53,15 @@
 
   <!-- PROFILE SECTION -->
   <div class="card profile">
-    <img id="avatar" src="https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png">
+
+    <!-- AVATAR + HIDDEN FILE INPUT -->
+    <div style="position:relative;">
+      <img id="avatar" 
+           src="https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png"
+           onclick="chooseAvatar()">
+      <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar()">
+    </div>
+
     <div>
       <div id="fullName" style="font-size:20px; font-weight:bold;">Yuklanmoqda...</div>
       <div id="phone" style="color:#555;"></div>
@@ -99,7 +105,7 @@
     <button onclick="clearAddForm()" class="gray-btn" style="margin-top:5px;">Tozalash</button>
   </div>
 
-  <!-- PROFILE EDIT MODAL -->
+  <!-- EDIT MODAL -->
   <div id="editModal">
     <div class="modal-box">
       <h3>Profilni tahrirlash</h3>
@@ -112,6 +118,6 @@
     </div>
   </div>
 
-  <script type="module" src="./profile.js?v=2003"></script>
+  <script type="module" src="./profile.js?v=3001"></script>
 </body>
 </html>
