@@ -1,7 +1,6 @@
 // ===============================
 // FIREBASE INIT
 // ===============================
-import { regionsData } from "./regions.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
@@ -18,10 +17,10 @@ import {
   push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// ImgBB uchun API
+// ImgBB API
 const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
 
-// firebase config
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -35,6 +34,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
+
 
 // ===============================
 // LOGIN TEKSHIRUV
@@ -51,50 +51,48 @@ onAuthStateChanged(auth, user => {
 
 
 // ===============================
-// PROFIL YUKLASH
+// PROFIL MA’LUMOTINI YUKLASH
 // ===============================
 async function loadUserProfile(uid) {
   const snap = await get(ref(db, "users/" + uid));
 
   if (!snap.exists()) {
     await set(ref(db, "users/" + uid), {
-      fullName: "",
+      fullName: "Ism kiritilmagan",
       phone: "",
-      avatar: "",
-      carModel: "",
-      carNumber: "",
-      carColor: "",
-      seatCount: ""
+      avatar: ""
     });
   }
 
-  const u = snap.val();
-  window.userProfile = u; // profilni tahrirga uzatish uchun
+  const u = snap.val() || {};
 
-  document.getElementById("fullName").textContent = u.fullName || "Ism ko‘rsatilmagan";
-  document.getElementById("phone").textContent = u.phone || "";
+  document.getElementById("fullName").textContent =
+    u.fullName || "Ism ko‘rsatilmagan";
+
+  document.getElementById("phone").textContent =
+    u.phone || "";
 
   document.getElementById("avatar").src =
     u.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
 }
 
 
-
 // ===============================
 // VILOYATLARNI YUKLASH
 // ===============================
 function loadRegions() {
+  const fromRegion = document.getElementById("fromRegion");
+  const toRegion = document.getElementById("toRegion");
+
   fromRegion.innerHTML = '<option value="">Qayerdan (Viloyat)</option>';
   toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
 
-  Object.keys(regionsData).forEach(region => {
-    let o1 = document.createElement("option");
-    o1.value = region; o1.textContent = region;
-    fromRegion.appendChild(o1);
+  Object.keys(window.regionsData).forEach(region => {
+    let op1 = new Option(region, region);
+    let op2 = new Option(region, region);
 
-    let o2 = document.createElement("option");
-    o2.value = region; o2.textContent = region;
-    toRegion.appendChild(o2);
+    fromRegion.add(op1);
+    toRegion.add(op2);
   });
 }
 
@@ -102,45 +100,46 @@ function loadRegions() {
 // ===============================
 // VILOYAT → TUMAN
 // ===============================
-window.updateDistricts = function(type) {
+window.updateDistricts = function (type) {
   const region = document.getElementById(type + "Region").value;
   const district = document.getElementById(type + "District");
 
   district.innerHTML = '<option value="">Tuman</option>';
 
-  if (!regionsData[region]) return;
+  if (!region || !window.regionsData[region]) return;
 
-  regionsData[region].forEach(t => {
-    let opt = document.createElement("option");
-    opt.value = t; opt.textContent = t;
-    district.appendChild(opt);
+  window.regionsData[region].forEach(t => {
+    district.add(new Option(t, t));
   });
 };
-
 
 
 // ===============================
 // E’LON QO‘SHISH
 // ===============================
 window.addAd = async function () {
-  if (!adType.value || !fromRegion.value || !fromDistrict.value ||
-    !toRegion.value || !toDistrict.value) {
+  const type = adType.value;
+  const a = fromRegion.value;
+  const b = fromDistrict.value;
+  const c = toRegion.value;
+  const d = toDistrict.value;
+
+  if (!type || !a || !b || !c || !d) {
     alert("Barcha maydonlarni to‘ldiring!");
     return;
   }
 
   const user = auth.currentUser;
-  if (!user) return;
 
   const ad = {
     userId: user.uid,
-    type: adType.value,
-    fromRegion: fromRegion.value,
-    fromDistrict: fromDistrict.value,
-    toRegion: toRegion.value,
-    toDistrict: toDistrict.value,
+    type,
+    fromRegion: a,
+    fromDistrict: b,
+    toRegion: c,
+    toDistrict: d,
     price: price.value || 0,
-    comment: adComment.value,
+    comment: adComment.value || "",
     approved: false,
     createdAt: Date.now()
   };
@@ -150,7 +149,6 @@ window.addAd = async function () {
   alert("E’lon muvaffaqiyatli qo‘shildi!");
   clearAddForm();
 };
-
 
 
 // ===============================
@@ -167,23 +165,14 @@ window.clearAddForm = function () {
 };
 
 
-
 // ===============================
-// PROFILNI TAHRIRGA OCHISH
+// PROFILNI TAHRIRLASH
 // ===============================
 window.openEditProfile = function () {
   editModal.style.display = "flex";
-
-  editFullName.value = userProfile.fullName || "";
-  editPhoneInput.value = userProfile.phone || "";
-
-  // 🚗 YANGI — MASHINA MA’LUMOTLARINI TOLDIRISH
-  carModel.value = userProfile.carModel || "";
-  carNumber.value = userProfile.carNumber || "";
-  carColor.value = userProfile.carColor || "";
-  seatCount.value = userProfile.seatCount || "";
+  editFullName.value = fullName.textContent;
+  editPhoneInput.value = phone.textContent;
 };
-
 
 window.closeEditProfile = function () {
   editModal.style.display = "none";
@@ -191,50 +180,34 @@ window.closeEditProfile = function () {
 
 
 // ===============================
-// PROFILNI SAQLASH
+// PROFIL SAQLASH
+// Telefon raqami o‘zgarmaydi!
 // ===============================
 window.saveProfileEdit = async function () {
   const user = auth.currentUser;
-  if (!user) return;
 
   await update(ref(db, "users/" + user.uid), {
-    fullName: editFullName.value,
-
-    // 🚗 MASHINA MA’LUMOTLARINI SAQLAYMIZ
-    carModel: carModel.value,
-    carNumber: carNumber.value,
-    carColor: carColor.value,
-    seatCount: seatCount.value
+    fullName: editFullName.value
   });
 
-  alert("Profil muvaffaqiyatli saqlandi!");
-  editModal.style.display = "none";
+  alert("Profil saqlandi!");
+  closeEditProfile();
   loadUserProfile(user.uid);
 };
 
 
-
 // ===============================
-// AVATAR TANLASH
-// ===============================
-window.chooseAvatar = function () {
-  document.getElementById("avatarInput").click();
-};
-
-
-// ===============================
-// AVATAR YUKLASH (ImgBB)
+// IMGBB AVATAR YUKLASH
 // ===============================
 document.getElementById("avatarInput").addEventListener("change", async function () {
   const file = this.files[0];
   if (!file) return;
 
   const reader = new FileReader();
+  reader.onload = async function (event) {
+    const base64 = event.target.result.split(",")[1];
 
-  reader.onload = async function (e) {
-    const base64 = e.target.result.split(",")[1];
-
-    let formData = new FormData();
+    const formData = new FormData();
     formData.append("key", imgbbApiKey);
     formData.append("image", base64);
 
@@ -246,12 +219,12 @@ document.getElementById("avatarInput").addEventListener("change", async function
     const result = await res.json();
 
     if (result.success) {
-      const url = result.data.url;
+      const imageUrl = result.data.url;
 
       const user = auth.currentUser;
-      await update(ref(db, "users/" + user.uid), { avatar: url });
+      await update(ref(db, "users/" + user.uid), { avatar: imageUrl });
 
-      document.getElementById("avatar").src = url;
+      avatar.src = imageUrl;
       alert("Rasm yuklandi!");
     } else {
       alert("Rasm yuklanmadi!");
@@ -262,20 +235,16 @@ document.getElementById("avatarInput").addEventListener("change", async function
 });
 
 
-
 // ===============================
 // CHIQISH
 // ===============================
-window.logout = function () {
-  signOut(auth);
-};
-
+window.logout = () => signOut(auth);
 
 
 // ===============================
-// DOM loaded
+// DOM READY
 // ===============================
-window.addEventListener("DOMContentLoaded", () => {
-  fromDistrict.innerHTML = '<option value="">Tuman</option>';
-  toDistrict.innerHTML = '<option value="">Tuman</option>';
+document.addEventListener("DOMContentLoaded", () => {
+  if (fromDistrict.innerHTML.trim() === "")
+    fromDistrict.innerHTML = '<option>Tuman</option>';
 });
