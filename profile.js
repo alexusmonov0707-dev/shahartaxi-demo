@@ -227,6 +227,57 @@ avatarInput.addEventListener("change", async function () {
   reader.readAsDataURL(file);
 });
 
+// ===============================
+// MENING E’LONLARIMNI YUKLASH
+// ===============================
+async function loadMyAds() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const adsRef = ref(db, "ads");
+  const snap = await get(adsRef);
+
+  const box = document.getElementById("myAdsList");
+  box.innerHTML = "";
+
+  if (!snap.exists()) {
+    box.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+    return;
+  }
+
+  let found = false;
+
+  snap.forEach(child => {
+    const ad = child.val();
+
+    if (ad.userId === user.uid) {
+      found = true;
+
+      const div = document.createElement("div");
+      div.style = `
+        padding:12px;
+        border:1px solid #ddd;
+        border-radius:8px;
+        margin-bottom:10px;
+      `;
+
+      div.innerHTML = `
+        <b>${ad.type}</b><br>
+        <span>${ad.fromRegion}, ${ad.fromDistrict}</span> → 
+        <span>${ad.toRegion}, ${ad.toDistrict}</span><br>
+        Narx: <b>${ad.price ? ad.price + " so‘m" : "ko‘rsatilmagan"}</b><br>
+        Izoh: ${ad.comment || "-"}<br>
+        <small style="color:#777;">${new Date(ad.createdAt).toLocaleString()}</small>
+      `;
+
+      box.appendChild(div);
+    }
+  });
+
+  if (!found) {
+    box.innerHTML = "<p>Hozircha sizning e’lonlaringiz yo‘q.</p>";
+  }
+}
 
 // ===============================
 // LOGOUT
