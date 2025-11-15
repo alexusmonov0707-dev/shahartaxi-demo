@@ -62,17 +62,16 @@
 
 <!-- ====================== FIREBASE LOGIN JS ======================== -->
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
   getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  getDatabase, ref, get, set
+  getDatabase, ref, get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-
-// ====================== FIREBASE CONFIG ======================
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -88,74 +87,69 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 
-// ====================== AVVAL KIRGAN USERNI TEKSHIRISH ======================
-onAuthStateChanged(auth, user => {
+// =======================================
+//    AUTO LOGIN CHECK
+// =======================================
+onAuthStateChanged(auth, async (user) => {
   if (user) {
-    window.location.href = "profile.html";
+    const u = await get(ref(db, "users/" + user.uid));
+
+    if (u.exists()) {
+      window.location.href = "profile.html";
+    } else {
+      window.location.href = "register.html";
+    }
   }
 });
 
 
-// ====================== INVISIBLE RECAPTCHA ======================
-window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha", {
+// =======================================
+//    RECAPTCHA
+// =======================================
+window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
   size: "invisible"
 });
 
 
-// ====================== SMS KOD YUBORISH ======================
+// =======================================
+//   SEND CODE
+// =======================================
 window.sendCode = async function () {
   const phone = document.getElementById("phone").value;
 
   try {
-    window.confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-    alert("SMS yuborildi!");
-  } catch (err) {
-    alert("Xatolik: " + err.message);
+    const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+    window.confirmationResult = confirmation;
+
+    alert("SMS kod yuborildi!");
+
+  } catch (e) {
+    alert("Xatolik: " + e.message);
   }
 };
 
 
-// ====================== KODNI TASDIQLASH ======================
+// =======================================
+//   VERIFY CODE
+// =======================================
 window.verifyCode = async function () {
-  const code = document.getElementById("code").value;
+  const code = document.getElementById("smsCode").value;
 
   try {
     const result = await window.confirmationResult.confirm(code);
     const user = result.user;
 
-    const userRef = ref(db, "users/" + user.uid);
-    const snap = await get(userRef);
+    // USER DATABASEDA BOR-YO‘QLIGINI TEKSHIRISH
+    const snap = await get(ref(db, "users/" + user.uid));
 
-    // === AGAR USER MA'LUMOTLARI YO'Q BO'LSA — YOZAMIZ ===
-    if (!snap.exists()) {
-      await set(userRef, {
-        fullName: "",
-        phone: user.phoneNumber,
-        avatar: "",
-        role: "",
-        car: "",
-        created: Date.now()
-      });
-    } 
-
-    // === AGAR USER BOR LEKIN MA'LUMOTLARI TO'LIQ EMAS — TO'LDIRAMIZ ===
-    else {
-      let u = snap.val();
-      await set(userRef, {
-        fullName: u.fullName || "",
-        phone: u.phone || user.phoneNumber,
-        avatar: u.avatar || "",
-        role: u.role || "",
-        car: u.car || "",
-        created: u.created || Date.now()
-      });
+    if (snap.exists()) {
+      window.location.href = "profile.html";
+    } else {
+      window.location.href = "register.html";
     }
 
-    alert("Muvaffaqiyatli kirdingiz!");
-    window.location.href = "profile.html";
-
-  } catch (err) {
-    alert("Kod noto‘g‘ri yoki xato: " + err.message);
+  } catch (e) {
+    alert("Kod noto‘g‘ri!");
   }
 };
 
