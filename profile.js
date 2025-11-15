@@ -36,7 +36,7 @@ const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
 
 
 // ===============================
-// LOGIN
+// LOGIN STATE
 // ===============================
 onAuthStateChanged(auth, user => {
   if (!user) {
@@ -48,6 +48,25 @@ onAuthStateChanged(auth, user => {
   loadRegions();
   loadMyAds();
 });
+
+
+// ===============================
+// DATETIME FORMAT
+// ===============================
+function formatDatetime(value) {
+  if (!value) return "—";
+  
+  const d = new Date(value);
+  if (isNaN(d)) return value;
+
+  return d.toLocaleString("uz-UZ", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
 
 
 // ===============================
@@ -78,25 +97,17 @@ async function loadUserProfile(uid) {
   editFullName.value = u.fullName || "";
   editPhoneInput.value = u.phone || "";
 
-  // 🔵 Agar haydovchi bo‘lsa mashina ma’lumotlarini ko‘rsatish
-  if (u.role === "driver") {
-    document.getElementById("carModel").style.display = "block";
-    document.getElementById("carNumber").style.display = "block";
-    document.getElementById("carColor").style.display = "block";
-    document.getElementById("seatCount").style.display = "block";
-  } else {
-    document.getElementById("carModel").style.display = "none";
-    document.getElementById("carNumber").style.display = "none";
-    document.getElementById("carColor").style.display = "none";
-    document.getElementById("seatCount").style.display = "none";
-  }
+  // Haydovchi bo‘lsa mashina ma’lumotlari ko‘rinadi
+  const carFields = ["carModel", "carNumber", "carColor", "seatCount"];
+  carFields.forEach(id => {
+    document.getElementById(id).style.display = u.role === "driver" ? "block" : "none";
+  });
 
   carModel.value = u.carModel || "";
   carNumber.value = u.carNumber || "";
   carColor.value = u.carColor || "";
   seatCount.value = u.seatCount || "";
 
-  // 🔵 Rolni globalga saqlab qo‘yamiz (e’londa kerak bo‘ladi)
   window.userRole = u.role;
 }
 
@@ -116,9 +127,9 @@ function loadRegions() {
 
 
 // ===============================
-// VILOYAT → TUMAN
+// TUMANLARNI YUKLASH
 // ===============================
-window.updateDistricts = function(type) {
+window.updateDistricts = function (type) {
   const region = document.getElementById(type + "Region").value;
   const districtSelect = document.getElementById(type + "District");
 
@@ -134,7 +145,7 @@ window.updateDistricts = function(type) {
 
 
 // ===============================
-// E’LON QO‘SHISH
+// E'LON QO‘SHISH
 // ===============================
 window.addAd = async function () {
   const user = auth.currentUser;
@@ -142,15 +153,15 @@ window.addAd = async function () {
 
   let extraInfo = {};
 
-  // 🔵 ROLGA QARAB MAYDONLAR
+  // Role bo‘yicha farqlar
   if (window.userRole === "driver") {
     extraInfo.seatCount = seatCount.value;
   } else {
     extraInfo.passengerCount = document.getElementById("passengerCount")?.value || "";
   }
 
-  // 🔵 JO‘NASH VAQTI
-  extraInfo.startTime = document.getElementById("startTime").value || "";
+  // Jo‘nash vaqti
+  extraInfo.departureTime = document.getElementById("departureTime").value || "";
 
   const ad = {
     userId: user.uid,
@@ -173,34 +184,33 @@ window.addAd = async function () {
 };
 
 
+
 // ===============================
 // CLEAR FORM
 // ===============================
 window.clearAddForm = function () {
-  adType.value = "";
   fromRegion.value = "";
   fromDistrict.innerHTML = '<option value="">Tuman</option>';
   toRegion.value = "";
   toDistrict.innerHTML = '<option value="">Tuman</option>';
   price.value = "";
   adComment.value = "";
+
   if (document.getElementById("passengerCount"))
-      document.getElementById("passengerCount").value = "";
-  if (document.getElementById("startTime"))
-      document.getElementById("startTime").value = "";
+    document.getElementById("passengerCount").value = "";
+
+  if (document.getElementById("departureTime"))
+    document.getElementById("departureTime").value = "";
 };
+
 
 
 // ===============================
 // PROFIL MODAL
 // ===============================
-window.openEditProfile = function () {
-  editModal.style.display = "flex";
-};
+window.openEditProfile = () => editModal.style.display = "flex";
+window.closeEditProfile = () => editModal.style.display = "none";
 
-window.closeEditProfile = function () {
-  editModal.style.display = "none";
-};
 
 
 // ===============================
@@ -226,12 +236,11 @@ window.saveProfileEdit = async function () {
 };
 
 
+
 // ===============================
 // AVATAR — ImgBB
 // ===============================
-window.chooseAvatar = function () {
-  avatarInput.click();
-};
+window.chooseAvatar = () => avatarInput.click();
 
 avatarInput.addEventListener("change", async function () {
   const file = this.files[0];
@@ -265,6 +274,7 @@ avatarInput.addEventListener("change", async function () {
 });
 
 
+
 // ===============================
 // MENING E’LONLARIM
 // ===============================
@@ -272,9 +282,7 @@ async function loadMyAds() {
   const user = auth.currentUser;
   if (!user) return;
 
-  const adsRef = ref(db, "ads");
-  const snap = await get(adsRef);
-
+  const snap = await get(ref(db, "ads"));
   const box = document.getElementById("myAdsList");
   box.innerHTML = "";
 
@@ -285,34 +293,32 @@ async function loadMyAds() {
 
   snap.forEach(child => {
     const ad = child.val();
+    if (ad.userId !== user.uid) return;
 
-    if (ad.userId === user.uid) {
-      const div = document.createElement("div");
-      div.style = `
-        padding:12px;
-        border:1px solid #ddd;
-        border-radius:8px;
-        margin-bottom:10px;
-      `;
+    const div = document.createElement("div");
+    div.style = `
+      padding:12px;
+      border:1px solid #ddd;
+      border-radius:8px;
+      margin-bottom:10px;
+    `;
 
-      div.innerHTML = `
-        <b>${ad.type}</b><br>
-        ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
-        Narx: <b>${ad.price || "-"} so‘m</b><br>
-        Vaqt: ${ad.startTime || "-"}<br>
-        Qo‘shimcha: ${ad.comment || "-"}<br>
-        <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
-      `;
+    div.innerHTML = `
+      <b>${ad.type}</b><br>
+      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
+      Narx: <b>${ad.price || "-"} so‘m</b><br>
+      Jo‘nash vaqti: <b>${formatDatetime(ad.departureTime)}</b><br>
+      Qo‘shimcha: ${ad.comment || "-"}<br>
+      <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
+    `;
 
-      box.appendChild(div);
-    }
+    box.appendChild(div);
   });
 }
+
 
 
 // ===============================
 // LOGOUT
 // ===============================
-window.logout = function () {
-  signOut(auth);
-};
+window.logout = () => signOut(auth);
