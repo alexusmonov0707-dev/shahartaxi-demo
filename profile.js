@@ -46,6 +46,7 @@ onAuthStateChanged(auth, user => {
 
   loadUserProfile(user.uid);
   loadRegions();
+    loadMyAds();
 });
 
 
