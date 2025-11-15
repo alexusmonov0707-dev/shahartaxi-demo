@@ -1,137 +1,111 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShaharTaxi — Tizimga kirish</title>
-
-  <style>
-    body{
-      font-family: Arial;
-      background:#f2f4f8;
-      margin:0;
-      padding:0;
-    }
-    .card{
-      max-width:360px;
-      margin:60px auto;
-      background:#fff;
-      padding:20px;
-      border-radius:12px;
-      box-shadow:0 4px 12px rgba(0,0,0,.1);
-      text-align:center;
-    }
-    input, button{
-      width:100%;
-      padding:12px;
-      margin-top:12px;
-      border-radius:6px;
-      font-size:16px;
-      box-sizing:border-box;
-    }
-    input{
-      border:1px solid #ccc;
-    }
-    button{
-      border:none;
-      background:#006eff;
-      color:white;
-      cursor:pointer;
-      font-weight:bold;
-    }
-    button:hover{
-      background:#0053c7;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>ShaharTaxi — Tizimga kirish</title>
+    <style>
+        body { font-family: Arial; background:#eef2f7; }
+        .box { width:360px; margin:80px auto; padding:25px;
+               background:white; border-radius:10px; text-align:center; }
+        input, button {
+            width:100%; padding:12px; margin:8px 0;
+            border-radius:6px; border:1px solid #ccc; font-size:16px;
+        }
+        button { background:#007bff; color:white; border:none; }
+    </style>
 </head>
-
 <body>
 
-<div class="card">
-    <h2 style="color:#006eff">ShaharTaxi — Tizimga kirish</h2>
+<div class="box">
+    <h2>ShaharTaxi — Tizimga kirish</h2>
 
-    <input id="phone" placeholder="+998901234567">
+    <input id="phone" type="text" placeholder="+998901234567">
+
+    <!-- ⚠️ Juda muhim -->
+    <div id="recaptcha-container"></div>
+
     <button onclick="sendCode()">SMS kod yuborish</button>
 
-    <input id="code" placeholder="SMS kod">
-    <button onclick="verifyCode()">Kirish</button>
+    <input id="smsCode" type="text" placeholder="SMS kod">
 
-    <div id="recaptcha"></div>
+    <button onclick="verifyCode()">Kirish</button>
 </div>
 
 
-<!-- ====================== FIREBASE LOGIN JS ======================== -->
+<!-- ================= SCRIPT =================== -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
-  getAuth, RecaptchaVerifier, signInWithPhoneNumber
+    getAuth, RecaptchaVerifier, signInWithPhoneNumber 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
 import {
-  getDatabase, ref, get
+    getDatabase, ref, get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+
 const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.firebasestorage.app",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.firebasestorage.app",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// =============================
-// INVISIBLE RECAPTCHA
-// =============================
+// ===============================
+// Invisible Recaptcha
+// ===============================
 window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-  size: "invisible"
+    size: "invisible"
 });
 
-// =============================
-// SMS YUBORISH
-// =============================
-window.sendCode = async function () {
-  const phone = document.getElementById("phone").value;
 
-  try {
-    const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-    window.confirmationResult = confirmation;
-    alert("SMS kod yuborildi!");
-  } catch (e) {
-    console.error(e);
-    alert("Xatolik: " + e.message);
-  }
+// ===============================
+// SMS YUBORISH
+// ===============================
+window.sendCode = async function () {
+    const phone = document.getElementById("phone").value;
+
+    try {
+        const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+        window.confirmationResult = confirmation;
+        alert("SMS yuborildi!");
+    } catch (e) {
+        console.error(e);
+        alert("SMS yuborishda xatolik: " + e.message);
+    }
 };
 
-// =============================
+
+// ===============================
 // KODNI TASDIQLASH
-// =============================
+// ===============================
 window.verifyCode = async function () {
-  const code = document.getElementById("smsCode").value;
+    const code = document.getElementById("smsCode").value;
 
-  try {
-    const result = await window.confirmationResult.confirm(code);
-    const user = result.user;
+    try {
+        const result = await window.confirmationResult.confirm(code);
+        const user = result.user;
 
-    const snap = await get(ref(db, "users/" + user.uid));
+        // user DBda bormi?
+        const snap = await get(ref(db, "users/" + user.uid));
 
-    if (snap.exists()) {
-      window.location.href = "profile.html";
-    } else {
-      window.location.href = "register.html";
+        if (snap.exists()) {
+            window.location.href = "profile.html";
+        } else {
+            window.location.href = "register.html";
+        }
+
+    } catch (e) {
+        alert("Kod xato!");
     }
-
-  } catch (e) {
-    alert("Kod noto‘g‘ri!");
-  }
 };
 </script>
-
 
 </body>
 </html>
