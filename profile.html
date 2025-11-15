@@ -4,12 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShaharTaxi — Profil</title>
-  <link rel="stylesheet" href="style.css" />
 
   <style>
     body { font-family: Arial; background:#f2f4f8; margin:0; }
-    .topbar { background:#0069d9; color:#fff; padding:14px 20px; font-size:20px;
-      display:flex; justify-content:space-between; align-items:center; }
+    .topbar {
+      background:#0069d9; color:#fff; padding:14px 20px; font-size:20px;
+      display:flex; justify-content:space-between; align-items:center;
+    }
     .logout { background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
       color:#fff; cursor:pointer; font-size:15px; }
 
@@ -18,7 +19,11 @@
       border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);
     }
     .profile { display:flex; align-items:center; gap:20px; }
-    .profile img { width:90px; height:90px; border-radius:12px; object-fit:cover; cursor:pointer; }
+
+    .profile img {
+      width:90px; height:90px; border-radius:12px;
+      object-fit:cover; cursor:pointer; border:3px solid #ddd;
+    }
 
     .title { text-align:center; font-size:24px; margin-top:10px; color:#0069d9; }
 
@@ -28,10 +33,10 @@
     }
 
     button { padding:10px 20px; border:none; border-radius:6px; cursor:pointer; }
-
     .blue-btn { background:#0069d9; color:#fff; }
     .gray-btn { background:#ccc; }
 
+    /* MODAL */
     #editModal {
       position:fixed; left:0; top:0; right:0; bottom:0;
       background:rgba(0,0,0,0.6); display:none;
@@ -53,14 +58,13 @@
 
   <!-- PROFILE SECTION -->
   <div class="card profile">
+    <!-- 📌 YANGI: onclick + id="avatarInput" bilan bog‘langan -->
+    <img id="avatar" onclick="chooseAvatar()"
+         src="https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png">
 
-    <!-- AVATAR + HIDDEN FILE INPUT -->
-    <div style="position:relative;">
-      <img id="avatar" 
-           src="https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png"
-           onclick="chooseAvatar()">
-      <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar()">
-    </div>
+    <!-- 📌 YANGI: yashirin rasm tanlash input -->
+    <input id="avatarInput" type="file" accept="image/*"
+           style="display:none" onchange="uploadAvatar()">
 
     <div>
       <div id="fullName" style="font-size:20px; font-weight:bold;">Yuklanmoqda...</div>
@@ -73,6 +77,7 @@
     </button>
   </div>
 
+  <!-- ADD AD SECTION -->
   <div class="card">
     <div class="title">Yangi e’lon qo‘shish</div>
 
@@ -105,7 +110,7 @@
     <button onclick="clearAddForm()" class="gray-btn" style="margin-top:5px;">Tozalash</button>
   </div>
 
-  <!-- EDIT MODAL -->
+  <!-- EDIT PROFILE MODAL -->
   <div id="editModal">
     <div class="modal-box">
       <h3>Profilni tahrirlash</h3>
@@ -118,6 +123,8 @@
     </div>
   </div>
 
+  <!-- JS -->
   <script type="module" src="./profile.js?v=3001"></script>
+
 </body>
 </html>
