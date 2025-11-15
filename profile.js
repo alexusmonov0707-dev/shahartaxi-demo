@@ -219,6 +219,10 @@ window.openEditProfile = function () {
   document.getElementById("editFullName").value = fullName.textContent;
   document.getElementById("editPhoneInput").value = phone.textContent;
 };
+carModel.value = (window.userProfile?.carModel) || "";
+carNumber.value = (window.userProfile?.carNumber) || "";
+carColor.value = (window.userProfile?.carColor) || "";
+seatCount.value = (window.userProfile?.seatCount) || "";
 
 window.closeEditProfile = function () {
   document.getElementById("editModal").style.display = "none";
