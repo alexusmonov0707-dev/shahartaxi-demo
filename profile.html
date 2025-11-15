@@ -147,21 +147,38 @@
 
 
   <!-- EDIT AD MODAL -->
-  <div id="editAdModal">
-    <div class="modal-box">
-      <h3>E’lonni tahrirlash</h3>
+<div id="editAdModal">
+  <div class="modal-box">
+    <h3>E’lonni tahrirlash</h3>
 
-      <input id="editFrom" placeholder="Qayerdan">
-      <input id="editTo" placeholder="Qayerga">
-      <input id="editPrice" placeholder="Narx">
-      <input id="editTime" type="datetime-local">
+    <label>Qayerdan (Viloyat)</label>
+    <select id="editFromRegion" onchange="updateEditDistricts('from')">
+      <option value="">Viloyat</option>
+    </select>
 
-      <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
+    <label>Tuman</label>
+    <select id="editFromDistrict">
+      <option value="">Tuman</option>
+    </select>
 
-      <button onclick="saveAdEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
-      <button onclick="closeEditAd()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
-    </div>
+    <label>Qayerga (Viloyat)</label>
+    <select id="editToRegion" onchange="updateEditDistricts('to')">
+      <option value="">Viloyat</option>
+    </select>
+
+    <label>Tuman</label>
+    <select id="editToDistrict">
+      <option value="">Tuman</option>
+    </select>
+
+    <input id="editPrice" placeholder="Narx">
+    <input id="editTime" type="datetime-local">
+    <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
+
+    <button onclick="saveAdEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
+    <button onclick="closeEditAd()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
   </div>
+</div>
 
 
 <script src="regions.js?v=1"></script>
