@@ -14,7 +14,8 @@ import {
   get,
   set,
   update,
-  push
+  push,
+  remove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -31,7 +32,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// ImgBB API
 const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
 
 
@@ -51,19 +51,19 @@ onAuthStateChanged(auth, user => {
 
 
 // ===============================
-// DATETIME FORMAT — TUZATILGAN
+// DATETIME FORMATTER
 // ===============================
 function formatDatetime(dt) {
   if (!dt) return "—";
 
-  // endi faqat ISO format o‘qiladi
+  dt = dt.replace("M", "-").replace(/\s+/g, " ");
   const d = new Date(dt);
 
-  if (isNaN(d)) return "—";
+  if (isNaN(d)) return dt;
 
   return d.toLocaleString("uz-UZ", {
     year: "numeric",
-    month: "long",
+    month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit"
@@ -72,7 +72,7 @@ function formatDatetime(dt) {
 
 
 // ===============================
-// PROFIL YUKLASH
+// USER PROFILE LOAD
 // ===============================
 async function loadUserProfile(uid) {
   const snap = await get(ref(db, "users/" + uid));
@@ -114,7 +114,7 @@ async function loadUserProfile(uid) {
 
 
 // ===============================
-// VILOYATLARNI YUKLASH
+// REGION & DISTRICT LOAD
 // ===============================
 function loadRegions() {
   fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
@@ -126,10 +126,6 @@ function loadRegions() {
   });
 }
 
-
-// ===============================
-// TUMANLAR
-// ===============================
 window.updateDistricts = function (type) {
   const region = document.getElementById(type + "Region").value;
   const districtSelect = document.getElementById(type + "District");
@@ -145,7 +141,7 @@ window.updateDistricts = function (type) {
 
 
 // ===============================
-// E’LON QO‘SHISH — TUZATILGAN
+// ADD AD
 // ===============================
 window.addAd = async function () {
   const user = auth.currentUser;
@@ -159,11 +155,7 @@ window.addAd = async function () {
     extraInfo.passengerCount = seats.value;
   }
 
-  // 🔵 MUHIM: vaqtni ISO formatda saqlash
-  let rawTime = document.getElementById("departureTime").value;
-  extraInfo.departureTime = rawTime
-    ? new Date(rawTime).toISOString()
-    : "";
+  extraInfo.departureTime = departureTime.value || "";
 
   const ad = {
     userId: user.uid,
@@ -187,7 +179,7 @@ window.addAd = async function () {
 
 
 // ===============================
-// CLEAR FORM
+// CLEAR ADD FORM
 // ===============================
 window.clearAddForm = function () {
   fromRegion.value = "";
@@ -196,21 +188,21 @@ window.clearAddForm = function () {
   toDistrict.innerHTML = '<option value="">Tuman</option>';
   price.value = "";
   adComment.value = "";
-
   seats.value = "";
   departureTime.value = "";
 };
 
 
+
 // ===============================
-// MODAL
+// PROFILE MODAL OPEN/CLOSE
 // ===============================
 window.openEditProfile = () => editModal.style.display = "flex";
 window.closeEditProfile = () => editModal.style.display = "none";
 
 
 // ===============================
-// PROFIL SAQLASH
+// SAVE PROFILE
 // ===============================
 window.saveProfileEdit = async function () {
   const user = auth.currentUser;
@@ -233,7 +225,7 @@ window.saveProfileEdit = async function () {
 
 
 // ===============================
-// AVATAR — ImgBB
+// AVATAR UPLOAD (ImgBB)
 // ===============================
 window.chooseAvatar = () => avatarInput.click();
 
@@ -242,7 +234,6 @@ avatarInput.addEventListener("change", async function () {
   if (!file) return;
 
   const reader = new FileReader();
-
   reader.onload = async function (e) {
     const base64 = e.target.result.split(",")[1];
 
@@ -264,13 +255,12 @@ avatarInput.addEventListener("change", async function () {
     avatar.src = url;
     alert("Rasm yuklandi!");
   };
-
   reader.readAsDataURL(file);
 });
 
 
 // ===============================
-// MENING E’LONLARIM
+// LOAD MY ADS
 // ===============================
 async function loadMyAds() {
   const user = auth.currentUser;
@@ -278,6 +268,7 @@ async function loadMyAds() {
 
   const snap = await get(ref(db, "ads"));
   const box = document.getElementById("myAdsList");
+
   box.innerHTML = "";
 
   if (!snap.exists()) {
@@ -287,15 +278,12 @@ async function loadMyAds() {
 
   snap.forEach(child => {
     const ad = child.val();
+    const id = child.key;
+
     if (ad.userId !== user.uid) return;
 
     const div = document.createElement("div");
-    div.style = `
-      padding:12px;
-      border:1px solid #ddd;
-      border-radius:8px;
-      margin-bottom:10px;
-    `;
+    div.className = "ad-box";
 
     div.innerHTML = `
       <b>${ad.type}</b><br>
@@ -304,11 +292,68 @@ async function loadMyAds() {
       Jo‘nash vaqti: ${formatDatetime(ad.departureTime)}<br>
       Qo‘shimcha: ${ad.comment || "-"}<br>
       <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
+
+      <div class="ad-actions">
+        <button class="edit-btn" onclick="openEditAd('${id}')">Tahrirlash</button>
+        <button class="delete-btn" onclick="deleteAd('${id}')">O‘chirish</button>
+      </div>
     `;
 
     box.appendChild(div);
   });
 }
+
+
+// ===============================
+// DELETE AD
+// ===============================
+window.deleteAd = async function (adId) {
+  if (!confirm("E’lonni o‘chirishni istaysizmi?")) return;
+
+  await remove(ref(db, "ads/" + adId));
+  loadMyAds();
+};
+
+
+// ===============================
+// OPEN EDIT AD MODAL
+// ===============================
+window.openEditAd = async function (adId) {
+  window.currentEditAdId = adId;
+
+  const snap = await get(ref(db, "ads/" + adId));
+  const ad = snap.val();
+
+  editFrom.value = `${ad.fromRegion} / ${ad.fromDistrict}`;
+  editTo.value = `${ad.toRegion} / ${ad.toDistrict}`;
+  editPrice.value = ad.price;
+  editTime.value = ad.departureTime;
+  editComment.value = ad.comment;
+
+  document.getElementById("editAdModal").style.display = "flex";
+};
+
+window.closeEditAd = () =>
+  document.getElementById("editAdModal").style.display = "none";
+
+
+// ===============================
+// SAVE AD EDIT
+// ===============================
+window.saveAdEdit = async function () {
+  const id = window.currentEditAdId;
+  if (!id) return;
+
+  await update(ref(db, "ads/" + id), {
+    price: editPrice.value,
+    departureTime: editTime.value,
+    comment: editComment.value
+  });
+
+  alert("E’lon yangilandi!");
+  closeEditAd();
+  loadMyAds();
+};
 
 
 // ===============================
