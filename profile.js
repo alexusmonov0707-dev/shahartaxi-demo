@@ -55,19 +55,30 @@ onAuthStateChanged(auth, user => {
 // ===============================
 function formatDatetime(value) {
   if (!value) return "—";
-  
-  const d = new Date(value);
-  if (isNaN(d)) return value;
 
-  return d.toLocaleString("uz-UZ", {
-    year: "numeric",
-    month: "long",
+  // ISO shaklini to'g'ri o‘qish
+  let date = new Date(value);
+
+  // Agar brauzer noto‘g‘ri parse qilsa (Invalid Date)
+  if (isNaN(date.getTime())) {
+    // qo‘lda parse qilamiz
+    try {
+      const [full, y, m, d, hh, mm] = value.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/) || [];
+      date = new Date(y, m - 1, d, hh, mm);
+    } catch {
+      return value;
+    }
+  }
+
+  return date.toLocaleDateString("uz-UZ", {
     day: "numeric",
+    month: "long",
+    year: "numeric"
+  }) + " " + date.toLocaleTimeString("uz-UZ", {
     hour: "2-digit",
     minute: "2-digit"
   });
 }
-
 
 // ===============================
 // PROFIL YUKLASH
