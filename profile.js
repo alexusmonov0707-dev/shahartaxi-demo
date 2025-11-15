@@ -46,7 +46,7 @@ onAuthStateChanged(auth, user => {
 
   loadUserProfile(user.uid);
   loadRegions();
-    loadMyAds();
+  loadMyAds();
 });
 
 
@@ -61,6 +61,7 @@ async function loadUserProfile(uid) {
       fullName: "",
       phone: "",
       avatar: "",
+      role: "passenger",
       carModel: "",
       carNumber: "",
       carColor: "",
@@ -76,10 +77,27 @@ async function loadUserProfile(uid) {
 
   editFullName.value = u.fullName || "";
   editPhoneInput.value = u.phone || "";
+
+  // 🔵 Agar haydovchi bo‘lsa mashina ma’lumotlarini ko‘rsatish
+  if (u.role === "driver") {
+    document.getElementById("carModel").style.display = "block";
+    document.getElementById("carNumber").style.display = "block";
+    document.getElementById("carColor").style.display = "block";
+    document.getElementById("seatCount").style.display = "block";
+  } else {
+    document.getElementById("carModel").style.display = "none";
+    document.getElementById("carNumber").style.display = "none";
+    document.getElementById("carColor").style.display = "none";
+    document.getElementById("seatCount").style.display = "none";
+  }
+
   carModel.value = u.carModel || "";
   carNumber.value = u.carNumber || "";
   carColor.value = u.carColor || "";
   seatCount.value = u.seatCount || "";
+
+  // 🔵 Rolni globalga saqlab qo‘yamiz (e’londa kerak bo‘ladi)
+  window.userRole = u.role;
 }
 
 
@@ -114,6 +132,7 @@ window.updateDistricts = function(type) {
 };
 
 
+
 // ===============================
 // E’LON QO‘SHISH
 // ===============================
@@ -121,9 +140,21 @@ window.addAd = async function () {
   const user = auth.currentUser;
   if (!user) return;
 
+  let extraInfo = {};
+
+  // 🔵 ROLGA QARAB MAYDONLAR
+  if (window.userRole === "driver") {
+    extraInfo.seatCount = seatCount.value;
+  } else {
+    extraInfo.passengerCount = document.getElementById("passengerCount")?.value || "";
+  }
+
+  // 🔵 JO‘NASH VAQTI
+  extraInfo.startTime = document.getElementById("startTime").value || "";
+
   const ad = {
     userId: user.uid,
-    type: adType.value,
+    type: window.userRole === "driver" ? "Haydovchi" : "Yo‘lovchi",
     fromRegion: fromRegion.value,
     fromDistrict: fromDistrict.value,
     toRegion: toRegion.value,
@@ -131,7 +162,8 @@ window.addAd = async function () {
     price: price.value,
     comment: adComment.value,
     approved: false,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    ...extraInfo
   };
 
   await push(ref(db, "ads"), ad);
@@ -152,6 +184,10 @@ window.clearAddForm = function () {
   toDistrict.innerHTML = '<option value="">Tuman</option>';
   price.value = "";
   adComment.value = "";
+  if (document.getElementById("passengerCount"))
+      document.getElementById("passengerCount").value = "";
+  if (document.getElementById("startTime"))
+      document.getElementById("startTime").value = "";
 };
 
 
@@ -228,8 +264,9 @@ avatarInput.addEventListener("change", async function () {
   reader.readAsDataURL(file);
 });
 
+
 // ===============================
-// MENING E’LONLARIMNI YUKLASH
+// MENING E’LONLARIM
 // ===============================
 async function loadMyAds() {
   const user = auth.currentUser;
@@ -246,14 +283,10 @@ async function loadMyAds() {
     return;
   }
 
-  let found = false;
-
   snap.forEach(child => {
     const ad = child.val();
 
     if (ad.userId === user.uid) {
-      found = true;
-
       const div = document.createElement("div");
       div.style = `
         padding:12px;
@@ -264,21 +297,18 @@ async function loadMyAds() {
 
       div.innerHTML = `
         <b>${ad.type}</b><br>
-        <span>${ad.fromRegion}, ${ad.fromDistrict}</span> → 
-        <span>${ad.toRegion}, ${ad.toDistrict}</span><br>
-        Narx: <b>${ad.price ? ad.price + " so‘m" : "ko‘rsatilmagan"}</b><br>
-        Izoh: ${ad.comment || "-"}<br>
-        <small style="color:#777;">${new Date(ad.createdAt).toLocaleString()}</small>
+        ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
+        Narx: <b>${ad.price || "-"} so‘m</b><br>
+        Vaqt: ${ad.startTime || "-"}<br>
+        Qo‘shimcha: ${ad.comment || "-"}<br>
+        <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
       `;
 
       box.appendChild(div);
     }
   });
-
-  if (!found) {
-    box.innerHTML = "<p>Hozircha sizning e’lonlaringiz yo‘q.</p>";
-  }
 }
+
 
 // ===============================
 // LOGOUT
