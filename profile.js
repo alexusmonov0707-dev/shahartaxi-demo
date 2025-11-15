@@ -233,10 +233,14 @@ window.saveProfileEdit = async function () {
     const user = auth.currentUser;
     if (!user) return;
 
-    await update(ref(db, "users/" + user.uid), {
-      fullName: editFullName.value,
-      phone: editPhoneInput.value
-    });
+   await update(ref(db, "users/" + user.uid), {
+  fullName: editFullName.value,
+  phone: editPhoneInput.value,
+  carModel: carModel.value || "",
+  carNumber: carNumber.value || "",
+  carColor: carColor.value || "",
+  seatCount: seatCount.value || ""
+});
 
     alert("Profil saqlandi!");
     closeEditProfile();
