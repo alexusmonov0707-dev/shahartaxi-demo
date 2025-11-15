@@ -31,6 +31,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+// ImgBB API
 const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
 
 
@@ -50,13 +51,15 @@ onAuthStateChanged(auth, user => {
 
 
 // ===============================
-// DATETIME FORMAT
+// DATETIME FORMAT — TUZATILGAN
 // ===============================
 function formatDatetime(dt) {
   if (!dt) return "—";
 
+  // endi faqat ISO format o‘qiladi
   const d = new Date(dt);
-  if (isNaN(d)) return dt;
+
+  if (isNaN(d)) return "—";
 
   return d.toLocaleString("uz-UZ", {
     year: "numeric",
@@ -69,7 +72,7 @@ function formatDatetime(dt) {
 
 
 // ===============================
-// USER PROFILE
+// PROFIL YUKLASH
 // ===============================
 async function loadUserProfile(uid) {
   const snap = await get(ref(db, "users/" + uid));
@@ -96,7 +99,6 @@ async function loadUserProfile(uid) {
   editFullName.value = u.fullName || "";
   editPhoneInput.value = u.phone || "";
 
-  // Haydovchi bo'lsa mashina maydonlarini ko’rsatish
   const carFields = ["carModel", "carNumber", "carColor", "seatCount"];
   carFields.forEach(id => {
     document.getElementById(id).style.display = u.role === "driver" ? "block" : "none";
@@ -112,7 +114,7 @@ async function loadUserProfile(uid) {
 
 
 // ===============================
-// REGIONS
+// VILOYATLARNI YUKLASH
 // ===============================
 function loadRegions() {
   fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
@@ -125,22 +127,25 @@ function loadRegions() {
 }
 
 
+// ===============================
+// TUMANLAR
+// ===============================
 window.updateDistricts = function (type) {
   const region = document.getElementById(type + "Region").value;
-  const select = document.getElementById(type + "District");
+  const districtSelect = document.getElementById(type + "District");
 
-  select.innerHTML = '<option value="">Tuman</option>';
+  districtSelect.innerHTML = '<option value="">Tuman</option>';
 
   if (window.regionsData[region]) {
     window.regionsData[region].forEach(t => {
-      select.innerHTML += `<option value="${t}">${t}</option>`;
+      districtSelect.innerHTML += `<option value="${t}">${t}</option>`;
     });
   }
 };
 
 
 // ===============================
-// ADD AD
+// E’LON QO‘SHISH — TUZATILGAN
 // ===============================
 window.addAd = async function () {
   const user = auth.currentUser;
@@ -148,14 +153,17 @@ window.addAd = async function () {
 
   let extraInfo = {};
 
-  // Yo'lovchi / Haydovchi
   if (window.userRole === "driver") {
     extraInfo.seatCount = seatCount.value;
   } else {
-    extraInfo.passengerCount = document.getElementById("seats").value || "";
+    extraInfo.passengerCount = seats.value;
   }
 
-  extraInfo.departureTime = document.getElementById("departureTime").value || "";
+  // 🔵 MUHIM: vaqtni ISO formatda saqlash
+  let rawTime = document.getElementById("departureTime").value;
+  extraInfo.departureTime = rawTime
+    ? new Date(rawTime).toISOString()
+    : "";
 
   const ad = {
     userId: user.uid,
@@ -179,7 +187,7 @@ window.addAd = async function () {
 
 
 // ===============================
-// CLEAR
+// CLEAR FORM
 // ===============================
 window.clearAddForm = function () {
   fromRegion.value = "";
@@ -188,20 +196,21 @@ window.clearAddForm = function () {
   toDistrict.innerHTML = '<option value="">Tuman</option>';
   price.value = "";
   adComment.value = "";
-  departureTime.value = "";
+
   seats.value = "";
+  departureTime.value = "";
 };
 
 
 // ===============================
-// PROFILE MODAL
+// MODAL
 // ===============================
 window.openEditProfile = () => editModal.style.display = "flex";
 window.closeEditProfile = () => editModal.style.display = "none";
 
 
 // ===============================
-// SAVE PROFILE
+// PROFIL SAQLASH
 // ===============================
 window.saveProfileEdit = async function () {
   const user = auth.currentUser;
@@ -217,8 +226,7 @@ window.saveProfileEdit = async function () {
   };
 
   await update(ref(db, "users/" + user.uid), updates);
-
-  alert("Profil saqlandi!");
+  alert("Saqlandi!");
   closeEditProfile();
   loadUserProfile(user.uid);
 };
@@ -262,9 +270,6 @@ avatarInput.addEventListener("change", async function () {
 
 
 // ===============================
-// MY ADS
-// ===============================
-// ===============================
 // MENING E’LONLARIM
 // ===============================
 async function loadMyAds() {
@@ -292,25 +297,18 @@ async function loadMyAds() {
       margin-bottom:10px;
     `;
 
-    // 🔥 Faqat departureTime ishlatiladi
-    const formattedTime = formatDatetime(ad.departureTime);
-
     div.innerHTML = `
       <b>${ad.type}</b><br>
-      ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → 
-      ${ad.toRegion || ""}, ${ad.toDistrict || ""}<br>
+      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
       Narx: <b>${ad.price || "-"} so‘m</b><br>
-      Jo‘nash vaqti: ${formattedTime}<br>
+      Jo‘nash vaqti: ${formatDatetime(ad.departureTime)}<br>
       Qo‘shimcha: ${ad.comment || "-"}<br>
-      <small style="color:#777;">
-        ${new Date(ad.createdAt).toLocaleString()}
-      </small>
+      <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
     `;
 
     box.appendChild(div);
   });
 }
-
 
 
 // ===============================
