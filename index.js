@@ -3,15 +3,10 @@
 // ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
+  getAuth, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
 import {
-  getDatabase,
-  ref,
-  get
+  getDatabase, ref, get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -32,196 +27,127 @@ const db = getDatabase(app);
 // ===============================
 // LOGIN TEKSHIRUV
 // ===============================
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
   if (!user) {
     window.location.href = "login.html";
     return;
   }
-  loadRegionsFilter();
-  loadAllAds();
+
+  await loadUserRole(user.uid);
+  loadAds();
 });
 
 
+let CURRENT_ROLE = ""; // Haydovchi / Yo‘lovchi
+
+
 // ===============================
-// FILTERLARNI YUKLASH (Viloyat)
+// USER ROLE YUKLASH
 // ===============================
-function loadRegionsFilter() {
-  const filterRegion = document.getElementById("filterRegion");
-  Object.keys(window.regionsData).forEach(r => {
-    filterRegion.innerHTML += `<option value="${r}">${r}</option>`;
-  });
+async function loadUserRole(uid) {
+  const snap = await get(ref(db, "users/" + uid));
+  if (snap.exists()) CURRENT_ROLE = snap.val().role || "passenger";
 }
 
 
 // ===============================
-// DATETIME FORMAT
+// TIME FORMAT FUNCTION
 // ===============================
-function formatTime(t) {
-  if (!t) return "—";
+function formatTime(dt) {
+  if (!dt) return "—";
 
-  // Ba’zi formatlar Firebase’da: 2025-11-20T14:30
-  const d = new Date(t);
-  if (isNaN(d)) return t;
-
-  return d.toLocaleString("uz-UZ", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-}
-
-
-// ===============================
-// E’LONLARNI YUKLASH
-// ===============================
-async function loadAllAds() {
-  const adsRef = ref(db, "ads");
-  const snap = await get(adsRef);
-
-  const list = document.getElementById("adsList");
-  list.innerHTML = "";
-
-  if (!snap.exists()) {
-    list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-    return;
+  // Chrome formatini to‘g‘rilaymiz
+  if (dt.includes("T")) {
+    const d = new Date(dt);
+    return d.toLocaleString("uz-UZ", {
+      year:"numeric", month:"long", day:"numeric",
+      hour:"2-digit", minute:"2-digit"
+    });
   }
 
-  let ads = [];
-  snap.forEach(c => {
-    ads.push({ id: c.key, ...c.val() });
-  });
-
-  renderAds(ads);
-
-  // FILTER EVENTS
-  document.getElementById("search").oninput = () => renderAds(ads);
-  document.getElementById("filterRole").onchange = () => renderAds(ads);
-  document.getElementById("filterRegion").onchange = () => renderAds(ads);
+  return dt;
 }
 
 
 // ===============================
-// FILTERLANIB CHIZISH
-// ===============================
-function renderAds(ads) {
-  const list = document.getElementById("adsList");
-  const q = document.getElementById("search").value.toLowerCase();
-  const role = document.getElementById("filterRole").value;
-  const region = document.getElementById("filterRegion").value;
-
-  list.innerHTML = "";
-
-  const filtered = ads.filter(a => {
-    let hay = true;
-
-    if (role && a.type !== role) hay = false;
-    if (region && a.fromRegion !== region && a.toRegion !== region) hay = false;
-
-    if (q) {
-      const text = `
-        ${a.fromRegion} ${a.fromDistrict} ${a.toRegion} ${a.toDistrict}
-        ${a.comment} ${a.price}
-      `.toLowerCase();
-      if (!text.includes(q)) hay = false;
-    }
-
-    return hay;
-  });
-
-  if (filtered.length === 0) {
-    list.innerHTML = "<p>Natija topilmadi.</p>";
-    return;
-  }
-
-  filtered.forEach(a => list.appendChild(createAdCard(a)));
-}
-
-
-// ===============================
-// MINI-KARTA YARATISH
+// AD CARD CREATOR
 // ===============================
 function createAdCard(ad) {
   const div = document.createElement("div");
-  div.style = `
-    padding:12px;
-    margin-bottom:12px;
-    background:white;
-    border-radius:10px;
-    border:1px solid #ddd;
-    cursor:pointer;
-  `;
-
+  div.className = "ad-card";
   div.innerHTML = `
-    <b style="color:#0069d9">${ad.type}</b>  
-    <br>
-    ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}
-    <br>
-    <b>${ad.price ? ad.price + " so‘m" : "Narx ko‘rsatilmagan"}</b>
-    <br>
-    <small style="color:#777">Jo‘nash: ${formatTime(ad.departureTime)}</small>
+    <div class="ad-top">
+      <div style="font-size:14px; color:#555;">${ad.type}</div>
+      <span class="price">${ad.price ? ad.price + " so‘m" : "—"}</span>
+    </div>
+
+    <div class="route">
+      ${ad.fromRegion}, ${ad.fromDistrict}
+      <span class="arrow">→</span>
+      ${ad.toRegion}, ${ad.toDistrict}
+    </div>
+
+    <div class="time">⏰ ${formatTime(ad.departureTime)}</div>
   `;
 
   div.onclick = () => openAdModal(ad);
-
   return div;
 }
 
 
 // ===============================
-// MODAL OCHISH
+// BARCHA E’LONLARNI YUKLASH
 // ===============================
-function openAdModal(ad) {
-  let modal = document.getElementById("adFullModal");
+async function loadAds() {
+  const adsBox = document.getElementById("adsList");
+  adsBox.innerHTML = "Yuklanmoqda...";
 
-  // YANGI MODAL YO‘Q BO‘LSA — YARATAMIZ
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "adFullModal";
-    modal.style = `
-      position:fixed; inset:0;
-      background:rgba(0,0,0,0.6);
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      z-index:9999;
-    `;
-    document.body.appendChild(modal);
+  const snap = await get(ref(db, "ads"));
+  if (!snap.exists()) {
+    adsBox.innerHTML = "<p>E’lon yo‘q.</p>";
+    return;
   }
 
-  modal.innerHTML = `
-    <div style="
-      background:white; padding:20px;
-      border-radius:12px; width:350px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.3);
-    ">
-      <h3 style="margin-top:0; color:#0069d9;">E’lon tafsilotlari</h3>
+  adsBox.innerHTML = "";
 
-      <p><b>${ad.type}</b></p>
+  snap.forEach(child => {
+    const ad = child.val();
+
+    // faqat o‘z roliga mos elonlar chiqadi
+    if (ad.type !== (CURRENT_ROLE === "driver" ? "Haydovchi" : "Yo‘lovchi")) return;
+
+    adsBox.appendChild(createAdCard(ad));
+  });
+}
+
+
+// ===============================
+// FULL MODAL OCHISH
+// ===============================
+window.openAdModal = function (ad) {
+  const modal = document.getElementById("adFullModal");
+  const box = document.getElementById("adFullBox");
+
+  box.innerHTML = `
+      <h3>${ad.type} e’loni</h3>
 
       <p><b>Yo‘nalish:</b><br>
       ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}</p>
 
-      <p><b>Jo‘nash vaqti:</b><br>
-      ${formatTime(ad.departureTime)}</p>
+      <p><b>Narx:</b> ${ad.price || "—"} so‘m</p>
 
-      <p><b>Narx:</b> ${ad.price ? ad.price + " so‘m" : "-"}</p>
+      <p><b>Jo‘nash vaqti:</b><br> ${formatTime(ad.departureTime)}</p>
 
-      <p><b>Qo‘shimcha izoh:</b><br>${ad.comment || "-"}</p>
+      <p><b>Izoh:</b><br> ${ad.comment || "—"}</p>
 
-      <button onclick="closeAdModal()" 
-        style="width:100%; background:#444; color:#fff; padding:10px;
-        border:none; border-radius:8px; margin-top:10px;">Yopish</button>
-    </div>
+      <button class="close-btn" onclick="closeAdModal()">Yopish</button>
   `;
 
   modal.style.display = "flex";
-}
+};
 
 window.closeAdModal = function () {
-  const modal = document.getElementById("adFullModal");
-  if (modal) modal.style.display = "none";
+  document.getElementById("adFullModal").style.display = "none";
 };
 
 
