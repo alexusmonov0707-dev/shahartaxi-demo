@@ -1,11 +1,10 @@
-// index.js (module)
-// To'liq funksional — qo'ygan index.html bilan mos
-
+// ===============================
+//  FIREBASE INIT
+// ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// --- Firebase config (sizning config) ---
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -20,215 +19,197 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// --- yordamchi: viloyat obyekti (regions.js turlicha nom bilan export qilishi mumkin) ---
+// ===============================
+//  REGIONS DATA
+// ===============================
 const REGIONS = window.regionsData || window.regions || {};
 
-// --- yordamchi: turli quote/apostrophe va kichik/katta farqlarni birlashtirish uchun ---
+
+// ===============================
+// TYPE NORMALIZATION
+// ===============================
 function normalizeType(t) {
   if (!t) return "";
-  // normalizatsiya: o'zgaruvchi apostroflar va inglizcha so'zlarni bir xilligicha qaytarish
   t = String(t).trim().toLowerCase();
-  // o‘zbek apostrof variantlarini almashtiramiz
-  t = t.replace(/[‘’`ʼ']/g, "'"); // unify to simple apostrophe
+  t = t.replace(/[‘’`ʼ']/g, "'");
+
   if (t.includes("haydov")) return "Haydovchi";
   if (t.includes("yo") && t.includes("lov")) return "Yo‘lovchi";
-  if (t === "driver" || t === "haydovchi") return "Haydovchi";
-  if (t === "passenger" || t === "yo'lovchi" || t === "yo‘lovchi" || t === "yolovchi") return "Yo‘lovchi";
-  // default: capitalize first
+  if (t === "yo'lovchi") return "Yo‘lovchi";
+
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-// --- vaqtni formatlash: turli formatlarni qamrab oladi ---
-function formatTime(raw) {
-  if (!raw) return "—";
 
-  // agar epoch number kiritilgan bo'lsa
-  if (typeof raw === "number") {
-    const d = new Date(raw);
-    if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
+// ===============================
+// DATE FORMATTER
+// ===============================
+function formatTime(val) {
+  if (!val) return "—";
+
+  if (typeof val === "number") {
+    return new Date(val).toLocaleString("uz-UZ", {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
   }
 
-  // raw oddiy string bo'lsa: tozalash / common conversions
-  let s = String(raw).trim();
-
-  // handle case like "2025 M11 17 14:36" -> "2025-11-17 14:36"
-  // replace " M11 " or " M9 " patterns:
+  let s = String(val).trim();
   s = s.replace(/\bM(\d{1,2})\b/, "-$1-");
-  // if there are multiple spaces, collapse
-  s = s.replace(/\s+/g, " ").replace(/[-\s]+(\d{2}:\d{2})$/, " $1");
 
-  // sometimes Firebase stores ISO like '2025-11-20T14:30' -> direct parse
-  let d = new Date(s);
-  if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
+  const d = new Date(s);
+  if (!isNaN(d)) {
+    return d.toLocaleString("uz-UZ", {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+  }
 
-  // try replacing space between date and time with 'T'
-  d = new Date(s.replace(" ", "T"));
-  if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
-
-  // fallback: return original string
-  return s;
+  return val;
 }
-function datetimeOptions(){
+
+
+// ===============================
+// USER INFO FETCHING
+// ===============================
+async function getUserInfo(userId) {
+  if (!userId) return { phone: "", avatar: "" };
+
+  const snap = await get(ref(db, "users/" + userId));
+  if (!snap.exists()) return { phone: "", avatar: "" };
+
+  const v = snap.val();
   return {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
+    phone: v.phone || "",
+    avatar: v.avatar || ""
   };
 }
 
-// --- AUTH state: agar user yo'q -> login.html ga qaytaradi ---
-onAuthStateChanged(auth, user => {
+
+// ===============================
+// AUTH CHECK
+// ===============================
+onAuthStateChanged(auth, (user) => {
   if (!user) {
     window.location.href = "login.html";
     return;
   }
-  // yuklashlar
   loadRegionsFilter();
   loadAllAds();
 });
 
-// --- Viloyat filterni to'ldirish ---
-function loadRegionsFilter() {
-  const filterRegion = document.getElementById("filterRegion");
-  if (!filterRegion) return;
-  filterRegion.innerHTML = '<option value="">Viloyat (filter)</option>';
 
-  Object.keys(REGIONS).forEach(r => {
+// ===============================
+// FILTER REGION GENERATOR
+// ===============================
+function loadRegionsFilter() {
+  const el = document.getElementById("filterRegion");
+  el.innerHTML = '<option value="">Viloyat (filter)</option>';
+
+  Object.keys(REGIONS).forEach(region => {
     const opt = document.createElement("option");
-    opt.value = r;
-    opt.textContent = r;
-    filterRegion.appendChild(opt);
+    opt.value = region;
+    opt.textContent = region;
+    el.appendChild(opt);
   });
 }
 
-// --- barcha e'lonlarni olish va renderlash ---
+
+// ===============================
+// LOAD ALL ADS
+// ===============================
 async function loadAllAds() {
-  try {
-    const adsRef = ref(db, "ads");
-    const snap = await get(adsRef);
+  const snap = await get(ref(db, "ads"));
+  const list = document.getElementById("adsList");
 
-    const list = document.getElementById("adsList");
-    if (!list) return;
-
-    list.innerHTML = "";
-
-    if (!snap.exists()) {
-      list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-      return;
-    }
-
-    // jamlab massivga solamiz
-    const ads = [];
-    snap.forEach(child => {
-      const val = child.val();
-      // tag: ba'zi yozuvlarda type maydoni notekis bo'lishi mumkin — normalize qilamiz
-      const type = normalizeType(val.type || val.userType || val.role || "");
-      ads.push({ id: child.key, ...val, typeNormalized: type });
-    });
-
-    // init filter eventlar
-    const searchEl = document.getElementById("search");
-    const roleEl = document.getElementById("filterRole");
-    const regionEl = document.getElementById("filterRegion");
-
-    if (searchEl) searchEl.oninput = () => renderAds(ads);
-    if (roleEl) roleEl.onchange = () => renderAds(ads);
-    if (regionEl) regionEl.onchange = () => renderAds(ads);
-
-    // dastlab render
-    renderAds(ads);
-  } catch (err) {
-    console.error("loadAllAds error:", err);
-    const list = document.getElementById("adsList");
-    if (list) list.innerHTML = "<p>Xatolik yuz berdi. Konsolni tekshiring.</p>";
+  if (!snap.exists()) {
+    list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+    return;
   }
+
+  const ads = [];
+  snap.forEach(child => {
+    const v = child.val();
+    ads.push({
+      id: child.key,
+      ...v,
+      typeNormalized: normalizeType(v.type)
+    });
+  });
+
+  document.getElementById("search").oninput = () => renderAds(ads);
+  document.getElementById("filterRole").onchange = () => renderAds(ads);
+  document.getElementById("filterRegion").onchange = () => renderAds(ads);
+
+  renderAds(ads);
 }
 
-// --- filtrlab chiqarish va DOM tayyorlash ---
+
+// ===============================
+// RENDER ADS
+// ===============================
 function renderAds(ads) {
   const list = document.getElementById("adsList");
-  if (!list) return;
   list.innerHTML = "";
 
-  const q = (document.getElementById("search")?.value || "").toLowerCase().trim();
-  const roleFilterRaw = document.getElementById("filterRole")?.value || "";
-  const regionFilter = document.getElementById("filterRegion")?.value || "";
-
-  // normalize role filter to same canonical values we use
-  const roleFilter = normalizeType(roleFilterRaw);
+  const q = document.getElementById("search").value.toLowerCase();
+  const roleFilter = normalizeType(document.getElementById("filterRole").value);
+  const regionFilter = document.getElementById("filterRegion").value;
 
   const filtered = ads.filter(a => {
-    // a.typeNormalized holds canonical "Haydovchi" / "Yo‘lovchi" or generic
     if (roleFilter && a.typeNormalized !== roleFilter) return false;
+    if (regionFilter && a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
 
-    if (regionFilter) {
-      if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
-    }
+    const hay = [
+      a.fromRegion, a.fromDistrict, a.toRegion, a.toDistrict,
+      a.comment, a.price, a.type
+    ].join(" ").toLowerCase();
 
-    if (q) {
-      const hay = [
-        a.fromRegion, a.fromDistrict, a.toRegion, a.toDistrict,
-        a.comment, a.price, a.type, a.typeNormalized, a.userId
-      ].map(x => (x || "").toString().toLowerCase()).join(" ");
-      if (!hay.includes(q)) return false;
-    }
-
-    return true;
+    return hay.includes(q);
   });
 
-  if (filtered.length === 0) {
+  if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
     return;
   }
 
-  // limit: agar kerak bo'lsa, pastga limit qo'yish mumkin. Hozir hammasi ko'rsatiladi.
-  filtered.forEach(ad => {
-    list.appendChild(createAdCard(ad));
-  });
+  filtered.forEach(a => list.appendChild(createAdCard(a)));
 }
 
-// --- karta yaratish ---
+
+// ===============================
+// CREATE AD CARD
+// ===============================
 function createAdCard(ad) {
   const div = document.createElement("div");
   div.className = "ad-card";
 
-  // chiroyli yo'nalish
-  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-
-  // departureTime could be saved under different keys:
-  const rawTime = ad.departureTime || ad.startTime || ad.time || ad.createdAt || "";
-  const formattedTime = (rawTime === ad.createdAt && typeof rawTime === "number") ? new Date(rawTime).toLocaleString("uz-UZ", datetimeOptions()) : formatTime(rawTime);
-
-  // small chips (narx, seats)
-  const priceText = ad.price ? `${ad.price} so‘m` : "Narx ko‘rsatilmagan";
-  const seatText = ad.seatCount ? `${ad.seatCount} joy` : (ad.passengerCount ? `${ad.passengerCount} o‘rindiq so‘ralgan` : "");
+  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const time = formatTime(ad.departureTime || ad.startTime);
 
   div.innerHTML = `
     <div class="ad-header">
-      <div class="ad-type">${escapeHtml(ad.typeNormalized || ad.type || "")}</div>
-      <div class="ad-chip">${escapeHtml(priceText)}</div>
+      <div class="ad-type">${escapeHtml(ad.typeNormalized)}</div>
+      <div class="ad-chip">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
     </div>
 
     <div class="ad-route">${escapeHtml(route)}</div>
 
     <div class="ad-info">
-      <div><span class="icon">⏰</span> ${escapeHtml(formattedTime)}</div>
-      ${seatText ? `<div><span class="icon">👥</span> ${escapeHtml(seatText)}</div>` : ""}
-      ${ad.userName ? `<div><span class="icon">👤</span> ${escapeHtml(ad.userName)}</div>` : ""}
+      <div><span class="icon">⏰</span>${escapeHtml(time)}</div>
+      ${ad.seatCount ? `<div><span class="icon">👥</span>${ad.seatCount} joy</div>` : ""}
     </div>
   `;
 
-  // click -> open modal with full details
-  div.addEventListener("click", () => openAdModal(ad));
-
+  div.onclick = () => openAdModal(ad);
   return div;
 }
 
-// --- modal: to'liq e'lon ---
-function openAdModal(ad) {
-  // remove old modal if exist
+
+// ===============================
+// FULL MODAL
+// ===============================
+async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
   if (!modal) {
     modal = document.createElement("div");
@@ -242,49 +223,53 @@ function openAdModal(ad) {
     document.body.appendChild(modal);
   }
 
-  const rawTime = ad.departureTime || ad.startTime || ad.time || ad.createdAt || "";
-  const formattedTime = (rawTime === ad.createdAt && typeof rawTime === "number") ? new Date(rawTime).toLocaleString("uz-UZ", datetimeOptions()) : formatTime(rawTime);
-
-  const ownerPhone = ad.ownerPhone || ad.phone || ad.userPhone || "";
-  const createdAtLabel = ad.createdAt ? (typeof ad.createdAt === "number" ? new Date(ad.createdAt).toLocaleString("uz-UZ") : formatTime(ad.createdAt)) : "—";
+  const userInfo = await getUserInfo(ad.userId);
+  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const time = formatTime(ad.departureTime || ad.startTime);
+  const created = formatTime(ad.createdAt);
 
   modal.innerHTML = `
-    <div style="background:white;padding:18px;border-radius:12px;max-width:520px;width:94%;box-shadow:0 8px 28px rgba(0,0,0,0.15)">
-      <h3 style="margin:0 0 8px;color:#0069d9">${escapeHtml(ad.typeNormalized || ad.type || "")}</h3>
-
-      <p style="margin:6px 0"><strong>Yo'nalish:</strong><br>${escapeHtml(ad.fromRegion || "")} ${ad.fromDistrict ? ', '+escapeHtml(ad.fromDistrict) : ''} → ${escapeHtml(ad.toRegion || "")} ${ad.toDistrict ? ', '+escapeHtml(ad.toDistrict) : ''}</p>
-
-      <p style="margin:6px 0"><strong>Jo'nash vaqti:</strong><br>${escapeHtml(formattedTime)}</p>
-
-      <p style="margin:6px 0"><strong>Narx:</strong> ${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</p>
-
-      <p style="margin:6px 0"><strong>Qo‘shimcha:</strong><br>${escapeHtml(ad.comment || "-")}</p>
-
-      <p style="margin:6px 0;color:#666"><small>Joylashtirilgan vaqti: ${escapeHtml(createdAtLabel)}</small></p>
-
-      <p style="margin:6px 0"><strong>Kontakt:</strong> ${escapeHtml(ownerPhone || "-")}</p>
-
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button id="closeAdBtn" style="flex:1;background:#444;color:#fff;padding:10px;border-radius:8px;border:none;cursor:pointer">Yopish</button>
+    <div style="background:white;padding:20px;border-radius:14px;max-width:520px;width:92%">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
+        <img src="${userInfo.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}"
+             style="width:60px;height:60px;border-radius:10px;object-fit:cover;">
+        <h3 style="margin:0;color:#0069d9">${escapeHtml(ad.typeNormalized)}</h3>
       </div>
+
+      <p><b>Yo‘nalish:</b><br>${escapeHtml(route)}</p>
+      <p><b>Jo‘nash vaqti:</b><br>${escapeHtml(time)}</p>
+      <p><b>Narx:</b> ${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</p>
+      <p><b>Qo‘shimcha:</b><br>${escapeHtml(ad.comment || "-")}</p>
+      <p><b>Kontakt:</b> ${escapeHtml(userInfo.phone || "-")}</p>
+      <p style="color:#777;font-size:13px"><small>Joylashtirilgan: ${escapeHtml(created)}</small></p>
+
+      <button onclick="closeAdModal()" 
+              style="width:100%;margin-top:14px;padding:10px;background:#444;color:#fff;border:none;border-radius:8px">
+        Yopish
+      </button>
     </div>
   `;
-  modal.style.display = "flex";
 
-  document.getElementById("closeAdBtn").onclick = () => { modal.style.display = "none"; };
+  modal.style.display = "flex";
 }
 
-window.closeAdModal = function() {
+window.closeAdModal = function () {
   const modal = document.getElementById("adFullModal");
   if (modal) modal.style.display = "none";
 };
 
-// --- logout ---
+
+// ===============================
+// LOGOUT
+// ===============================
 window.logout = () => signOut(auth);
 
-// --- minimal helper: escape HTML to avoid injection ---
+
+// ===============================
+// HTML ESCAPE
+// ===============================
 function escapeHtml(str) {
-  if (str === undefined || str === null) return "";
+  if (!str) return "";
   return String(str)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
