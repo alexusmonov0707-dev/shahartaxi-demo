@@ -1,153 +1,77 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi - Bosh sahifa</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <title>ShaharTaxi — E’lonlar</title>
+
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #007bff, #00c6ff);
-      margin: 0;
-      padding: 0;
-      color: #333;
+    body { font-family: Arial; background:#f2f4f8; margin:0; }
+
+    .topbar {
+      background:#0069d9;
+      color:#fff;
+      padding:14px 20px;
+      font-size:20px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
     }
-    header {
-      background: #fff;
-      padding: 1rem;
-      text-align: center;
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #007bff;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    .btn {
+      padding:8px 16px;
+      background:white;
+      color:#0069d9;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
     }
-    main {
-      max-width: 900px;
-      margin: 2rem auto;
-      background: #fff;
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    .btn:hover { background:#e6e6e6; }
+
+    .card {
+      max-width:900px;
+      margin:20px auto;
+      background:#fff;
+      padding:20px;
+      border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.08);
     }
-    h2 {
-      color: #007bff;
-      border-bottom: 2px solid #007bff;
-      padding-bottom: .5rem;
+
+    .ad-box {
+      border:1px solid #ddd;
+      padding:12px;
+      border-radius:10px;
+      margin-bottom:12px;
+      background:white;
     }
-    .ad-card {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      background: #f8f9fa;
+
+    .type-label {
+      padding:4px 8px;
+      border-radius:6px;
+      color:white;
+      font-size:13px;
     }
-    .ad-card strong {
-      color: #007bff;
-    }
-    .no-ads {
-      text-align: center;
-      color: gray;
-      font-style: italic;
-    }
-    .nav-btns {
-      text-align: center;
-      margin-top: 1rem;
-    }
-    .nav-btns a {
-      text-decoration: none;
-      background: #007bff;
-      color: #fff;
-      padding: 10px 16px;
-      border-radius: 8px;
-      margin: 0 5px;
-      display: inline-block;
-    }
-    .nav-btns a:hover {
-      background: #0056b3;
-    }
+    .driver   { background:#007bff; }
+    .passenger { background:#ff8800; }
   </style>
 </head>
+
 <body>
-  <header>🚖 ShaharTaxi — E’lonlar</header>
 
-  <main>
-    <h2>🚗 Haydovchilar</h2>
-    <div id="driverList"></div>
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div>ShaharTaxi — E’lonlar</div>
+    <button class="btn" onclick="window.location.href='profile.html'">Profil</button>
+  </div>
 
-    <h2>🧍 Yo‘lovchilar</h2>
-    <div id="passengerList"></div>
+  <!-- ADS -->
+  <div class="card">
+    <h2 style="text-align:center; color:#0069d9;">Barcha e’lonlar</h2>
 
-    <div class="nav-btns">
-      <a href="driver.html">Haydovchi e’lon joylash</a>
-      <a href="passenger.html">Yo‘lovchi e’lon joylash</a>
-      <a href="my-ads.html">Mening e’lonlarim</a>
-      <a href="admin.html">Admin panel</a>
+    <div id="allAdsList" style="margin-top:20px;">
+      Yuklanmoqda...
     </div>
-  </main>
+  </div>
 
-  <script>
-    // === Eski ma'lumotlarni tozalash va to‘g‘rilash funksiyasi ===
-    function fixOldAds(list) {
-      return list.map(ad => ({
-        ...ad,
-        fromRegion: ad.fromRegion || ad.from || 'Noma’lum viloyat',
-        fromDistrict: ad.fromDistrict || '',
-        toRegion: ad.toRegion || ad.to || 'Noma’lum viloyat',
-        toDistrict: ad.toDistrict || '',
-        price: ad.price || '—',
-        driver: ad.driver || ad.name || 'Noma’lum',
-        phone: ad.phone || ad.phoneNumber || '—',
-        status: (ad.status || 'kutilyapti').toLowerCase() // barcha statuslarni kichik qilib saqlaymiz
-      }));
-    }
-
-    function loadAds() {
-      const driverList = document.getElementById('driverList');
-      const passengerList = document.getElementById('passengerList');
-
-      let drivers = JSON.parse(localStorage.getItem('driverAds')) || [];
-      let passengers = JSON.parse(localStorage.getItem('passengerAds')) || [];
-
-      // Eski formatdagi e’lonlarni to‘g‘rilaymiz
-      drivers = fixOldAds(drivers);
-      passengers = fixOldAds(passengers);
-
-      // === Status nomlarini yagona formatda solishtiramiz ===
-      const approvedDrivers = drivers.filter(ad => ['tasdiqlandi', 'approved', 'tasdiqlangan'].includes(ad.status));
-      const approvedPassengers = passengers.filter(ad => ['tasdiqlandi', 'approved', 'tasdiqlangan'].includes(ad.status));
-
-      // === Haydovchilar ===
-      if (approvedDrivers.length === 0) {
-        driverList.innerHTML = '<p class="no-ads">Hozircha tasdiqlangan e’lonlar yo‘q.</p>';
-      } else {
-        driverList.innerHTML = approvedDrivers.map(ad => `
-          <div class="ad-card">
-            <strong>${ad.fromRegion} ${ad.fromDistrict}</strong> → 
-            <strong>${ad.toRegion} ${ad.toDistrict}</strong><br>
-            🚘 Haydovchi: <b>${ad.driver}</b><br>
-            📞 Tel: ${ad.phone}<br>
-            💰 Narx: ${ad.price} so‘m
-          </div>
-        `).join('');
-      }
-
-      // === Yo‘lovchilar ===
-      if (approvedPassengers.length === 0) {
-        passengerList.innerHTML = '<p class="no-ads">Hozircha tasdiqlangan e’lonlar yo‘q.</p>';
-      } else {
-        passengerList.innerHTML = approvedPassengers.map(ad => `
-          <div class="ad-card">
-            <strong>${ad.fromRegion} ${ad.fromDistrict}</strong> → 
-            <strong>${ad.toRegion} ${ad.toDistrict}</strong><br>
-            📞 Tel: ${ad.phone}<br>
-            💰 Taklif narxi: ${ad.price} so‘m
-          </div>
-        `).join('');
-      }
-    }
-
-    window.onload = loadAds;
-  </script>
+  <script type="module" src="index.js?v=1001"></script>
 </body>
 </html>
