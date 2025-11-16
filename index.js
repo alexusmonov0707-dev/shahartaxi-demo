@@ -44,6 +44,7 @@ function normalizeType(t) {
 // formatTime(val, { shortYear: false|true })
 // - shortYear=true -> omit year in date part (used for createdAt mini)
 function formatTime(val, opts = {}) {
+  console.log("formatTime RAW:", val);
   if (!val) return "—";
   const short = !!opts.shortYear;
 
