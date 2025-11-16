@@ -158,21 +158,24 @@ function createAdCard(ad) {
   div.className = "ad-card";
 
   div.innerHTML = `
-    <div class="ad-top">${ad.type}</div>
+    <div class="ad-header">
+      <div class="ad-type">${ad.type}</div>
+    </div>
 
     <div class="ad-route">
-      <span>${ad.fromRegion}</span> → <span>${ad.toRegion}</span>
+      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}
     </div>
 
     <div class="ad-info">
-      <div><span class="icon">💰</span> ${ad.price ? ad.price + " so‘m" : "-"}</div>
-      <div><span class="icon">⏰</span> ${formatTime(ad.departureTime)}</div>
+      <div class="ad-chip"><span class="icon">💰</span>${ad.price ? ad.price + " so‘m" : "-"}</div>
+      <div class="ad-chip"><span class="icon">⏰</span>${formatTime(ad.departureTime)}</div>
     </div>
   `;
 
   div.onclick = () => openAdModal(ad);
   return div;
 }
+
 
 // ===============================
 // FULL MODAL
