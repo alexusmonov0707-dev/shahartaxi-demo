@@ -1,77 +1,47 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi — E’lonlar</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShaharTaxi — E’lonlar</title>
 
-  <style>
-    body { font-family: Arial; background:#f2f4f8; margin:0; }
-
-    .topbar {
-      background:#0069d9;
-      color:#fff;
-      padding:14px 20px;
-      font-size:20px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-    }
-    .btn {
-      padding:8px 16px;
-      background:white;
-      color:#0069d9;
-      border:none;
-      border-radius:6px;
-      cursor:pointer;
-    }
-    .btn:hover { background:#e6e6e6; }
-
-    .card {
-      max-width:900px;
-      margin:20px auto;
-      background:#fff;
-      padding:20px;
-      border-radius:12px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    }
-
-    .ad-box {
-      border:1px solid #ddd;
-      padding:12px;
-      border-radius:10px;
-      margin-bottom:12px;
-      background:white;
-    }
-
-    .type-label {
-      padding:4px 8px;
-      border-radius:6px;
-      color:white;
-      font-size:13px;
-    }
-    .driver   { background:#007bff; }
-    .passenger { background:#ff8800; }
-  </style>
+    <style>
+        body { font-family: Arial; background:#f2f4f8; margin:0; }
+        .topbar {
+            background:#0069d9; color:#fff; padding:14px 20px;
+            font-size:20px; display:flex; justify-content:space-between;
+            align-items:center;
+        }
+        .logout {
+            background:#ff4444; padding:6px 16px; border:none;
+            border-radius:6px; color:#fff; cursor:pointer;
+        }
+        .card {
+            max-width:900px; margin:20px auto; background:#fff;
+            padding:20px; border-radius:12px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.08);
+        }
+        .ad-box {
+            border:1px solid #ddd; border-radius:10px;
+            padding:15px; margin-bottom:15px;
+            background:#fff;
+        }
+        .ad-title { font-size:18px; font-weight:bold; color:#0069d9; }
+        .ad-info { margin:6px 0; }
+    </style>
 </head>
-
 <body>
 
-  <!-- TOP BAR -->
-  <div class="topbar">
-    <div>ShaharTaxi — E’lonlar</div>
-    <button class="btn" onclick="window.location.href='profile.html'">Profil</button>
-  </div>
-
-  <!-- ADS -->
-  <div class="card">
-    <h2 style="text-align:center; color:#0069d9;">Barcha e’lonlar</h2>
-
-    <div id="allAdsList" style="margin-top:20px;">
-      Yuklanmoqda...
+    <div class="topbar">
+        <div>ShaharTaxi — E’lonlar</div>
+        <button onclick="logout()" class="logout">Chiqish</button>
     </div>
-  </div>
 
-  <script type="module" src="index.js?v=1001"></script>
+    <div class="card">
+        <h2>Barcha e’lonlar</h2>
+        <div id="allAds">Yuklanmoqda...</div>
+    </div>
+
+    <script type="module" src="index.js?v=1001"></script>
 </body>
 </html>
