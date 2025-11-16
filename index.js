@@ -322,22 +322,27 @@ async function openAdModal(ad) {
     document.body.appendChild(modal);
   }
 
+  // DEBUG: log ad and ad.userId
+  console.log("openAdModal: ad:", ad);
+  console.log("openAdModal: ad.userId =", ad.userId);
+
   const u = await getUserInfo(ad.userId);
 
-  // --- DEBUG: show user object in console to inspect actual DB fields
-  console.log("openAdModal: user object for userId=", ad.userId, u);
+  // DEBUG: show user object (from getUserInfo)
+  console.log("openAdModal: user (getUserInfo returned) ->", u);
+  if (u && u._raw) {
+    console.log("openAdModal: raw DB user object:", u._raw);
+  }
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: false });
 
-// OLD (agar shunday bo'lsa): may telefon chiqib qolgan
-// const fullname = (u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : u.name || u.displayName || u.username || u.oq || u.car || u.phone || "Foydalanuvchi";
-
-// NEW — telefon/kar/other fallbackni olib tashladik:
-const fullname = (u.firstname || u.lastname)
-  ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
-  : (u.name || u.displayName || u.username || u.oq) || "Foydalanuvchi";
+  // Robust fullname: prefer firstname+lastname, fallback to name/displayName/oq
+  const fullname =
+    (u.firstname || u.lastname)
+      ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
+      : (u.name || u.displayName || u.username || u.oq || "Foydalanuvchi");
 
   const carFull = `${u.carModel || u.car || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
@@ -350,7 +355,6 @@ const fullname = (u.firstname || u.lastname)
 
   modal.innerHTML = `
     <div class="ad-modal-box" role="dialog" aria-modal="true">
-
       <div class="modal-header">
         <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
