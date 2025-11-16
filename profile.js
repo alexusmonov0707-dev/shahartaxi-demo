@@ -412,12 +412,11 @@ async function loadMyAds() {
 window.deleteAd = async function (adId) {
   if (!confirm("Rostdan o‘chirilsinmi?")) return;
 
-  await update(ref(db, "ads/" + adId), null);
+  await remove(ref(db, "ads/" + adId));
 
   alert("E’lon o‘chirildi!");
   loadMyAds();
 };
-
 
 // ===============================
 // LOGOUT
