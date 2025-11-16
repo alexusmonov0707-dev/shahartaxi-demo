@@ -35,79 +35,147 @@
       min-width:150px;
     }
 
-    /* MINI CARD – VARIANT B */
+    /* ===============================
+       AD CARD (Premium)
+       =============================== */
+
     .ad-card {
-      padding:14px 16px;
-      background:#ffffff;
-      border-radius:14px;
-      border:1px solid #e3e7ef;
-      margin-bottom:12px;
-      transition:0.2s;
-      box-shadow:0 2px 4px rgba(0,0,0,0.03);
-      display:flex;
-      gap:15px;
-      cursor:pointer;
+      display: flex;
+      gap: 14px;
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 14px;
+      border: 1px solid #e5e7eb;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: 0.2s ease;
+      align-items: center;
     }
 
     .ad-card:hover {
-      border-color:#b8c1d1;
-      background:#f8f9fc;
+      background: #f8f9fc;
+      border-color: #cfd4dc;
     }
 
-    .ad-left {
-      width:58px;
-      height:58px;
-      border-radius:12px;
-      overflow:hidden;
-      flex-shrink:0;
-      background:#eee;
+    .ad-avatar {
+      width: 58px;
+      height: 58px;
+      border-radius: 12px;
+      object-fit: cover;
     }
 
-    .ad-left img {
-      width:100%; height:100%; object-fit:cover;
+    .ad-main { flex: 1; }
+
+    .ad-user-name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 3px;
     }
 
-    .ad-right { flex:1; }
-
-    .ad-header {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:6px;
-    }
-
-    .ad-type { font-weight:700; color:#0069d9; font-size:15px; }
-
-    .ad-time {
-      font-size:12px;
-      color:#666;
+    .ad-user-car {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 6px;
     }
 
     .ad-route {
-      font-size:15px;
-      margin-bottom:6px;
-      font-weight:500;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
     }
 
-    .ad-info {
-      font-size:14px;
-      color:#444;
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
+    .ad-details {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
     }
 
     .ad-chip {
-      padding:3px 6px;
-      background:#eef4ff;
-      border-radius:6px;
-      font-size:13px;
-      display:inline-flex;
-      align-items:center;
-      gap:4px;
+      background: #eef4ff;
+      padding: 4px 7px;
+      font-size: 12px;
+      border-radius: 6px;
     }
 
-    .icon { opacity:0.7; }
+
+    /* ===============================
+       MODAL (Premium Style)
+       =============================== */
+
+    #adFullModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+    }
+
+    .ad-modal-box {
+      background: white;
+      width: 92%;
+      max-width: 480px;
+      padding: 20px;
+      border-radius: 16px;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity:0; transform:scale(.9); }
+      to { opacity:1; transform:scale(1); }
+    }
+
+    .ad-modal-header {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .ad-modal-avatar {
+      width: 78px;
+      height: 78px;
+      border-radius: 14px;
+      object-fit: cover;
+    }
+
+    .ad-modal-name {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .ad-modal-car {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .ad-block {
+      margin-top: 18px;
+    }
+
+    .ad-label {
+      color: #444;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .ad-text {
+      font-size: 15px;
+      color: #222;
+    }
+
+    .ad-contact-btn {
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px;
+      background: #0069d9;
+      border: none;
+      color: white;
+      font-size: 16px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
 
   </style>
 </head>
@@ -141,9 +209,11 @@
     <div id="adsList">Yuklanmoqda...</div>
   </div>
 
-  <!-- REGIONS + MAIN JS -->
+  <div id="adFullModal"></div>
+
+  <!-- REGIONS + JS -->
   <script src="regions.js"></script>
-  <script type="module" src="index.js?v=5001"></script>
+  <script type="module" src="index.js?v=6001"></script>
 
 </body>
 </html>
