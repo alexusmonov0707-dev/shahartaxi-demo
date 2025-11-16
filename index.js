@@ -303,15 +303,20 @@ async function openAdModal(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  modal.innerHTML = `
-    <div class="ad-modal-box" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
-        <div>
-          <div class="modal-name">${escapeHtml(fullname)}</div>
-          <div class="modal-car">${escapeHtml(carFull)}</div>
+ modal.innerHTML = `
+  <div style="background:white;padding:25px;border-radius:14px;max-width:600px;width:95%;">
+
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:15px;">
+      <img src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}"
+           style="width:70px;height:70px;border-radius:12px;object-fit:cover;">
+      
+      <div>
+        <div style="font-size:20px;font-weight:600;">
+          ${escapeHtml(u.name || "Foydalanuvchi")}
         </div>
+        <div style="color:#666;">${escapeHtml(ad.car || "")}</div>
       </div>
+    </div>
 
       <div class="modal-row">
         <div class="modal-col">
