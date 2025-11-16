@@ -27,7 +27,7 @@ const REGIONS = window.regionsData || {};
 
 
 // ===============================
-// DATE FORMATTER — chiroyli ko‘rinish
+// DATE FORMATTER (Premium)
 // ===============================
 function formatTime(val) {
   if (!val) return "—";
@@ -46,7 +46,7 @@ function formatTime(val) {
 
 
 // ===============================
-// USER INFO (name, phone, avatar, car info)
+// GET USER INFO (avatar, name, car info)
 // ===============================
 async function getUserInfo(userId) {
   const snap = await get(ref(db, "users/" + userId));
@@ -63,7 +63,7 @@ async function getUserInfo(userId) {
   return {
     phone: u.phone || "",
     avatar: u.avatar || "",
-    name: (u.firstname || "") + " " + (u.lastname || ""),
+    name: `${u.firstname || ""} ${u.lastname || ""}`.trim(),
     carModel: u.carModel || "",
     carColor: u.carColor || "",
     carNumber: u.carNumber || ""
@@ -83,11 +83,11 @@ onAuthStateChanged(auth, (user) => {
 
 
 // ===============================
-// FILTER REGION GENERATOR
+// LOAD REGION FILTER
 // ===============================
 function loadRegionsFilter() {
   const el = document.getElementById("filterRegion");
-  el.innerHTML = '<option value="">Viloyat (filter)</option>';
+  el.innerHTML = `<option value="">Viloyat (filter)</option>`;
 
   Object.keys(REGIONS).forEach(region => {
     el.innerHTML += `<option value="${region}">${region}</option>`;
@@ -96,7 +96,7 @@ function loadRegionsFilter() {
 
 
 // ===============================
-// LOAD ALL ADS — BUG FIXED (full list now)
+// LOAD ALL ADS
 // ===============================
 async function loadAllAds() {
   const snap = await get(ref(db, "ads"));
@@ -118,7 +118,7 @@ async function loadAllAds() {
 
 
 // ===============================
-// MAIN RENDER
+// RENDER ADS
 // ===============================
 async function renderAds(ads) {
   const list = document.getElementById("adsList");
@@ -129,8 +129,8 @@ async function renderAds(ads) {
 
   const filtered = ads.filter(a => {
     if (region && a.fromRegion !== region && a.toRegion !== region) return false;
-    const hay = `${a.fromRegion} ${a.fromDistrict} ${a.toRegion} ${a.toDistrict} ${a.comment} ${a.price}`.toLowerCase();
-    return hay.includes(q);
+    const text = `${a.fromRegion} ${a.fromDistrict} ${a.toRegion} ${a.toDistrict} ${a.comment} ${a.price}`.toLowerCase();
+    return text.includes(q);
   });
 
   if (!filtered.length) {
@@ -138,15 +138,18 @@ async function renderAds(ads) {
     return;
   }
 
-  for (const ad of filtered) list.appendChild(await createAdCard(ad));
+  for (const ad of filtered) {
+    list.appendChild(await createAdCard(ad));
+  }
 }
 
 
 // ===============================
-// CARD — avatar + full info qo‘shildi
+// AD CARD (Premium Style)
 // ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
+
   const div = document.createElement("div");
   div.className = "ad-card";
 
@@ -157,25 +160,25 @@ async function createAdCard(ad) {
   const time = formatTime(ad.departureTime);
 
   div.innerHTML = `
-    <div class="ad-left">
-      <img src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}" />
-    </div>
+    <img class="ad-avatar" src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}">
 
-    <div class="ad-right">
-      
-      <div class="ad-header">
-        <div class="ad-type">${escapeHtml(u.name || "Foydalanuvchi")}</div>
-        <div class="ad-time">${escapeHtml(time)}</div>
+    <div class="ad-main">
+
+      <div class="ad-user-name">${escapeHtml(u.name || "Foydalanuvchi")}</div>
+
+      <div class="ad-user-car">
+        ${u.carModel ? u.carModel : ""}
+        ${u.carColor ? " • " + u.carColor : ""}
+        ${u.carNumber ? " • " + u.carNumber : ""}
       </div>
 
       <div class="ad-route">${escapeHtml(route)}</div>
 
-      <div class="ad-info">
-        <div class="ad-chip"><span class="icon">💰</span>${ad.price} so‘m</div>
-        ${ad.seatCount ? `<div class="ad-chip"><span class="icon">👥</span>${ad.seatCount} joy</div>` : ""}
-        ${u.carModel ? `<div class="ad-chip"><span class="icon">🚗</span>${u.carModel}</div>` : ""}
+      <div class="ad-details">
+        <div class="ad-chip">💰 ${ad.price} so‘m</div>
+        <div class="ad-chip">⏰ ${escapeHtml(time)}</div>
+        ${ad.seatCount ? `<div class="ad-chip">👥 ${ad.seatCount} joy</div>` : ""}
       </div>
-
     </div>
   `;
 
@@ -185,66 +188,78 @@ async function createAdCard(ad) {
 
 
 // ===============================
-// MODAL (FULL DETAILS)
+// MODAL (Premium)
 // ===============================
 async function openAdModal(ad) {
-  let modal = document.getElementById("adFullModal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "adFullModal";
-    modal.style = `
-      position:fixed; inset:0; background:rgba(0,0,0,0.6);
-      display:flex;justify-content:center;align-items:center;z-index:9999;
-    `;
-    document.body.appendChild(modal);
-  }
+  const modal = document.getElementById("adFullModal");
+  modal.style.display = "flex";
 
   const u = await getUserInfo(ad.userId);
 
-  const created = formatTime(ad.createdAt);
   const time = formatTime(ad.departureTime);
+  const created = formatTime(ad.createdAt);
 
   const route =
     `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ` +
     `${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
 
   modal.innerHTML = `
-    <div style="background:white;padding:20px;border-radius:14px;max-width:520px;width:92%">
-    
-      <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
-        <img src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}"
-             style="width:70px;height:70px;border-radius:12px;object-fit:cover;">
+    <div class="ad-modal-box">
+
+      <div class="ad-modal-header">
+        <img class="ad-modal-avatar" src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}">
         <div>
-          <div style="font-size:18px;font-weight:bold">${escapeHtml(u.name)}</div>
-          <div style="color:#666;font-size:14px">
-            ${u.carModel ? u.carModel + " • " : ""} 
-            ${u.carColor ? u.carColor + " • " : ""}
-            ${u.carNumber || ""}
+          <div class="ad-modal-name">${escapeHtml(u.name)}</div>
+          <div class="ad-modal-car">
+            ${u.carModel ? u.carModel : ""}
+            ${u.carColor ? " • " + u.carColor : ""}
+            ${u.carNumber ? " • " + u.carNumber : ""}
           </div>
         </div>
       </div>
 
-      <p><b>Yo‘nalish:</b><br>${escapeHtml(route)}</p>
-      <p><b>Jo‘nash vaqti:</b><br>${escapeHtml(time)}</p>
-      <p><b>Joy soni:</b> ${ad.seatCount || "-"}</p>
-      <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
-      <p><b>Izoh:</b><br>${escapeHtml(ad.comment || "-")}</p>
-      <p><b>Aloqa:</b> ${escapeHtml(u.phone || "-")}</p>
-      <p style="color:#777;font-size:13px"><small>Joylangan: ${escapeHtml(created)}</small></p>
+      <div class="ad-block">
+        <div class="ad-label">Yo‘nalish:</div>
+        <div class="ad-text">${escapeHtml(route)}</div>
+      </div>
 
-      <button onclick="closeAdModal()"
-        style="width:100%;padding:12px;background:#444;color:white;border:none;border-radius:10px;margin-top:12px">
-        Yopish
-      </button>
+      <div class="ad-block">
+        <div class="ad-label">Jo‘nash vaqti:</div>
+        <div class="ad-text">${escapeHtml(time)}</div>
+      </div>
+
+      <div class="ad-block">
+        <div class="ad-label">Joy soni:</div>
+        <div class="ad-text">${ad.seatCount || "-"}</div>
+      </div>
+
+      <div class="ad-block">
+        <div class="ad-label">Narx:</div>
+        <div class="ad-text">${ad.price} so‘m</div>
+      </div>
+
+      <div class="ad-block">
+        <div class="ad-label">Izoh:</div>
+        <div class="ad-text">${escapeHtml(ad.comment || "-")}</div>
+      </div>
+
+      <div class="ad-block">
+        <div class="ad-label">Aloqa:</div>
+        <div class="ad-text">${escapeHtml(u.phone || "-")}</div>
+      </div>
+
+      <button class="ad-contact-btn" onclick="closeAdModal()">Yopish</button>
     </div>
   `;
-
-  modal.style.display = "flex";
 }
 
+
+// ===============================
+// CLOSE MODAL
+// ===============================
 window.closeAdModal = () => {
-  const m = document.getElementById("adFullModal");
-  if (m) m.style.display = "none";
+  const modal = document.getElementById("adFullModal");
+  modal.style.display = "none";
 };
 
 
@@ -259,7 +274,9 @@ window.logout = () => signOut(auth);
 // ===============================
 function escapeHtml(str) {
   return String(str || "")
-    .replaceAll("&", "&amp;").replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;").replaceAll('"', "&quot;")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
