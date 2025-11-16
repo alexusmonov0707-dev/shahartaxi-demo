@@ -84,9 +84,11 @@ function formatTime(t) {
 // LOAD ADS
 // ===============================
 async function loadAllAds() {
+  const adsRef = ref(db, "ads");
+  const snap = await get(adsRef);
 
-  const snap = await get(ref(db, "ads"));
   const list = document.getElementById("adsList");
+  list.innerHTML = "";
 
   if (!snap.exists()) {
     list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
@@ -94,10 +96,21 @@ async function loadAllAds() {
   }
 
   let ads = [];
+  let userCache = {};  // avatar & ismni 1 marta olish uchun
 
-  snap.forEach(child => {
-    ads.push({ id: child.key, ...child.val() });
-  });
+  const adsArr = [];
+  snap.forEach(c => adsArr.push({ id: c.key, ...c.val() }));
+
+  // 🔵 USER MALUMOTLARINI OLIB KELAMIZ
+  for (const ad of adsArr) {
+    if (!userCache[ad.userId]) {
+      const uSnap = await get(ref(db, "users/" + ad.userId));
+      userCache[ad.userId] = uSnap.exists() ? uSnap.val() : {};
+    }
+
+    ad.user = userCache[ad.userId];  // avatar + ism
+    ads.push(ad);
+  }
 
   renderAds(ads);
 
