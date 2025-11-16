@@ -1,9 +1,14 @@
-// ===============================
-// FIREBASE INIT
-// ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-  getDatabase, ref, get 
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  getDatabase,
+  ref,
+  get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -17,52 +22,66 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getDatabase(app);
 
+// ===============================
+// LOGIN CHECK
+// ===============================
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+  loadAllAds();
+});
+
 
 // ===============================
-// E’LONLARNI YUKLASH
+// ALL ADS
 // ===============================
 async function loadAllAds() {
-  const list = document.getElementById("allAdsList");
-  list.innerHTML = "Yuklanmoqda...";
+  const box = document.getElementById("allAds");
+  box.innerHTML = "Yuklanmoqda...";
 
   const snap = await get(ref(db, "ads"));
   if (!snap.exists()) {
-    list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+    box.innerHTML = "<p>Hozircha e’lonlar yo‘q.</p>";
     return;
   }
 
-  const adsArr = [];
+  box.innerHTML = "";
 
   snap.forEach(child => {
-    adsArr.push({ id: child.key, ...child.val() });
-  });
+    const ad = child.val();
 
-  // 🔵 Eng so‘nggi e’lonlarni yuqoriga chiqaramiz
-  adsArr.sort((a,b) => b.createdAt - a.createdAt);
-
-  list.innerHTML = "";
-
-  adsArr.forEach(ad => {
     const div = document.createElement("div");
     div.className = "ad-box";
 
-    const labelClass = ad.type === "Haydovchi" ? "driver" : "passenger";
-
     div.innerHTML = `
-      <span class="type-label ${labelClass}">${ad.type}</span><br><br>
-      <b>${ad.fromRegion}, ${ad.fromDistrict}</b> → 
-      <b>${ad.toRegion}, ${ad.toDistrict}</b><br>
-      Narx: <b>${ad.price || "-"} so‘m</b><br>
-      Jo‘nash vaqti: ${ad.departureTime || "-"}<br>
-      Qo‘shimcha: ${ad.comment || "-"}<br>
-      <small style="color:#777">${new Date(ad.createdAt).toLocaleString()}</small>
+      <div class="ad-title">${ad.type}</div>
+
+      <div class="ad-info">
+        <b>${ad.fromRegion}</b>, ${ad.fromDistrict} → 
+        <b>${ad.toRegion}</b>, ${ad.toDistrict}
+      </div>
+
+      <div class="ad-info">Narx: <b>${ad.price || "—"} so‘m</b></div>
+      <div class="ad-info">Jo‘nash vaqti: ${ad.startTime || "—"}</div>
+
+      <div class="ad-info">Izoh: ${ad.comment || "-"}</div>
+
+      <small style="color:#777;">
+        ${new Date(ad.createdAt).toLocaleString()}
+      </small>
     `;
 
-    list.appendChild(div);
+    box.appendChild(div);
   });
-
 }
 
-loadAllAds();
+
+// ===============================
+// LOGOUT
+// ===============================
+window.logout = () => signOut(auth);
