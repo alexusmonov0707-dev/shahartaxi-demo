@@ -7,6 +7,7 @@
 
   <style>
     body { font-family: Arial; background:#f2f4f8; margin:0; }
+
     .topbar {
       background:#0069d9; color:#fff; padding:14px 20px; font-size:20px;
       display:flex; justify-content:space-between; align-items:center;
@@ -15,6 +16,7 @@
       background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
       color:#fff; cursor:pointer; font-size:15px;
     }
+
     .card {
       max-width:900px; margin:20px auto;
       background:#fff; padding:20px; border-radius:12px;
@@ -33,111 +35,79 @@
       min-width:150px;
     }
 
+    /* MINI CARD – VARIANT B */
     .ad-card {
-      padding:12px; margin-bottom:12px; background:white;
-      border-radius:10px; border:1px solid #ddd; cursor:pointer;
+      padding:14px 16px;
+      background:#ffffff;
+      border-radius:14px;
+      border:1px solid #e3e7ef;
+      margin-bottom:12px;
+      transition:0.2s;
+      box-shadow:0 2px 4px rgba(0,0,0,0.03);
+      display:flex;
+      gap:15px;
+      cursor:pointer;
     }
-    .ad-card {
-  padding:14px 16px;
-  background: #ffffff;
-  border-radius:12px;
-  border:1px solid #e2e6ea;
-  margin-bottom:12px;
-  transition:0.2s;
-}
 
-.ad-card:hover {
-  border-color:#b6c2d1;
-  background:#f8f9fa;
-}
+    .ad-card:hover {
+      border-color:#b8c1d1;
+      background:#f8f9fc;
+    }
 
-.ad-top {
-  font-weight:bold;
-  color:#0069d9;
-  margin-bottom:6px;
-}
+    .ad-left {
+      width:58px;
+      height:58px;
+      border-radius:12px;
+      overflow:hidden;
+      flex-shrink:0;
+      background:#eee;
+    }
 
-.ad-route {
-  font-size:15px;
-  margin-bottom:5px;
-}
+    .ad-left img {
+      width:100%; height:100%; object-fit:cover;
+    }
 
-.ad-route span {
-  font-weight:bold;
-}
+    .ad-right { flex:1; }
 
-.ad-info {
-  font-size:14px;
-  color:#666;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
+    .ad-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:6px;
+    }
 
-.ad-info div {
-  display:flex;
-  align-items:center;
-  gap:4px;
-}
+    .ad-type { font-weight:700; color:#0069d9; font-size:15px; }
 
-.icon {
-  font-size:14px;
-  opacity:0.8;
-}
-    .ad-card {
-  padding: 14px 16px;
-  background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #e3e7ef;
-  margin-bottom: 12px;
-  transition: 0.2s;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-}
+    .ad-time {
+      font-size:12px;
+      color:#666;
+    }
 
-.ad-card:hover {
-  border-color: #b8c1d1;
-  background: #f8f9fc;
-}
+    .ad-route {
+      font-size:15px;
+      margin-bottom:6px;
+      font-weight:500;
+    }
 
-.ad-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
+    .ad-info {
+      font-size:14px;
+      color:#444;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
 
-.ad-type {
-  font-weight: 700;
-  color: #0069d9;
-}
+    .ad-chip {
+      padding:3px 6px;
+      background:#eef4ff;
+      border-radius:6px;
+      font-size:13px;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
 
-.ad-route {
-  font-size: 15px;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.ad-info {
-  font-size: 14px;
-  color: #555;
-  display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
-}
-
-.ad-chip {
-  padding: 4px 8px;
-  background: #eef4ff;
-  border-radius: 6px;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.icon {
-  opacity: 0.8;
-}
+    .icon { opacity:0.7; }
 
   </style>
 </head>
@@ -160,7 +130,7 @@
       <select id="filterRole">
         <option value="">Hammasi</option>
         <option value="Haydovchi">Haydovchi</option>
-        <option value="Yo'lovchi">Yo‘lovchi</option>
+        <option value="Yo‘lovchi">Yo‘lovchi</option>
       </select>
 
       <select id="filterRegion">
@@ -171,9 +141,9 @@
     <div id="adsList">Yuklanmoqda...</div>
   </div>
 
-<script src="regions.js"></script>
-<script type="module" src="index.js?v=3008"></script>
-
+  <!-- REGIONS + MAIN JS -->
+  <script src="regions.js"></script>
+  <script type="module" src="index.js?v=5001"></script>
 
 </body>
 </html>
