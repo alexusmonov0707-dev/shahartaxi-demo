@@ -194,17 +194,20 @@ async function createAdCard(ad) {
 
     <div class="ad-main">
 
-      <div class="ad-route">${escapeHtml(route)}</div>
+      <div class="ad-user-name">${escapeHtml(u.name || "Foydalanuvchi")}</div>
 
       <div class="ad-user-car">
         ${u.carModel ? escapeHtml(u.carModel) : ""}
       </div>
 
+      <div class="ad-route">${escapeHtml(route)}</div>
+
       <div class="ad-details">
-        <div class="ad-chip">🕒 ${escapeHtml(depTime)}</div>
+        <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
         ${ad.seatCount ? `<div class="ad-chip">👥 ${ad.seatCount} joy</div>` : ""}
         <div class="ad-chip">📅 ${escapeHtml(created)}</div>
       </div>
+
     </div>
 
     <div style="
