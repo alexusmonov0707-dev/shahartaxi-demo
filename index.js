@@ -167,10 +167,19 @@ function renderAds(ads) {
 // CREATE MINI CARD
 // ===============================
 function createAdCard(ad) {
+  const u = ad.user || {};
+  const avatar = u.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
+  const name = u.fullName || "No name";
+
   const div = document.createElement("div");
   div.className = "ad-card";
 
   div.innerHTML = `
+    <div class="ad-user">
+      <img src="${avatar}">
+      <div class="ad-user-name">${name}</div>
+    </div>
+
     <div class="ad-header">
       <div class="ad-type">${ad.type}</div>
     </div>
