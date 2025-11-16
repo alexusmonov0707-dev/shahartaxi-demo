@@ -33,19 +33,9 @@
       min-width:150px;
     }
 
-    /* FULL MODAL */
-    #adFullModal {
-      position:fixed; inset:0; 
-      background:rgba(0,0,0,0.6);
-      display:none; 
-      justify-content:center; 
-      align-items:center;
-      z-index:9999;
-    }
-    #adFullBox {
-      background:white; padding:20px; width:350px;
-      border-radius:12px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.3);
+    .ad-card {
+      padding:12px; margin-bottom:12px; background:white;
+      border-radius:10px; border:1px solid #ddd; cursor:pointer;
     }
   </style>
 </head>
@@ -65,11 +55,11 @@
     <div class="filters">
       <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
 
-     <select id="filterRole">
-  <option value="">Hammasi</option>
-  <option value="Haydovchi">Haydovchi</option>
-  <option value="Yo'lovchi">Yo‘lovchi</option>
-</select>
+      <select id="filterRole">
+        <option value="">Hammasi</option>
+        <option value="Haydovchi">Haydovchi</option>
+        <option value="Yo'lovchi">Yo‘lovchi</option>
+      </select>
 
       <select id="filterRegion">
         <option value="">Viloyat (filter)</option>
@@ -79,13 +69,8 @@
     <div id="adsList">Yuklanmoqda...</div>
   </div>
 
-  <!-- FULL MODAL -->
-  <div id="adFullModal">
-    <div id="adFullBox"></div>
-  </div>
-
-  <script src="regions.js?v=1"></script>
-  <script type="module" src="index.js?v=3005"></script>
+  <script src="regions.js"></script>
+  <script type="module" src="index.js?v=3007"></script>
 
 </body>
 </html>
