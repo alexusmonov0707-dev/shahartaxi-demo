@@ -41,7 +41,6 @@ function normalizeType(t) {
 // UNIVERSAL DATE PARSER & FORMATTER
 // formatTime(val, { shortYear: false|true })
 // - shortYear=true -> omit year in date part (used for createdAt mini)
-// - default: full date + time
 function formatTime(val, opts = {}) {
   if (!val) return "—";
   const short = !!opts.shortYear;
@@ -54,26 +53,29 @@ function formatTime(val, opts = {}) {
     return formatReal(new Date(Number(val)), short);
   }
 
-  // Pattern: "2025 M11 20 18:48" or "2025 M11 20"
-  if (typeof val === "string" && /M\d{1,2}/.test(val)) {
-    const m = val.match(/(\d{4})\s*M(\d{1,2})\s*(\d{1,2})\s*([0-2]?\d:[0-5]\d)?/);
-    if (m) {
-      const year = m[1], month = m[2].padStart(2, "0"), day = m[3].padStart(2, "0"), time = m[4] || "00:00";
-      const d = new Date(`${year}-${month}-${day}T${time}`);
-      if (!isNaN(d)) return formatReal(d, short);
+  // Pattern: "2025 M11 20 18:48" or "2025 M11 20, 18:48" or "2025-11-15T09:24"
+  if (typeof val === "string") {
+    // handle "2025 M11 20 18:48" and with comma
+    if (/M\d{1,2}/.test(val)) {
+      const m = String(val).match(/(\d{4})\s*M(\d{1,2})\s*(\d{1,2})\s*([0-2]?\d:[0-5]\d)?/);
+      if (m) {
+        const year = m[1], month = m[2].padStart(2, "0"), day = m[3].padStart(2, "0"), time = m[4] || "00:00";
+        const d = new Date(`${year}-${month}-${day}T${time}`);
+        if (!isNaN(d)) return formatReal(d, short);
+      }
     }
-  }
 
-  // Try ISO or common formats
-  const d = new Date(val);
-  if (!isNaN(d)) return formatReal(d, short);
+    // handle ISO-like and "YYYY-MM-DDTHH:MM" and "YYYY-MM-DD HH:MM"
+    const iso = new Date(val);
+    if (!isNaN(iso)) return formatReal(iso, short);
 
-  // Fallback: try to parse "YYYY MM DD hh:mm" like "2025 11 20 18:48"
-  const m2 = String(val).match(/(\d{4})[^\d]{1,3}(\d{1,2})[^\d]{1,3}(\d{1,2})\s*([0-2]?\d:[0-5]\d)?/);
-  if (m2) {
-    const year = m2[1], month = m2[2].padStart(2, "0"), day = m2[3].padStart(2, "0"), time = m2[4] || "00:00";
-    const d2 = new Date(`${year}-${month}-${day}T${time}`);
-    if (!isNaN(d2)) return formatReal(d2, short);
+    // fallback parse formats like "2025 11 20 18:48" or "2025-11-20 18:48"
+    const m2 = String(val).match(/(\d{4})[^\d]{1,3}(\d{1,2})[^\d]{1,3}(\d{1,2})\s*([0-2]?\d:[0-5]\d)?/);
+    if (m2) {
+      const year = m2[1], month = m2[2].padStart(2, "0"), day = m2[3].padStart(2, "0"), time = m2[4] || "00:00";
+      const d2 = new Date(`${year}-${month}-${day}T${time}`);
+      if (!isNaN(d2)) return formatReal(d2, short);
+    }
   }
 
   // last resort
@@ -92,15 +94,11 @@ function formatReal(date, short = false) {
     minute: "2-digit"
   });
 
-  // If short and year omitted, result like "15 noyabr, 13:51"
   if (short) {
-    // datePart may be "15 noyabr 2025" — remove year if present
+    // remove year if present
     const parts = datePart.split(" ");
-    // If last part is year (all digits), remove it
-    if (parts.length && /\d{4}/.test(parts[parts.length - 1])) {
-      parts.pop();
-    }
-    return `${parts.join(" ")} , ${timePart}`.replace(/\s+,/, ","); // small cleanup
+    if (parts.length && /\d{4}/.test(parts[parts.length - 1])) parts.pop();
+    return `${parts.join(" ")} , ${timePart}`.replace(/\s+,/, ",");
   }
 
   return `${datePart}, ${timePart}`;
@@ -228,7 +226,6 @@ async function renderAds(ads) {
 
 // ===============================
 // CREATE AD CARD (mini) — ISM BO‘LMAYDI
-// Includes: avatar, carModel under route, route, departureTime, seats (available/total), price (right), createdAt bottom-right
 // ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
@@ -237,25 +234,24 @@ async function createAdCard(ad) {
   div.className = "ad-card";
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time);
+  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
   // createdAt short (omit year) as user chose variant B
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: true });
 
   // seats logic:
-  // driver ads: totalSeats or seatCount, bookedSeats may come from ad or user
-  const totalSeats = ad.totalSeats || ad.seatCount || null;
-  const booked = ad.bookedSeats || 0; // if ad stores booked
-  // fallback to user bookedSeats (rare), not used here
-  const available = (typeof totalSeats === "number") ? (totalSeats - booked) : null;
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
+  const booked = Number(ad.bookedSeats || 0);
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
 
   // passenger requested seats:
-  const requested = ad.requestedSeats || ad.requestSeats || null;
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  // car model placement (moved down under route)
   const carModel = u.carModel || "";
 
   div.innerHTML = `
-    <img class="ad-avatar" src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}" alt="avatar">
+    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
 
     <div class="ad-main">
       <div class="ad-route">${escapeHtml(route)}</div>
@@ -263,8 +259,8 @@ async function createAdCard(ad) {
 
       <div class="ad-meta">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
-        ${ totalSeats ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>` :
-          (requested ? `<div class="ad-chip">Talab: ${escapeHtml(String(requested))} joy</div>` : "") }
+        ${ totalSeats !== null ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>` :
+          (requested !== null ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>` : "") }
       </div>
     </div>
 
@@ -291,21 +287,23 @@ async function openAdModal(ad) {
   const u = await getUserInfo(ad.userId);
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time);
+  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: false });
   const fullname = `${u.firstname || ""} ${u.lastname || ""}`.trim() || "Foydalanuvchi";
   const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
   // seats details
-  const totalSeats = ad.totalSeats || ad.seatCount || null;
-  const booked = ad.bookedSeats || 0;
-  const available = (typeof totalSeats === "number") ? (totalSeats - booked) : null;
-  const requested = ad.requestedSeats || ad.requestSeats || null;
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
+  const booked = Number(ad.bookedSeats || 0);
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
   modal.innerHTML = `
     <div class="ad-modal-box" role="dialog" aria-modal="true">
       <div class="modal-header">
-        <img class="modal-avatar" src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}" alt="avatar">
+        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
           <div class="modal-name">${escapeHtml(fullname)}</div>
           <div class="modal-car">${escapeHtml(carFull)}</div>
@@ -327,8 +325,8 @@ async function openAdModal(ad) {
         <div class="modal-col">
           <div class="label">Joylar</div>
           <div class="value">
-            ${ totalSeats ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})` :
-               (requested ? `Talab: ${escapeHtml(String(requested))} joy` : "-") }
+            ${ totalSeats !== null ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})` :
+               (requested !== null ? `Talab: ${escapeHtml(String(requested))} odam` : "-") }
           </div>
         </div>
         <div class="modal-col">
@@ -383,7 +381,7 @@ window.logout = () => signOut(auth);
 // ===============================
 function escapeHtml(str) {
   if (str === 0) return "0";
-  if (!str) return "";
+  if (!str && str !== 0) return "";
   return String(str)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
