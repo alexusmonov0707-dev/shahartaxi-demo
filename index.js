@@ -157,28 +157,36 @@ async function createAdCard(ad) {
     `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ` +
     `${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
 
-  const time = formatTime(ad.departureTime);
+  const depTime = formatTime(ad.departureTime);
+  const created = formatTime(ad.createdAt);
 
   div.innerHTML = `
     <img class="ad-avatar" src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}">
 
     <div class="ad-main">
 
-      <div class="ad-user-name">${escapeHtml(u.name || "Foydalanuvchi")}</div>
-
-      <div class="ad-user-car">
-        ${u.carModel ? u.carModel : ""}
-        ${u.carColor ? " • " + u.carColor : ""}
-        ${u.carNumber ? " • " + u.carNumber : ""}
-      </div>
-
       <div class="ad-route">${escapeHtml(route)}</div>
 
-      <div class="ad-details">
-        <div class="ad-chip">💰 ${ad.price} so‘m</div>
-        <div class="ad-chip">⏰ ${escapeHtml(time)}</div>
-        ${ad.seatCount ? `<div class="ad-chip">👥 ${ad.seatCount} joy</div>` : ""}
+      <div class="ad-user-car">
+        ${u.carModel ? escapeHtml(u.carModel) : ""}
       </div>
+
+      <div class="ad-details">
+        <div class="ad-chip">🕒 ${escapeHtml(depTime)}</div>
+        ${ad.seatCount ? `<div class="ad-chip">👥 ${ad.seatCount} joy</div>` : ""}
+        <div class="ad-chip">📅 ${escapeHtml(created)}</div>
+      </div>
+    </div>
+
+    <div style="
+      margin-left:auto;
+      font-weight:600;
+      font-size:16px;
+      color:#111;
+      background:#eef4ff;
+      padding:6px 10px;
+      border-radius:8px;">
+      💰 ${ad.price} so‘m
     </div>
   `;
 
