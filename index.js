@@ -43,47 +43,49 @@ function normalizeType(t) {
 // UNIVERSAL DATE PARSER & FORMATTER
 // formatTime(val, { shortYear: false|true })
 // - shortYear=true -> omit year in date part (used for createdAt mini)
-function formatTime(val, opts = {}) {
-  console.log("formatTime RAW:", val);
+function formatTime(val) {
   if (!val) return "—";
-  const short = !!opts.shortYear;
 
-  // If number (timestamp)
-  if (typeof val === "number") return formatReal(new Date(val), short);
-
-  // If numeric string timestamp
-  if (typeof val === "string" && /^\d+$/.test(val)) {
-    return formatReal(new Date(Number(val)), short);
+  // timestamp bo‘lsa
+  if (typeof val === "number") {
+    return new Date(val).toLocaleString("uz-UZ", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
 
-  // Pattern: "2025 M11 20 18:48" or "2025 M11 20, 18:48" or "2025-11-15T09:24"
+  // string bo'lsa
   if (typeof val === "string") {
-    // handle "2025 M11 20 18:48" and with comma
-    if (/M\d{1,2}/.test(val)) {
-      const m = String(val).match(/(\d{4})\s*M(\d{1,2})\s*(\d{1,2})\s*([0-2]?\d:[0-5]\d)?/);
-      if (m) {
-        const year = m[1], month = m[2].padStart(2, "0"), day = m[3].padStart(2, "0"), time = m[4] || "00:00";
-        const d = new Date(`${year}-${month}-${day}T${time}`);
-        if (!isNaN(d)) return formatReal(d, short);
-      }
+    // "2025-11-20T22:00" format
+    if (!isNaN(Date.parse(val))) {
+      return new Date(val).toLocaleString("uz-UZ", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
     }
 
-    // handle ISO-like and "YYYY-MM-DDTHH:MM" and "YYYY-MM-DD HH:MM"
-    const iso = new Date(val);
-    if (!isNaN(iso)) return formatReal(iso, short);
-
-    // fallback parse formats like "2025 11 20 18:48" or "2025-11-20 18:48"
-    const m2 = String(val).match(/(\d{4})[^\d]{1,3}(\d{1,2})[^\d]{1,3}(\d{1,2})\s*([0-2]?\d:[0-5]\d)?/);
-    if (m2) {
-      const year = m2[1], month = m2[2].padStart(2, "0"), day = m2[3].padStart(2, "0"), time = m2[4] || "00:00";
-      const d2 = new Date(`${year}-${month}-${day}T${time}`);
-      if (!isNaN(d2)) return formatReal(d2, short);
+    // "2025-11-20 22:00" format (bo'sh joy bilan)
+    const fix = val.replace(" ", "T");
+    if (!isNaN(Date.parse(fix))) {
+      return new Date(fix).toLocaleString("uz-UZ", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
     }
   }
 
-  // last resort
-  return String(val);
+  return val;
 }
+
 
 function formatReal(date, short = false) {
   const datePart = date.toLocaleDateString("uz-UZ", {
