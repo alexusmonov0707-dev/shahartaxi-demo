@@ -7,65 +7,47 @@
 
   <style>
     body { font-family: Arial; background:#f2f4f8; margin:0; }
-
     .topbar {
-      background:#0069d9; color:#fff; padding:14px 20px;
-      font-size:20px; display:flex; justify-content:space-between; 
-      align-items:center;
+      background:#0069d9; color:#fff; padding:14px 20px; font-size:20px;
+      display:flex; justify-content:space-between; align-items:center;
     }
-
     .logout {
-      background:#ff4444; padding:6px 16px; border:none;
-      border-radius:6px; color:#fff; cursor:pointer; font-size:15px;
+      background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
+      color:#fff; cursor:pointer; font-size:15px;
     }
-
     .card {
-      max-width:900px; margin:20px auto; background:#fff; padding:20px;
-      border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);
+      max-width:900px; margin:20px auto;
+      background:#fff; padding:20px; border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.08);
     }
 
-    /* AD CARD */
-    .ad-card {
-      background:#fff;
-      padding:14px 16px;
-      border-radius:14px;
-      margin-bottom:14px;
-      box-shadow:0 2px 10px rgba(0,0,0,0.08);
-      transition:0.2s; cursor:pointer;
+    .filters {
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-bottom:20px;
     }
-    .ad-card:hover {
-      transform:translateY(-2px);
-      box-shadow:0 4px 16px rgba(0,0,0,0.12);
+    select, input {
+      padding:10px;
+      border-radius:8px;
+      border:1px solid #bbb;
+      flex:1;
+      min-width:150px;
     }
 
-    .ad-top { display:flex; justify-content:space-between; margin-bottom:8px; }
-    .price { font-weight:bold; color:#222; }
-
-    .route { font-size:15px; margin-bottom:6px; }
-    .arrow { color:#ff8800; font-weight:bold; margin:0 6px; }
-
-    .time { font-size:13px; color:#666; }
-
-    /* MODAL */
+    /* FULL MODAL */
     #adFullModal {
-      position:fixed; inset:0; display:none;
+      position:fixed; inset:0; 
       background:rgba(0,0,0,0.6);
-      justify-content:center; align-items:center;
+      display:none; 
+      justify-content:center; 
+      align-items:center;
       z-index:9999;
     }
-
-    #adFullModal .box {
-      background:#fff; padding:20px; border-radius:14px;
-      width:350px; box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    #adFullBox {
+      background:white; padding:20px; width:350px;
+      border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.3);
     }
-
-    .close-btn {
-      background:#ccc; padding:8px 15px; border:none; border-radius:8px;
-      width:100%; margin-top:15px; cursor:pointer;
-    }
-
   </style>
-
 </head>
 
 <body>
@@ -76,19 +58,34 @@
   </div>
 
   <div class="card">
+
     <h2 style="text-align:center; color:#0069d9;">Barcha e’lonlar</h2>
+
+    <!-- FILTER PANEL -->
+    <div class="filters">
+      <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
+
+      <select id="filterRole">
+        <option value="">Hammasi</option>
+        <option value="Haydovchi">Haydovchi</option>
+        <option value="Yo‘lovchi">Yo‘lovchi</option>
+      </select>
+
+      <select id="filterRegion">
+        <option value="">Viloyat (filter)</option>
+      </select>
+    </div>
+
     <div id="adsList">Yuklanmoqda...</div>
   </div>
 
   <!-- FULL MODAL -->
   <div id="adFullModal">
-    <div class="box" id="adFullBox">
-      <!-- JS to‘ldiradi -->
-      <button class="close-btn" onclick="closeAdModal()">Yopish</button>
-    </div>
+    <div id="adFullBox"></div>
   </div>
 
-  <script src="regions.js"></script>
+  <script src="regions.js?v=1"></script>
   <script type="module" src="index.js?v=3002"></script>
+
 </body>
 </html>
