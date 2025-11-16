@@ -109,7 +109,7 @@ function renderAds(ads) {
     let ok = true;
 
     // Filter by role
-    if (role && a.type !== role) ok = false;
+  if (role && a.type.toLowerCase() !== role.toLowerCase()) hay = false;
 
     // Filter by region
     if (region && a.fromRegion !== region && a.toRegion !== region) ok = false;
