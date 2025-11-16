@@ -278,7 +278,7 @@ async function createAdCard(ad) {
 }
 
 // ===============================
-// FULL MODAL (FIXED NAME!)
+// FULL MODAL (robust fullname + debug logs)
 // ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
@@ -290,15 +290,29 @@ async function openAdModal(ad) {
 
   const u = await getUserInfo(ad.userId);
 
+  // --- DEBUG: show user object in console to inspect actual DB fields
+  console.log("openAdModal: user object for userId=", ad.userId, u);
+
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: false });
 
-  // 🔥 **FIXED FULLNAME**
-  const fullname =
-    (u.firstname || u.lastname)
-      ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
-      : u.name || "Foydalanuvchi";
+  // === ROBUST FULLNAME computation (lots of fallbacks)
+  const fullname = (
+    // prefer firstname + lastname if any present
+    ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : null)
+    // then prefer combined 'name' or 'displayName'
+    || u.name
+    || u.displayName
+    // sometimes username or 'oq' field used
+    || u.username
+    || u.oq
+    // sometimes stored in car owner field or phone as last resort
+    || u.car
+    || u.phone
+    // final fallback
+    || "Foydalanuvchi"
+  );
 
   const carFull = `${u.carModel || u.car || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
@@ -374,6 +388,7 @@ async function openAdModal(ad) {
   modal.style.display = "flex";
   modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
+
 
 window.closeAdModal = function () {
   const modal = document.getElementById("adFullModal");
