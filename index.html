@@ -33,63 +33,112 @@
       min-width:150px;
     }
 
-    /* ===== MINI CARD ===== */
     .ad-card {
-      background:#fff;
-      border-radius:12px;
-      border:1px solid #ddd;
-      padding:12px;
-      margin-bottom:12px;
-      cursor:pointer;
-      transition:0.2s;
+      padding:12px; margin-bottom:12px; background:white;
+      border-radius:10px; border:1px solid #ddd; cursor:pointer;
     }
-    .ad-card:hover {
-      background:#f7f9ff;
-      border-color:#b9c7ff;
-    }
+    .ad-card {
+  padding:14px 16px;
+  background: #ffffff;
+  border-radius:12px;
+  border:1px solid #e2e6ea;
+  margin-bottom:12px;
+  transition:0.2s;
+}
 
-    /* USER SECTION */
-    .ad-user {
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-bottom:8px;
-    }
-    .ad-user img {
-      width:40px;
-      height:40px;
-      border-radius:50%;
-      object-fit:cover;
-      border:2px solid #eee;
-    }
-    .ad-user-name {
-      font-size:15px;
-      font-weight:bold;
-      color:#333;
-    }
+.ad-card:hover {
+  border-color:#b6c2d1;
+  background:#f8f9fa;
+}
 
-    .ad-type {
-      font-size:15px;
-      color:#0069d9;
-      font-weight:bold;
-      margin-bottom:3px;
-    }
-    .ad-route {
-      font-size:16px;
-      font-weight:bold;
-      margin-bottom:8px;
-    }
-    .ad-info {
-      display:flex;
-      gap:10px;
-    }
-    .ad-chip {
-      background:#eef3ff;
-      padding:6px 10px;
-      border-radius:8px;
-      font-size:14px;
-      color:#003c8f;
-    }
+.ad-top {
+  font-weight:bold;
+  color:#0069d9;
+  margin-bottom:6px;
+}
+
+.ad-route {
+  font-size:15px;
+  margin-bottom:5px;
+}
+
+.ad-route span {
+  font-weight:bold;
+}
+
+.ad-info {
+  font-size:14px;
+  color:#666;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.ad-info div {
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.icon {
+  font-size:14px;
+  opacity:0.8;
+}
+    .ad-card {
+  padding: 14px 16px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e3e7ef;
+  margin-bottom: 12px;
+  transition: 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+
+.ad-card:hover {
+  border-color: #b8c1d1;
+  background: #f8f9fc;
+}
+
+.ad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.ad-type {
+  font-weight: 700;
+  color: #0069d9;
+}
+
+.ad-route {
+  font-size: 15px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.ad-info {
+  font-size: 14px;
+  color: #555;
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.ad-chip {
+  padding: 4px 8px;
+  background: #eef4ff;
+  border-radius: 6px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon {
+  opacity: 0.8;
+}
+
   </style>
 </head>
 
@@ -104,13 +153,14 @@
 
     <h2 style="text-align:center; color:#0069d9;">Barcha e’lonlar</h2>
 
+    <!-- FILTER PANEL -->
     <div class="filters">
       <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
 
       <select id="filterRole">
         <option value="">Hammasi</option>
         <option value="Haydovchi">Haydovchi</option>
-        <option value="Yo‘lovchi">Yo‘lovchi</option>
+        <option value="Yo'lovchi">Yo‘lovchi</option>
       </select>
 
       <select id="filterRegion">
@@ -121,8 +171,9 @@
     <div id="adsList">Yuklanmoqda...</div>
   </div>
 
-  <script src="regions.js"></script>
-  <script type="module" src="index.js?v=3002"></script>
+<script src="regions.js"></script>
+<script type="module" src="index.js?v=3008"></script>
+
 
 </body>
 </html>
