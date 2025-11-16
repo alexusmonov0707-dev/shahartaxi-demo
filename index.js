@@ -39,45 +39,70 @@ function normalizeType(t) {
 
 // ===============================
 // UNIVERSAL DATE PARSER & FORMATTER
-// Returns string like: "20 noyabr 2025, 18:48"
-function formatTime(val) {
+// formatTime(val, { shortYear: false|true })
+// - shortYear=true -> omit year in date part (used for createdAt mini)
+// - default: full date + time
+function formatTime(val, opts = {}) {
   if (!val) return "—";
+  const short = !!opts.shortYear;
 
   // If number (timestamp)
-  if (typeof val === "number") return formatReal(new Date(val));
+  if (typeof val === "number") return formatReal(new Date(val), short);
 
-  // If Firebase RTDB stores JS timestamp as string number
+  // If numeric string timestamp
   if (typeof val === "string" && /^\d+$/.test(val)) {
-    return formatReal(new Date(Number(val)));
+    return formatReal(new Date(Number(val)), short);
   }
 
   // Pattern: "2025 M11 20 18:48" or "2025 M11 20"
-  if (typeof val === "string" && val.includes("M")) {
-    const m = val.match(/(\d{4})\s*M(\d{1,2})\s*(\d{1,2})\s*([0-2]\d:[0-5]\d)?/);
+  if (typeof val === "string" && /M\d{1,2}/.test(val)) {
+    const m = val.match(/(\d{4})\s*M(\d{1,2})\s*(\d{1,2})\s*([0-2]?\d:[0-5]\d)?/);
     if (m) {
-      const year = m[1], month = m[2], day = m[3], time = m[4] || "00:00";
-      return formatReal(new Date(`${year}-${month}-${day}T${time}`));
+      const year = m[1], month = m[2].padStart(2, "0"), day = m[3].padStart(2, "0"), time = m[4] || "00:00";
+      const d = new Date(`${year}-${month}-${day}T${time}`);
+      if (!isNaN(d)) return formatReal(d, short);
     }
   }
 
-  // ISO / normal JS-date parse
+  // Try ISO or common formats
   const d = new Date(val);
-  if (!isNaN(d)) return formatReal(d);
+  if (!isNaN(d)) return formatReal(d, short);
 
-  // fallback: return as-is
+  // Fallback: try to parse "YYYY MM DD hh:mm" like "2025 11 20 18:48"
+  const m2 = String(val).match(/(\d{4})[^\d]{1,3}(\d{1,2})[^\d]{1,3}(\d{1,2})\s*([0-2]?\d:[0-5]\d)?/);
+  if (m2) {
+    const year = m2[1], month = m2[2].padStart(2, "0"), day = m2[3].padStart(2, "0"), time = m2[4] || "00:00";
+    const d2 = new Date(`${year}-${month}-${day}T${time}`);
+    if (!isNaN(d2)) return formatReal(d2, short);
+  }
+
+  // last resort
   return String(val);
 }
 
-function formatReal(date) {
+function formatReal(date, short = false) {
   const datePart = date.toLocaleDateString("uz-UZ", {
     day: "2-digit",
     month: "long",
-    year: "numeric"
+    year: short ? undefined : "numeric"
   });
+
   const timePart = date.toLocaleTimeString("uz-UZ", {
     hour: "2-digit",
     minute: "2-digit"
   });
+
+  // If short and year omitted, result like "15 noyabr, 13:51"
+  if (short) {
+    // datePart may be "15 noyabr 2025" — remove year if present
+    const parts = datePart.split(" ");
+    // If last part is year (all digits), remove it
+    if (parts.length && /\d{4}/.test(parts[parts.length - 1])) {
+      parts.pop();
+    }
+    return `${parts.join(" ")} , ${timePart}`.replace(/\s+,/, ","); // small cleanup
+  }
+
   return `${datePart}, ${timePart}`;
 }
 
@@ -87,13 +112,13 @@ function formatReal(date) {
 async function getUserInfo(userId) {
   if (!userId) return {
     phone: "", avatar: "", firstname: "", lastname: "",
-    carModel: "", carColor: "", carNumber: ""
+    carModel: "", carColor: "", carNumber: "", bookedSeats: 0
   };
 
   const snap = await get(ref(db, "users/" + userId));
   if (!snap.exists()) return {
     phone: "", avatar: "", firstname: "", lastname: "",
-    carModel: "", carColor: "", carNumber: ""
+    carModel: "", carColor: "", carNumber: "", bookedSeats: 0
   };
 
   const u = snap.val();
@@ -104,7 +129,8 @@ async function getUserInfo(userId) {
     lastname: u.lastname || "",
     carModel: u.carModel || "",
     carColor: u.carColor || "",
-    carNumber: u.carNumber || ""
+    carNumber: u.carNumber || "",
+    bookedSeats: u.bookedSeats || 0
   };
 }
 
@@ -167,7 +193,7 @@ async function loadAllAds() {
 }
 
 // ===============================
-// RENDER ADS (fixed to render all cards parallel)
+// RENDER ADS
 // ===============================
 async function renderAds(ads) {
   const list = document.getElementById("adsList");
@@ -202,7 +228,7 @@ async function renderAds(ads) {
 
 // ===============================
 // CREATE AD CARD (mini) — ISM BO‘LMAYDI
-// Includes: avatar, carModel, route, departureTime, seats, price (right), createdAt bottom-right
+// Includes: avatar, carModel under route, route, departureTime, seats (available/total), price (right), createdAt bottom-right
 // ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
@@ -212,21 +238,33 @@ async function createAdCard(ad) {
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time);
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
+  // createdAt short (omit year) as user chose variant B
+  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: true });
 
-  // car model only (no name in mini)
+  // seats logic:
+  // driver ads: totalSeats or seatCount, bookedSeats may come from ad or user
+  const totalSeats = ad.totalSeats || ad.seatCount || null;
+  const booked = ad.bookedSeats || 0; // if ad stores booked
+  // fallback to user bookedSeats (rare), not used here
+  const available = (typeof totalSeats === "number") ? (totalSeats - booked) : null;
+
+  // passenger requested seats:
+  const requested = ad.requestedSeats || ad.requestSeats || null;
+
+  // car model placement (moved down under route)
   const carModel = u.carModel || "";
 
   div.innerHTML = `
     <img class="ad-avatar" src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}" alt="avatar">
 
     <div class="ad-main">
-      <div class="ad-car">${escapeHtml(carModel)}</div>
       <div class="ad-route">${escapeHtml(route)}</div>
+      <div class="ad-car">${escapeHtml(carModel)}</div>
 
       <div class="ad-meta">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
-        ${ad.seatCount ? `<div class="ad-chip">👥 ${escapeHtml(String(ad.seatCount))} joy</div>` : ""}
+        ${ totalSeats ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>` :
+          (requested ? `<div class="ad-chip">Talab: ${escapeHtml(String(requested))} joy</div>` : "") }
       </div>
     </div>
 
@@ -240,7 +278,7 @@ async function createAdCard(ad) {
 }
 
 // ===============================
-// MODAL (full) — contains name and full car info
+// MODAL (full) — contains name and full car info, seats details
 // ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
@@ -254,9 +292,15 @@ async function openAdModal(ad) {
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time);
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
+  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: false });
   const fullname = `${u.firstname || ""} ${u.lastname || ""}`.trim() || "Foydalanuvchi";
   const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
+
+  // seats details
+  const totalSeats = ad.totalSeats || ad.seatCount || null;
+  const booked = ad.bookedSeats || 0;
+  const available = (typeof totalSeats === "number") ? (totalSeats - booked) : null;
+  const requested = ad.requestedSeats || ad.requestSeats || null;
 
   modal.innerHTML = `
     <div class="ad-modal-box" role="dialog" aria-modal="true">
@@ -281,8 +325,11 @@ async function openAdModal(ad) {
 
       <div class="modal-row">
         <div class="modal-col">
-          <div class="label">Joy soni</div>
-          <div class="value">${escapeHtml(ad.seatCount || "-")}</div>
+          <div class="label">Joylar</div>
+          <div class="value">
+            ${ totalSeats ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})` :
+               (requested ? `Talab: ${escapeHtml(String(requested))} joy` : "-") }
+          </div>
         </div>
         <div class="modal-col">
           <div class="label">Narx</div>
@@ -323,7 +370,6 @@ window.closeAdModal = function () {
 // simple contact action
 window.onContact = (phone) => {
   if (!phone) return alert("Telefon raqami mavjud emas");
-  // on mobile this will attempt to call
   window.location.href = `tel:${phone}`;
 };
 
@@ -336,7 +382,8 @@ window.logout = () => signOut(auth);
 // HTML ESCAPE
 // ===============================
 function escapeHtml(str) {
-  if (!str && str !== 0) return "";
+  if (str === 0) return "0";
+  if (!str) return "";
   return String(str)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
