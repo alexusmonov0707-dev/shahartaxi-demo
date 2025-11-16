@@ -106,37 +106,71 @@ function formatReal(date, short = false) {
 // GET USER INFO (IMPORTANT — FIXED)
 // ===============================
 async function getUserInfo(userId) {
-  if (!userId) return {
-    phone: "", avatar: "",
-    firstname: "", lastname: "", name: "",
-    oq: "", car: "",
-    carModel: "", carColor: "", carNumber: "",
-    bookedSeats: 0
-  };
+  if (!userId) {
+    console.warn("getUserInfo: no userId provided");
+    return {
+      phone: "", avatar: "",
+      firstname: "", lastname: "", name: "",
+      displayName: "", username: "", oq: "", car: "",
+      carModel: "", carColor: "", carNumber: "",
+      bookedSeats: 0
+    };
+  }
 
   const snap = await get(ref(db, "users/" + userId));
-  if (!snap.exists()) return {
-    phone: "", avatar: "",
-    firstname: "", lastname: "", name: "",
-    oq: "", car: "",
-    carModel: "", carColor: "", carNumber: "",
-    bookedSeats: 0
-  };
+  if (!snap.exists()) {
+    console.warn("getUserInfo: no user record for userId=", userId);
+    return {
+      phone: "", avatar: "",
+      firstname: "", lastname: "", name: "",
+      displayName: "", username: "", oq: "", car: "",
+      carModel: "", carColor: "", carNumber: "",
+      bookedSeats: 0
+    };
+  }
 
   const u = snap.val();
-  return {
-    phone: u.phone || "",
-    avatar: u.avatar || "",
-    firstname: u.firstname || "",
-    lastname: u.lastname || "",
-    name: u.name || "",
+
+  // Normalize: ensure we always return firstname/lastname when possible
+  let firstname = u.firstname || "";
+  let lastname = u.lastname || "";
+
+  // If DB has single full name field, try to split it
+  const nameField = u.name || u.displayName || u.username || "";
+  if ((!firstname && !lastname) && nameField) {
+    // Split on space — take first token as firstname, rest as lastname
+    const parts = String(nameField).trim().split(/\s+/);
+    if (parts.length === 1) {
+      firstname = parts[0];
+    } else if (parts.length > 1) {
+      firstname = parts[0];
+      lastname = parts.slice(1).join(" ");
+    }
+  }
+
+  // Build returned object (include raw user object for debugging)
+  const out = {
+    phone: u.phone || u.phoneNumber || u.mobile || "" ,
+    avatar: u.avatar || u.photoURL || u.image || "",
+    firstname: firstname || "",
+    lastname: lastname || "",
+    name: nameField || "",
+    displayName: u.displayName || "",
+    username: u.username || "",
     oq: u.oq || "",
     car: u.car || "",
     carModel: u.carModel || "",
     carColor: u.carColor || "",
     carNumber: u.carNumber || "",
-    bookedSeats: u.bookedSeats || 0
+    bookedSeats: u.bookedSeats || 0,
+    // include raw for debugging
+    _raw: u
   };
+
+  // DEBUG LOG — bu qatordagi ma'lumotni konsolda ko'ring
+  console.log("getUserInfo -> userId:", userId, "resolved:", out);
+
+  return out;
 }
 
 // ===============================
