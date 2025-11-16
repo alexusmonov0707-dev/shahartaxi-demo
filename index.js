@@ -30,29 +30,27 @@ const db = getDatabase(app);
 
 
 // ===============================
-// LOGIN STATE
+// LOGIN CHECK
 // ===============================
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, user => {
   if (!user) {
     window.location.href = "login.html";
     return;
   }
+
+  loadRegions();
   loadAllAds();
 });
 
 
 // ===============================
-// UNIVERSAL DATETIME FORMATTER
+// UNIVERSAL DATETIME FORMAT
 // ===============================
 function formatTime(ad) {
-  const raw =
-    ad.departureTime ||     // yangi nom
-    ad.startTime ||         // eski nom
-    "";                     // yo‘q bo‘lsa
+  const raw = ad.departureTime || ad.startTime || "";
 
   if (!raw) return "—";
 
-  // datetime-local → "2025-11-16T12:30"
   const d = new Date(raw);
   if (isNaN(d)) return raw;
 
@@ -66,51 +64,113 @@ function formatTime(ad) {
 }
 
 
+// =======================================
+// LOAD REGIONS TO FILTER
+// =======================================
+function loadRegions() {
+  const sel = document.getElementById("filterRegion");
+
+  Object.keys(window.regionsData).forEach(region => {
+    const opt = document.createElement("option");
+    opt.value = region;
+    opt.textContent = region;
+    sel.appendChild(opt);
+  });
+}
+
+
 // ===============================
-// LOAD ALL ADS
+// GLOBAL ADS CACHE
+// ===============================
+let allAds = [];
+
+
+// ===============================
+// LOAD ALL ADS (once)
 // ===============================
 async function loadAllAds() {
-  const adsBox = document.getElementById("adsList");
+  const box = document.getElementById("adsList");
 
   const snap = await get(ref(db, "ads"));
   if (!snap.exists()) {
-    adsBox.innerHTML = "<p>E’lonlar mavjud emas.</p>";
+    box.innerHTML = "<p>E’lonlar mavjud emas.</p>";
     return;
   }
 
-  adsBox.innerHTML = "";
+  allAds = [];
 
-  snap.forEach((child) => {
-    const ad = child.val();
+  snap.forEach(child => {
+    allAds.push(child.val());
+  });
 
-    const time = formatTime(ad);
+  renderAds();
+}
 
+
+// ===============================
+// RENDER ADS WITH FILTERS
+// ===============================
+function renderAds() {
+  const box = document.getElementById("adsList");
+  box.innerHTML = "";
+
+  let list = [...allAds];
+
+  // Qidiruv
+  const q = document.getElementById("search").value.toLowerCase();
+  if (q) {
+    list = list.filter(ad =>
+      (ad.fromRegion + " " + ad.fromDistrict + " " + ad.toRegion + " " + ad.toDistrict + " " +
+       ad.price + " " + ad.comment)
+      .toLowerCase()
+      .includes(q)
+    );
+  }
+
+  // Rol bo‘yicha filter
+  const role = document.getElementById("filterRole").value;
+  if (role) list = list.filter(ad => ad.type === role);
+
+  // Viloyat filter
+  const reg = document.getElementById("filterRegion").value;
+  if (reg) list = list.filter(ad => ad.fromRegion === reg || ad.toRegion === reg);
+
+  // Agar bo‘sh bo‘lsa
+  if (list.length === 0) {
+    box.innerHTML = "<p>Hech narsa topilmadi…</p>";
+    return;
+  }
+
+  list.forEach(ad => {
     const div = document.createElement("div");
     div.style = `
-      padding:12px;
-      border:1px solid #ddd;
-      border-radius:8px;
-      margin-bottom:12px;
-      background:#fbfcff;
+      padding:12px; border:1px solid #ddd; border-radius:8px;
+      margin-bottom:12px; background:#fbfcff;
     `;
 
     div.innerHTML = `
       <b>${ad.type}</b><br>
       ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
       Narx: <b>${ad.price || "-"} so‘m</b><br>
-      Jo‘nash vaqti: ${time}<br>
+      Jo‘nash vaqti: ${formatTime(ad)}<br>
       Izoh: ${ad.comment || "-"}<br>
       <small style="color:#777">${new Date(ad.createdAt).toLocaleString("uz-UZ")}</small>
     `;
 
-    adsBox.appendChild(div);
+    box.appendChild(div);
   });
 }
 
 
 // ===============================
+// FILTER EVENT BINDINGS
+// ===============================
+document.getElementById("search").oninput = renderAds;
+document.getElementById("filterRole").onchange = renderAds;
+document.getElementById("filterRegion").onchange = renderAds;
+
+
+// ===============================
 // LOGOUT
 // ===============================
-window.logout = function () {
-  signOut(auth);
-};
+window.logout = () => signOut(auth);
