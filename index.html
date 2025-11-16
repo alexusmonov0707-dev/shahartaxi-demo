@@ -20,6 +20,18 @@
       background:#fff; padding:20px; border-radius:12px;
       box-shadow:0 4px 12px rgba(0,0,0,0.08);
     }
+
+    .filters {
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-bottom:20px;
+    }
+    select, input {
+      padding:10px;
+      border-radius:8px;
+      border:1px solid #bbb;
+      flex:1;
+      min-width:150px;
+    }
   </style>
 </head>
 
@@ -31,11 +43,29 @@
   </div>
 
   <div class="card">
+
     <h2 style="text-align:center; color:#0069d9;">Barcha e’lonlar</h2>
+
+    <!-- FILTER PANEL -->
+    <div class="filters">
+      <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
+
+      <select id="filterRole">
+        <option value="">Hammasi</option>
+        <option value="Haydovchi">Haydovchi</option>
+        <option value="Yo‘lovchi">Yo‘lovchi</option>
+      </select>
+
+      <select id="filterRegion">
+        <option value="">Viloyat (filter)</option>
+      </select>
+    </div>
+
     <div id="adsList">Yuklanmoqda...</div>
   </div>
 
-  <script type="module" src="index.js?v=1002"></script>
+  <script src="regions.js"></script>
+  <script type="module" src="index.js?v=2001"></script>
 
 </body>
 </html>
