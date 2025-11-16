@@ -2,8 +2,17 @@
 // FIREBASE INIT
 // ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  getDatabase,
+  ref,
+  get
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
@@ -19,53 +28,45 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+// REGION LIST
 const REGIONS = window.regionsData || window.regions || {};
 
-
-// ===============================
-// TYPE NORMALIZE (HAYDOVCHI ↔ YO‘LOVCHI)
-// ===============================
-function normalizeType(t) {
-  if (!t) return "";
-  t = String(t).trim().toLowerCase();
-  t = t.replace(/[‘’`ʼ']/g, "'");
-
-  if (t.includes("haydov")) return "Haydovchi";
-  if (t.includes("yo") && t.includes("lov")) return "Yo‘lovchi";
-
-  if (t === "driver") return "Haydovchi";
-  if (t === "passenger") return "Yo‘lovchi";
-  if (t === "yo'lovchi" || t === "yolovchi") return "Yo‘lovchi";
-
-  return t.charAt(0).toUpperCase() + t.slice(1);
+// Helper — apostroflarni normallashtirish
+function normalize(str) {
+  if (!str) return "";
+  return String(str).toLowerCase().replace(/[‘’`ʼ']/g, "'");
 }
 
-
-// ===============================
-// TIME FORMAT
-// ===============================
+// Vaqt format
 function formatTime(raw) {
   if (!raw) return "—";
 
   if (typeof raw === "number") {
-    const d = new Date(raw);
-    return !isNaN(d) ? d.toLocaleString("uz-UZ") : "—";
+    return new Date(raw).toLocaleString("uz-UZ", {
+      hour: "2-digit",
+      minute: "2-digit",
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    });
   }
 
-  let s = String(raw).trim();
-  s = s.replace(/\bM(\d{1,2})\b/, "-$1-").replace(/\s+/g, " ");
-  let d = new Date(s);
-  if (!isNaN(d)) return d.toLocaleString("uz-UZ");
+  let d = new Date(raw);
+  if (!isNaN(d)) {
+    return d.toLocaleString("uz-UZ", {
+      hour: "2-digit",
+      minute: "2-digit",
+      year: "numeric",
+      month: "short",
+      day: "numeric"
+    });
+  }
 
-  d = new Date(s.replace(" ", "T"));
-  if (!isNaN(d)) return d.toLocaleString("uz-UZ");
-
-  return s;
+  return raw;
 }
 
-
 // ===============================
-// AUTH CHECK
+// LOGIN CHECK
 // ===============================
 onAuthStateChanged(auth, user => {
   if (!user) {
@@ -76,21 +77,18 @@ onAuthStateChanged(auth, user => {
   loadAllAds();
 });
 
-
 // ===============================
-// VILOYAT FILTER YUKLASH
+// LOAD REGIONS
 // ===============================
 function loadRegionsFilter() {
-  const filterRegion = document.getElementById("filterRegion");
-  filterRegion.innerHTML = '<option value="">Viloyat (filter)</option>';
+  const reg = document.getElementById("filterRegion");
   Object.keys(REGIONS).forEach(r => {
-    filterRegion.innerHTML += `<option value="${r}">${r}</option>`;
+    reg.innerHTML += `<option value="${r}">${r}</option>`;
   });
 }
 
-
 // ===============================
-// BARCHA E’LONLARNI FIREBASE DAN YUKLASH
+// LOAD ADS
 // ===============================
 async function loadAllAds() {
   const adsRef = ref(db, "ads");
@@ -104,25 +102,12 @@ async function loadAllAds() {
     return;
   }
 
-  const ads = [];
-
-  snap.forEach(child => {
-    const val = child.val();
-
-    const normType = normalizeType(
-      val.type ||
-      val.userType ||
-      val.role ||
-      ""
-    );
-
-    ads.push({
-      id: child.key,
-      ...val,
-      typeNormalized: normType
-    });
+  let ads = [];
+  snap.forEach(c => {
+    ads.push({ id: c.key, ...c.val() });
   });
 
+  // Filter events
   document.getElementById("search").oninput = () => renderAds(ads);
   document.getElementById("filterRole").onchange = () => renderAds(ads);
   document.getElementById("filterRegion").onchange = () => renderAds(ads);
@@ -130,139 +115,145 @@ async function loadAllAds() {
   renderAds(ads);
 }
 
-
 // ===============================
-// FILTER + CHIZISH
+// RENDER ADS
 // ===============================
 function renderAds(ads) {
   const list = document.getElementById("adsList");
   list.innerHTML = "";
 
-  const q = (document.getElementById("search").value || "").toLowerCase();
-  const role = normalizeType(document.getElementById("filterRole").value);
-  const region = document.getElementById("filterRegion").value;
+  const q = normalize(document.getElementById("search").value);
+  const roleFilter = normalize(document.getElementById("filterRole").value);
+  const regionFilter = document.getElementById("filterRegion").value;
 
-  const filtered = ads.filter(ad => {
-    if (role && ad.typeNormalized !== role) return false;
-
-    if (region) {
-      if (ad.fromRegion !== region && ad.toRegion !== region) return false;
+  const filtered = ads.filter(a => {
+    // Type filter (but NOT shown)
+    if (roleFilter) {
+      let t = normalize(a.type);
+      if (!t.includes(roleFilter)) return false;
     }
 
+    // Region filter
+    if (regionFilter) {
+      if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
+    }
+
+    // Search
     if (q) {
-      const text = `
-        ${ad.fromRegion} ${ad.fromDistrict}
-        ${ad.toRegion} ${ad.toDistrict}
-        ${ad.comment} ${ad.price}
+      const txt = `
+        ${a.fromRegion} ${a.fromDistrict}
+        ${a.toRegion} ${a.toDistrict}
+        ${a.comment} ${a.price}
+        ${a.userName} ${a.carModel}
       `.toLowerCase();
-
-      if (!text.includes(q)) return false;
+      if (!txt.includes(q)) return false;
     }
+
     return true;
   });
 
-  if (!filtered.length) {
+  if (filtered.length === 0) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
     return;
   }
 
-  filtered.forEach(ad => list.appendChild(createAdCard(ad)));
+  filtered.forEach(a => list.appendChild(createAdCard(a)));
 }
 
-
 // ===============================
-// MINI CARD YARATISH (Variant B)
+// CREATE MINI CARD
 // ===============================
 function createAdCard(ad) {
   const div = document.createElement("div");
   div.className = "ad-card";
 
-  const avatar =
-    ad.avatar ||
-    ad.userAvatar ||
-    "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
+  const photo =
+    ad.photo ||
+    ad.photoUrl ||
+    ad.userPhoto ||
+    "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → 
-                 ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
 
-  const time = formatTime(ad.departureTime || ad.startTime);
+  const time = formatTime(ad.departureTime);
 
-  const price = ad.price ? `${ad.price} so‘m` : "Narx yo‘q";
-
-  const seats =
-    ad.seatCount
-      ? `${ad.seatCount} joy`
-      : ad.passengerCount
-        ? `${ad.passengerCount} o‘rindiq`
-        : "";
+  const seats = ad.seatCount ? `${ad.seatCount} joy` : "";
 
   div.innerHTML = `
-    <div class="ad-left">
-      <img src="${avatar}">
-    </div>
+    <div style="display:flex; gap:12px; align-items:flex-start;">
+      <img src="${photo}" style="width:55px;height:55px;border-radius:8px;object-fit:cover;border:1px solid #ddd;" />
 
-    <div class="ad-right">
+      <div style="flex:1">
+        <div class="ad-route">${route}</div>
 
-      <div class="ad-header">
-        <div class="ad-type">${ad.typeNormalized}</div>
-        <div class="ad-chip">${price}</div>
+        <div class="ad-info">
+          <div><span class="icon">⏰</span> ${time}</div>
+          ${seats ? `<div><span class="icon">👥</span> ${seats}</div>` : ""}
+        </div>
       </div>
 
-      <div class="ad-route">${route}</div>
-
-      <div class="ad-info">
-        <div><span class="icon">⏰</span> ${time}</div>
-        ${seats ? `<div><span class="icon">👥</span> ${seats}</div>` : ""}
-      </div>
+      <div class="ad-chip">${ad.price ? ad.price + " so‘m" : "-"}</div>
     </div>
   `;
 
   div.onclick = () => openAdModal(ad);
-
   return div;
 }
-
 
 // ===============================
 // FULL MODAL
 // ===============================
 function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
-
   if (!modal) {
     modal = document.createElement("div");
     modal.id = "adFullModal";
     modal.style = `
-      position:fixed; inset:0; background:rgba(0,0,0,0.6);
-      display:flex; justify-content:center; align-items:center; z-index:9999;
+      position:fixed; inset:0;
+      background:rgba(0,0,0,0.6);
+      display:flex; justify-content:center; align-items:center;
+      z-index:9999;
     `;
     document.body.appendChild(modal);
   }
 
-  const time = formatTime(ad.departureTime || ad.startTime);
+  const photo =
+    ad.photo ||
+    ad.photoUrl ||
+    ad.userPhoto ||
+    "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+  const time = formatTime(ad.departureTime);
+  const created = formatTime(ad.createdAt);
+  const seats = ad.seatCount ? `${ad.seatCount} joy` : "";
   const phone = ad.ownerPhone || ad.phone || ad.userPhone || "—";
 
   modal.innerHTML = `
-    <div style="background:white;padding:20px;border-radius:12px;
-                max-width:520px;width:94%;box-shadow:0 8px 28px rgba(0,0,0,.15)">
+    <div style="background:white;padding:20px;border-radius:12px;width:95%;max-width:500px;">
       
-      <h3 style="margin-top:0;color:#0069d9">${ad.typeNormalized}</h3>
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <img src="${photo}" style="width:60px;height:60px;border-radius:10px;object-fit:cover;">
+        <div>
+          <div style="font-weight:bold;font-size:18px;">${ad.userName || "Foydalanuvchi"}</div>
+          <div style="font-size:14px;color:#666">${ad.carModel || ""}</div>
+        </div>
+      </div>
 
-      <p><strong>Yo'nalish:</strong><br>
-      ${ad.fromRegion}, ${ad.fromDistrict || ""} → 
-      ${ad.toRegion}, ${ad.toDistrict || ""}</p>
+      <p><b>Yo'nalish:</b><br>${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}</p>
 
-      <p><strong>Jo'nash vaqti:</strong><br>${time}</p>
+      <p><b>Jo‘nash vaqti:</b><br>${time}</p>
 
-      <p><strong>Narx:</strong> ${ad.price ? ad.price+" so‘m" : "-"}</p>
+      <p><b>Narx:</b> ${ad.price ? ad.price + " so‘m" : "-"}</p>
 
-      <p><strong>Izoh:</strong><br>${ad.comment || "-"}</p>
+      ${seats ? `<p><b>Joy soni:</b> ${seats}</p>` : ""}
 
-      <p><strong>Kontakt:</strong> ${phone}</p>
+      <p><b>Izoh:</b><br>${ad.comment || "-"}</p>
 
-      <button onclick="closeAdModal()" 
-      style="width:100%;padding:10px;border:none;border-radius:8px;
-      background:#444;color:#fff;margin-top:12px">Yopish</button>
+      <p><b>Kontakt:</b> ${phone}</p>
+
+      <p style="color:#777;"><small>Joylangan: ${created}</small></p>
+
+      <button onclick="closeAdModal()" style="width:100%;background:#333;color:white;padding:10px;border-radius:8px;margin-top:10px;">Yopish</button>
     </div>
   `;
 
@@ -274,20 +265,7 @@ window.closeAdModal = function () {
   if (modal) modal.style.display = "none";
 };
 
-
 // ===============================
 // LOGOUT
 // ===============================
 window.logout = () => signOut(auth);
-
-
-// ===============================
-// HELPER
-// ===============================
-function escape(str) {
-  if (!str) return "";
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-}
