@@ -1,5 +1,5 @@
 // ===============================
-//  FIREBASE INIT
+// FIREBASE INIT
 // ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -19,14 +19,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// ===============================
-//  REGIONS DATA
-// ===============================
 const REGIONS = window.regionsData || window.regions || {};
 
 
 // ===============================
-// TYPE NORMALIZATION
+// TYPE NORMALIZE (HAYDOVCHI ↔ YO‘LOVCHI)
 // ===============================
 function normalizeType(t) {
   if (!t) return "";
@@ -35,61 +32,42 @@ function normalizeType(t) {
 
   if (t.includes("haydov")) return "Haydovchi";
   if (t.includes("yo") && t.includes("lov")) return "Yo‘lovchi";
-  if (t === "yo'lovchi") return "Yo‘lovchi";
+
+  if (t === "driver") return "Haydovchi";
+  if (t === "passenger") return "Yo‘lovchi";
+  if (t === "yo'lovchi" || t === "yolovchi") return "Yo‘lovchi";
 
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 
 // ===============================
-// DATE FORMATTER
+// TIME FORMAT
 // ===============================
-function formatTime(val) {
-  if (!val) return "—";
+function formatTime(raw) {
+  if (!raw) return "—";
 
-  if (typeof val === "number") {
-    return new Date(val).toLocaleString("uz-UZ", {
-      year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit"
-    });
+  if (typeof raw === "number") {
+    const d = new Date(raw);
+    return !isNaN(d) ? d.toLocaleString("uz-UZ") : "—";
   }
 
-  let s = String(val).trim();
-  s = s.replace(/\bM(\d{1,2})\b/, "-$1-");
+  let s = String(raw).trim();
+  s = s.replace(/\bM(\d{1,2})\b/, "-$1-").replace(/\s+/g, " ");
+  let d = new Date(s);
+  if (!isNaN(d)) return d.toLocaleString("uz-UZ");
 
-  const d = new Date(s);
-  if (!isNaN(d)) {
-    return d.toLocaleString("uz-UZ", {
-      year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit"
-    });
-  }
+  d = new Date(s.replace(" ", "T"));
+  if (!isNaN(d)) return d.toLocaleString("uz-UZ");
 
-  return val;
-}
-
-
-// ===============================
-// USER INFO FETCHING
-// ===============================
-async function getUserInfo(userId) {
-  if (!userId) return { phone: "", avatar: "" };
-
-  const snap = await get(ref(db, "users/" + userId));
-  if (!snap.exists()) return { phone: "", avatar: "" };
-
-  const v = snap.val();
-  return {
-    phone: v.phone || "",
-    avatar: v.avatar || ""
-  };
+  return s;
 }
 
 
 // ===============================
 // AUTH CHECK
 // ===============================
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, user => {
   if (!user) {
     window.location.href = "login.html";
     return;
@@ -100,27 +78,26 @@ onAuthStateChanged(auth, (user) => {
 
 
 // ===============================
-// FILTER REGION GENERATOR
+// VILOYAT FILTER YUKLASH
 // ===============================
 function loadRegionsFilter() {
-  const el = document.getElementById("filterRegion");
-  el.innerHTML = '<option value="">Viloyat (filter)</option>';
-
-  Object.keys(REGIONS).forEach(region => {
-    const opt = document.createElement("option");
-    opt.value = region;
-    opt.textContent = region;
-    el.appendChild(opt);
+  const filterRegion = document.getElementById("filterRegion");
+  filterRegion.innerHTML = '<option value="">Viloyat (filter)</option>';
+  Object.keys(REGIONS).forEach(r => {
+    filterRegion.innerHTML += `<option value="${r}">${r}</option>`;
   });
 }
 
 
 // ===============================
-// LOAD ALL ADS
+// BARCHA E’LONLARNI FIREBASE DAN YUKLASH
 // ===============================
 async function loadAllAds() {
-  const snap = await get(ref(db, "ads"));
+  const adsRef = ref(db, "ads");
+  const snap = await get(adsRef);
+
   const list = document.getElementById("adsList");
+  list.innerHTML = "";
 
   if (!snap.exists()) {
     list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
@@ -128,12 +105,21 @@ async function loadAllAds() {
   }
 
   const ads = [];
+
   snap.forEach(child => {
-    const v = child.val();
+    const val = child.val();
+
+    const normType = normalizeType(
+      val.type ||
+      val.userType ||
+      val.role ||
+      ""
+    );
+
     ads.push({
       id: child.key,
-      ...v,
-      typeNormalized: normalizeType(v.type)
+      ...val,
+      typeNormalized: normType
     });
   });
 
@@ -146,26 +132,33 @@ async function loadAllAds() {
 
 
 // ===============================
-// RENDER ADS
+// FILTER + CHIZISH
 // ===============================
 function renderAds(ads) {
   const list = document.getElementById("adsList");
   list.innerHTML = "";
 
-  const q = document.getElementById("search").value.toLowerCase();
-  const roleFilter = normalizeType(document.getElementById("filterRole").value);
-  const regionFilter = document.getElementById("filterRegion").value;
+  const q = (document.getElementById("search").value || "").toLowerCase();
+  const role = normalizeType(document.getElementById("filterRole").value);
+  const region = document.getElementById("filterRegion").value;
 
-  const filtered = ads.filter(a => {
-    if (roleFilter && a.typeNormalized !== roleFilter) return false;
-    if (regionFilter && a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
+  const filtered = ads.filter(ad => {
+    if (role && ad.typeNormalized !== role) return false;
 
-    const hay = [
-      a.fromRegion, a.fromDistrict, a.toRegion, a.toDistrict,
-      a.comment, a.price, a.type
-    ].join(" ").toLowerCase();
+    if (region) {
+      if (ad.fromRegion !== region && ad.toRegion !== region) return false;
+    }
 
-    return hay.includes(q);
+    if (q) {
+      const text = `
+        ${ad.fromRegion} ${ad.fromDistrict}
+        ${ad.toRegion} ${ad.toDistrict}
+        ${ad.comment} ${ad.price}
+      `.toLowerCase();
+
+      if (!text.includes(q)) return false;
+    }
+    return true;
   });
 
   if (!filtered.length) {
@@ -173,35 +166,59 @@ function renderAds(ads) {
     return;
   }
 
-  filtered.forEach(a => list.appendChild(createAdCard(a)));
+  filtered.forEach(ad => list.appendChild(createAdCard(ad)));
 }
 
 
 // ===============================
-// CREATE AD CARD
+// MINI CARD YARATISH (Variant B)
 // ===============================
 function createAdCard(ad) {
   const div = document.createElement("div");
   div.className = "ad-card";
 
-  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const avatar =
+    ad.avatar ||
+    ad.userAvatar ||
+    "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
+
+  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → 
+                 ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+
   const time = formatTime(ad.departureTime || ad.startTime);
 
+  const price = ad.price ? `${ad.price} so‘m` : "Narx yo‘q";
+
+  const seats =
+    ad.seatCount
+      ? `${ad.seatCount} joy`
+      : ad.passengerCount
+        ? `${ad.passengerCount} o‘rindiq`
+        : "";
+
   div.innerHTML = `
-    <div class="ad-header">
-      <div class="ad-type">${escapeHtml(ad.typeNormalized)}</div>
-      <div class="ad-chip">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
+    <div class="ad-left">
+      <img src="${avatar}">
     </div>
 
-    <div class="ad-route">${escapeHtml(route)}</div>
+    <div class="ad-right">
 
-    <div class="ad-info">
-      <div><span class="icon">⏰</span>${escapeHtml(time)}</div>
-      ${ad.seatCount ? `<div><span class="icon">👥</span>${ad.seatCount} joy</div>` : ""}
+      <div class="ad-header">
+        <div class="ad-type">${ad.typeNormalized}</div>
+        <div class="ad-chip">${price}</div>
+      </div>
+
+      <div class="ad-route">${route}</div>
+
+      <div class="ad-info">
+        <div><span class="icon">⏰</span> ${time}</div>
+        ${seats ? `<div><span class="icon">👥</span> ${seats}</div>` : ""}
+      </div>
     </div>
   `;
 
   div.onclick = () => openAdModal(ad);
+
   return div;
 }
 
@@ -209,44 +226,43 @@ function createAdCard(ad) {
 // ===============================
 // FULL MODAL
 // ===============================
-async function openAdModal(ad) {
+function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
+
   if (!modal) {
     modal = document.createElement("div");
     modal.id = "adFullModal";
     modal.style = `
-      position:fixed; inset:0;
-      background:rgba(0,0,0,0.6);
-      display:flex; justify-content:center; align-items:center;
-      z-index:9999;
+      position:fixed; inset:0; background:rgba(0,0,0,0.6);
+      display:flex; justify-content:center; align-items:center; z-index:9999;
     `;
     document.body.appendChild(modal);
   }
 
-  const userInfo = await getUserInfo(ad.userId);
-  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const time = formatTime(ad.departureTime || ad.startTime);
-  const created = formatTime(ad.createdAt);
+  const phone = ad.ownerPhone || ad.phone || ad.userPhone || "—";
 
   modal.innerHTML = `
-    <div style="background:white;padding:20px;border-radius:14px;max-width:520px;width:92%">
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">
-        <img src="${userInfo.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}"
-             style="width:60px;height:60px;border-radius:10px;object-fit:cover;">
-        <h3 style="margin:0;color:#0069d9">${escapeHtml(ad.typeNormalized)}</h3>
-      </div>
+    <div style="background:white;padding:20px;border-radius:12px;
+                max-width:520px;width:94%;box-shadow:0 8px 28px rgba(0,0,0,.15)">
+      
+      <h3 style="margin-top:0;color:#0069d9">${ad.typeNormalized}</h3>
 
-      <p><b>Yo‘nalish:</b><br>${escapeHtml(route)}</p>
-      <p><b>Jo‘nash vaqti:</b><br>${escapeHtml(time)}</p>
-      <p><b>Narx:</b> ${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</p>
-      <p><b>Qo‘shimcha:</b><br>${escapeHtml(ad.comment || "-")}</p>
-      <p><b>Kontakt:</b> ${escapeHtml(userInfo.phone || "-")}</p>
-      <p style="color:#777;font-size:13px"><small>Joylashtirilgan: ${escapeHtml(created)}</small></p>
+      <p><strong>Yo'nalish:</strong><br>
+      ${ad.fromRegion}, ${ad.fromDistrict || ""} → 
+      ${ad.toRegion}, ${ad.toDistrict || ""}</p>
+
+      <p><strong>Jo'nash vaqti:</strong><br>${time}</p>
+
+      <p><strong>Narx:</strong> ${ad.price ? ad.price+" so‘m" : "-"}</p>
+
+      <p><strong>Izoh:</strong><br>${ad.comment || "-"}</p>
+
+      <p><strong>Kontakt:</strong> ${phone}</p>
 
       <button onclick="closeAdModal()" 
-              style="width:100%;margin-top:14px;padding:10px;background:#444;color:#fff;border:none;border-radius:8px">
-        Yopish
-      </button>
+      style="width:100%;padding:10px;border:none;border-radius:8px;
+      background:#444;color:#fff;margin-top:12px">Yopish</button>
     </div>
   `;
 
@@ -266,14 +282,12 @@ window.logout = () => signOut(auth);
 
 
 // ===============================
-// HTML ESCAPE
+// HELPER
 // ===============================
-function escapeHtml(str) {
+function escape(str) {
   if (!str) return "";
   return String(str)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll(">", "&gt;");
 }
