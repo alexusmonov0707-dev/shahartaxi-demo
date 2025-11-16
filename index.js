@@ -32,17 +32,36 @@ const REGIONS = window.regionsData || {};
 function formatTime(val) {
   if (!val) return "—";
 
+  // CASE 1: Firebase timestamp number
+  if (typeof val === "number") {
+    val = new Date(val);
+  } 
+
+  // CASE 2: Strange format: "2025 M11 20 18:48"
+  if (typeof val === "string" && val.includes("M")) {
+    const parts = val.split(" ");
+    const year = parts[0];
+    const month = parts[1].replace("M","");
+    const day = parts[2];
+    const time = parts[3] || "00:00";
+
+    val = new Date(`${year}-${month}-${day}T${time}`);
+  }
+
   const d = new Date(val);
   if (isNaN(d)) return val;
 
-  return d.toLocaleString("uz-UZ", {
-    year: "numeric",
+  return d.toLocaleDateString("uz-UZ", {
+    day: "2-digit",
     month: "long",
-    day: "numeric",
+    year: "numeric"
+  }) + ", " + 
+  d.toLocaleTimeString("uz-UZ", {
     hour: "2-digit",
     minute: "2-digit"
   });
 }
+
 
 
 // ===============================
