@@ -43,6 +43,7 @@ function normalizeType(t) {
 function formatTime(val) {
   if (!val) return "—";
 
+  // timestamp
   if (typeof val === "number") {
     return new Date(val).toLocaleString("uz-UZ", {
       year: "numeric",
@@ -53,6 +54,7 @@ function formatTime(val) {
     });
   }
 
+  // ISO string
   if (typeof val === "string") {
     if (!isNaN(Date.parse(val))) {
       return new Date(val).toLocaleString("uz-UZ", {
@@ -101,18 +103,24 @@ function formatReal(date, short = false) {
 }
 
 // ===============================
-// GET USER INFO (name, phone, avatar, car info)
+// GET USER INFO (IMPORTANT — FIXED)
 // ===============================
 async function getUserInfo(userId) {
   if (!userId) return {
-    phone: "", avatar: "", firstname: "", lastname: "",
-    carModel: "", carColor: "", carNumber: "", bookedSeats: 0
+    phone: "", avatar: "",
+    firstname: "", lastname: "", name: "",
+    oq: "", car: "",
+    carModel: "", carColor: "", carNumber: "",
+    bookedSeats: 0
   };
 
   const snap = await get(ref(db, "users/" + userId));
   if (!snap.exists()) return {
-    phone: "", avatar: "", firstname: "", lastname: "",
-    carModel: "", carColor: "", carNumber: "", bookedSeats: 0
+    phone: "", avatar: "",
+    firstname: "", lastname: "", name: "",
+    oq: "", car: "",
+    carModel: "", carColor: "", carNumber: "",
+    bookedSeats: 0
   };
 
   const u = snap.val();
@@ -121,6 +129,9 @@ async function getUserInfo(userId) {
     avatar: u.avatar || "",
     firstname: u.firstname || "",
     lastname: u.lastname || "",
+    name: u.name || "",
+    oq: u.oq || "",
+    car: u.car || "",
     carModel: u.carModel || "",
     carColor: u.carColor || "",
     carNumber: u.carNumber || "",
@@ -129,7 +140,7 @@ async function getUserInfo(userId) {
 }
 
 // ===============================
-// AUTH CHECK
+// AUTH
 // ===============================
 onAuthStateChanged(auth, (user) => {
   if (!user) { window.location.href = "login.html"; return; }
@@ -198,7 +209,8 @@ async function renderAds(ads) {
     if (regionFilter && a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
 
     const hay = [
-      a.fromRegion, a.fromDistrict, a.toRegion, a.toDistrict,
+      a.fromRegion, a.fromDistrict,
+      a.toRegion, a.toDistrict,
       a.comment, a.price, a.type
     ].join(" ").toLowerCase();
 
@@ -215,7 +227,7 @@ async function renderAds(ads) {
 }
 
 // ===============================
-// CREATE AD CARD (mini)
+// MINI CARD (NO NAME)
 // ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
@@ -225,7 +237,7 @@ async function createAdCard(ad) {
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
+  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: true });
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
@@ -246,8 +258,13 @@ async function createAdCard(ad) {
 
       <div class="ad-meta">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
-        ${ totalSeats !== null ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>` :
-          (requested !== null ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>` : "") }
+        ${
+          totalSeats !== null
+            ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
+            : requested !== null
+              ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
+              : ""
+        }
       </div>
     </div>
 
@@ -261,7 +278,7 @@ async function createAdCard(ad) {
 }
 
 // ===============================
-// MODAL (full) — TO‘G‘RILANGAN ISM!
+// FULL MODAL (FIXED NAME!)
 // ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
@@ -275,21 +292,26 @@ async function openAdModal(ad) {
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
+  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: false });
 
-  const fullname = `${u.firstname || ""} ${u.lastname || ""}`.trim() || "Foydalanuvchi";  // ✅ TUZATILDI!
-  const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
+  // 🔥 **FIXED FULLNAME**
+  const fullname =
+    (u.firstname || u.lastname)
+      ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
+      : u.name || "Foydalanuvchi";
+
+  const carFull = `${u.carModel || u.car || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
   const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
-
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
   modal.innerHTML = `
     <div class="ad-modal-box" role="dialog" aria-modal="true">
+
       <div class="modal-header">
         <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
@@ -313,8 +335,13 @@ async function openAdModal(ad) {
         <div class="modal-col">
           <div class="label">Joylar</div>
           <div class="value">
-            ${ totalSeats !== null ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})` :
-               (requested !== null ? `Talab: ${escapeHtml(String(requested))} odam` : "-") }
+            ${
+              totalSeats !== null
+                ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})`
+                : requested !== null
+                  ? `Talab: ${escapeHtml(String(requested))} odam`
+                  : "-"
+            }
           </div>
         </div>
         <div class="modal-col">
@@ -333,7 +360,7 @@ async function openAdModal(ad) {
         <div class="value">${escapeHtml(u.phone || "-")}</div>
       </div>
 
-      <div style="margin-top:12px; color:#88919a; font-size:13px;">
+      <div style="margin-top:12px;color:#88919a;font-size:13px;">
         Joylashtirilgan: ${escapeHtml(created)}
       </div>
 
@@ -353,7 +380,6 @@ window.closeAdModal = function () {
   if (modal) modal.style.display = "none";
 };
 
-// simple contact action
 window.onContact = (phone) => {
   if (!phone) return alert("Telefon raqami mavjud emas");
   window.location.href = `tel:${phone}`;
