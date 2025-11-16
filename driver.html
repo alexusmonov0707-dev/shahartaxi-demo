@@ -1,200 +1,165 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Haydovchi e’loni - ShaharTaxi</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShaharTaxi — E’lonlar</title>
+
   <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #ff8c00, #ffcc70);
-      margin: 0;
-      padding: 0;
-      color: #333;
+    :root{
+      --primary:#0069d9;
+      --muted:#6b7280;
+      --card:#fff;
+      --bg:#f2f4f8;
+      --chip-bg:#eef4ff;
     }
-    main {
-      max-width: 500px;
-      margin: 3rem auto;
-      background: #fff;
-      border-radius: 16px;
-      padding: 2rem;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-    }
-    input, select, button {
-      width: 100%;
-      margin-bottom: 1rem;
-      padding: 0.8rem;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-    button {
-      background: #ff8c00;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    button:hover {
-      background: #e67300;
-    }
-    h2 {
-      text-align: center;
-      color: #ff8c00;
-    }
-    .ad-user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-}
 
-.ad-user img {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e3e7ef;
-}
+    body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:#111; }
 
-.ad-user-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
-}
+    .topbar {
+      background:var(--primary); color:#fff; padding:14px 20px; font-size:20px;
+      display:flex; justify-content:space-between; align-items:center;
+    }
+    .logout {
+      background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
+      color:#fff; cursor:pointer; font-size:15px;
+    }
+
+    .container { max-width:980px; margin:20px auto; padding:0 12px; }
+
+    .card {
+      background:var(--card); padding:18px; border-radius:12px;
+      box-shadow:0 6px 20px rgba(16,24,40,0.06);
+    }
+
+    .filters {
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      margin-bottom:18px;
+    }
+    .filters input, .filters select {
+      padding:10px;
+      border-radius:8px;
+      border:1px solid #d1d5db;
+      min-width:150px;
+      font-size:14px;
+    }
+
+    /* AD CARD (mini) */
+    .ad-card {
+      display:flex; gap:14px; align-items:flex-start;
+      background:var(--card); padding:14px; border-radius:12px;
+      border:1px solid #eef2f7; margin-bottom:12px; position:relative;
+      transition:0.12s ease;
+      cursor:pointer;
+    }
+    .ad-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(16,24,40,0.04); }
+
+    .ad-avatar {
+      width:64px; height:64px; border-radius:12px; object-fit:cover;
+      flex-shrink:0; background:#eee;
+    }
+
+    .ad-main { flex:1; min-width:0; }
+
+    /* car model moved below route and smaller */
+    .ad-car {
+      font-size:13px; color:var(--muted); margin-top:6px;
+    }
+
+    .ad-route {
+      font-size:15px; color:#111; margin-bottom:6px; font-weight:600;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+
+    .ad-meta {
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      color:var(--muted); font-size:13px;
+      margin-top:6px;
+    }
+
+    .ad-chip {
+      background:var(--chip-bg); padding:6px 8px; border-radius:8px;
+      font-size:13px; color:#0b3a66; display:inline-flex; align-items:center; gap:6px;
+    }
+
+    /* Price on right */
+    .ad-price {
+      margin-left:auto; align-self:center;
+      font-weight:700; font-size:15px;
+      background:var(--chip-bg); padding:8px 12px; border-radius:10px;
+      color:#032b57;
+    }
+
+    /* createdAt small bottom-right (compact: day month, time) */
+    .ad-created {
+      position:absolute; right:12px; bottom:8px;
+      font-size:12px; color:#9aa3b2;
+    }
+
+    /* MODAL */
+    #adFullModal {
+      position:fixed; inset:0; display:none; justify-content:center; align-items:center;
+      background:rgba(0,0,0,0.55); z-index:99999; padding:18px;
+    }
+    .ad-modal-box {
+      background:var(--card); width:100%; max-width:540px; border-radius:14px; padding:18px;
+      box-shadow:0 20px 60px rgba(2,6,23,0.2);
+    }
+    .modal-header { display:flex; gap:14px; align-items:center; margin-bottom:8px; }
+    .modal-avatar { width:84px; height:84px; border-radius:12px; object-fit:cover; }
+    .modal-name { font-size:18px; font-weight:700; color:#0b3a66; }
+    .modal-car { font-size:14px; color:var(--muted); margin-top:4px; }
+
+    .modal-row { display:flex; gap:12px; margin-top:12px; flex-wrap:wrap; }
+    .modal-col { flex:1; min-width:160px; }
+
+    .label { font-weight:600; color:#334155; margin-bottom:6px; font-size:13px; }
+    .value { color:#0b1720; font-size:15px; }
+
+    .modal-actions { display:flex; gap:10px; margin-top:14px; }
+    .btn-primary { flex:1; padding:12px; background:var(--primary); color:#fff; border-radius:10px; border:none; cursor:pointer; font-weight:600; }
+    .btn-ghost { flex:1; padding:12px; border-radius:10px; border:1px solid #e6eefc; background:#fff; cursor:pointer; }
+
+    /* Responsive */
+    @media (max-width:520px){
+      .ad-route{ font-size:14px; }
+      .ad-avatar{ width:56px; height:56px; }
+      .ad-created{ right:8px; bottom:6px; font-size:11px; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <h2>🚗 Haydovchi e’loni joylash</h2>
 
-    <!-- Qayerdan -->
-    <select id="fromRegion" onchange="updateDistricts('from')">
-      <option value="">Viloyat (qayerdan)</option>
-    </select>
-    <select id="fromDistrict">
-      <option value="">Tuman (qayerdan)</option>
-    </select>
+  <div class="topbar">
+    <div>ShaharTaxi — E’lonlar</div>
+    <button class="logout" onclick="logout()">Chiqish</button>
+  </div>
 
-    <!-- Qayerga -->
-    <select id="toRegion" onchange="updateDistricts('to')">
-      <option value="">Viloyat (qayerga)</option>
-    </select>
-    <select id="toDistrict">
-      <option value="">Tuman (qayerga)</option>
-    </select>
+  <div class="container">
+    <div class="card">
+      <h2 style="margin:0 0 12px 0; color:var(--primary); text-align:center;">Barcha e’lonlar</h2>
 
-    <input id="driver" placeholder="Haydovchi ismi" />
-    <input id="phone" placeholder="Telefon raqamingiz" />
-    <input id="price" placeholder="Yo‘l haqi (so‘m)" />
+      <div class="filters">
+        <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
 
-    <button onclick="saveDriverAd()">E’lonni joylash</button>
+        <select id="filterRole">
+          <option value="">Hammasi</option>
+          <option value="Haydovchi">Haydovchi</option>
+          <option value="Yo‘lovchi">Yo‘lovchi</option>
+        </select>
 
-    <p id="msg" style="color:green;text-align:center;"></p>
-  </main>
+        <select id="filterRegion">
+          <option value="">Viloyat (filter)</option>
+        </select>
+      </div>
+
+      <div id="adsList">Yuklanmoqda...</div>
+    </div>
+  </div>
+
+  <div id="adFullModal"></div>
 
   <script src="regions.js"></script>
-  <script>
-    // ✅ Viloyatlar ro‘yxatini yuklash
-    function loadRegions() {
-      const selects = ["fromRegion", "toRegion"];
-      selects.forEach(id => {
-        const select = document.getElementById(id);
-        Object.keys(regions).forEach(region => {
-          const opt = document.createElement("option");
-          opt.value = region;
-          opt.textContent = region;
-          select.appendChild(opt);
-        });
-      });
-    }
-
-    // ✅ Tanlangan viloyatga qarab tumanlarni yangilash
-    function updateDistricts(type) {
-      const regionSelect = document.getElementById(type + "Region");
-      const districtSelect = document.getElementById(type + "District");
-      const selectedRegion = regionSelect.value;
-
-      districtSelect.innerHTML = "<option value=''>Tuman</option>";
-      if (regions[selectedRegion]) {
-        regions[selectedRegion].forEach(d => {
-          const opt = document.createElement("option");
-          opt.value = d;
-          opt.textContent = d;
-          districtSelect.appendChild(opt);
-        });
-      }
-    }
-
-    // ✅ Login bo‘lmagan foydalanuvchini qaytarish
-    function requireLoginOrRedirect() {
-      const user = JSON.parse(localStorage.getItem('currentUser'));
-      if (!user || !user.phone) {
-        alert('E’lon joylash uchun avval tizimga kiring.');
-        window.location.href = 'login.html';
-        return null;
-      }
-      return user;
-    }
-
-    // ✅ Sahifa yuklanganda login foydalanuvchi raqamini o‘rnatish
-    window.onload = () => {
-      loadRegions();
-      const user = requireLoginOrRedirect();
-      if (!user) return;
-      const phoneInput = document.getElementById('phone');
-      if (phoneInput) {
-        phoneInput.value = user.phone;
-        phoneInput.readOnly = true;
-        phoneInput.style.background = '#f1f1f1';
-      }
-    };
-
-    // ✅ Haydovchi e’lonini saqlash
-    function saveDriverAd() {
-      const user = JSON.parse(localStorage.getItem('currentUser'));
-      if (!user) { alert('Avval tizimga kiring.'); window.location.href='login.html'; return; }
-
-      const ad = {
-        id: 'drv-' + Date.now(),
-        type: "driver",
-        ownerPhone: user.phone,
-        fromRegion: document.getElementById('fromRegion').value,
-        fromDistrict: document.getElementById('fromDistrict').value,
-        toRegion: document.getElementById('toRegion').value,
-        toDistrict: document.getElementById('toDistrict').value,
-        driver: document.getElementById('driver').value.trim(),
-        phone: user.phone,
-        price: document.getElementById('price').value.trim(),
-        date: new Date().toLocaleString(),
-        status: "kutilyapti"
-      };
-
-      const from = `${ad.fromRegion}${ad.fromDistrict ? ' ' + ad.fromDistrict : ''}`;
-      const to = `${ad.toRegion}${ad.toDistrict ? ' ' + ad.toDistrict : ''}`;
-      ad.route = `${from} → ${to}`;
-
-      if (!ad.fromRegion || !ad.toRegion || !ad.driver || !ad.price) {
-        alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
-        return;
-      }
-
-      // ✅ Har ikki joyga yozish
-      const allAds = JSON.parse(localStorage.getItem('allAds')) || [];
-      allAds.push(ad);
-      localStorage.setItem('allAds', JSON.stringify(allAds));
-
-      const driverAds = JSON.parse(localStorage.getItem('driverAds')) || [];
-      driverAds.push(ad);
-      localStorage.setItem('driverAds', JSON.stringify(driverAds));
-
-      // ✅ Sinxron bo‘lishi uchun flag qo‘shamiz
-      localStorage.setItem('lastAdUpdated', Date.now());
-
-      document.getElementById('msg').innerText = "✅ E’lon muvaffaqiyatli joylandi!";
-      setTimeout(() => location.href = 'index.html', 1500);
-    }
-  </script>
+  <script type="module" src="index.js?v=9002"></script>
 </body>
 </html>
