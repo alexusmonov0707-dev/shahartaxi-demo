@@ -166,9 +166,10 @@ async function renderAds(ads) {
     return;
   }
 
-  for (const ad of filtered) {
-    list.appendChild(await createAdCard(ad));
-  }
+  // async card generation FIXED
+  const cards = await Promise.all(filtered.map(a => createAdCard(a)));
+
+  cards.forEach(card => list.appendChild(card));
 }
 
 
