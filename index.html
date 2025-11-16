@@ -61,18 +61,20 @@
 
     .ad-main { flex:1; min-width:0; }
 
+    /* car model moved below route and smaller */
     .ad-car {
-      font-size:14px; font-weight:600; color:#111; margin-bottom:4px;
+      font-size:13px; color:var(--muted); margin-top:6px;
     }
 
     .ad-route {
-      font-size:15px; color:#111; margin-bottom:8px; font-weight:500;
+      font-size:15px; color:#111; margin-bottom:6px; font-weight:600;
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
 
     .ad-meta {
       display:flex; gap:10px; flex-wrap:wrap; align-items:center;
       color:var(--muted); font-size:13px;
+      margin-top:6px;
     }
 
     .ad-chip {
@@ -88,7 +90,7 @@
       color:#032b57;
     }
 
-    /* createdAt small bottom-right */
+    /* createdAt small bottom-right (compact: day month, time) */
     .ad-created {
       position:absolute; right:12px; bottom:8px;
       font-size:12px; color:#9aa3b2;
@@ -158,6 +160,6 @@
   <div id="adFullModal"></div>
 
   <script src="regions.js"></script>
-  <script type="module" src="index.js?v=9001"></script>
+  <script type="module" src="index.js?v=9002"></script>
 </body>
 </html>
