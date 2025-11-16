@@ -32,36 +32,45 @@ const REGIONS = window.regionsData || {};
 function formatTime(val) {
   if (!val) return "—";
 
-  // CASE 1: Firebase timestamp number
+  // 1) If number (timestamp)
   if (typeof val === "number") {
-    val = new Date(val);
-  } 
+    const d = new Date(val);
+    return formatUzbek(d);
+  }
 
-  // CASE 2: Strange format: "2025 M11 20 18:48"
+  // 2) If special format: "2025 M11 20 18:48"
   if (typeof val === "string" && val.includes("M")) {
     const parts = val.split(" ");
     const year = parts[0];
-    const month = parts[1].replace("M","");
+    const month = parts[1].replace("M", "");
     const day = parts[2];
     const time = parts[3] || "00:00";
 
-    val = new Date(`${year}-${month}-${day}T${time}`);
+    const d = new Date(`${year}-${month}-${day}T${time}`);
+    return formatUzbek(d);
   }
 
+  // 3) If valid JS date string
   const d = new Date(val);
-  if (isNaN(d)) return val;
+  if (!isNaN(d)) return formatUzbek(d);
 
-  return d.toLocaleDateString("uz-UZ", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric"
-  }) + ", " + 
-  d.toLocaleTimeString("uz-UZ", {
+  return val; // fallback
+}
+
+function formatUzbek(date) {
+  const t = date.toLocaleTimeString("uz-UZ", {
     hour: "2-digit",
     minute: "2-digit"
   });
-}
 
+  const d = date.toLocaleDateString("uz-UZ", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric"
+  });
+
+  return `${d}, ${t}`;
+}
 
 
 // ===============================
