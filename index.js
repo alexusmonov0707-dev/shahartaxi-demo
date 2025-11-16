@@ -27,41 +27,46 @@ const REGIONS = window.regionsData || {};
 
 
 // ===============================
-// DATE FORMATTER
+// DATE FORMATTER — chiroyli ko‘rinish
 // ===============================
 function formatTime(val) {
   if (!val) return "—";
 
-  if (typeof val === "number") {
-    return new Date(val).toLocaleString("uz-UZ", {
-      year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit"
-    });
-  }
-
   const d = new Date(val);
-  if (!isNaN(d))
-    return d.toLocaleString("uz-UZ", {
-      year: "numeric", month: "short", day: "numeric",
-      hour: "2-digit", minute: "2-digit"
-    });
+  if (isNaN(d)) return val;
 
-  return val;
+  return d.toLocaleString("uz-UZ", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
 
 // ===============================
-// USER INFO (phone, avatar, name)
+// USER INFO (name, phone, avatar, car info)
 // ===============================
 async function getUserInfo(userId) {
   const snap = await get(ref(db, "users/" + userId));
-  if (!snap.exists()) return { phone: "", avatar: "", name: "" };
+  if (!snap.exists()) return {
+    phone: "",
+    avatar: "",
+    name: "",
+    carModel: "",
+    carColor: "",
+    carNumber: ""
+  };
 
   const u = snap.val();
   return {
     phone: u.phone || "",
     avatar: u.avatar || "",
-    name: (u.firstname || "") + " " + (u.lastname || "")
+    name: (u.firstname || "") + " " + (u.lastname || ""),
+    carModel: u.carModel || "",
+    carColor: u.carColor || "",
+    carNumber: u.carNumber || ""
   };
 }
 
@@ -91,7 +96,7 @@ function loadRegionsFilter() {
 
 
 // ===============================
-// LOAD ALL ADS
+// LOAD ALL ADS — BUG FIXED (full list now)
 // ===============================
 async function loadAllAds() {
   const snap = await get(ref(db, "ads"));
@@ -113,9 +118,9 @@ async function loadAllAds() {
 
 
 // ===============================
-// RENDER CARDS
+// MAIN RENDER
 // ===============================
-function renderAds(ads) {
+async function renderAds(ads) {
   const list = document.getElementById("adsList");
   list.innerHTML = "";
 
@@ -133,29 +138,44 @@ function renderAds(ads) {
     return;
   }
 
-  filtered.forEach(a => list.appendChild(createAdCard(a)));
+  for (const ad of filtered) list.appendChild(await createAdCard(ad));
 }
 
 
 // ===============================
-// CARD
+// CARD — avatar + full info qo‘shildi
 // ===============================
-function createAdCard(ad) {
+async function createAdCard(ad) {
+  const u = await getUserInfo(ad.userId);
   const div = document.createElement("div");
   div.className = "ad-card";
 
-  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const route =
+    `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ` +
+    `${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+
   const time = formatTime(ad.departureTime);
 
   div.innerHTML = `
-    <div class="ad-header">
-      <div class="ad-route">${escapeHtml(route)}</div>
-      <div class="ad-chip">${escapeHtml(ad.price || "-")} so‘m</div>
+    <div class="ad-left">
+      <img src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}" />
     </div>
 
-    <div class="ad-info">
-      <div><span class="icon">⏰</span>${escapeHtml(time)}</div>
-      ${ad.seatCount ? `<div><span class="icon">👥</span>${ad.seatCount} joy</div>` : ""}
+    <div class="ad-right">
+      
+      <div class="ad-header">
+        <div class="ad-type">${escapeHtml(u.name || "Foydalanuvchi")}</div>
+        <div class="ad-time">${escapeHtml(time)}</div>
+      </div>
+
+      <div class="ad-route">${escapeHtml(route)}</div>
+
+      <div class="ad-info">
+        <div class="ad-chip"><span class="icon">💰</span>${ad.price} so‘m</div>
+        ${ad.seatCount ? `<div class="ad-chip"><span class="icon">👥</span>${ad.seatCount} joy</div>` : ""}
+        ${u.carModel ? `<div class="ad-chip"><span class="icon">🚗</span>${u.carModel}</div>` : ""}
+      </div>
+
     </div>
   `;
 
@@ -183,7 +203,10 @@ async function openAdModal(ad) {
 
   const created = formatTime(ad.createdAt);
   const time = formatTime(ad.departureTime);
-  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+
+  const route =
+    `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ` +
+    `${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
 
   modal.innerHTML = `
     <div style="background:white;padding:20px;border-radius:14px;max-width:520px;width:92%">
@@ -191,7 +214,14 @@ async function openAdModal(ad) {
       <div style="display:flex;gap:14px;align-items:center;margin-bottom:12px">
         <img src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}"
              style="width:70px;height:70px;border-radius:12px;object-fit:cover;">
-        <div style="font-size:18px;font-weight:bold">${escapeHtml(u.name || "Foydalanuvchi")}</div>
+        <div>
+          <div style="font-size:18px;font-weight:bold">${escapeHtml(u.name)}</div>
+          <div style="color:#666;font-size:14px">
+            ${u.carModel ? u.carModel + " • " : ""} 
+            ${u.carColor ? u.carColor + " • " : ""}
+            ${u.carNumber || ""}
+          </div>
+        </div>
       </div>
 
       <p><b>Yo‘nalish:</b><br>${escapeHtml(route)}</p>
@@ -199,7 +229,7 @@ async function openAdModal(ad) {
       <p><b>Joy soni:</b> ${ad.seatCount || "-"}</p>
       <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
       <p><b>Izoh:</b><br>${escapeHtml(ad.comment || "-")}</p>
-      <p><b>Kontakt:</b> ${escapeHtml(u.phone || "-")}</p>
+      <p><b>Aloqa:</b> ${escapeHtml(u.phone || "-")}</p>
       <p style="color:#777;font-size:13px"><small>Joylangan: ${escapeHtml(created)}</small></p>
 
       <button onclick="closeAdModal()"
