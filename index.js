@@ -297,22 +297,13 @@ async function openAdModal(ad) {
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: false });
 
-  // === ROBUST FULLNAME computation (lots of fallbacks)
-  const fullname = (
-    // prefer firstname + lastname if any present
-    ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : null)
-    // then prefer combined 'name' or 'displayName'
-    || u.name
-    || u.displayName
-    // sometimes username or 'oq' field used
-    || u.username
-    || u.oq
-    // sometimes stored in car owner field or phone as last resort
-    || u.car
-    || u.phone
-    // final fallback
-    || "Foydalanuvchi"
-  );
+// OLD (agar shunday bo'lsa): may telefon chiqib qolgan
+// const fullname = (u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : u.name || u.displayName || u.username || u.oq || u.car || u.phone || "Foydalanuvchi";
+
+// NEW — telefon/kar/other fallbackni olib tashladik:
+const fullname = (u.firstname || u.lastname)
+  ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
+  : (u.name || u.displayName || u.username || u.oq) || "Foydalanuvchi";
 
   const carFull = `${u.carModel || u.car || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
