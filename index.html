@@ -5,297 +5,142 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShaharTaxi — E’lonlar</title>
 
-  <style>
-    body {
-      font-family: Inter, Arial, sans-serif;
-      margin: 0;
-      background: #f4f6fa;
-      color: #111;
-    }
+<style>
+:root{
+  --primary:#0069d9;
+  --muted:#6b7280;
+  --card:#fff;
+  --bg:#f2f4f8;
+  --chip-bg:#eef4ff;
+}
 
-    /* ===================== TOP BAR ===================== */
-    .topbar {
-      background: #0069d9;
-      color: #fff;
-      padding: 14px 20px;
-      font-size: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:#111; }
 
-    .logout {
-      background: #ff4444;
-      padding: 6px 14px;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 15px;
-      cursor: pointer;
-    }
+.topbar {
+  background:var(--primary); color:#fff; padding:14px 20px; font-size:20px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+.logout {
+  background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
+  color:#fff; cursor:pointer; font-size:15px;
+}
 
-    h2 {
-      text-align: center;
-      margin-top: 20px;
-      color: #0d47a1;
-    }
+.container { max-width:980px; margin:20px auto; padding:0 12px; }
 
-    /* ===================== FILTER AREA ===================== */
-    .filters {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      max-width: 1000px;
-      margin: 0 auto;
-      padding: 10px 20px;
-    }
+.card {
+  background:var(--card); padding:18px; border-radius:12px;
+  box-shadow:0 6px 20px rgba(16,24,40,0.06);
+}
 
-    .filter-group {
-      background: #fff;
-      padding: 18px;
-      border-radius: 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.07);
-    }
+.filters { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+.filters input, .filters select {
+  padding:10px; border-radius:8px; border:1px solid #d1d5db; min-width:150px; font-size:14px;
+}
 
-    .filter-row {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 10px;
-    }
+.filter-block{
+  background:white; padding:12px; border-radius:10px; margin-top:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.05);
+}
 
-    .filter-row label {
-      font-weight: 600;
-      margin-right: 10px;
-    }
+.district-box { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.district-item { background:#f3f4f6; padding:6px 10px; border-radius:8px; }
 
-    select, input {
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      font-size: 15px;
-    }
+.ad-card {
+  display:flex; gap:14px; align-items:flex-start;
+  background:var(--card); padding:14px; border-radius:12px;
+  border:1px solid #eef2f7; margin-bottom:12px; position:relative;
+  transition:0.12s ease; cursor:pointer;
+}
+.ad-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(16,24,40,0.04); }
 
-    /* District checkbox grid */
-    .district-box {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 8px;
-      margin-top: 10px;
-    }
+.ad-avatar {
+  width:64px; height:64px; border-radius:12px; object-fit:cover;
+}
 
-    .district-item {
-      background: #eef3ff;
-      padding: 6px 8px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 14px;
-    }
+.ad-main { flex:1; }
 
-    /* ===================== CARDS ===================== */
-    #adsList {
-      max-width: 1000px;
-      margin: 20px auto;
-    }
+.ad-route { font-size:15px; font-weight:600; margin-bottom:6px; }
+.ad-meta { display:flex; gap:10px; flex-wrap:wrap; font-size:13px; color:var(--muted); }
+.ad-chip { background:var(--chip-bg); padding:6px 8px; border-radius:8px; font-size:13px; }
 
-    .ad-card {
-      background: #fff;
-      border-radius: 14px;
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      margin-bottom: 14px;
-      gap: 18px;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.06);
-      transition: 0.15s;
-    }
+.ad-price {
+  margin-left:auto; align-self:center; font-weight:700; font-size:16px;
+  background:var(--chip-bg); padding:8px 12px; border-radius:10px;
+}
 
-    .ad-card:hover {
-      transform: scale(1.01);
-    }
+.ad-created {
+  position:absolute; right:14px; bottom:8px;
+  font-size:12px; color:#9aa3b2;
+}
 
-    .ad-avatar {
-      width: 62px;
-      height: 62px;
-      border-radius: 10px;
-      object-fit: cover;
-    }
+/* MODAL */
+#adFullModal {
+  position:fixed; inset:0; display:none; justify-content:center; align-items:center;
+  background:rgba(0,0,0,0.55); z-index:99999; padding:18px;
+}
+.ad-modal-box{
+  background:white; border-radius:14px; padding:20px; width:100%; max-width:600px;
+}
+.modal-header { display:flex; gap:15px; margin-bottom:10px; }
+.modal-avatar { width:84px; height:84px; border-radius:12px; object-fit:cover; }
+.modal-row { display:flex; gap:14px; margin-top:12px; }
+.modal-col { flex:1; }
+.label { font-weight:600; color:#334155; font-size:13px; margin-bottom:4px; }
+.value { font-size:15px; }
 
-    .ad-main {
-      flex: 1;
-    }
-
-    .ad-route {
-      font-size: 17px;
-      font-weight: 600;
-      margin-bottom: 5px;
-    }
-
-    .ad-meta { display: flex; gap: 10px; margin-top: 5px; }
-    .ad-chip {
-      background: #eef4ff;
-      padding: 4px 10px;
-      border-radius: 8px;
-      font-size: 13px;
-    }
-
-    .ad-price {
-      font-size: 18px;
-      font-weight: bold;
-      white-space: nowrap;
-    }
-
-    .ad-created {
-      font-size: 13px;
-      color: #7c8799;
-      width: 120px;
-      text-align: right;
-    }
-
-    /* ===================== MODAL ===================== */
-    #adFullModal {
-      display: none;
-      position: fixed;
-      background: rgba(0,0,0,0.55);
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-      z-index: 99;
-    }
-
-    .ad-modal-box {
-      background: #fff;
-      padding: 24px;
-      border-radius: 14px;
-      width: 90%;
-      max-width: 750px;
-      animation: showModal 0.2s ease-out;
-    }
-
-    @keyframes showModal {
-      from { transform: scale(0.92); opacity: 0; }
-      to   { transform: scale(1); opacity: 1; }
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-
-    .modal-avatar {
-      width: 72px;
-      height: 72px;
-      border-radius: 12px;
-      object-fit: cover;
-    }
-
-    .modal-name {
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    .modal-row {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 14px;
-    }
-
-    .modal-col { width: 48%; }
-
-    .label { font-weight: 600; margin-bottom: 4px; }
-    .value { color: #1a1a1a; }
-
-    .modal-actions {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 22px;
-    }
-
-    .btn-primary {
-      background: #0069d9;
-      color: #fff;
-      padding: 10px 22px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    .btn-ghost {
-      background: #f1f1f1;
-      padding: 10px 22px;
-      border-radius: 10px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-  </style>
+.modal-actions { display:flex; gap:10px; margin-top:14px; }
+.btn-primary { flex:1; padding:12px; border:none; background:var(--primary); color:white; border-radius:10px; }
+.btn-ghost { flex:1; padding:12px; border:1px solid #e6eefc; border-radius:10px; }
+</style>
 </head>
 
 <body>
 
-  <div class="topbar">
-    <span>ShaharTaxi — E’lonlar</span>
-    <button class="logout" onclick="logout()">Chiqish</button>
-  </div>
+<div class="topbar">
+  <div>ShaharTaxi — E’lonlar</div>
+  <button class="logout" onclick="logout()">Chiqish</button>
+</div>
 
-  <h2>Barcha e’lonlar</h2>
+<div class="container">
+  <div class="card">
+    <h2 style="text-align:center; color:var(--primary); margin:0 0 12px 0;">Barcha e’lonlar</h2>
 
-  <!-- ===================== FILTER ZONE ===================== -->
-  <div class="filters">
+    <div class="filters">
+      <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
 
-    <!-- Search + Role + Region -->
-    <div class="filter-group">
-      <div class="filter-row">
-        <input id="search" type="text" placeholder="Qidiruv (manzil, izoh, narx)..." />
+      <select id="filterRole">
+        <option value="">Hammasi</option>
+        <option value="Haydovchi">Haydovchi</option>
+        <option value="Yo‘lovchi">Yo‘lovchi</option>
+      </select>
 
-        <select id="filterRole">
-          <option value="">Hammmasi</option>
-          <option value="Haydovchi">Haydovchi</option>
-          <option value="Yo‘lovchi">Yo‘lovchi</option>
-        </select>
-
-        <select id="filterRegion">
-          <option value="">Viloyat (filter)</option>
-        </select>
-      </div>
+      <select id="filterRegion">
+        <option value="">Viloyat (filter)</option>
+      </select>
     </div>
 
-    <!-- FROM REGION -->
-    <div class="filter-group">
-      <div class="filter-row">
-        <label>Qayerdan:</label>
-        <select id="fromRegion"></select>
-      </div>
+    <!-- Qayerdan -->
+    <div class="filter-block">
+      <label><b>Qayerdan:</b></label><br>
+      <select id="fromRegion"><option value="">Viloyat</option></select>
       <div id="fromDistrictBox" class="district-box"></div>
     </div>
 
-    <!-- TO REGION -->
-    <div class="filter-group">
-      <div class="filter-row">
-        <label>Qayerga:</label>
-        <select id="toRegion"></select>
-      </div>
+    <!-- Qayerga -->
+    <div class="filter-block">
+      <label><b>Qayerga:</b></label><br>
+      <select id="toRegion"><option value="">Viloyat</option></select>
       <div id="toDistrictBox" class="district-box"></div>
     </div>
 
+    <div id="adsList">Yuklanmoqda...</div>
   </div>
+</div>
 
-  <!-- ===================== ADS LIST ===================== -->
-  <div id="adsList"></div>
+<div id="adFullModal"></div>
 
-  <!-- ===================== MODAL ===================== -->
-  <div id="adFullModal"></div>
-
-  <!-- ===================== JS ===================== -->
-  <script type="module" src="index.js"></script>
+<script src="regions.js"></script>
+<script type="module" src="index.js?v=final"></script>
 
 </body>
 </html>
