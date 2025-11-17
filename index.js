@@ -259,37 +259,30 @@ function fillToDistricts() {
 // ===============================
 // LOAD ALL ADS
 // ===============================
-async function loadAllAds() {
-  const list = document.getElementById("adsList");
+import { onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  const snap = await get(ref(db, "ads"));
-  if (!snap.exists()) {
-    list.innerHTML = "E’lon yo‘q.";
-    ALL_ADS = [];
-    return;
-  }
+function loadAllAds() {
+  const listRef = ref(db, "ads");
 
-  const arr = [];
+  onValue(listRef, (snap) => {
+    if (!snap.exists()) {
+      ALL_ADS = [];
+      renderAds([]);
+      return;
+    }
 
-  snap.forEach(c => {
-    const v = c.val();
-    arr.push({
-      id: c.key,
-      ...v,
-      typeNormalized: normalizeType(v.type)
+    const arr = [];
+    snap.forEach((c) => {
+      arr.push({
+        id: c.key,
+        ...c.val(),
+        typeNormalized: normalizeType(c.val().type)
+      });
     });
+
+    ALL_ADS = arr;
+    renderAds(ALL_ADS);
   });
-
-  ALL_ADS = arr;
-
-  document.getElementById("search").oninput = () => renderAds(ALL_ADS);
-  document.getElementById("filterRole").onchange = () => renderAds(ALL_ADS);
-  document.getElementById("sortBy").onchange = () => renderAds(ALL_ADS);
-  document.getElementById("filterDate").onchange = () => renderAds(ALL_ADS);
-  document.getElementById("priceMin").oninput = () => renderAds(ALL_ADS);
-  document.getElementById("priceMax").oninput = () => renderAds(ALL_ADS);
-
-  renderAds(ALL_ADS);
 }
 
 
@@ -365,14 +358,16 @@ async function renderAds(ads) {
 // === PRICE EXTRACT (FIX) ===
 const adPrice = a.price ? Number(a.price) : NaN;
 
-const priceMin = Number(document.getElementById("priceMin").value || 0);
-const priceMax = Number(document.getElementById("priceMax").value || 0);
+const priceMinInput = document.getElementById("priceMin").value.trim();
+const priceMaxInput = document.getElementById("priceMax").value.trim();
 
-const isPriceMinSet = document.getElementById("priceMin").value !== "";
-const isPriceMaxSet = document.getElementById("priceMax").value !== "";
+const isPriceMinSet = priceMinInput !== "";
+const isPriceMaxSet = priceMaxInput !== "";
 
-if (isPriceMinSet && isNaN(adPrice)) return false;
-if (isPriceMaxSet && isNaN(adPrice)) return false;
+const priceMin = isPriceMinSet ? Number(priceMinInput) : null;
+const priceMax = isPriceMaxSet ? Number(priceMaxInput) : null;
+
+const adPrice = a.price ? Number(a.price) : NaN;
 
 if (isPriceMinSet && adPrice < priceMin) return false;
 if (isPriceMaxSet && adPrice > priceMax) return false;
