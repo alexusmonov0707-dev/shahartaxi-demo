@@ -1,4 +1,5 @@
 // index.js (to'liq)
+const USER_CACHE = {}; // userId → userInfo
 // ===============================
 //  FIREBASE INIT
 // ===============================
@@ -100,31 +101,40 @@ async function getUserInfo(userId) {
     carModel: "", carColor: "", carNumber: "", seatCount: 0
   };
 
+  // CACHE BORMI?
+  if (USER_CACHE[userId]) {
+    return USER_CACHE[userId];
+  }
+
   try {
     const snap = await get(ref(db, "users/" + userId));
     if (!snap.exists()) {
-      return {
+      USER_CACHE[userId] = {
         phone: "", avatar: "", fullName: "", role: "",
         carModel: "", carColor: "", carNumber: "", seatCount: 0
       };
+      return USER_CACHE[userId];
     }
+
     const u = snap.val();
-    return {
+    const info = {
       phone: u.phone || u.telephone || "",
       avatar: u.avatar || "",
-      fullName:
-        u.fullName ||
+      fullName: u.fullName ||
         ((u.firstname || u.lastname)
           ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
-          : "") ||
-        u.name ||
-        "",
+          : "") || u.name || "",
       role: (u.role || u.userRole || "").toString(),
       carModel: u.carModel || u.car || "",
       carColor: u.carColor || "",
       carNumber: u.carNumber || u.plate || "",
       seatCount: u.seatCount || u.seats || 0
     };
+
+    USER_CACHE[userId] = info; // CACHEGA SAQLAYMIZ
+
+    return info;
+
   } catch (err) {
     console.error("getUserInfo error:", err);
     return {
@@ -133,6 +143,7 @@ async function getUserInfo(userId) {
     };
   }
 }
+
 
 let ALL_ADS = [];
 let CURRENT_USER = null;
