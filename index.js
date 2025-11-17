@@ -494,7 +494,13 @@ async function createAdCard(ad) {
         }
       </div>
     </div>
-
+// Yangi badge (so'nggi 24 soat ichida joylangan bo'lsa)
+let isNew = false;
+if (createdRaw) {
+  const createdDate = new Date(createdRaw);
+  const diffHours = (Date.now() - createdDate.getTime()) / (1000 * 60 * 60);
+  if (diffHours <= 24) isNew = true;
+}
     <div class="ad-price">💰 ${escapeHtml(ad.price || "-")} so‘m</div>
     <div class="ad-created">${escapeHtml(created)}</div>
   `;
