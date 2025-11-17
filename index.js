@@ -1,10 +1,10 @@
-// index.js (to'liq, professional, HTML: final variant bilan mos)
-// Import Firebase (ES modules)
+// ===============================
+//  FIREBASE INIT
+// ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// --- Firebase config (o'zingizniki bilan almashtiring agar kerak bo'lsa) ---
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -19,291 +19,194 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// --- Regions object (regions.js orqali globalga qo'yilgan) ---
+// ===============================
+// REGIONS DATA (from regions.js)
 const REGIONS = window.regionsData || window.regions || {};
+// ===============================
 
-// ----------------- Helper functions -----------------
-function escapeHtml(str) {
-  if (str === undefined || str === null) return "";
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-// Normalize type values to canonical "Haydovchi" / "Yo‘lovchi"
+// ===============================
+// TYPE NORMALIZATION
+// ===============================
 function normalizeType(t) {
   if (!t) return "";
   t = String(t).trim().toLowerCase();
-  t = t.replace(/[‘’`ʼ']/g, "'"); // unify apostrophes
+  t = t.replace(/[‘’`ʼ']/g, "'");
   if (t.includes("haydov")) return "Haydovchi";
   if (t.includes("yo") && t.includes("lov")) return "Yo‘lovchi";
-  if (t === "driver" || t === "haydovchi") return "Haydovchi";
-  if (t === "passenger" || t === "passenger" || t === "yolovchi") return "Yo‘lovchi";
+  if (t === "yo'lovchi") return "Yo‘lovchi";
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-// Datetime formatting: robust to various input formats
-function datetimeOptions() {
-  return { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" };
-}
-function formatTime(raw) {
-  if (!raw) return "—";
+// ===============================
+// UNIVERSAL DATE PARSER & FORMATTER
+// ===============================
+function formatTime(val) {
+  if (!val) return "—";
 
-  // If epoch number in ms
-  if (typeof raw === "number") {
-    const d = new Date(raw);
-    if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
-    return String(raw);
+  if (typeof val === "number") {
+    return new Date(val).toLocaleString("uz-UZ", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
 
-  let s = String(raw).trim();
+  if (typeof val === "string") {
+    if (!isNaN(Date.parse(val))) {
+      return new Date(val).toLocaleString("uz-UZ", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
 
-  // handle "2025 M11 17 14:36" style -> convert Mxx to -xx-
-  s = s.replace(/\bM(\d{1,2})\b/g, "-$1-");
-  // collapse multiple spaces
-  s = s.replace(/\s+/g, " ");
-
-  // try direct parse
-  let d = new Date(s);
-  if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
-
-  // try replace last space before time with 'T'
-  d = new Date(s.replace(/(\d{4}[-\d]*)\s+(\d{2}:\d{2})/, "$1T$2"));
-  if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
-
-  // fallback: return original trimmed string
-  return s;
-}
-
-// Fetch single user (phone, avatar, name, car) safely
-async function fetchUser(userId) {
-  if (!userId) return { phone: "", avatar: "", fullName: "", carModel: "", carNumber: "" };
-  try {
-    const snap = await get(ref(db, `users/${userId}`));
-    if (!snap.exists()) return { phone: "", avatar: "", fullName: "", carModel: "", carNumber: "" };
-    const v = snap.val();
-    return {
-      phone: v.phone || "",
-      avatar: v.avatar || "",
-      fullName: v.fullName || "",
-      carModel: v.carModel || "",
-      carNumber: v.carNumber || "",
-      seatCount: v.seatCount || ""
-    };
-  } catch (e) {
-    console.error("fetchUser error", e);
-    return { phone: "", avatar: "", fullName: "", carModel: "", carNumber: "" };
+    const fix = val.replace(" ", "T");
+    if (!isNaN(Date.parse(fix))) {
+      return new Date(fix).toLocaleString("uz-UZ", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
   }
+
+  return val;
 }
 
-// Batch fetch users (reduce DB calls)
-async function fetchUsersBatch(userIds) {
-  const map = {};
-  const unique = Array.from(new Set(userIds.filter(Boolean)));
-  await Promise.all(unique.map(async uid => {
-    map[uid] = await fetchUser(uid);
-  }));
-  return map;
+function formatReal(date, short = false) {
+  const datePart = date.toLocaleDateString("uz-UZ", {
+    day: "2-digit",
+    month: "long",
+    year: short ? undefined : "numeric"
+  });
+
+  const timePart = date.toLocaleTimeString("uz-UZ", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  if (short) {
+    const parts = datePart.split(" ");
+    if (parts.length && /\d{4}/.test(parts[parts.length - 1])) parts.pop();
+    return `${parts.join(" ")} , ${timePart}`.replace(/\s+,/, ",");
+  }
+
+  return `${datePart}, ${timePart}`;
 }
 
-// ----------------- UI helpers -----------------
-function el(id) { return document.getElementById(id); }
+// ===============================
+// GET USER INFO
+// ===============================
+async function getUserInfo(userId) {
+  if (!userId) return {
+    phone: "", avatar: "",
+    fullName: "",
+    carModel: "", carColor: "", carNumber: "",
+    seatCount: 0
+  };
 
-// Render regions into filter select
+  const snap = await get(ref(db, "users/" + userId));
+  if (!snap.exists()) return {
+    phone: "", avatar: "",
+    fullName: "",
+    carModel: "", carColor: "", carNumber: "",
+    seatCount: 0
+  };
+
+  const u = snap.val();
+  return {
+    phone: u.phone || "",
+    avatar: u.avatar || "",
+    fullName: u.fullName || "",
+    carModel: u.carModel || "",
+    carColor: u.carColor || "",
+    carNumber: u.carNumber || "",
+    seatCount: u.seatCount || 0
+  };
+}
+
+// ===============================
+// AUTH CHECK
+// ===============================
+onAuthStateChanged(auth, (user) => {
+  if (!user) { window.location.href = "login.html"; return; }
+  loadRegionsFilter();
+  loadAllAds();
+});
+
+// ===============================
+// LOAD REGION FILTER
+// ===============================
 function loadRegionsFilter() {
-  const filterRegion = el("filterRegion");
-  if (!filterRegion) return;
-  filterRegion.innerHTML = '<option value="">Viloyat (filter)</option>';
-  Object.keys(REGIONS).forEach(r => {
+  const el = document.getElementById("filterRegion");
+  if (!el) return;
+  el.innerHTML = '<option value="">Viloyat (filter)</option>';
+  Object.keys(REGIONS).forEach(region => {
     const opt = document.createElement("option");
-    opt.value = r;
-    opt.textContent = r;
-    filterRegion.appendChild(opt);
+    opt.value = region;
+    opt.textContent = region;
+    el.appendChild(opt);
   });
 }
 
-// Create ad card DOM (compact)
-function createAdCard(ad, userInfo) {
-  const div = document.createElement("div");
-  div.className = "ad-card";
-
-  const avatarSrc = userInfo?.avatar || ad.avatar || "https://i.ibb.co/2W0z7Lx/user.png";
-  const name = userInfo?.fullName || ad.userName || "";
-  const car = userInfo?.carModel || ad.carModel || "";
-  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-  const priceText = ad.price ? `${ad.price} so‘m` : "Narx ko‘rsatilmagan";
-  const seatText = ad.seatCount ? `${ad.seatCount} joy` : (ad.passengerCount ? `${ad.passengerCount} o‘rindiq` : "");
-  const timeText = formatTime(ad.departureTime || ad.startTime || ad.startAt || ad.createdAt);
-
-  // card inner HTML
-  div.innerHTML = `
-    <img class="ad-avatar" src="${escapeHtml(avatarSrc)}" alt="avatar" onerror="this.src='https://i.ibb.co/2W0z7Lx/user.png'"/>
-    <div class="ad-main">
-      <div class="ad-route">${escapeHtml(route)}</div>
-      <div class="ad-car">${escapeHtml(car)}</div>
-      <div class="ad-meta">
-        <div class="ad-chip"><span class="icon">⏰</span> ${escapeHtml(timeText)}</div>
-        ${seatText ? `<div class="ad-chip"><span class="icon">👥</span> ${escapeHtml(seatText)}</div>` : ""}
-        ${name ? `<div style="color:var(--muted)"><span class="icon">👤</span> ${escapeHtml(name)}</div>` : ""}
-      </div>
-    </div>
-    <div class="ad-price">${escapeHtml(priceText)}</div>
-    <div class="ad-created">${escapeHtml(formatTime(ad.createdAt || ad.created || ""))}</div>
-  `;
-
-  // click -> full modal
-  div.addEventListener("click", () => openAdModal(ad, userInfo));
-  return div;
-}
-
-// Full modal (detailed)
-function openAdModal(ad, userInfo) {
-  let modal = el("adFullModal");
-  if (!modal) return;
-
-  // build modal content
-  const avatarSrc = userInfo?.avatar || ad.avatar || "https://i.ibb.co/2W0z7Lx/user.png";
-  const name = userInfo?.fullName || ad.userName || "-";
-  const carModel = userInfo?.carModel || ad.carModel || "-";
-  const carNumber = userInfo?.carNumber || ad.carNumber || "-";
-  const seats = ad.seatCount || ad.passengerCount || userInfo?.seatCount || "-";
-  const contact = userInfo?.phone || ad.ownerPhone || ad.phone || "-";
-  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ', ' + ad.fromDistrict : ''} → ${ad.toRegion || ""}${ad.toDistrict ? ', ' + ad.toDistrict : ''}`;
-  const departure = formatTime(ad.departureTime || ad.startTime || ad.startAt || "");
-  const created = formatTime(ad.createdAt || ad.created || "");
-
-  modal.innerHTML = `
-    <div class="ad-modal-box" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <img class="modal-avatar" src="${escapeHtml(avatarSrc)}" onerror="this.src='https://i.ibb.co/2W0z7Lx/user.png'"/>
-        <div>
-          <div class="modal-name">${escapeHtml(name)}</div>
-          <div class="modal-car">${escapeHtml(carModel)} ${carNumber ? ' • ' + escapeHtml(carNumber) : ''}</div>
-        </div>
-      </div>
-
-      <div style="margin-top:6px;">
-        <div class="label">Yo'nalish</div>
-        <div class="value">${escapeHtml(route)}</div>
-
-        <div class="modal-row">
-          <div class="modal-col">
-            <div class="label">Jo'nash vaqti</div>
-            <div class="value">${escapeHtml(departure)}</div>
-          </div>
-          <div class="modal-col">
-            <div class="label">Narx</div>
-            <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
-          </div>
-        </div>
-
-        <div style="margin-top:10px;">
-          <div class="label">Qo'shimcha</div>
-          <div class="value">${escapeHtml(ad.comment || "-")}</div>
-        </div>
-
-        <div class="modal-row" style="margin-top:10px">
-          <div class="modal-col">
-            <div class="label">Kontakt</div>
-            <div class="value">${escapeHtml(contact)}</div>
-          </div>
-          <div class="modal-col">
-            <div class="label">O'rindiqlar</div>
-            <div class="value">${escapeHtml(seats || "-")}</div>
-          </div>
-        </div>
-
-        <div style="margin-top:10px;color:var(--muted);font-size:13px">
-          Joylashtirilgan: ${escapeHtml(created)}
-        </div>
-
-        <div class="modal-actions">
-          <button id="closeAdBtn" class="btn-ghost">Yopish</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  modal.style.display = "flex";
-  const closeBtn = el("closeAdBtn");
-  if (closeBtn) closeBtn.onclick = () => { modal.style.display = "none"; };
-  // clicking outside closes
-  modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
-}
-
-// ----------------- Main: load ads & render -----------------
+// ===============================
+// LOAD ALL ADS
+// ===============================
 async function loadAllAds() {
-  try {
-    const snap = await get(ref(db, "ads"));
-    const list = el("adsList");
-    if (!list) return;
-    list.innerHTML = "";
+  const snap = await get(ref(db, "ads"));
+  const list = document.getElementById("adsList");
 
-    if (!snap.exists()) {
-      list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-      return;
-    }
-
-    // collect ads and userIds to batch fetch
-    const ads = [];
-    const userIds = [];
-    snap.forEach(child => {
-      const v = child.val() || {};
-      const id = child.key;
-      const typeNorm = normalizeType(v.type || v.userType || v.role || "");
-      const a = { id, ...v, typeNormalized: typeNorm };
-      ads.push(a);
-      if (a.userId) userIds.push(a.userId);
-    });
-
-    // batch fetch users
-    const usersMap = await fetchUsersBatch(userIds);
-
-    // wire up filter events
-    const searchEl = el("search");
-    const roleEl = el("filterRole");
-    const regionEl = el("filterRegion");
-    if (searchEl) searchEl.oninput = () => renderAds(ads, usersMap);
-    if (roleEl) roleEl.onchange = () => renderAds(ads, usersMap);
-    if (regionEl) regionEl.onchange = () => renderAds(ads, usersMap);
-
-    // initial render
-    renderAds(ads, usersMap);
-
-  } catch (err) {
-    console.error("loadAllAds error", err);
-    const list = el("adsList");
-    if (list) list.innerHTML = "<p>Xatolik yuz berdi. Konsolni tekshiring.</p>";
+  if (!snap.exists()) {
+    if (list) list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+    return;
   }
+
+  const ads = [];
+  snap.forEach(child => {
+    const v = child.val();
+    ads.push({
+      id: child.key,
+      ...v,
+      typeNormalized: normalizeType(v.type)
+    });
+  });
+
+  document.getElementById("search").oninput = () => renderAds(ads);
+  document.getElementById("filterRole").onchange = () => renderAds(ads);
+  document.getElementById("filterRegion").onchange = () => renderAds(ads);
+
+  renderAds(ads);
 }
 
-// render with filters
-function renderAds(ads, usersMap = {}) {
-  const list = el("adsList");
+// ===============================
+// RENDER ADS
+// ===============================
+async function renderAds(ads) {
+  const list = document.getElementById("adsList");
   if (!list) return;
   list.innerHTML = "";
 
-  const q = (el("search")?.value || "").toLowerCase().trim();
-  const roleFilterRaw = el("filterRole")?.value || "";
-  const regionFilter = el("filterRegion")?.value || "";
-  const roleFilter = normalizeType(roleFilterRaw);
+  const q = (document.getElementById("search")?.value || "").toLowerCase();
+  const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
+  const regionFilter = document.getElementById("filterRegion")?.value || "";
 
   const filtered = ads.filter(a => {
     if (roleFilter && a.typeNormalized !== roleFilter) return false;
-    if (regionFilter) {
-      if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
-    }
-    if (q) {
-      const hay = [
-        a.fromRegion, a.fromDistrict, a.toRegion, a.toDistrict,
-        a.comment, a.price, a.type, a.typeNormalized, usersMap[a.userId]?.fullName
-      ].map(x => (x || "").toString().toLowerCase()).join(" ");
-      if (!hay.includes(q)) return false;
-    }
-    return true;
+    if (regionFilter && a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
+
+    const hay = [
+      a.fromRegion, a.fromDistrict,
+      a.toRegion, a.toDistrict,
+      a.comment, a.price, a.type
+    ].join(" ").toLowerCase();
+
+    return hay.includes(q);
   });
 
   if (!filtered.length) {
@@ -311,28 +214,184 @@ function renderAds(ads, usersMap = {}) {
     return;
   }
 
-  // show all (no pagination) — user wanted full listing
-  filtered.forEach(ad => {
-    const userInfo = usersMap[ad.userId] || {};
-    const card = createAdCard(ad, userInfo);
-    list.appendChild(card);
-  });
+  const cards = await Promise.all(filtered.map(a => createAdCard(a)));
+  cards.forEach(card => list.appendChild(card));
 }
 
-// ----------------- Auth state and init -----------------
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
+// ===============================
+// MINI CARD (NO NAME)
+// ===============================
+async function createAdCard(ad) {
+  const u = await getUserInfo(ad.userId);
+
+  const div = document.createElement("div");
+  div.className = "ad-card";
+
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
+  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: true });
+
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
+  const booked = Number(ad.bookedSeats || 0);
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
+
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
+
+  const carModel = u.carModel || "";
+
+  div.innerHTML = `
+    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
+
+    <div class="ad-main">
+      <div class="ad-route">${escapeHtml(route)}</div>
+      <div class="ad-car">${escapeHtml(carModel)}</div>
+
+      <div class="ad-meta">
+        <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
+        ${
+          totalSeats !== null
+            ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
+            : requested !== null
+              ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
+              : ""
+        }
+      </div>
+    </div>
+
+    <div class="ad-price">💰 ${escapeHtml(ad.price ? String(ad.price) : "-")} so‘m</div>
+
+    <div class="ad-created">${escapeHtml(created)}</div>
+  `;
+
+  div.onclick = () => openAdModal(ad);
+  return div;
+}
+
+// ===============================
+// FULL MODAL (correct fullName)
+// ===============================
+async function openAdModal(ad) {
+  let modal = document.getElementById("adFullModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "adFullModal";
+    document.body.appendChild(modal);
   }
-  // init UI
-  loadRegionsFilter();
-  loadAllAds();
-});
 
-// logout binding (used in HTML topbar)
-window.logout = () => signOut(auth).catch(e => console.error("logout err", e));
+  const u = await getUserInfo(ad.userId);
 
-// Export openAdModal to global scope for other scripts (if needed)
-window.openAdModal = openAdModal;
-window.closeAdModal = () => { const m = el("adFullModal"); if (m) m.style.display = "none"; };
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
+  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: false });
+
+  const fullname = u.fullName || "Foydalanuvchi";
+
+  const carFull =
+    `${u.carModel || ""}` +
+    `${u.carColor ? " • " + u.carColor : ""}` +
+    `${u.carNumber ? " • " + u.carNumber : ""}`;
+
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
+  const booked = Number(ad.bookedSeats || 0);
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
+
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
+
+  modal.innerHTML = `
+    <div class="ad-modal-box" role="dialog" aria-modal="true">
+
+      <div class="modal-header">
+        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
+        <div>
+          <div class="modal-name">${escapeHtml(fullname)}</div>
+          <div class="modal-car">${escapeHtml(carFull)}</div>
+        </div>
+      </div>
+
+      <div class="modal-row">
+        <div class="modal-col">
+          <div class="label">Yo‘nalish</div>
+          <div class="value">${escapeHtml(route)}</div>
+        </div>
+        <div class="modal-col">
+          <div class="label">Jo‘nash vaqti</div>
+          <div class="value">${escapeHtml(depTime)}</div>
+        </div>
+      </div>
+
+      <div class="modal-row">
+        <div class="modal-col">
+          <div class="label">Joylar</div>
+          <div class="value">
+            ${
+              totalSeats !== null
+                ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})`
+                : requested !== null
+                  ? `Talab: ${escapeHtml(String(requested))} odam`
+                  : "-"
+            }
+          </div>
+        </div>
+        <div class="modal-col">
+          <div class="label">Narx</div>
+          <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="label">Izoh</div>
+        <div class="value">${escapeHtml(ad.comment || "-")}</div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="label">Kontakt</div>
+        <div class="value">${escapeHtml(u.phone || "-")}</div>
+      </div>
+
+      <div style="margin-top:12px;color:#88919a;font-size:13px;">
+        Joylashtirilgan: ${escapeHtml(created)}
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="closeAdModal()">Yopish</button>
+        <button class="btn-ghost" onclick="onContact('${escapeHtml(u.phone || "")}')">Qo'ng'iroq</button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = "flex";
+  modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
+}
+
+window.closeAdModal = function () {
+  const modal = document.getElementById("adFullModal");
+  if (modal) modal.style.display = "none";
+};
+
+window.onContact = (phone) => {
+  if (!phone) return alert("Telefon raqami mavjud emas");
+  window.location.href = `tel:${phone}`;
+};
+
+// ===============================
+// LOGOUT
+// ===============================
+window.logout = () => signOut(auth);
+
+// ===============================
+// HTML ESCAPE
+// ===============================
+function escapeHtml(str) {
+  if (str === 0) return "0";
+  if (!str && str !== 0) return "";
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
