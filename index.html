@@ -5,129 +5,151 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShaharTaxi — E’lonlar</title>
 
-  <style>
-    :root{
-      --primary:#0069d9;
-      --muted:#6b7280;
-      --card:#fff;
-      --bg:#f2f4f8;
-      --chip-bg:#eef4ff;
-    }
+<style>
+  :root{
+    --primary:#0069d9;
+    --muted:#6b7280;
+    --card:#fff;
+    --bg:#f2f4f8;
+    --chip-bg:#eef4ff;
+  }
 
-    body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:#111; }
+  body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:#111; }
 
-    .topbar {
-      background:var(--primary); color:#fff; padding:14px 20px; font-size:20px;
-      display:flex; justify-content:space-between; align-items:center;
-    }
-    .logout {
-      background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
-      color:#fff; cursor:pointer; font-size:15px;
-    }
+  .topbar {
+    background:var(--primary); color:#fff; padding:14px 20px; font-size:20px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .logout {
+    background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
+    color:#fff; cursor:pointer; font-size:15px;
+  }
 
-    .container { max-width:980px; margin:20px auto; padding:0 12px; }
+  .container { max-width:980px; margin:20px auto; padding:0 12px; }
 
-    .card {
-      background:var(--card); padding:18px; border-radius:12px;
-      box-shadow:0 6px 20px rgba(16,24,40,0.06);
-    }
+  .card {
+    background:var(--card); padding:18px; border-radius:12px;
+    box-shadow:0 6px 20px rgba(16,24,40,0.06);
+  }
 
-    .filters {
-      display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;
-      margin-bottom:18px;
-    }
-    .filters input, .filters select {
-      padding:10px;
-      border-radius:8px;
-      border:1px solid #d1d5db;
-      min-width:150px;
-      font-size:14px;
-    }
+  .filters {
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    margin-bottom:18px;
+  }
+  .filters input, .filters select {
+    padding:10px;
+    border-radius:8px;
+    border:1px solid #d1d5db;
+    min-width:150px;
+    font-size:14px;
+  }
 
-    .filter-block {
-      margin-bottom: 10px;
-      background: #fff;
-      padding: 10px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    }
+  .filter-block {
+    margin-bottom: 12px;
+    background: #fff;
+    padding: 12px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
 
-    .district-box {
-      margin-top: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
+  .district-box {
+    margin-top: 8px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
 
-    .district-item {
-      background: #f3f4f6;
-      padding: 6px 10px;
-      border-radius: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 14px;
-    }
+  .district-item {
+    background:#f3f4f6;
+    padding:6px 10px;
+    border-radius:8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:14px;
+  }
+  .district-item input { transform:scale(1.2); }
 
-    .district-item input {
-      transform: scale(1.2);
-    }
+  /* AD CARD */
+  .ad-card {
+    display:flex; gap:14px; align-items:flex-start;
+    background:var(--card); padding:14px; border-radius:12px;
+    border:1px solid #eef2f7; margin-bottom:12px; position:relative;
+    transition:0.12s ease;
+    cursor:pointer;
+  }
+  .ad-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(16,24,40,0.04); }
 
-    /* AD CARD (mini) */
-    .ad-card {
-      display:flex; gap:14px; align-items:flex-start;
-      background:var(--card); padding:14px; border-radius:12px;
-      border:1px solid #eef2f7; margin-bottom:12px; position:relative;
-      transition:0.12s ease;
-      cursor:pointer;
-    }
-    .ad-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(16,24,40,0.04); }
+  .ad-avatar {
+    width:64px; height:64px; border-radius:12px; object-fit:cover;
+    flex-shrink:0; background:#eee;
+  }
 
-    .ad-avatar {
-      width:64px; height:64px; border-radius:12px; object-fit:cover;
-      flex-shrink:0; background:#eee;
-    }
+  .ad-main { flex:1; min-width:0; }
 
-    .ad-main { flex:1; min-width:0; }
+  .ad-route {
+    font-size:15px; color:#111; margin-bottom:6px; font-weight:600;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
 
-    .ad-car {
-      font-size:13px; color:var(--muted); margin-top:6px;
-    }
+  .ad-meta {
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    color:var(--muted); font-size:13px;
+    margin-top:6px;
+  }
 
-    .ad-route {
-      font-size:15px; color:#111; margin-bottom:6px; font-weight:600;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
+  .ad-chip {
+    background:var(--chip-bg); padding:6px 8px; border-radius:8px;
+    font-size:13px; color:#0b3a66; display:inline-flex; align-items:center; gap:6px;
+  }
 
-    .ad-meta {
-      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-      color:var(--muted); font-size:13px;
-      margin-top:6px;
-    }
+  .ad-price {
+    margin-left:auto; align-self:center;
+    font-weight:700; font-size:15px;
+    background:var(--chip-bg); padding:8px 12px; border-radius:10px;
+    color:#032b57;
+  }
 
-    .ad-chip {
-      background:var(--chip-bg); padding:6px 8px; border-radius:8px;
-      font-size:13px; color:#0b3a66; display:inline-flex; align-items:center; gap:6px;
-    }
+  .ad-created {
+    position:absolute; right:12px; bottom:8px;
+    font-size:12px; color:#9aa3b2;
+  }
 
-    .ad-price {
-      margin-left:auto; align-self:center;
-      font-weight:700; font-size:15px;
-      background:var(--chip-bg); padding:8px 12px; border-radius:10px;
-      color:#032b57;
-    }
+  /* MODAL */
+  #adFullModal {
+    position:fixed; inset:0; display:none;
+    justify-content:center; align-items:center;
+    background:rgba(0,0,0,0.55); z-index:99999;
+    padding:20px;
+  }
 
-    .ad-created {
-      position:absolute; right:12px; bottom:8px;
-      font-size:12px; color:#9aa3b2;
-    }
+  .ad-modal-box {
+    background:#fff; width:100%; max-width:480px;
+    border-radius:14px; padding:20px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  }
 
-    #adFullModal {
-      position:fixed; inset:0; display:none; justify-content:center; align-items:center;
-      background:rgba(0,0,0,0.55); z-index:99999; padding:18px;
-    }
-  </style>
+  .modal-header {
+    display:flex; gap:14px; align-items:center; margin-bottom:10px;
+  }
+
+  .modal-avatar {
+    width:84px; height:84px; border-radius:12px; object-fit:cover;
+  }
+
+  .modal-name { font-size:18px; font-weight:700; color:#0b3a66; }
+  .modal-car { font-size:14px; color:#6b7280; }
+
+  .modal-row { display:flex; justify-content:space-between; margin:6px 0; }
+  .label { font-weight:600; color:#374151; }
+  .value { color:#0b1720; }
+
+  .modal-actions { display:flex; gap:10px; margin-top:14px; }
+  .btn-primary { flex:1; padding:12px; background:var(--primary); color:#fff; border-radius:10px; border:none; cursor:pointer; font-weight:600; }
+  .btn-ghost { flex:1; padding:12px; border-radius:10px; border:1px solid #e6eefc; background:#fff; cursor:pointer; }
+</style>
+
 </head>
 <body>
 
@@ -136,55 +158,56 @@
     <button class="logout" onclick="logout()">Chiqish</button>
   </div>
 
-  <div class="container">
-    <div class="card">
-      <h2 style="margin:0 0 12px 0; color:var(--primary); text-align:center;">
-        Barcha e’lonlar
-      </h2>
+<div class="container">
+  <div class="card">
 
-      <div class="filters">
+    <h2 style="margin:0 0 12px 0; text-align:center; color:var(--primary);">
+      Barcha e’lonlar
+    </h2>
 
-        <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
+    <div class="filters">
+      <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
 
-        <select id="filterRole">
-          <option value="">Hammasi</option>
-          <option value="Haydovchi">Haydovchi</option>
-          <option value="Yo‘lovchi">Yo‘lovchi</option>
-        </select>
+      <select id="filterRole">
+        <option value="">Hammasi</option>
+        <option value="Haydovchi">Haydovchi</option>
+        <option value="Yo‘lovchi">Yo‘lovchi</option>
+      </select>
 
-
-        <!-- QAYERDAN -->
-        <div class="filter-block">
-          <label><b>Qayerdan:</b></label>
-
-          <select id="fromRegion">
-            <option value="">Viloyat</option>
-          </select>
-
-          <div id="fromDistrictBox" class="district-box"></div>
-        </div>
-
-
-        <!-- QAYERGA -->
-        <div class="filter-block">
-          <label><b>Qayerga:</b></label>
-
-          <select id="toRegion">
-            <option value="">Viloyat</option>
-          </select>
-
-          <div id="toDistrictBox" class="district-box"></div>
-        </div>
-
-      </div>
-
-      <div id="adsList">Yuklanmoqda...</div>
+      <select id="filterRegion">
+        <option value="">Viloyat (filter)</option>
+      </select>
     </div>
+
+    <!-- FROM FILTER -->
+    <div class="filter-block">
+      <label><b>Qayerdan:</b></label>
+      <select id="fromRegion">
+        <option value="">Viloyat</option>
+      </select>
+
+      <div id="fromDistrictBox" class="district-box"></div>
+    </div>
+
+    <!-- TO FILTER -->
+    <div class="filter-block">
+      <label><b>Qayerga:</b></label>
+      <select id="toRegion">
+        <option value="">Viloyat</option>
+      </select>
+
+      <div id="toDistrictBox" class="district-box"></div>
+    </div>
+
+    <div id="adsList">Yuklanmoqda...</div>
+
   </div>
+</div>
 
   <div id="adFullModal"></div>
 
   <script src="regions.js"></script>
-  <script type="module" src="index.js?v=final"></script>
+  <script type="module" src="index.js"></script>
+
 </body>
 </html>
