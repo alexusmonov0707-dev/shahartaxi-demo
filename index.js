@@ -20,9 +20,26 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 // ===============================
-//  REGIONS
+//  REGIONS DATA
 // ===============================
 const REGIONS = window.regionsData || window.regions || {};
+
+
+// ===============================
+//  *** NEW BADGE LOCAL STORAGE ***
+// ===============================
+function markAsRead(adId) {
+  let read = JSON.parse(localStorage.getItem("readAds") || "[]");
+  if (!read.includes(adId)) {
+    read.push(adId);
+    localStorage.setItem("readAds", JSON.stringify(read));
+  }
+}
+
+function isRead(adId) {
+  let read = JSON.parse(localStorage.getItem("readAds") || "[]");
+  return read.includes(adId);
+}
 
 
 // ===============================
@@ -55,8 +72,11 @@ function formatTime(val) {
   if (typeof val === "number") {
     try {
       return new Date(val).toLocaleString("uz-UZ", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit"
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
       });
     } catch (e) { return String(val); }
   }
@@ -64,16 +84,21 @@ function formatTime(val) {
   if (typeof val === "string") {
     if (!isNaN(Date.parse(val))) {
       return new Date(val).toLocaleString("uz-UZ", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit"
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
       });
     }
-
     const fix = val.replace(" ", "T");
     if (!isNaN(Date.parse(fix))) {
       return new Date(fix).toLocaleString("uz-UZ", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit"
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
       });
     }
   }
@@ -83,12 +108,13 @@ function formatTime(val) {
 
 
 // ===============================
-// GET USER INFO
+//  GET USER INFO
 // ===============================
 async function getUserInfo(userId) {
   if (!userId) return {
-    phone: "", avatar: "", fullName: "", role: "",
-    carModel: "", carColor: "", carNumber: "", seatCount: 0
+    phone: "", avatar: "", fullName: "",
+    role: "", carModel: "", carColor: "",
+    carNumber: "", seatCount: 0
   };
 
   try {
@@ -96,8 +122,9 @@ async function getUserInfo(userId) {
 
     if (!snap.exists()) {
       return {
-        phone: "", avatar: "", fullName: "", role: "",
-        carModel: "", carColor: "", carNumber: "", seatCount: 0
+        phone: "", avatar: "", fullName: "",
+        role: "", carModel: "", carColor: "",
+        carNumber: "", seatCount: 0
       };
     }
 
@@ -123,22 +150,23 @@ async function getUserInfo(userId) {
   } catch (err) {
     console.error("getUserInfo error", err);
     return {
-      phone: "", avatar: "", fullName: "", role: "",
-      carModel: "", carColor: "", carNumber: "", seatCount: 0
+      phone: "", avatar: "", fullName: "",
+      role: "", carModel: "", carColor: "",
+      carNumber: "", seatCount: 0
     };
   }
 }
 
 
 // ===============================
-// GLOBAL
+// GLOBALS
 // ===============================
 let ALL_ADS = [];
 let CURRENT_USER = null;
 
 
 // ===============================
-// AUTH
+// AUTH CHECK
 // ===============================
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
@@ -154,11 +182,12 @@ onAuthStateChanged(auth, async (user) => {
 
 
 // ===============================
-// ROUTE FILTERS (REGION + DISTRICT)
+// LOAD Route Filters
 // ===============================
 function loadRouteFilters() {
   const fromRegion = document.getElementById("fromRegion");
   const toRegion = document.getElementById("toRegion");
+  if (!fromRegion || !toRegion) return;
 
   fromRegion.innerHTML = '<option value="">Viloyat</option>';
   toRegion.innerHTML = '<option value="">Viloyat</option>';
@@ -182,6 +211,10 @@ function loadRouteFilters() {
   fillToDistricts();
 }
 
+
+// ===============================
+// FILL DISTRICTS
+// ===============================
 function fillFromDistricts() {
   const region = document.getElementById("fromRegion").value;
   const box = document.getElementById("fromDistrictBox");
@@ -261,117 +294,122 @@ async function loadAllAds() {
 
 
 // ===============================
-// RENDER ADS (FINAL + ESki e’lonlarni yashirish)
+// SLUGIFY
+// ===============================
+function slugify(s) {
+  return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
+}
+
+
+// ===============================
+// RENDER ADS (MAIN ENGINE)
 // ===============================
 async function renderAds(ads) {
   const list = document.getElementById("adsList");
+  if (!list) return;
   list.innerHTML = "";
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
+  const regionFilter = document.getElementById("filterRegion")?.value || "";
+
   const sortBy = document.getElementById("sortBy")?.value || "newest";
   const filterDate = document.getElementById("filterDate")?.value || "";
   const priceMin = Number(document.getElementById("priceMin")?.value || 0);
   const priceMax = Number(document.getElementById("priceMax")?.value || 0);
 
-  const fromRegion = document.getElementById("fromRegion").value || "";
-  const toRegion = document.getElementById("toRegion").value || "";
-  const fromDistricts = Array.from(document.querySelectorAll(".fromDistrict:checked")).map(x => x.value);
-  const toDistricts = Array.from(document.querySelectorAll(".toDistrict:checked")).map(x => x.value);
-
   const currentUserId = auth.currentUser?.uid || null;
+
+  const currentRoleRaw = (CURRENT_USER?.role || "").toString().toLowerCase();
+  let currentRole = "";
+  if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov")) currentRole = "driver";
+  else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo")) currentRole = "passenger";
+
+  const fromRegion = document.getElementById("fromRegion")?.value || "";
+  const toRegion = document.getElementById("toRegion")?.value || "";
+  const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
+  const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
   let filtered = ads.filter(a => {
     if (!a) return false;
 
-    // AUTO opposite type filter
-    const roleRaw = (CURRENT_USER?.role || "").toLowerCase();
-    if (roleRaw.includes("haydov")) {
-      if (!a.typeNormalized.toLowerCase().includes("yo")) return false;
-    } else if (roleRaw.includes("yo")) {
-      if (!a.typeNormalized.toLowerCase().includes("haydov")) return false;
+    if (currentRole === "driver") {
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
+    } else if (currentRole === "passenger") {
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("haydov")) return false;
     }
 
-    // manual role
-    if (roleFilter && a.typeNormalized !== roleFilter) return false;
+    if (roleFilter) {
+      if (a.typeNormalized !== roleFilter) return false;
+    }
 
-    // hide own
     if (currentUserId && a.userId === currentUserId) return false;
 
-    // region-from-to
-    if (fromRegion && a.fromRegion !== fromRegion) return false;
-    if (fromDistricts.length && !fromDistricts.includes(a.fromDistrict)) return false;
+    if (regionFilter) {
+      if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
+    }
 
-    if (toRegion && a.toRegion !== toRegion) return false;
-    if (toDistricts.length && !toDistricts.includes(a.toDistrict)) return false;
+    if (fromRegion) {
+      if (a.fromRegion !== fromRegion) return false;
+    }
+    if (fromDistricts.length > 0) {
+      if (!fromDistricts.includes(a.fromDistrict)) return false;
+    }
 
-    // price
+    if (toRegion) {
+      if (a.toRegion !== toRegion) return false;
+    }
+    if (toDistricts.length > 0) {
+      if (!toDistricts.includes(a.toDistrict)) return false;
+    }
+
+    // === FIXED PRICE FILTER (NO DUPLICATE BUG) ===
     const adPrice = a.price ? Number(a.price) : NaN;
-    if (priceMin && !isNaN(adPrice) && adPrice < priceMin) return false;
-    if (priceMax && !isNaN(adPrice) && adPrice > priceMax) return false;
 
-    // DATE FILTER (bugun, ertaga, 3 kun)
+    if (priceMin || priceMax) {
+      if (isNaN(adPrice)) return false;
+      if (priceMin && adPrice < priceMin) return false;
+      if (priceMax && adPrice > priceMax) return false;
+    }
+
+    // === DATE FILTER ===
     if (filterDate) {
       const raw = a.departureTime || a.startTime || a.time || a.date || null;
 
       let adTime = null;
       if (typeof raw === "number") adTime = new Date(raw);
-      else if (typeof raw === "string") {
-        const fix = raw.replace(" ", "T");
-        adTime = !isNaN(Date.parse(raw))
-          ? new Date(raw)
-          : (!isNaN(Date.parse(fix)) ? new Date(fix) : null);
+      else if (typeof raw === "string" && raw.trim() !== "") {
+        const tryFix = raw.replace(" ", "T");
+        adTime = !isNaN(Date.parse(raw)) ? new Date(raw) :
+                 (!isNaN(Date.parse(tryFix)) ? new Date(tryFix) : null);
       }
 
       if (!adTime) return false;
 
       const now = new Date();
-
       if (filterDate === "today") {
-        if (
-          adTime.getFullYear() !== now.getFullYear() ||
-          adTime.getMonth() !== now.getMonth() ||
-          adTime.getDate() !== now.getDate()
-        ) return false;
-
-      } else if (filterDate === "tomorrow") {
+        if (adTime.getFullYear() !== now.getFullYear() ||
+            adTime.getMonth() !== now.getMonth() ||
+            adTime.getDate() !== now.getDate()) return false;
+      } 
+      else if (filterDate === "tomorrow") {
         const t = new Date(now);
         t.setDate(now.getDate() + 1);
-        if (
-          adTime.getFullYear() !== t.getFullYear() ||
-          adTime.getMonth() !== t.getMonth() ||
-          adTime.getDate() !== t.getDate()
-        ) return false;
-
-      } else if (filterDate === "3days") {
-        const diff = adTime - now;
-        if (diff < 0 || diff > 86400000 * 3) return false;
+        if (adTime.getFullYear() !== t.getFullYear() ||
+            adTime.getMonth() !== t.getMonth() ||
+            adTime.getDate() !== t.getDate()) return false;
+      } 
+      else if (filterDate === "3days") {
+        const diff = adTime.getTime() - now.getTime();
+        if (diff < 0 || diff > 1000 * 60 * 60 * 24 * 3) return false;
       }
     }
 
-
-    // ❗ B VARIANT — Eski e’lonlarni yashirish
-    const rawT = a.departureTime || a.startTime || a.time || a.date || null;
-    let dt = null;
-
-    if (typeof rawT === "number") dt = new Date(rawT);
-    else if (typeof rawT === "string") {
-      const fix = rawT.replace(" ", "T");
-      dt = !isNaN(Date.parse(rawT))
-        ? new Date(rawT)
-        : (!isNaN(Date.parse(fix)) ? new Date(fix) : null);
-    }
-
-    if (!dt) return false;
-
-    if (dt.getTime() < Date.now()) return false;
-
-
-    // search
+    // === SEARCH ===
     const hay = [
       a.fromRegion, a.fromDistrict,
       a.toRegion, a.toDistrict,
-      a.comment, a.price, a.type
+      a.comment, a.price, a.type, a.carModel, a.userId
     ].join(" ").toLowerCase();
 
     if (!hay.includes(q)) return false;
@@ -379,22 +417,26 @@ async function renderAds(ads) {
     return true;
   });
 
-  // sort
+  // === REMOVE DUPLICATES BY ID ===
+  filtered = filtered.filter((v, i, arr) =>
+    arr.findIndex(x => x.id === v.id) === i
+  );
+
+  if (!filtered.length) {
+    list.innerHTML = "<p>Natija topilmadi.</p>";
+    return;
+  }
+
   if (sortBy === "newest") {
     filtered.sort((a, b) =>
       new Date(b.createdAt || b.created || b.postedAt || 0) -
       new Date(a.createdAt || a.created || a.postedAt || 0)
     );
-  } else {
+  } else if (sortBy === "oldest") {
     filtered.sort((a, b) =>
       new Date(a.createdAt || a.created || a.postedAt || 0) -
       new Date(b.createdAt || b.created || b.postedAt || 0)
     );
-  }
-
-  if (!filtered.length) {
-    list.innerHTML = "<p>Natija topilmadi.</p>";
-    return;
   }
 
   const cards = await Promise.all(filtered.map(a => createAdCard(a)));
@@ -403,39 +445,43 @@ async function renderAds(ads) {
 
 
 // ===============================
-// CREATE AD CARD
+// CREATE CARD
 // ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
 
   const div = document.createElement("div");
   div.className = "ad-card";
+  div.setAttribute("data-ad-id", ad.id || "");
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
 
-  const timeRaw = ad.departureTime || ad.startTime || ad.time || ad.date || "";
-  const depTime = formatTime(timeRaw);
+  const depTimeRaw = ad.departureTime || ad.startTime || ad.time || ad.date || "";
+  const depTime = formatTime(depTimeRaw);
 
   const createdRaw = ad.createdAt || ad.created || ad.postedAt || "";
   const created = formatTime(createdRaw);
 
-  // ❗ Yangi badge (24 soat)
   let isNew = false;
   if (createdRaw) {
     const ct = new Date(createdRaw).getTime();
-    if (Date.now() - ct <= 86400000) isNew = true;
+    if ((Date.now() - ct <= 86400000) && !isRead(ad.id)) {
+      isNew = true;
+    }
   }
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
-  const totalSeats = totalSeatsRaw !== null ? Number(totalSeatsRaw) : null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
-  const available = totalSeats !== null ? Math.max(totalSeats - booked, 0) : null;
+  const available = (typeof totalSeats === "number") ? Math.max(totalSeats - booked, 0) : null;
 
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
-  const requested = requestedRaw !== null ? Number(requestedRaw) : null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
+
+  const carModel = u.carModel || ad.car || "";
 
   div.innerHTML = `
-    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" />
+    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
 
     <div class="ad-main">
       <div class="ad-route">
@@ -443,24 +489,21 @@ async function createAdCard(ad) {
         ${isNew ? '<span class="ad-badge-new">Yangi</span>' : ''}
       </div>
 
-      <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px;">
-        ${escapeHtml(u.carModel || "")}
-      </div>
+      <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModel)}</div>
 
       <div class="ad-meta" style="margin-top:8px">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
-
         ${
           totalSeats !== null
             ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
-            : (requested !== null
-                ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
-                : "")
+            : requested !== null
+              ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
+              : `<div class="ad-chip">👥 -</div>`
         }
       </div>
     </div>
 
-    <div class="ad-price">💰 ${escapeHtml(ad.price || "-")} so‘m</div>
+    <div class="ad-price">💰 ${escapeHtml(ad.price ? String(ad.price) : "-")} so‘m</div>
 
     <div class="ad-created">${escapeHtml(created)}</div>
   `;
@@ -472,11 +515,10 @@ async function createAdCard(ad) {
 
 
 // ===============================
-// MODAL
+// OPEN MODAL
 // ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
-
   if (!modal) {
     modal = document.createElement("div");
     modal.id = "adFullModal";
@@ -489,22 +531,25 @@ async function openAdModal(ad) {
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
 
-  const fullname = u.fullName || "Foydalanuvchi";
+  const fullname = u.fullName ||
+    ((u.firstname || u.lastname)
+      ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
+      : "") ||
+    "Foydalanuvchi";
 
   const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
-  const totalSeats = totalSeatsRaw !== null ? Number(totalSeatsRaw) : null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
-  const available = totalSeats !== null ? Math.max(totalSeats - booked, 0) : null;
-
+  const available = (typeof totalSeats === "number") ? Math.max(totalSeats - booked, 0) : null;
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
-  const requested = requestedRaw !== null ? Number(requestedRaw) : null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
   modal.innerHTML = `
-    <div class="ad-modal-box">
+    <div class="ad-modal-box" role="dialog" aria-modal="true">
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
-        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" />
+        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
           <div class="modal-name">${escapeHtml(fullname)}</div>
           <div class="modal-car" style="color:#6b7280">${escapeHtml(carFull)}</div>
@@ -516,7 +561,6 @@ async function openAdModal(ad) {
           <div class="label">Yo‘nalish</div>
           <div class="value">${escapeHtml(route)}</div>
         </div>
-
         <div class="modal-col" style="text-align:right">
           <div class="label">Jo‘nash vaqti</div>
           <div class="value">${escapeHtml(depTime)}</div>
@@ -526,27 +570,28 @@ async function openAdModal(ad) {
       <div class="modal-row">
         <div class="modal-col">
           <div class="label">Joylar</div>
-          <div class="value">${
-            totalSeats !== null
-              ? `${totalSeats} ta (Bo‘sh: ${available})`
-              : requested !== null
-                ? `Talab: ${requested} odam`
-                : "-"
-          }</div>
+          <div class="value">
+            ${
+              totalSeats !== null
+                ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})`
+                : requested !== null
+                  ? `Talab: ${escapeHtml(String(requested))} odam`
+                  : "-"
+            }
+          </div>
         </div>
-
         <div class="modal-col" style="text-align:right">
           <div class="label">Narx</div>
-          <div class="value">${escapeHtml(ad.price || "-")} so‘m</div>
+          <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
         </div>
       </div>
 
-      <div style="margin-top:12px;">
+      <div style="margin-top:12px">
         <div class="label">Izoh</div>
         <div class="value">${escapeHtml(ad.comment || "-")}</div>
       </div>
 
-      <div style="margin-top:12px;">
+      <div style="margin-top:12px">
         <div class="label">Kontakt</div>
         <div class="value">${escapeHtml(u.phone || "-")}</div>
       </div>
@@ -564,17 +609,27 @@ async function openAdModal(ad) {
 
   modal.style.display = "flex";
 
-  document.getElementById("modalCloseBtn").onclick = closeAdModal;
-  document.getElementById("modalCallBtn").onclick = () => onContact(u.phone || "");
-  modal.onclick = e => { if (e.target === modal) closeAdModal(); };
+  const closeBtn = document.getElementById("modalCloseBtn");
+  const callBtn = document.getElementById("modalCallBtn");
+  if (closeBtn) closeBtn.onclick = closeAdModal;
+  if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
+
+  // *** Mark as read ***
+  markAsRead(ad.id);
+  scheduleRenderAds();
+
+  modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
 
+
+// ===============================
+// CLOSE MODAL
+// ===============================
 function closeAdModal() {
   const modal = document.getElementById("adFullModal");
-  if (modal) {
-    modal.style.display = "none";
-    modal.innerHTML = "";
-  }
+  if (!modal) return;
+  modal.style.display = "none";
+  modal.innerHTML = "";
 }
 
 function onContact(phone) {
@@ -588,7 +643,7 @@ window.onContact = onContact;
 
 
 // ===============================
-// Debounce render (no blinking)
+// DEBOUNCE
 // ===============================
 let __render_timeout = null;
 function scheduleRenderAds() {
@@ -596,7 +651,7 @@ function scheduleRenderAds() {
   __render_timeout = setTimeout(() => {
     renderAds(ALL_ADS);
     __render_timeout = null;
-  }, 140);
+  }, 120);
 }
 
 document.addEventListener("change", (e) => {
@@ -604,3 +659,10 @@ document.addEventListener("change", (e) => {
     scheduleRenderAds();
   }
 });
+
+
+// ===============================
+// LOGOUT
+// ===============================
+window.logout = () => signOut(auth);
+
