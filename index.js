@@ -363,14 +363,17 @@ async function renderAds(ads) {
       if (!toDistricts.includes(a.toDistrict)) return false;
     }
 
-    // === FIXED PRICE FILTER (NO DUPLICATE BUG) ===
-    const adPrice = a.price ? Number(a.price) : NaN;
+   // --- FIXED PRICE FILTER (NO DUPLICATES) ---
+const isPriceMinSet = document.getElementById("priceMin").value !== "";
+const isPriceMaxSet = document.getElementById("priceMax").value !== "";
 
-    if (priceMin || priceMax) {
-      if (isNaN(adPrice)) return false;
-      if (priceMin && adPrice < priceMin) return false;
-      if (priceMax && adPrice > priceMax) return false;
-    }
+if (isPriceMinSet || isPriceMaxSet) {
+  if (isNaN(adPrice)) return false;
+
+  if (isPriceMinSet && adPrice < priceMin) return false;
+  if (isPriceMaxSet && adPrice > priceMax) return false;
+}
+
 // === HIDE EXPIRED ADS (NEW) ===
 const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
 let departureTime = null;
