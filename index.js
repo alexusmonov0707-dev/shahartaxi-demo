@@ -192,21 +192,47 @@ async function renderAds(ads) {
   if (!list) return;
   list.innerHTML = "";
 
+  // Qidiruv qiymati
   const q = (document.getElementById("search")?.value || "").toLowerCase();
-  const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
+
+  // Region filter
   const regionFilter = document.getElementById("filterRegion")?.value || "";
 
+  // Hozirgi user roli
+  const currentUserId = auth.currentUser?.uid || null;
+  const currentUser = currentUserId ? await getUserInfo(currentUserId) : null;
+  const currentRole = currentUser?.role || "";  // "driver" yoki "passenger" (Yo‘lovchi)
+
+  console.log("CURRENT USER ROLE =", currentRole);
+
   const filtered = ads.filter(a => {
-    if (roleFilter && a.typeNormalized !== roleFilter) return false;
-    if (regionFilter && a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
 
-    const hay = [
-      a.fromRegion, a.fromDistrict,
-      a.toRegion, a.toDistrict,
-      a.comment, a.price, a.type
-    ].join(" ").toLowerCase();
+    // ================================
+    // 1. ROLE FILTER (ENG MUHIM)
+    // ================================
+    if (currentRole === "driver" && a.type !== "Yo‘lovchi") return false;
+    if (currentRole !== "driver" && a.type === "Yo‘lovchi") return false;
 
-    return hay.includes(q);
+    // ================================
+    // 2. REGION FILTER
+    // ================================
+    if (regionFilter &&
+       a.fromRegion !== regionFilter &&
+       a.toRegion !== regionFilter) {
+      return false;
+    }
+
+    // ================================
+    // 3. QIDIRUV FILTER
+    // ================================
+    const hay =
+      `${a.fromRegion} ${a.fromDistrict} ${a.toRegion} ${a.toDistrict} 
+       ${a.comment} ${a.price} ${a.type}`
+        .toLowerCase();
+
+    if (!hay.includes(q)) return false;
+
+    return true;
   });
 
   if (!filtered.length) {
@@ -214,9 +240,11 @@ async function renderAds(ads) {
     return;
   }
 
+  // Kartalar yaratish
   const cards = await Promise.all(filtered.map(a => createAdCard(a)));
   cards.forEach(card => list.appendChild(card));
 }
+
 
 // ===============================
 // MINI CARD (NO NAME)
