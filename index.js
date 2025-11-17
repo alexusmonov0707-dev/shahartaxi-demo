@@ -207,11 +207,16 @@ async function renderAds(ads) {
 
   const filtered = ads.filter(a => {
 
-    // ================================
-    // 1. ROLE FILTER (ENG MUHIM)
-    // ================================
-    if (currentRole === "driver" && a.type !== "Yo‘lovchi") return false;
-    if (currentRole !== "driver" && a.type === "Yo‘lovchi") return false;
+   // 1. ROLE FILTER (to‘g‘ri ishlaydigan)
+if (currentRole === "driver") {
+    // Haydovchi → faqat Yo‘lovchi e’lonlarni ko‘radi
+    if (a.type.toLowerCase() !== "yo‘lovchi") return false;
+}
+else if (currentRole === "passenger") {
+    // Yo‘lovchi → faqat Haydovchi e’lonlarni ko‘radi
+    if (a.type.toLowerCase() !== "haydovchi") return false;
+}
+
 
     // ================================
     // 2. REGION FILTER
