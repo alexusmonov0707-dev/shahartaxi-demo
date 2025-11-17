@@ -107,6 +107,23 @@ body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; co
 
     <div class="filters">
       <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
+<!-- SARALASH -->
+<select id="sortBy">
+  <option value="newest">Eng yangi</option>
+  <option value="oldest">Eng eski</option>
+</select>
+
+<!-- JO‘NASH VAQTI -->
+<select id="filterDate">
+  <option value="">Vaqt (hammasi)</option>
+  <option value="today">Bugun</option>
+  <option value="tomorrow">Ertaga</option>
+  <option value="3days">3 kun ichida</option>
+</select>
+
+<!-- NARX ORALIG‘I -->
+<input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
+<input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
 
       <select id="filterRole">
         <option value="">Hammasi</option>
