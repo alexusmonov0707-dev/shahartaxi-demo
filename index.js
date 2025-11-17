@@ -1,5 +1,3 @@
-// index.js (to'liq)
-const USER_CACHE = {}; // userId → userInfo
 // ===============================
 //  FIREBASE INIT
 // ===============================
@@ -22,12 +20,13 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 // ===============================
-// REGIONS DATA (from regions.js)
+//  REGIONS DATA (from regions.js)
 // ===============================
 const REGIONS = window.regionsData || window.regions || {};
 
+
 // ===============================
-// HELPERS
+//  HELPERS
 // ===============================
 function escapeHtml(str) {
   if (str === 0) return "0";
@@ -50,6 +49,7 @@ function normalizeType(t) {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
+// universal date formatter (BUZMAYMAN)
 function formatTime(val) {
   if (!val) return "—";
 
@@ -62,9 +62,7 @@ function formatTime(val) {
         hour: "2-digit",
         minute: "2-digit"
       });
-    } catch {
-      return String(val);
-    }
+    } catch (e) { return String(val); }
   }
 
   if (typeof val === "string") {
@@ -77,6 +75,7 @@ function formatTime(val) {
         minute: "2-digit"
       });
     }
+
     const fix = val.replace(" ", "T");
     if (!isNaN(Date.parse(fix))) {
       return new Date(fix).toLocaleString("uz-UZ", {
@@ -92,260 +91,247 @@ function formatTime(val) {
   return String(val);
 }
 
+
 // ===============================
-// GET USER INFO
+//  GET USER INFO
 // ===============================
 async function getUserInfo(userId) {
   if (!userId) return {
-    phone: "", avatar: "", fullName: "", role: "",
-    carModel: "", carColor: "", carNumber: "", seatCount: 0
+    phone: "", avatar: "", fullName: "",
+    role: "", carModel: "", carColor: "",
+    carNumber: "", seatCount: 0
   };
-
-  // CACHE BORMI?
-  if (USER_CACHE[userId]) {
-    return USER_CACHE[userId];
-  }
 
   try {
     const snap = await get(ref(db, "users/" + userId));
+
     if (!snap.exists()) {
-      USER_CACHE[userId] = {
-        phone: "", avatar: "", fullName: "", role: "",
-        carModel: "", carColor: "", carNumber: "", seatCount: 0
+      return {
+        phone: "", avatar: "", fullName: "",
+        role: "", carModel: "", carColor: "",
+        carNumber: "", seatCount: 0
       };
-      return USER_CACHE[userId];
     }
 
     const u = snap.val();
-    const info = {
+
+    return {
       phone: u.phone || u.telephone || "",
       avatar: u.avatar || "",
-      fullName: u.fullName ||
+      fullName:
+        u.fullName ||
         ((u.firstname || u.lastname)
           ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
-          : "") || u.name || "",
+          : "") ||
+        u.name ||
+        "",
       role: (u.role || u.userRole || "").toString(),
       carModel: u.carModel || u.car || "",
       carColor: u.carColor || "",
       carNumber: u.carNumber || u.plate || "",
-      seatCount: u.seatCount || u.seats || 0
+      seatCount: Number(u.seatCount || u.seats || 0)
     };
 
-    USER_CACHE[userId] = info; // CACHEGA SAQLAYMIZ
-
-    return info;
-
   } catch (err) {
-    console.error("getUserInfo error:", err);
+    console.error("getUserInfo error", err);
     return {
-      phone: "", avatar: "", fullName: "", role: "",
-      carModel: "", carColor: "", carNumber: "", seatCount: 0
+      phone: "", avatar: "", fullName: "",
+      role: "", carModel: "", carColor: "",
+      carNumber: "", seatCount: 0
     };
   }
 }
 
 
+// ===============================
+// GLOBALS
+// ===============================
 let ALL_ADS = [];
 let CURRENT_USER = null;
 
+
+// ===============================
+// AUTH CHECK
+// ===============================
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "login.html";
     return;
   }
 
-  CURRENT_USER = await getUserInfo(user.uid || user?.userId);
+  CURRENT_USER = await getUserInfo(user.uid);
+
   loadRouteFilters();
   await loadAllAds();
 });
+
+
 // ===============================
-// LOAD Route Filters (from/to region + districts)
+// LOAD ROUTE FILTERS
 // ===============================
 function loadRouteFilters() {
-  const fromRegion = document.getElementById("fromRegion");
-  const toRegion = document.getElementById("toRegion");
-  if (!fromRegion || !toRegion) return;
+  const fromR = document.getElementById("fromRegion");
+  const toR = document.getElementById("toRegion");
 
-  fromRegion.innerHTML = '<option value="">Viloyat</option>';
-  toRegion.innerHTML = '<option value="">Viloyat</option>';
+  if (!fromR || !toR) return;
 
-  Object.keys(REGIONS).forEach(region => {
-    const o1 = document.createElement("option");
-    o1.value = region;
-    o1.textContent = region;
-    fromRegion.appendChild(o1);
+  fromR.innerHTML = `<option value="">Viloyat</option>`;
+  toR.innerHTML = `<option value="">Viloyat</option>`;
 
-    const o2 = document.createElement("option");
-    o2.value = region;
-    o2.textContent = region;
-    toRegion.appendChild(o2);
+  Object.keys(REGIONS).forEach(r => {
+    fromR.innerHTML += `<option value="${r}">${r}</option>`;
+    toR.innerHTML += `<option value="${r}">${r}</option>`;
   });
 
-  fromRegion.onchange = () => {
-    fillFromDistricts();
-    renderAds(ALL_ADS);
-  };
-
-  toRegion.onchange = () => {
-    fillToDistricts();
-    renderAds(ALL_ADS);
-  };
+  fromR.onchange = () => { fillFromDistricts(); renderAds(ALL_ADS); };
+  toR.onchange = () => { fillToDistricts(); renderAds(ALL_ADS); };
 
   fillFromDistricts();
   fillToDistricts();
 }
 
+
+// Qayerdan → tumanlar
 function fillFromDistricts() {
-  const region = document.getElementById("fromRegion").value;
+  const r = document.getElementById("fromRegion").value;
   const box = document.getElementById("fromDistrictBox");
-  if (!box) return;
 
   box.innerHTML = "";
-  if (!region || !REGIONS[region]) return;
+  if (!r || !REGIONS[r]) return;
 
-  REGIONS[region].forEach(d => {
-    const id = "fromDist_" + slugify(region) + "_" + slugify(d);
-    const label = document.createElement("label");
-    label.className = "district-item";
-    label.innerHTML = `
-      <input type="checkbox" id="${id}" value="${escapeHtml(d)}" class="fromDistrict">
-      ${escapeHtml(d)}
+  REGIONS[r].forEach(d => {
+    box.innerHTML += `
+      <label class="district-item">
+        <input type="checkbox" class="fromDistrict" value="${d}">
+        ${d}
+      </label>
     `;
-    box.appendChild(label);
   });
 
-  box.querySelectorAll("input[type=checkbox]").forEach(ch =>
-    ch.onchange = () => renderAds(ALL_ADS)
-  );
+  box.querySelectorAll("input").forEach(ch => {
+    ch.onchange = () => renderAds(ALL_ADS);
+  });
 }
 
+
+// Qayerga → tumanlar
 function fillToDistricts() {
-  const region = document.getElementById("toRegion").value;
+  const r = document.getElementById("toRegion").value;
   const box = document.getElementById("toDistrictBox");
-  if (!box) return;
 
   box.innerHTML = "";
-  if (!region || !REGIONS[region]) return;
+  if (!r || !REGIONS[r]) return;
 
-  REGIONS[region].forEach(d => {
-    const id = "toDist_" + slugify(region) + "_" + slugify(d);
-    const label = document.createElement("label");
-    label.className = "district-item";
-    label.innerHTML = `
-      <input type="checkbox" id="${id}" value="${escapeHtml(d)}" class="toDistrict">
-      ${escapeHtml(d)}
+  REGIONS[r].forEach(d => {
+    box.innerHTML += `
+      <label class="district-item">
+        <input type="checkbox" class="toDistrict" value="${d}">
+        ${d}
+      </label>
     `;
-    box.appendChild(label);
   });
 
-  box.querySelectorAll("input[type=checkbox]").forEach(ch =>
-    ch.onchange = () => renderAds(ALL_ADS)
-  );
+  box.querySelectorAll("input").forEach(ch => {
+    ch.onchange = () => renderAds(ALL_ADS);
+  });
 }
 
-function slugify(s) {
-  return String(s || "")
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^\w\-]/g, "");
-}
 
 // ===============================
 // LOAD ALL ADS
 // ===============================
 async function loadAllAds() {
-  try {
-    const snap = await get(ref(db, "ads"));
-    const list = document.getElementById("adsList");
-    if (!list) return;
+  const list = document.getElementById("adsList");
 
-    if (!snap.exists()) {
-      list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-      ALL_ADS = [];
-      return;
-    }
-
-    const ads = [];
-    snap.forEach(child => {
-      const v = child.val();
-      ads.push({
-        id: child.key,
-        ...v,
-        typeNormalized: normalizeType(v.type)
-      });
-    });
-
-    ALL_ADS = ads;
-
-    const searchEl = document.getElementById("search");
-    const roleEl = document.getElementById("filterRole");
-    const fromRegionEl = document.getElementById("fromRegion");
-    const toRegionEl = document.getElementById("toRegion");
-
-    if (searchEl) searchEl.oninput = () => renderAds(ALL_ADS);
-    if (roleEl) roleEl.onchange = () => renderAds(ALL_ADS);
-    if (fromRegionEl) fromRegionEl.onchange = () => {
-      fillFromDistricts();
-      renderAds(ALL_ADS);
-    };
-    if (toRegionEl) toRegionEl.onchange = () => {
-      fillToDistricts();
-      renderAds(ALL_ADS);
-    };
-
-    renderAds(ALL_ADS);
-  } catch (err) {
-    console.error("loadAllAds error:", err);
+  const snap = await get(ref(db, "ads"));
+  if (!snap.exists()) {
+    list.innerHTML = "E’lon yo‘q.";
+    ALL_ADS = [];
+    return;
   }
+
+  const arr = [];
+
+  snap.forEach(c => {
+    const v = c.val();
+    arr.push({
+      id: c.key,
+      ...v,
+      typeNormalized: normalizeType(v.type)
+    });
+  });
+
+  ALL_ADS = arr;
+
+  document.getElementById("search").oninput = () => renderAds(ALL_ADS);
+  document.getElementById("filterRole").onchange = () => renderAds(ALL_ADS);
+  document.getElementById("sortBy").onchange = () => renderAds(ALL_ADS);
+  document.getElementById("filterDate").onchange = () => renderAds(ALL_ADS);
+  document.getElementById("priceMin").oninput = () => renderAds(ALL_ADS);
+  document.getElementById("priceMax").oninput = () => renderAds(ALL_ADS);
+
+  renderAds(ALL_ADS);
 }
 // ===============================
-// RENDER ADS with all filters applied
+// QISM 2 — FILTER ENGINE, CARDS, MODAL
+// (1-qism bilan birlashtirish uchun)
 // ===============================
+
+function slugify(s) {
+  return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
+}
+
+// RENDER ADS with all filters applied (komplekt)
 async function renderAds(ads) {
   const list = document.getElementById("adsList");
   if (!list) return;
   list.innerHTML = "";
 
+  // basic controls
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
+  const regionFilter = document.getElementById("filterRegion")?.value || "";
 
+  // sort / price / date controls
+  const sortBy = document.getElementById("sortBy")?.value || "newest";
+  const filterDate = document.getElementById("filterDate")?.value || "";
+  const priceMin = Number(document.getElementById("priceMin")?.value || 0);
+  const priceMax = Number(document.getElementById("priceMax")?.value || 0);
+
+  // current user id & cached info
   const currentUserId = auth.currentUser?.uid || null;
-  if (currentUserId && (!CURRENT_USER || CURRENT_USER._uid !== currentUserId)) {
-    getUserInfo(currentUserId)
-      .then(u => {
-        CURRENT_USER = u;
-        renderAds(ALL_ADS);
-      })
-      .catch(() => {});
+
+  // Ensure CURRENT_USER is fresh-ish
+  if (currentUserId && (!CURRENT_USER || (CURRENT_USER._uid && CURRENT_USER._uid !== currentUserId))) {
+    // non-blocking refresh
+    getUserInfo(currentUserId).then(u => { CURRENT_USER = u; /* don't re-enter infinite loop here */ }).catch(()=>{});
   }
 
+  // determine current role normalized: "driver" or "passenger" or ""
   const currentRoleRaw = (CURRENT_USER?.role || "").toString().toLowerCase();
   let currentRole = "";
-  if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov"))
-    currentRole = "driver";
-  else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo"))
-    currentRole = "passenger";
+  if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov")) currentRole = "driver";
+  else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo")) currentRole = "passenger";
 
+  // route filters (from/to)
   const fromRegion = document.getElementById("fromRegion")?.value || "";
   const toRegion = document.getElementById("toRegion")?.value || "";
+  const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
+  const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
-  const fromDistricts = Array.from(
-    document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")
-  ).map(x => x.value);
+  // Filter pipeline
+  let filtered = ads.filter(a => {
+    // safety: ensure object
+    if (!a) return false;
 
-  const toDistricts = Array.from(
-    document.querySelectorAll("#toDistrictBox input.toDistrict:checked")
-  ).map(x => x.value);
-
-  const filtered = ads.filter(a => {
-    // 1) auto role filter by account type
+    // 1) automatic role filter: show opposite-type ads (driver sees passenger ads, and vice versa)
     if (currentRole === "driver") {
-      if (!a.typeNormalized.toLowerCase().includes("yo")) return false;
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
     } else if (currentRole === "passenger") {
-      if (!a.typeNormalized.toLowerCase().includes("haydov")) return false;
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("haydov")) return false;
     }
 
-    // 2) dropdown role filter
+    // 2) explicit role dropdown filter (if selected)
     if (roleFilter) {
       if (a.typeNormalized !== roleFilter) return false;
     }
@@ -353,115 +339,166 @@ async function renderAds(ads) {
     // 3) hide own ads
     if (currentUserId && a.userId === currentUserId) return false;
 
-    // 4) fromRegion / toRegion
-    if (fromRegion && a.fromRegion !== fromRegion) return false;
-    if (toRegion && a.toRegion !== toRegion) return false;
+    // 4) top region filter (either from or to)
+    if (regionFilter) {
+      if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
+    }
 
-    // 5) district filters
-    if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
-    if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
+    // 5) from region/districts
+    if (fromRegion) {
+      if (a.fromRegion !== fromRegion) return false;
+    }
+    if (fromDistricts.length > 0) {
+      if (!fromDistricts.includes(a.fromDistrict)) return false;
+    }
 
-    // 6) search
+    // 6) to region/districts
+    if (toRegion) {
+      if (a.toRegion !== toRegion) return false;
+    }
+    if (toDistricts.length > 0) {
+      if (!toDistricts.includes(a.toDistrict)) return false;
+    }
+
+    // 7) PRICE FILTER (yangi) — only if price present or filter set
+    const adPrice = a.price ? Number(a.price) : NaN;
+    if (priceMin && !isNaN(adPrice) && adPrice < priceMin) return false;
+    if (priceMax && !isNaN(adPrice) && adPrice > priceMax) return false;
+
+    // 8) DATE FILTER (yangi)
+    if (filterDate) {
+      const raw = a.departureTime || a.startTime || a.time || a.date || a.departure || null;
+      // parse robustly: if number — treat as timestamp; if string — try parse; fallback huge negative date
+      let adTime = null;
+      if (typeof raw === "number") adTime = new Date(raw);
+      else if (typeof raw === "string" && raw.trim() !== "") {
+        const tryFix = raw.replace(" ", "T");
+        adTime = !isNaN(Date.parse(raw)) ? new Date(raw) : (!isNaN(Date.parse(tryFix)) ? new Date(tryFix) : null);
+      }
+      // if adTime invalid and filterDate is used -> exclude (we cannot confirm)
+      if (!adTime) return false;
+
+      const now = new Date();
+      // normalize times to local midnight for day comparisons
+      if (filterDate === "today") {
+        if (adTime.getFullYear() !== now.getFullYear() ||
+            adTime.getMonth() !== now.getMonth() ||
+            adTime.getDate() !== now.getDate()) return false;
+      } else if (filterDate === "tomorrow") {
+        const t = new Date(now);
+        t.setDate(now.getDate() + 1);
+        if (adTime.getFullYear() !== t.getFullYear() ||
+            adTime.getMonth() !== t.getMonth() ||
+            adTime.getDate() !== t.getDate()) return false;
+      } else if (filterDate === "3days") {
+        const diff = adTime.getTime() - now.getTime();
+        if (diff < 0 || diff > 1000 * 60 * 60 * 24 * 3) return false;
+      }
+    }
+
+    // 9) SEARCH (last) — compare concatenated fields
     const hay = [
-      a.fromRegion,
-      a.fromDistrict,
-      a.toRegion,
-      a.toDistrict,
-      a.comment,
-      a.price,
-      a.type,
-      a.carModel
-    ]
-      .join(" ")
-      .toLowerCase();
+      a.fromRegion, a.fromDistrict,
+      a.toRegion, a.toDistrict,
+      a.comment, a.price, a.type, a.carModel, a.userId
+    ].join(" ").toLowerCase();
 
     if (!hay.includes(q)) return false;
 
     return true;
   });
 
+  // if none matched
   if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
     return;
   }
 
+  // SORT — newest/oldest by createdAt fallback
+  if (sortBy === "newest") {
+    filtered.sort((a, b) => {
+      const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
+      const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
+      return tb - ta;
+    });
+  } else if (sortBy === "oldest") {
+    filtered.sort((a, b) => {
+      const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
+      const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
+      return ta - tb;
+    });
+  }
+
+  // create cards (async map so user info fetched in parallel)
   const cards = await Promise.all(filtered.map(a => createAdCard(a)));
+  // append
   cards.forEach(c => list.appendChild(c));
 }
 
-// ===============================
-// CREATE AD CARD (mini card)
-// ===============================
+
+// CREATE AD CARD (mini) — barcha ma'lumotlar bilan
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
 
   const div = document.createElement("div");
   div.className = "ad-card";
+  div.setAttribute("data-ad-id", ad.id || "");
 
-  const route = `${ad.fromRegion || ""}${
-    ad.fromDistrict ? ", " + ad.fromDistrict : ""
-  } → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  // compose route
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
 
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
+  // times
+  const depTimeRaw = ad.departureTime || ad.startTime || ad.time || ad.date || "";
+  const depTime = formatTime(depTimeRaw);
 
+  // created short display (day month, time) - keep full for modal
+  const createdRaw = ad.createdAt || ad.created || ad.postedAt || "";
+  const created = formatTime(createdRaw);
+
+  // seats logic
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
-  const totalSeats =
-    totalSeatsRaw !== null && totalSeatsRaw !== undefined
-      ? Number(totalSeatsRaw)
-      : null;
-
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
-  const available =
-    typeof totalSeats === "number" ? Math.max(totalSeats - booked, 0) : null;
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
 
-  const requestedRaw =
-    ad.passengerCount ||
-    ad.requestedSeats ||
-    ad.requestSeats ||
-    ad.peopleCount ||
-    null;
-  const requested =
-    requestedRaw !== null && requestedRaw !== undefined
-      ? Number(requestedRaw)
-      : null;
+  // passenger requested seats
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  const carModel = u.carModel || "";
+  const carModel = u.carModel || (ad.car || "");
 
+  // build innerHTML
   div.innerHTML = `
-    <img class="ad-avatar"
-      src="${escapeHtml(
-        u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"
-      )}" alt="avatar">
-
+    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
     <div class="ad-main">
       <div class="ad-route">${escapeHtml(route)}</div>
-      <div class="ad-car">${escapeHtml(carModel)}</div>
+      <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModel)}</div>
 
-      <div class="ad-meta">
+      <div class="ad-meta" style="margin-top:8px">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
         ${
           totalSeats !== null
-            ? `<div class="ad-chip">👥 ${escapeHtml(
-                String(available)
-              )}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
-            : requested !== null
-            ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
-            : ""
+            ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
+            : (requested !== null
+                ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
+                : `<div class="ad-chip">👥 -</div>`)
         }
       </div>
     </div>
 
-    <div class="ad-price">💰 ${escapeHtml(String(ad.price))} so‘m</div>
+    <div class="ad-price">💰 ${escapeHtml(ad.price ? String(ad.price) : "-")} so‘m</div>
+
     <div class="ad-created">${escapeHtml(created)}</div>
   `;
 
+  // click opens modal
   div.onclick = () => openAdModal(ad);
+
   return div;
 }
-// ===============================
-// OPEN FULL MODAL (with tidy layout)
-// ===============================
+
+
+// OPEN FULL MODAL (detailed)
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
   if (!modal) {
@@ -470,19 +507,21 @@ async function openAdModal(ad) {
     document.body.appendChild(modal);
   }
 
-  // fetch user object
+  // get user
   const u = await getUserInfo(ad.userId);
 
-  const route =
-    `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""}` +
-    ` → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
+  // route/time
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
-  const fullname = u.fullName || "Foydalanuvchi";
-  const carFull =
-    `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
+  // name fallback
+  const fullname = u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "Foydalanuvchi";
+
+  // car full
+  const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
+
+  // seats
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
@@ -490,30 +529,30 @@ async function openAdModal(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  // modal markup - ensure avatar constrained by CSS (.modal-avatar in your CSS)
+  // modal markup
   modal.innerHTML = `
     <div class="ad-modal-box" role="dialog" aria-modal="true">
-      <div style="display:flex; gap:12px; align-items:center; margin-bottom:6px;">
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
         <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
           <div class="modal-name">${escapeHtml(fullname)}</div>
-          <div class="modal-car">${escapeHtml(carFull)}</div>
+          <div class="modal-car" style="color:#6b7280">${escapeHtml(carFull)}</div>
         </div>
       </div>
 
       <div class="modal-row">
-        <div style="flex:1">
+        <div class="modal-col">
           <div class="label">Yo‘nalish</div>
           <div class="value">${escapeHtml(route)}</div>
         </div>
-        <div style="flex:1; text-align:right">
+        <div class="modal-col" style="text-align:right">
           <div class="label">Jo‘nash vaqti</div>
           <div class="value">${escapeHtml(depTime)}</div>
         </div>
       </div>
 
       <div class="modal-row">
-        <div style="flex:1">
+        <div class="modal-col">
           <div class="label">Joylar</div>
           <div class="value">
             ${
@@ -525,27 +564,27 @@ async function openAdModal(ad) {
             }
           </div>
         </div>
-        <div style="flex:1; text-align:right">
+        <div class="modal-col" style="text-align:right">
           <div class="label">Narx</div>
           <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
         </div>
       </div>
 
-      <div style="margin-top:12px;">
+      <div style="margin-top:12px">
         <div class="label">Izoh</div>
         <div class="value">${escapeHtml(ad.comment || "-")}</div>
       </div>
 
-      <div style="margin-top:12px;">
+      <div style="margin-top:12px">
         <div class="label">Kontakt</div>
         <div class="value">${escapeHtml(u.phone || "-")}</div>
       </div>
 
-      <div style="margin-top:12px; color:#88919a; font-size:13px;">
+      <div style="margin-top:12px;color:#88919a;font-size:13px;">
         Joylashtirilgan: ${escapeHtml(created)}
       </div>
 
-      <div class="modal-actions">
+      <div class="modal-actions" style="margin-top:14px">
         <button class="btn-primary" id="modalCloseBtn">Yopish</button>
         <button class="btn-ghost" id="modalCallBtn">Qo'ng'iroq</button>
       </div>
@@ -555,46 +594,49 @@ async function openAdModal(ad) {
   // show modal
   modal.style.display = "flex";
 
-  // button handlers (use getElementById because IDs set above)
+  // attach handlers
   const closeBtn = document.getElementById("modalCloseBtn");
   const callBtn = document.getElementById("modalCallBtn");
   if (closeBtn) closeBtn.onclick = closeAdModal;
   if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
 
-  // clicking outside modal closes
+  // clicking outside closes
   modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
 
-// ===============================
-// CLOSE MODAL
-// ===============================
+
+// CLOSE modal
 function closeAdModal() {
   const modal = document.getElementById("adFullModal");
-  if (modal) {
-    modal.style.display = "none";
-    modal.innerHTML = "";
-  }
+  if (!modal) return;
+  modal.style.display = "none";
+  modal.innerHTML = "";
 }
 
-// ===============================
-// CONTACT ACTION
-// ===============================
+// contact
 function onContact(phone) {
   if (!phone) return alert("Telefon raqami mavjud emas");
-  // standard tel link (mobile will open dialer)
   window.location.href = `tel:${phone}`;
 }
 
-// ===============================
-// LOGOUT
-// ===============================
-window.logout = () => signOut(auth);
-
-// expose open/close globally (used by onclick in cards earlier)
+// expose global helpers (if used elsewhere)
 window.openAdModal = openAdModal;
 window.closeAdModal = closeAdModal;
 window.onContact = onContact;
 
-// ===============================
-// end of file - application entry (no exports)
-// ===============================
+// tidy: prevent card flicker — simple debounce of render calls (if render called too often)
+let __render_timeout = null;
+function scheduleRenderAds() {
+  if (__render_timeout) clearTimeout(__render_timeout);
+  __render_timeout = setTimeout(() => {
+    renderAds(ALL_ADS);
+    __render_timeout = null;
+  }, 120);
+}
+
+// attach small optimization: when checkboxes change we use scheduleRenderAds
+document.addEventListener("change", (e) => {
+  if (e.target && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
+    scheduleRenderAds();
+  }
+});
