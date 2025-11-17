@@ -154,6 +154,18 @@ function loadRegionsFilter() {
     el.appendChild(opt);
   });
 }
+function loadRouteFilters() {
+  const fromRegion = document.getElementById("fromRegion");
+  const toRegion = document.getElementById("toRegion");
+
+  Object.keys(REGIONS).forEach(region => {
+    fromRegion.innerHTML += `<option value="${region}">${region}</option>`;
+    toRegion.innerHTML += `<option value="${region}">${region}</option>`;
+  });
+
+  fromRegion.onchange = fillFromDistricts;
+  toRegion.onchange = fillToDistricts;
+}
 
 // ===============================
 // LOAD ALL ADS
@@ -176,12 +188,44 @@ async function loadAllAds() {
       typeNormalized: normalizeType(v.type)
     });
   });
+function fillFromDistricts() {
+  const region = document.getElementById("fromRegion").value;
+  const box = document.getElementById("fromDistrictBox");
+
+  box.innerHTML = "";
+
+  if (!region || !REGIONS[region]) return;
+
+  REGIONS[region].forEach(d => {
+    box.innerHTML += `
+      <label class="district-item">
+        <input type="checkbox" value="${d}" class="fromDistrict"> ${d}
+      </label>
+    `;
+  });
+}
+function fillToDistricts() {
+  const region = document.getElementById("toRegion").value;
+  const box = document.getElementById("toDistrictBox");
+
+  box.innerHTML = "";
+
+  if (!region || !REGIONS[region]) return;
+
+  REGIONS[region].forEach(d => {
+    box.innerHTML += `
+      <label class="district-item">
+        <input type="checkbox" value="${d}" class="toDistrict"> ${d}
+      </label>
+    `;
+  });
+}
 
   document.getElementById("search").oninput = () => renderAds(ads);
   document.getElementById("filterRole").onchange = () => renderAds(ads);
   document.getElementById("filterRegion").onchange = () => renderAds(ads);
 
-  renderAds(ads);
+  renderAds(ads); 
 }
 
 // ===============================
@@ -202,6 +246,23 @@ async function renderAds(ads) {
   const currentUserId = auth.currentUser?.uid || null;
   const currentUser = currentUserId ? await getUserInfo(currentUserId) : null;
   const currentRole = currentUser?.role || ""; // "driver" yoki "passenger" (Yo‘lovchi)
+  const fromRegion = document.getElementById("fromRegion").value;
+const toRegion = document.getElementById("toRegion").value;
+
+const fromDistricts = Array.from(document.querySelectorAll(".fromDistrict:checked")).map(x => x.value);
+const toDistricts = Array.from(document.querySelectorAll(".toDistrict:checked")).map(x => x.value);
+// FROM REGION
+if (fromRegion && a.fromRegion !== fromRegion) return false;
+
+// FROM DISTRICT (multi OR)
+if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
+
+// TO REGION
+if (toRegion && a.toRegion !== toRegion) return false;
+
+// TO DISTRICT (multi OR)
+if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
+
 
   console.log("CURRENT USER ROLE =", currentRole);
 
