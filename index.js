@@ -347,6 +347,28 @@ async function renderAds(ads) {
     if (priceMin && !isNaN(adPrice) && adPrice < priceMin) return false;
     if (priceMax && !isNaN(adPrice) && adPrice > priceMax) return false;
 
+    // 8) OLD E'LONLARNI YASHIRISH (faqat hozirgi va kelajak sanalar ko‘rinadi)
+{
+  const raw = a.departureTime || a.startTime || a.time || a.date || null;
+  let adTime = null;
+
+  if (typeof raw === "number") adTime = new Date(raw);
+  else if (typeof raw === "string" && raw.trim() !== "") {
+    const fix = raw.replace(" ", "T");
+    adTime = !isNaN(Date.parse(raw))
+      ? new Date(raw)
+      : (!isNaN(Date.parse(fix)) ? new Date(fix) : null);
+  }
+
+  if (!adTime) return false;
+
+  const now = new Date();
+  if (adTime.getTime() < now.getTime()) {
+    // ❗ Eskidan o'tgan elonlarni ko‘rsatmaymiz
+    return false;
+  }
+}
+
     // 8) DATE filter
     if (filterDate) {
       const raw = a.departureTime || a.startTime || a.time || a.date || null;
