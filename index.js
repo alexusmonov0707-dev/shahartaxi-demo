@@ -475,6 +475,7 @@ async function createAdCard(ad) {
   const carModel = u.carModel || ad.car || "";
 
   div.innerHTML = `
+  ${isNew ? `<div class="new-badge">Yangi</div>` : ""}
     <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" />
 
     <div class="ad-main">
