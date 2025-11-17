@@ -402,66 +402,63 @@ async function openAdModal(ad) {
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
   // Modal HTML — set explicit inline size for modal-avatar to avoid huge image
-  modal.innerHTML = `
-    <div class="ad-modal-box" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar" style="width:110px;height:110px;object-fit:cover;border-radius:10px;">
-        <div>
-          <div class="modal-name">${escapeHtml(fullname)}</div>
-          <div class="modal-car">${escapeHtml(carFull)}</div>
-        </div>
-      </div>
+modal.innerHTML = `
+  <div class="ad-modal-box" role="dialog" aria-modal="true">
 
-      <div class="modal-row">
-        <div class="modal-col">
-          <div class="label">Yo‘nalish</div>
-          <div class="value">${escapeHtml(route)}</div>
-        </div>
-        <div class="modal-col">
-          <div class="label">Jo‘nash vaqti</div>
-          <div class="value">${escapeHtml(depTime)}</div>
-        </div>
-      </div>
-
-      <div class="modal-row">
-        <div class="modal-col">
-          <div class="label">Joylar</div>
-          <div class="value">
-            ${
-              totalSeats !== null
-                ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})`
-                : requested !== null
-                  ? `Talab: ${escapeHtml(String(requested))} odam`
-                  : "-"
-            }
-          </div>
-        </div>
-        <div class="modal-col">
-          <div class="label">Narx</div>
-          <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
-        </div>
-      </div>
-
-      <div style="margin-top:12px">
-        <div class="label">Izoh</div>
-        <div class="value">${escapeHtml(ad.comment || "-")}</div>
-      </div>
-
-      <div style="margin-top:12px">
-        <div class="label">Kontakt</div>
-        <div class="value">${escapeHtml(u.phone || "-")}</div>
-      </div>
-
-      <div style="margin-top:12px;color:#88919a;font-size:13px;">
-        Joylashtirilgan: ${escapeHtml(created)}
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn-primary" onclick="closeAdModal()">Yopish</button>
-        <button class="btn-ghost" onclick="onContact('${escapeHtml(u.phone || "")}')">Qo'ng'iroq</button>
+    <div class="modal-header">
+      <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
+      <div>
+        <div class="modal-name">${escapeHtml(fullname)}</div>
+        <div class="modal-car">${escapeHtml(carFull)}</div>
       </div>
     </div>
-  `;
+
+    <div class="modal-row">
+      <div class="modal-col">
+        <div class="label">Yo‘nalish</div>
+        <div class="value">${escapeHtml(route)}</div>
+      </div>
+      <div class="modal-col">
+        <div class="label">Jo‘nash vaqti</div>
+        <div class="value">${escapeHtml(depTime)}</div>
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <div class="modal-col">
+        <div class="label">Joylar</div>
+        <div class="value">
+          ${
+            totalSeats !== null
+              ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})`
+              : requested !== null
+                ? `Talab: ${escapeHtml(String(requested))} odam`
+                : "-"
+          }
+        </div>
+      </div>
+      <div class="modal-col">
+        <div class="label">Narx</div>
+        <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="label">Izoh</div>
+      <div class="value">${escapeHtml(ad.comment || "-")}</div>
+    </div>
+
+    <div class="modal-section">
+      <div class="label">Kontakt</div>
+      <div class="value">${escapeHtml(u.phone || "-")}</div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="closeAdModal()">Yopish</button>
+      <button class="btn-ghost" onclick="onContact('${escapeHtml(u.phone || "")}')">Qo‘ng‘iroq</button>
+    </div>
+  </div>
+`;
 
   modal.style.display = "flex";
   modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
