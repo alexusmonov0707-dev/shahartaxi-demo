@@ -371,6 +371,24 @@ async function renderAds(ads) {
       if (priceMin && adPrice < priceMin) return false;
       if (priceMax && adPrice > priceMax) return false;
     }
+// === HIDE EXPIRED ADS (NEW) ===
+const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
+let departureTime = null;
+
+if (typeof departureRaw === "number") {
+  departureTime = new Date(departureRaw);
+} else if (typeof departureRaw === "string" && departureRaw.trim() !== "") {
+  const fix = departureRaw.replace(" ", "T");
+  departureTime = !isNaN(Date.parse(departureRaw))
+    ? new Date(departureRaw)
+    : (!isNaN(Date.parse(fix)) ? new Date(fix) : null);
+}
+
+// agar vaqt umuman noto‘g‘ri bo‘lsa → chiqmasin
+if (!departureTime) return false;
+
+// agar belgilangan jo‘nash vaqti o‘tib ketgan bo‘lsa → chiqmasin
+if (departureTime.getTime() < Date.now()) return false;
 
     // === DATE FILTER ===
     if (filterDate) {
