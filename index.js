@@ -126,6 +126,8 @@ async function getUserInfo(userId) {
 let ALL_ADS = [];            // current cached ads array
 let CURRENT_USER = null;
 let useRealtime = true;      // agar real-time kerak bo'lsa true, aks holda false
+let CURRENT_PAGE = 1;
+const ADS_PER_PAGE = 10;
 
 // ===============================
 // AUTH CHECK
