@@ -167,73 +167,80 @@ onAuthStateChanged(auth, async (user) => {
 
 
 // ===============================
-// LOAD ROUTE FILTERS
+// LOAD Route Filters (fixed - double render prevent)
 // ===============================
 function loadRouteFilters() {
-  const fromR = document.getElementById("fromRegion");
-  const toR = document.getElementById("toRegion");
+  const fromRegion = document.getElementById("fromRegion");
+  const toRegion = document.getElementById("toRegion");
+  if (!fromRegion || !toRegion) return;
 
-  if (!fromR || !toR) return;
+  // Region selectlarni to‘ldiramiz
+  fromRegion.innerHTML = '<option value="">Viloyat</option>';
+  toRegion.innerHTML = '<option value="">Viloyat</option>';
 
-  fromR.innerHTML = `<option value="">Viloyat</option>`;
-  toR.innerHTML = `<option value="">Viloyat</option>`;
-
-  Object.keys(REGIONS).forEach(r => {
-    fromR.innerHTML += `<option value="${r}">${r}</option>`;
-    toR.innerHTML += `<option value="${r}">${r}</option>`;
+  Object.keys(REGIONS).forEach(region => {
+    fromRegion.insertAdjacentHTML("beforeend", `<option value="${region}">${region}</option>`);
+    toRegion.insertAdjacentHTML("beforeend", `<option value="${region}">${region}</option>`);
   });
 
-  fromR.onchange = () => { fillFromDistricts(); renderAds(ALL_ADS); };
-  toR.onchange = () => { fillToDistricts(); renderAds(ALL_ADS); };
+  // ❗ MUHIM: faqat bitta event ishlaydi, dublikat emas
+  fromRegion.onchange = () => {
+    fillFromDistricts();
+    scheduleRenderAds();
+  };
+
+  toRegion.onchange = () => {
+    fillToDistricts();
+    scheduleRenderAds();
+  };
 
   fillFromDistricts();
   fillToDistricts();
 }
 
 
+
 // Qayerdan → tumanlar
 function fillFromDistricts() {
-  const r = document.getElementById("fromRegion").value;
+  const region = document.getElementById("fromRegion").value;
   const box = document.getElementById("fromDistrictBox");
-
   box.innerHTML = "";
-  if (!r || !REGIONS[r]) return;
 
-  REGIONS[r].forEach(d => {
+  if (!region || !REGIONS[region]) return;
+
+  REGIONS[region].forEach(d => {
     box.innerHTML += `
       <label class="district-item">
         <input type="checkbox" class="fromDistrict" value="${d}">
         ${d}
-      </label>
-    `;
+      </label>`;
   });
 
-  box.querySelectorAll("input").forEach(ch => {
-    ch.onchange = () => renderAds(ALL_ADS);
-  });
+  // ❗ faqat scheduleRenderAds (debounced)
+  box.querySelectorAll("input").forEach(ch =>
+    ch.onchange = () => scheduleRenderAds()
+  );
 }
 
-
-// Qayerga → tumanlar
 function fillToDistricts() {
-  const r = document.getElementById("toRegion").value;
+  const region = document.getElementById("toRegion").value;
   const box = document.getElementById("toDistrictBox");
-
   box.innerHTML = "";
-  if (!r || !REGIONS[r]) return;
 
-  REGIONS[r].forEach(d => {
+  if (!region || !REGIONS[region]) return;
+
+  REGIONS[region].forEach(d => {
     box.innerHTML += `
       <label class="district-item">
         <input type="checkbox" class="toDistrict" value="${d}">
         ${d}
-      </label>
-    `;
+      </label>`;
   });
 
-  box.querySelectorAll("input").forEach(ch => {
-    ch.onchange = () => renderAds(ALL_ADS);
-  });
+  // ❗ faqat scheduleRenderAds (debounced)
+  box.querySelectorAll("input").forEach(ch =>
+    ch.onchange = () => scheduleRenderAds()
+  );
 }
 
 
