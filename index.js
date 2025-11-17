@@ -377,7 +377,7 @@ if (isPriceMaxSet && isNaN(adPrice)) return false;
 if (isPriceMinSet && adPrice < priceMin) return false;
 if (isPriceMaxSet && adPrice > priceMax) return false;
 
-}
+
 
 // === HIDE EXPIRED ADS (NEW) ===
 const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
