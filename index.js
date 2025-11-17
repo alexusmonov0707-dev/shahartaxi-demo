@@ -1,15 +1,10 @@
-// ===============================
-// index.js — PART 1 of 3
-// Firebase init, utilities, getUserInfo, auth-check, loadRegionsFilter, loadAllAds starter
-// ===============================
-
-// FIREBASE IMPORTS
+// index.js (to'liq, professional, HTML: final variant bilan mos)
+// Import Firebase (ES modules)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// -----------------------------------------------------------------
-// FIREBASE CONFIG — siz avval bergan config (o'zgarmagan)
+// --- Firebase config (o'zingizniki bilan almashtiring agar kerak bo'lsa) ---
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -24,16 +19,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// -----------------------------------------------------------------
-// REGIONS — regions.js orqali window.regionsData yoki window.regions bo'lishi kerak
+// --- Regions object (regions.js orqali globalga qo'yilgan) ---
 const REGIONS = window.regionsData || window.regions || {};
 
-// ===============================
-// UTIL: escapeHtml
-// ===============================
+// ----------------- Helper functions -----------------
 function escapeHtml(str) {
-  if (str === 0) return "0";
-  if (str === null || str === undefined) return "";
+  if (str === undefined || str === null) return "";
   return String(str)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -42,245 +33,277 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
-// ===============================
-// UTIL: formatReal (detailed date) & formatTime wrapper
-//   - formatTime accepts numbers (ms), ISO strings, "YYYY-MM-DD HH:MM", and other patterns
-//   - formatReal formats Date to 'uz-UZ' readable form
-// ===============================
-function formatReal(date, short = false) {
-  if (!(date instanceof Date)) date = new Date(date);
-  if (isNaN(date)) return "—";
-
-  // date part
-  const datePart = date.toLocaleDateString("uz-UZ", {
-    day: "2-digit",
-    month: "long",
-    year: short ? undefined : "numeric"
-  });
-
-  const timePart = date.toLocaleTimeString("uz-UZ", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
-  if (short) {
-    const parts = datePart.split(" ");
-    if (parts.length && /\d{4}/.test(parts[parts.length - 1])) parts.pop();
-    return `${parts.join(" ")} , ${timePart}`.replace(/\s+,/, ",");
-  }
-
-  return `${datePart}, ${timePart}`;
-}
-
-function formatTime(val, opts = {}) {
-  // opts.shortYear not used here except when calling formatReal with short true.
-  if (!val) return "—";
-
-  // Date object
-  if (val instanceof Date && !isNaN(val)) {
-    return formatReal(val, !!opts.shortYear);
-  }
-
-  // numeric timestamp (ms or seconds)
-  if (typeof val === "number") {
-    // if seconds length 10 -> convert to ms
-    if (String(val).length === 10) return formatReal(new Date(val * 1000), !!opts.shortYear);
-    return formatReal(new Date(val), !!opts.shortYear);
-  }
-
-  // string handling
-  if (typeof val === "string") {
-    const s = val.trim();
-
-    // numeric string timestamp
-    if (/^\d{10,}$/.test(s)) {
-      const n = Number(s);
-      return formatReal(s.length === 10 ? new Date(n * 1000) : new Date(n), !!opts.shortYear);
-    }
-
-    // try Date.parse directly (ISO and many formats)
-    const parsed = Date.parse(s);
-    if (!isNaN(parsed)) return formatReal(new Date(parsed), !!opts.shortYear);
-
-    // replace ' ' with 'T' and try
-    const tfix = s.replace(" ", "T");
-    if (!isNaN(Date.parse(tfix))) return formatReal(new Date(Date.parse(tfix)), !!opts.shortYear);
-
-    // pattern like "2025 M11 20 18:48" or "2025 11 20 18:48"
-    const m = String(s).match(/(\d{4})\D+M?(\d{1,2})\D+(\d{1,2})\D+(\d{1,2}):?(\d{2})/);
-    if (m) {
-      const year = m[1].padStart(4, "0");
-      const month = m[2].padStart(2, "0");
-      const day = m[3].padStart(2, "0");
-      const hour = m[4].padStart(2, "0");
-      const min = m[5].padStart(2, "0");
-      const d = new Date(`${year}-${month}-${day}T${hour}:${min}:00`);
-      if (!isNaN(d)) return formatReal(d, !!opts.shortYear);
-    }
-
-    // last resort — return raw
-    return s;
-  }
-
-  return String(val);
-}
-
-// ===============================
-// TYPE NORMALIZATION
-// ===============================
+// Normalize type values to canonical "Haydovchi" / "Yo‘lovchi"
 function normalizeType(t) {
   if (!t) return "";
   t = String(t).trim().toLowerCase();
-  t = t.replace(/[‘’`ʼ']/g, "'");
+  t = t.replace(/[‘’`ʼ']/g, "'"); // unify apostrophes
   if (t.includes("haydov")) return "Haydovchi";
   if (t.includes("yo") && t.includes("lov")) return "Yo‘lovchi";
-  if (t === "yo'lovchi") return "Yo‘lovchi";
+  if (t === "driver" || t === "haydovchi") return "Haydovchi";
+  if (t === "passenger" || t === "passenger" || t === "yolovchi") return "Yo‘lovchi";
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-// ===============================
-// getUserInfo — robust to your DB structure
-// returns: { phone, avatar, fullName, carModel, carColor, carNumber, seatCount, _raw }
-// ===============================
-async function getUserInfo(userId) {
-  if (!userId) {
-    console.warn("getUserInfo: empty userId");
-    return {
-      phone: "", avatar: "", fullName: "", carModel: "", carColor: "", carNumber: "", seatCount: 0, _raw: {}
-    };
+// Datetime formatting: robust to various input formats
+function datetimeOptions() {
+  return { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" };
+}
+function formatTime(raw) {
+  if (!raw) return "—";
+
+  // If epoch number in ms
+  if (typeof raw === "number") {
+    const d = new Date(raw);
+    if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
+    return String(raw);
   }
 
+  let s = String(raw).trim();
+
+  // handle "2025 M11 17 14:36" style -> convert Mxx to -xx-
+  s = s.replace(/\bM(\d{1,2})\b/g, "-$1-");
+  // collapse multiple spaces
+  s = s.replace(/\s+/g, " ");
+
+  // try direct parse
+  let d = new Date(s);
+  if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
+
+  // try replace last space before time with 'T'
+  d = new Date(s.replace(/(\d{4}[-\d]*)\s+(\d{2}:\d{2})/, "$1T$2"));
+  if (!isNaN(d)) return d.toLocaleString("uz-UZ", datetimeOptions());
+
+  // fallback: return original trimmed string
+  return s;
+}
+
+// Fetch single user (phone, avatar, name, car) safely
+async function fetchUser(userId) {
+  if (!userId) return { phone: "", avatar: "", fullName: "", carModel: "", carNumber: "" };
   try {
-    const snap = await get(ref(db, "users/" + userId));
-    if (!snap.exists()) {
-      console.warn("getUserInfo: no user record for", userId);
-      return {
-        phone: "", avatar: "", fullName: "", carModel: "", carColor: "", carNumber: "", seatCount: 0, _raw: {}
-      };
-    }
-
-    const u = snap.val();
-
-    // prefer fullName (your DB uses fullName); fallback to name/displayName/firstname+lastname
-    const fullName = u.fullName || u.name || u.displayName ||
-      ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "";
-
-    const out = {
-      phone: u.phone || u.phoneNumber || u.mobile || "",
-      avatar: u.avatar || u.photoURL || u.image || "",
-      fullName: fullName,
-      carModel: u.carModel || u.car || "",
-      carColor: u.carColor || u.color || "",
-      carNumber: u.carNumber || u.plate || "",
-      seatCount: (u.seatCount !== undefined && u.seatCount !== null) ? Number(u.seatCount) : (u.bookedSeats !== undefined ? Number(u.bookedSeats) : 0),
-      _raw: u
+    const snap = await get(ref(db, `users/${userId}`));
+    if (!snap.exists()) return { phone: "", avatar: "", fullName: "", carModel: "", carNumber: "" };
+    const v = snap.val();
+    return {
+      phone: v.phone || "",
+      avatar: v.avatar || "",
+      fullName: v.fullName || "",
+      carModel: v.carModel || "",
+      carNumber: v.carNumber || "",
+      seatCount: v.seatCount || ""
     };
-
-    console.log("getUserInfo -> userId:", userId, "resolved:", out);
-    return out;
-  } catch (err) {
-    console.error("getUserInfo error:", err);
-    return { phone: "", avatar: "", fullName: "", carModel: "", carColor: "", carNumber: "", seatCount: 0, _raw: {} };
+  } catch (e) {
+    console.error("fetchUser error", e);
+    return { phone: "", avatar: "", fullName: "", carModel: "", carNumber: "" };
   }
 }
 
-// ===============================
-// AUTH CHECK: redirect to login if not authed
-// ===============================
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
-  // on auth success load filters and ads
-  loadRegionsFilter();
-  loadAllAds();
-});
+// Batch fetch users (reduce DB calls)
+async function fetchUsersBatch(userIds) {
+  const map = {};
+  const unique = Array.from(new Set(userIds.filter(Boolean)));
+  await Promise.all(unique.map(async uid => {
+    map[uid] = await fetchUser(uid);
+  }));
+  return map;
+}
 
-// ===============================
-// loadRegionsFilter — populate #filterRegion from REGIONS
-// ===============================
+// ----------------- UI helpers -----------------
+function el(id) { return document.getElementById(id); }
+
+// Render regions into filter select
 function loadRegionsFilter() {
-  const el = document.getElementById("filterRegion");
-  if (!el) return;
-  el.innerHTML = '<option value="">Viloyat (filter)</option>';
-  Object.keys(REGIONS).forEach(region => {
+  const filterRegion = el("filterRegion");
+  if (!filterRegion) return;
+  filterRegion.innerHTML = '<option value="">Viloyat (filter)</option>';
+  Object.keys(REGIONS).forEach(r => {
     const opt = document.createElement("option");
-    opt.value = region;
-    opt.textContent = region;
-    el.appendChild(opt);
+    opt.value = r;
+    opt.textContent = r;
+    filterRegion.appendChild(opt);
   });
 }
 
-// ===============================
-// loadAllAds — fetches /ads and prepares array then calls renderAds
-// ===============================
+// Create ad card DOM (compact)
+function createAdCard(ad, userInfo) {
+  const div = document.createElement("div");
+  div.className = "ad-card";
+
+  const avatarSrc = userInfo?.avatar || ad.avatar || "https://i.ibb.co/2W0z7Lx/user.png";
+  const name = userInfo?.fullName || ad.userName || "";
+  const car = userInfo?.carModel || ad.carModel || "";
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const priceText = ad.price ? `${ad.price} so‘m` : "Narx ko‘rsatilmagan";
+  const seatText = ad.seatCount ? `${ad.seatCount} joy` : (ad.passengerCount ? `${ad.passengerCount} o‘rindiq` : "");
+  const timeText = formatTime(ad.departureTime || ad.startTime || ad.startAt || ad.createdAt);
+
+  // card inner HTML
+  div.innerHTML = `
+    <img class="ad-avatar" src="${escapeHtml(avatarSrc)}" alt="avatar" onerror="this.src='https://i.ibb.co/2W0z7Lx/user.png'"/>
+    <div class="ad-main">
+      <div class="ad-route">${escapeHtml(route)}</div>
+      <div class="ad-car">${escapeHtml(car)}</div>
+      <div class="ad-meta">
+        <div class="ad-chip"><span class="icon">⏰</span> ${escapeHtml(timeText)}</div>
+        ${seatText ? `<div class="ad-chip"><span class="icon">👥</span> ${escapeHtml(seatText)}</div>` : ""}
+        ${name ? `<div style="color:var(--muted)"><span class="icon">👤</span> ${escapeHtml(name)}</div>` : ""}
+      </div>
+    </div>
+    <div class="ad-price">${escapeHtml(priceText)}</div>
+    <div class="ad-created">${escapeHtml(formatTime(ad.createdAt || ad.created || ""))}</div>
+  `;
+
+  // click -> full modal
+  div.addEventListener("click", () => openAdModal(ad, userInfo));
+  return div;
+}
+
+// Full modal (detailed)
+function openAdModal(ad, userInfo) {
+  let modal = el("adFullModal");
+  if (!modal) return;
+
+  // build modal content
+  const avatarSrc = userInfo?.avatar || ad.avatar || "https://i.ibb.co/2W0z7Lx/user.png";
+  const name = userInfo?.fullName || ad.userName || "-";
+  const carModel = userInfo?.carModel || ad.carModel || "-";
+  const carNumber = userInfo?.carNumber || ad.carNumber || "-";
+  const seats = ad.seatCount || ad.passengerCount || userInfo?.seatCount || "-";
+  const contact = userInfo?.phone || ad.ownerPhone || ad.phone || "-";
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ', ' + ad.fromDistrict : ''} → ${ad.toRegion || ""}${ad.toDistrict ? ', ' + ad.toDistrict : ''}`;
+  const departure = formatTime(ad.departureTime || ad.startTime || ad.startAt || "");
+  const created = formatTime(ad.createdAt || ad.created || "");
+
+  modal.innerHTML = `
+    <div class="ad-modal-box" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <img class="modal-avatar" src="${escapeHtml(avatarSrc)}" onerror="this.src='https://i.ibb.co/2W0z7Lx/user.png'"/>
+        <div>
+          <div class="modal-name">${escapeHtml(name)}</div>
+          <div class="modal-car">${escapeHtml(carModel)} ${carNumber ? ' • ' + escapeHtml(carNumber) : ''}</div>
+        </div>
+      </div>
+
+      <div style="margin-top:6px;">
+        <div class="label">Yo'nalish</div>
+        <div class="value">${escapeHtml(route)}</div>
+
+        <div class="modal-row">
+          <div class="modal-col">
+            <div class="label">Jo'nash vaqti</div>
+            <div class="value">${escapeHtml(departure)}</div>
+          </div>
+          <div class="modal-col">
+            <div class="label">Narx</div>
+            <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="label">Qo'shimcha</div>
+          <div class="value">${escapeHtml(ad.comment || "-")}</div>
+        </div>
+
+        <div class="modal-row" style="margin-top:10px">
+          <div class="modal-col">
+            <div class="label">Kontakt</div>
+            <div class="value">${escapeHtml(contact)}</div>
+          </div>
+          <div class="modal-col">
+            <div class="label">O'rindiqlar</div>
+            <div class="value">${escapeHtml(seats || "-")}</div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;color:var(--muted);font-size:13px">
+          Joylashtirilgan: ${escapeHtml(created)}
+        </div>
+
+        <div class="modal-actions">
+          <button id="closeAdBtn" class="btn-ghost">Yopish</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = "flex";
+  const closeBtn = el("closeAdBtn");
+  if (closeBtn) closeBtn.onclick = () => { modal.style.display = "none"; };
+  // clicking outside closes
+  modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+}
+
+// ----------------- Main: load ads & render -----------------
 async function loadAllAds() {
   try {
     const snap = await get(ref(db, "ads"));
-    const list = document.getElementById("adsList");
+    const list = el("adsList");
     if (!list) return;
+    list.innerHTML = "";
 
     if (!snap.exists()) {
       list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
       return;
     }
 
+    // collect ads and userIds to batch fetch
     const ads = [];
+    const userIds = [];
     snap.forEach(child => {
-      const v = child.val();
-      ads.push({
-        id: child.key,
-        ...v,
-        typeNormalized: normalizeType(v.type)
-      });
+      const v = child.val() || {};
+      const id = child.key;
+      const typeNorm = normalizeType(v.type || v.userType || v.role || "");
+      const a = { id, ...v, typeNormalized: typeNorm };
+      ads.push(a);
+      if (a.userId) userIds.push(a.userId);
     });
 
-    // attach handlers
-    const searchEl = document.getElementById("search");
-    const roleEl = document.getElementById("filterRole");
-    const regionEl = document.getElementById("filterRegion");
+    // batch fetch users
+    const usersMap = await fetchUsersBatch(userIds);
 
-    if (searchEl) searchEl.oninput = () => renderAds(ads);
-    if (roleEl) roleEl.onchange = () => renderAds(ads);
-    if (regionEl) regionEl.onchange = () => renderAds(ads);
+    // wire up filter events
+    const searchEl = el("search");
+    const roleEl = el("filterRole");
+    const regionEl = el("filterRegion");
+    if (searchEl) searchEl.oninput = () => renderAds(ads, usersMap);
+    if (roleEl) roleEl.onchange = () => renderAds(ads, usersMap);
+    if (regionEl) regionEl.onchange = () => renderAds(ads, usersMap);
 
     // initial render
-    renderAds(ads);
+    renderAds(ads, usersMap);
+
   } catch (err) {
-    console.error("loadAllAds error:", err);
-    const list = document.getElementById("adsList");
-    if (list) list.innerHTML = "<p>E'lonlarni yuklashda xatolik yuz berdi.</p>";
+    console.error("loadAllAds error", err);
+    const list = el("adsList");
+    if (list) list.innerHTML = "<p>Xatolik yuz berdi. Konsolni tekshiring.</p>";
   }
 }
 
-// End of PART 1
-// NEXT: PART 2 will include renderAds, createAdCard (mini card) and related helpers.
-// When ready, type: "2-qismni ber" (yoki '2') to get the next chunk.
-// ===============================
-// index.js — PART 2 of 3
-// RENDER ADS + CREATE AD CARD
-// ===============================
-
-async function renderAds(ads) {
-  const list = document.getElementById("adsList");
+// render with filters
+function renderAds(ads, usersMap = {}) {
+  const list = el("adsList");
   if (!list) return;
   list.innerHTML = "";
 
-  const q = (document.getElementById("search")?.value || "").toLowerCase();
-  const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
-  const regionFilter = document.getElementById("filterRegion")?.value || "";
+  const q = (el("search")?.value || "").toLowerCase().trim();
+  const roleFilterRaw = el("filterRole")?.value || "";
+  const regionFilter = el("filterRegion")?.value || "";
+  const roleFilter = normalizeType(roleFilterRaw);
 
   const filtered = ads.filter(a => {
     if (roleFilter && a.typeNormalized !== roleFilter) return false;
-    if (regionFilter && a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
-
-    const hay = [
-      a.fromRegion, a.fromDistrict, a.toRegion, a.toDistrict,
-      a.comment, a.price, a.type
-    ].join(" ").toLowerCase();
-
-    return hay.includes(q);
+    if (regionFilter) {
+      if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
+    }
+    if (q) {
+      const hay = [
+        a.fromRegion, a.fromDistrict, a.toRegion, a.toDistrict,
+        a.comment, a.price, a.type, a.typeNormalized, usersMap[a.userId]?.fullName
+      ].map(x => (x || "").toString().toLowerCase()).join(" ");
+      if (!hay.includes(q)) return false;
+    }
+    return true;
   });
 
   if (!filtered.length) {
@@ -288,223 +311,28 @@ async function renderAds(ads) {
     return;
   }
 
-  const cards = await Promise.all(filtered.map(a => createAdCard(a)));
-  cards.forEach(card => list.appendChild(card));
+  // show all (no pagination) — user wanted full listing
+  filtered.forEach(ad => {
+    const userInfo = usersMap[ad.userId] || {};
+    const card = createAdCard(ad, userInfo);
+    list.appendChild(card);
+  });
 }
 
-// ===============================
-// CREATE AD CARD (mini)
-// ===============================
-async function createAdCard(ad) {
-  const u = await getUserInfo(ad.userId);
-
-  const div = document.createElement("div");
-  div.className = "ad-card";
-
-  const route =
-    `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ` +
-    `${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: true });
-
-  // Seats logic
-  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
-  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
-
-  const booked = Number(ad.bookedSeats || 0);
-  const available = (typeof totalSeats === "number" && !isNaN(totalSeats))
-    ? Math.max(totalSeats - booked, 0)
-    : null;
-
-  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
-  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
-
-  const carModel = u.carModel || "";
-
-  div.innerHTML = `
-    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
-
-    <div class="ad-main">
-      <div class="ad-route">${escapeHtml(route)}</div>
-      <div class="ad-car">${escapeHtml(carModel)}</div>
-
-      <div class="ad-meta">
-        <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
-
-        ${
-          totalSeats !== null
-            ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
-            : requested !== null
-            ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
-            : ""
-        }
-      </div>
-    </div>
-
-    <div class="ad-price">💰 ${escapeHtml(ad.price ? String(ad.price) : "-")} so‘m</div>
-
-    <div class="ad-created">${escapeHtml(created)}</div>
-  `;
-
-  div.onclick = () => openAdModal(ad);
-  return div;
-}
-// ===============================
-// PART 3 — OPEN FULL MODAL
-// ===============================
-async function openAdModal(ad) {
-  let modal = document.getElementById("adFullModal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "adFullModal";
-    document.body.appendChild(modal);
+// ----------------- Auth state and init -----------------
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window.location.href = "login.html";
+    return;
   }
+  // init UI
+  loadRegionsFilter();
+  loadAllAds();
+});
 
-  const u = await getUserInfo(ad.userId);
+// logout binding (used in HTML topbar)
+window.logout = () => signOut(auth).catch(e => console.error("logout err", e));
 
-  // -------------------------
-  // FULL NAME — FIREBASE bo‘yicha
-  // -------------------------
-  const fullname =
-    u.fullname ||
-    `${u.firstname || ""} ${u.lastname || ""}`.trim() ||
-    u.name ||
-    u.displayName ||
-    u.username ||
-    "Foydalanuvchi";
-
-  // -------------------------
-  // ROUTE
-  // -------------------------
-  const route =
-    `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ` +
-    `${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-
-  // -------------------------
-  // DATE/TIME (TO‘G‘RI FORMAT)
-  // -------------------------
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
-
-  // -------------------------
-  // SEATS
-  // -------------------------
-  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
-  const totalSeats =
-    totalSeatsRaw !== null && totalSeatsRaw !== undefined ? Number(totalSeatsRaw) : null;
-
-  const booked = Number(ad.bookedSeats || 0);
-  const available =
-    typeof totalSeats === "number" && !isNaN(totalSeats)
-      ? Math.max(totalSeats - booked, 0)
-      : null;
-
-  const requestedRaw =
-    ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
-  const requested =
-    requestedRaw !== null && requestedRaw !== undefined ? Number(requestedRaw) : null;
-
-  // -------------------------
-  // CAR FULL INFO
-  // -------------------------
-  const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${
-    u.carNumber ? " • " + u.carNumber : ""
-  }`;
-
-  // -------------------------
-  // HTML
-  // -------------------------
-  modal.innerHTML = `
-    <div class="ad-modal-box" role="dialog" aria-modal="true">
-
-      <div class="modal-header">
-        <img class="modal-avatar" src="${escapeHtml(
-          u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"
-        )}" alt="avatar">
-
-        <div>
-          <div class="modal-name">${escapeHtml(fullname)}</div>
-          <div class="modal-car">${escapeHtml(carFull)}</div>
-        </div>
-      </div>
-
-      <div class="modal-row">
-        <div class="modal-col">
-          <div class="label">Yo‘nalish</div>
-          <div class="value">${escapeHtml(route)}</div>
-        </div>
-
-        <div class="modal-col">
-          <div class="label">Jo‘nash vaqti</div>
-          <div class="value">${escapeHtml(depTime)}</div>
-        </div>
-      </div>
-
-      <div class="modal-row">
-        <div class="modal-col">
-          <div class="label">Joylar</div>
-          <div class="value">
-            ${
-              totalSeats !== null
-                ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(
-                    String(available)
-                  )})`
-                : requested !== null
-                ? `Talab: ${escapeHtml(String(requested))} odam`
-                : "-"
-            }
-          </div>
-        </div>
-
-        <div class="modal-col">
-          <div class="label">Narx</div>
-          <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
-        </div>
-      </div>
-
-      <div style="margin-top:12px">
-        <div class="label">Izoh</div>
-        <div class="value">${escapeHtml(ad.comment || "-")}</div>
-      </div>
-
-      <div style="margin-top:12px">
-        <div class="label">Kontakt</div>
-        <div class="value">${escapeHtml(u.phone || "-")}</div>
-      </div>
-
-      <div style="margin-top:12px; color:#88919a; font-size:13px;">
-        Joylashtirilgan: ${escapeHtml(created)}
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn-primary" onclick="closeAdModal()">Yopish</button>
-        <button class="btn-ghost" onclick="onContact('${escapeHtml(u.phone || "")}')">
-          Qo'ng'iroq
-        </button>
-      </div>
-
-    </div>
-  `;
-
-  modal.style.display = "flex";
-  modal.onclick = (e) => {
-    if (e.target === modal) closeAdModal();
-  };
-}
-
-// ===============================
-// CLOSE MODAL
-// ===============================
-window.closeAdModal = function () {
-  const modal = document.getElementById("adFullModal");
-  if (modal) modal.style.display = "none";
-};
-
-// ===============================
-// PHONE CALL
-// ===============================
-window.onContact = (phone) => {
-  if (!phone) return alert("Telefon raqami mavjud emas");
-  window.location.href = `tel:${phone}`;
-};
+// Export openAdModal to global scope for other scripts (if needed)
+window.openAdModal = openAdModal;
+window.closeAdModal = () => { const m = el("adFullModal"); if (m) m.style.display = "none"; };
