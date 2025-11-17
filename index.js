@@ -371,9 +371,6 @@ const priceMax = Number(document.getElementById("priceMax").value || 0);
 const isPriceMinSet = document.getElementById("priceMin").value !== "";
 const isPriceMaxSet = document.getElementById("priceMax").value !== "";
 
-if (isPriceMinSet || isPriceMaxSet) {
-  if (isNaN(adPrice)) return false;
-
   if (isPriceMinSet && adPrice < priceMin) return false;
   if (isPriceMaxSet && adPrice > priceMax) return false;
 }
