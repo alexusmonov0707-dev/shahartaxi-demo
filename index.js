@@ -201,54 +201,66 @@ async function renderAds(ads) {
   // Hozirgi user roli
   const currentUserId = auth.currentUser?.uid || null;
   const currentUser = currentUserId ? await getUserInfo(currentUserId) : null;
-  const currentRole = currentUser?.role || "";  // "driver" yoki "passenger" (Yo‘lovchi)
+  const currentRole = currentUser?.role || ""; // "driver" yoki "passenger" (Yo‘lovchi)
 
   console.log("CURRENT USER ROLE =", currentRole);
 
   const filtered = ads.filter(a => {
 
-   // 1. ROLE FILTER (to‘g‘ri ishlaydigan)
-if (currentRole === "driver") {
-    // Haydovchi → faqat Yo‘lovchi e’lonlarni ko‘radi
-    if (a.type.toLowerCase() !== "yo‘lovchi") return false;
-}
-else if (currentRole === "passenger") {
-    // Yo‘lovchi → faqat Haydovchi e’lonlarni ko‘radi
-    if (a.type.toLowerCase() !== "haydovchi") return false;
-}
+    // ================================
+    // 1. ROLE FILTER (TO‘G‘RI ISHLAYDIGAN)
+    // ================================
+    if (currentRole === "driver") {
+      // Haydovchi → faqat Yo‘lovchi e’lonlarini ko‘radi
+      if (a.type?.toLowerCase() !== "yo‘lovchi") return false;
+    } 
+    else if (currentRole === "passenger") {
+      // Yo‘lovchi → faqat Haydovchi e’lonlarini ko‘radi
+      if (a.type?.toLowerCase() !== "haydovchi") return false;
+    }
 
+    // Agar boshqalarning elonlari kerak bo‘lsa (o‘zini e'loni ko‘rinmaydi)
+    if (a.userId === currentUserId) return false;
 
     // ================================
     // 2. REGION FILTER
     // ================================
-    if (regionFilter &&
-       a.fromRegion !== regionFilter &&
-       a.toRegion !== regionFilter) {
-      return false;
-    }
+    if (
+      regionFilter &&
+      a.fromRegion !== regionFilter &&
+      a.toRegion !== regionFilter
+    ) return false;
 
     // ================================
     // 3. QIDIRUV FILTER
     // ================================
     const hay =
-      `${a.fromRegion} ${a.fromDistrict} ${a.toRegion} ${a.toDistrict} 
-       ${a.comment} ${a.price} ${a.type}`
+      [
+        a.fromRegion,
+        a.fromDistrict,
+        a.toRegion,
+        a.toDistrict,
+        a.comment,
+        a.price,
+        a.type
+      ]
+        .join(" ")
         .toLowerCase();
 
-    if (!hay.includes(q)) return false;
-
-    return true;
+    return hay.includes(q);
   });
 
+  // Agar hech narsa topilmasa
   if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
     return;
   }
 
-  // Kartalar yaratish
+  // Kartalarni yaratish
   const cards = await Promise.all(filtered.map(a => createAdCard(a)));
   cards.forEach(card => list.appendChild(card));
 }
+
 
 
 // ===============================
