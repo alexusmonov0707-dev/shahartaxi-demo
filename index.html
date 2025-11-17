@@ -147,6 +147,57 @@
           <option value="Haydovchi">Haydovchi</option>
           <option value="Yo‘lovchi">Yo‘lovchi</option>
         </select>
+        <div class="filter-block">
+  <label>Qayerdan:</label>
+<div class="filter-block">
+  <label>Qayerga:</label>
+
+  <select id="toRegion">
+    <option value="">Viloyat</option>
+  </select>
+
+  <div id="toDistrictBox" class="district-box">
+    <!-- checkboxlar JS tomonidan to‘ldiriladi -->
+  </div>
+</div>
+.filter-block {
+  margin-bottom: 15px;
+  background: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.district-box {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.district-item {
+  background: #f3f4f6;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.district-item input {
+  transform: scale(1.2);
+}
+
+  <select id="fromRegion">
+    <option value="">Viloyat</option>
+  </select>
+
+  <div id="fromDistrictBox" class="district-box">
+    <!-- checkboxlar JS orqali avtomatik joylanadi -->
+  </div>
+</div>
 
         <select id="filterRegion">
           <option value="">Viloyat (filter)</option>
