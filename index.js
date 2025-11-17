@@ -1,10 +1,11 @@
+// index.js (tahrirlangan, to'liq)
 // ===============================
 //  FIREBASE INIT
 // ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-import { onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -24,12 +25,13 @@ const db = getDatabase(app);
 // ===============================
 const REGIONS = window.regionsData || window.regions || {};
 
-
 // ===============================
-//  *** NEW BADGE LOCAL STORAGE ***
+//  NEW BADGE LOCAL STORAGE
 // ===============================
 function markAsRead(adId) {
-  let read = JSON.parse(localStorage.getItem("readAds") || "[]");
+  if (!adId) return;
+  let read = [];
+  try { read = JSON.parse(localStorage.getItem("readAds") || "[]"); } catch(e){ read = []; }
   if (!read.includes(adId)) {
     read.push(adId);
     localStorage.setItem("readAds", JSON.stringify(read));
@@ -37,10 +39,12 @@ function markAsRead(adId) {
 }
 
 function isRead(adId) {
-  let read = JSON.parse(localStorage.getItem("readAds") || "[]");
-  return read.includes(adId);
+  if (!adId) return false;
+  try {
+    const read = JSON.parse(localStorage.getItem("readAds") || "[]");
+    return read.includes(adId);
+  } catch(e) { return false; }
 }
-
 
 // ===============================
 //  HELPERS
@@ -68,118 +72,72 @@ function normalizeType(t) {
 
 function formatTime(val) {
   if (!val) return "—";
-
   if (typeof val === "number") {
     try {
       return new Date(val).toLocaleString("uz-UZ", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit"
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
       });
-    } catch (e) { return String(val); }
+    } catch(e) { return String(val); }
   }
-
   if (typeof val === "string") {
     if (!isNaN(Date.parse(val))) {
       return new Date(val).toLocaleString("uz-UZ", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit"
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
       });
     }
     const fix = val.replace(" ", "T");
     if (!isNaN(Date.parse(fix))) {
       return new Date(fix).toLocaleString("uz-UZ", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit"
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
       });
     }
   }
-
   return String(val);
 }
 
-
-// ===============================
-//  GET USER INFO
-// ===============================
 async function getUserInfo(userId) {
-  if (!userId) return {
-    phone: "", avatar: "", fullName: "",
-    role: "", carModel: "", carColor: "",
-    carNumber: "", seatCount: 0
-  };
-
+  if (!userId) return { phone:"", avatar:"", fullName:"", role:"", carModel:"", carColor:"", carNumber:"", seatCount:0 };
   try {
     const snap = await get(ref(db, "users/" + userId));
-
-    if (!snap.exists()) {
-      return {
-        phone: "", avatar: "", fullName: "",
-        role: "", carModel: "", carColor: "",
-        carNumber: "", seatCount: 0
-      };
-    }
-
+    if (!snap.exists()) return { phone:"", avatar:"", fullName:"", role:"", carModel:"", carColor:"", carNumber:"", seatCount:0 };
     const u = snap.val();
-
     return {
       phone: u.phone || u.telephone || "",
       avatar: u.avatar || "",
-      fullName:
-        u.fullName ||
-        ((u.firstname || u.lastname)
-          ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
-          : "") ||
-        u.name ||
-        "",
+      fullName: u.fullName || ((u.firstname||u.lastname) ? `${u.firstname||""} ${u.lastname||""}`.trim() : "") || u.name || "",
       role: (u.role || u.userRole || "").toString(),
       carModel: u.carModel || u.car || "",
       carColor: u.carColor || "",
       carNumber: u.carNumber || u.plate || "",
       seatCount: Number(u.seatCount || u.seats || 0)
     };
-
-  } catch (err) {
+  } catch(err) {
     console.error("getUserInfo error", err);
-    return {
-      phone: "", avatar: "", fullName: "",
-      role: "", carModel: "", carColor: "",
-      carNumber: "", seatCount: 0
-    };
+    return { phone:"", avatar:"", fullName:"", role:"", carModel:"", carColor:"", carNumber:"", seatCount:0 };
   }
 }
-
 
 // ===============================
 // GLOBALS
 // ===============================
-let ALL_ADS = [];
+let ALL_ADS = [];            // current cached ads array
 let CURRENT_USER = null;
-
+let useRealtime = true;      // agar real-time kerak bo'lsa true, aks holda false
 
 // ===============================
 // AUTH CHECK
 // ===============================
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  CURRENT_USER = await getUserInfo(user.uid);
-
+  if (!user) { window.location.href = "login.html"; return; }
+  CURRENT_USER = await getUserInfo(user.uid || user.userId);
   loadRouteFilters();
-  await loadAllAds();
+  await loadAllAds(); // will set ALL_ADS and render
+  // if realtime enabled, attach listener
+  if (useRealtime) attachRealtimeListener();
 });
-
 
 // ===============================
 // LOAD Route Filters
@@ -191,98 +149,118 @@ function loadRouteFilters() {
 
   fromRegion.innerHTML = '<option value="">Viloyat</option>';
   toRegion.innerHTML = '<option value="">Viloyat</option>';
-
   Object.keys(REGIONS).forEach(region => {
-    fromRegion.insertAdjacentHTML("beforeend", `<option value="${region}">${region}</option>`);
-    toRegion.insertAdjacentHTML("beforeend", `<option value="${region}">${region}</option>`);
+    fromRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
+    toRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
   });
 
-  fromRegion.onchange = () => {
-    fillFromDistricts();
-    scheduleRenderAds();
-  };
-
-  toRegion.onchange = () => {
-    fillToDistricts();
-    scheduleRenderAds();
-  };
+  // attach once
+  fromRegion.onchange = () => { fillFromDistricts(); scheduleRenderAds(); };
+  toRegion.onchange   = () => { fillToDistricts(); scheduleRenderAds(); };
 
   fillFromDistricts();
   fillToDistricts();
 }
 
-
-// ===============================
-// FILL DISTRICTS
-// ===============================
 function fillFromDistricts() {
   const region = document.getElementById("fromRegion").value;
   const box = document.getElementById("fromDistrictBox");
+  if (!box) return;
   box.innerHTML = "";
-
   if (!region || !REGIONS[region]) return;
-
   REGIONS[region].forEach(d => {
-    box.innerHTML += `
-      <label class="district-item">
-        <input type="checkbox" class="fromDistrict" value="${d}">
-        ${d}
-      </label>`;
+    const label = document.createElement("label");
+    label.className = "district-item";
+    label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
+    box.appendChild(label);
   });
-
-  box.querySelectorAll("input").forEach(ch =>
-    ch.onchange = () => scheduleRenderAds()
-  );
+  box.querySelectorAll("input").forEach(ch => ch.onchange = scheduleRenderAds);
 }
 
 function fillToDistricts() {
   const region = document.getElementById("toRegion").value;
   const box = document.getElementById("toDistrictBox");
+  if (!box) return;
   box.innerHTML = "";
-
   if (!region || !REGIONS[region]) return;
-
   REGIONS[region].forEach(d => {
-    box.innerHTML += `
-      <label class="district-item">
-        <input type="checkbox" class="toDistrict" value="${d}">
-        ${d}
-      </label>`;
+    const label = document.createElement("label");
+    label.className = "district-item";
+    label.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
+    box.appendChild(label);
   });
-
-  box.querySelectorAll("input").forEach(ch =>
-    ch.onchange = () => scheduleRenderAds()
-  );
+  box.querySelectorAll("input").forEach(ch => ch.onchange = scheduleRenderAds);
 }
 
-
 // ===============================
-// LOAD ALL ADS
+// LOAD ALL ADS (one-time fetch)
 // ===============================
-function loadAllAds() {
-  const listRef = ref(db, "ads");
-
-  onValue(listRef, (snap) => {
+async function loadAllAds() {
+  try {
+    const snap = await get(ref(db, "ads"));
+    const listEl = document.getElementById("adsList");
+    if (!listEl) return;
     if (!snap.exists()) {
       ALL_ADS = [];
-      renderAds([]);
+      listEl.innerHTML = "E’lon yo‘q.";
       return;
     }
-
     const arr = [];
-    snap.forEach((c) => {
-      arr.push({
-        id: c.key,
-        ...c.val(),
-        typeNormalized: normalizeType(c.val().type)
-      });
+    snap.forEach(child => {
+      const v = child.val();
+      arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
     });
-
-    ALL_ADS = arr;
+    // ensure unique by id
+    const byId = new Map();
+    arr.forEach(x => { if (x && x.id) byId.set(x.id, x); });
+    ALL_ADS = Array.from(byId.values());
+    attachInputHandlers(); // once attach inputs
     renderAds(ALL_ADS);
-  });
+  } catch(err) {
+    console.error("loadAllAds error", err);
+  }
 }
 
+// optional realtime - updates ALL_ADS whenever DB changes
+function attachRealtimeListener() {
+  try {
+    const r = ref(db, "ads");
+    onValue(r, snap => {
+      const arr = [];
+      snap.forEach(child => { const v = child.val(); arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) }); });
+      // dedupe by id and replace ALL_ADS
+      const m = new Map();
+      arr.forEach(x => { if (x && x.id) m.set(x.id, x); });
+      ALL_ADS = Array.from(m.values());
+      scheduleRenderAds();
+    }, err => { console.warn("realtime error", err); });
+  } catch(e) {
+    console.warn("attachRealtimeListener failed", e);
+  }
+}
+
+// attach input event handlers once
+function attachInputHandlers() {
+  const searchEl = document.getElementById("search");
+  const roleEl = document.getElementById("filterRole");
+  const regionEl = document.getElementById("filterRegion");
+  const fromRegionEl = document.getElementById("fromRegion");
+  const toRegionEl = document.getElementById("toRegion");
+  const sortByEl = document.getElementById("sortBy");
+  const filterDateEl = document.getElementById("filterDate");
+  const priceMinEl = document.getElementById("priceMin");
+  const priceMaxEl = document.getElementById("priceMax");
+
+  if (searchEl) searchEl.oninput = scheduleRenderAds;
+  if (roleEl) roleEl.onchange = scheduleRenderAds;
+  if (regionEl) regionEl.onchange = scheduleRenderAds;
+  if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); scheduleRenderAds(); };
+  if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); scheduleRenderAds(); };
+  if (sortByEl) sortByEl.onchange = scheduleRenderAds;
+  if (filterDateEl) filterDateEl.onchange = scheduleRenderAds;
+  if (priceMinEl) priceMinEl.oninput = scheduleRenderAds;
+  if (priceMaxEl) priceMaxEl.oninput = scheduleRenderAds;
+}
 
 // ===============================
 // SLUGIFY
@@ -291,23 +269,28 @@ function slugify(s) {
   return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
 }
 
-
 // ===============================
 // RENDER ADS (MAIN ENGINE)
 // ===============================
 async function renderAds(ads) {
   const list = document.getElementById("adsList");
   if (!list) return;
+  // clear safely
   list.innerHTML = "";
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
   const regionFilter = document.getElementById("filterRegion")?.value || "";
-
   const sortBy = document.getElementById("sortBy")?.value || "newest";
   const filterDate = document.getElementById("filterDate")?.value || "";
-  const priceMin = Number(document.getElementById("priceMin")?.value || 0);
-  const priceMax = Number(document.getElementById("priceMax")?.value || 0);
+
+  // price inputs: parse as numbers only if not empty (avoid double-declare)
+  const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
+  const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
+  const isPriceMinSet = priceMinInput !== "";
+  const isPriceMaxSet = priceMaxInput !== "";
+  const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g,"")) : null;
+  const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
 
   const currentUserId = auth.currentUser?.uid || null;
 
@@ -321,147 +304,117 @@ async function renderAds(ads) {
   const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
   const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
-  let filtered = ads.filter(a => {
+  // filter pipeline
+  let filtered = (ads || []).filter(a => {
     if (!a) return false;
 
+    // automatic role filter
     if (currentRole === "driver") {
       if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
     } else if (currentRole === "passenger") {
       if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("haydov")) return false;
     }
 
+    // explicit role dropdown
     if (roleFilter) {
       if (a.typeNormalized !== roleFilter) return false;
     }
 
+    // hide own
     if (currentUserId && a.userId === currentUserId) return false;
 
+    // region top filter
     if (regionFilter) {
       if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
     }
 
-    if (fromRegion) {
-      if (a.fromRegion !== fromRegion) return false;
+    // from region/districts
+    if (fromRegion && a.fromRegion !== fromRegion) return false;
+    if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
+
+    // to region/districts
+    if (toRegion && a.toRegion !== toRegion) return false;
+    if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
+
+    // PRICE filter
+    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
+    if (isPriceMinSet && isNaN(adPrice)) return false; // ad has no price but user set min -> exclude
+    if (isPriceMaxSet && isNaN(adPrice)) return false; // ad has no price but user set max -> exclude
+    if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
+    if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
+
+    // HIDE EXPIRED ADS (by departure time)
+    const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
+    let departureTime = null;
+    if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
+    else if (typeof departureRaw === "string" && departureRaw.trim() !== "") {
+      const fixed = departureRaw.replace(" ", "T");
+      if (!isNaN(Date.parse(departureRaw))) departureTime = new Date(departureRaw);
+      else if (!isNaN(Date.parse(fixed))) departureTime = new Date(fixed);
     }
-    if (fromDistricts.length > 0) {
-      if (!fromDistricts.includes(a.fromDistrict)) return false;
-    }
+    // If no valid departureTime -> exclude (as requested)
+    if (!departureTime) return false;
+    // if already passed -> exclude
+    if (departureTime.getTime() < Date.now()) return false;
 
-    if (toRegion) {
-      if (a.toRegion !== toRegion) return false;
-    }
-    if (toDistricts.length > 0) {
-      if (!toDistricts.includes(a.toDistrict)) return false;
-    }
-// === PRICE EXTRACT (FIX) ===
-const adPrice = a.price ? Number(a.price) : NaN;
-
-const priceMinInput = document.getElementById("priceMin").value.trim();
-const priceMaxInput = document.getElementById("priceMax").value.trim();
-
-const isPriceMinSet = priceMinInput !== "";
-const isPriceMaxSet = priceMaxInput !== "";
-
-const priceMin = isPriceMinSet ? Number(priceMinInput) : null;
-const priceMax = isPriceMaxSet ? Number(priceMaxInput) : null;
-
-const adPrice = a.price ? Number(a.price) : NaN;
-
-if (isPriceMinSet && adPrice < priceMin) return false;
-if (isPriceMaxSet && adPrice > priceMax) return false;
-
-
-
-// === HIDE EXPIRED ADS (NEW) ===
-const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
-let departureTime = null;
-
-if (typeof departureRaw === "number") {
-  departureTime = new Date(departureRaw);
-} else if (typeof departureRaw === "string" && departureRaw.trim() !== "") {
-  const fix = departureRaw.replace(" ", "T");
-  departureTime = !isNaN(Date.parse(departureRaw))
-    ? new Date(departureRaw)
-    : (!isNaN(Date.parse(fix)) ? new Date(fix) : null);
-}
-
-// agar vaqt umuman noto‘g‘ri bo‘lsa → chiqmasin
-if (!departureTime) return false;
-
-// agar belgilangan jo‘nash vaqti o‘tib ketgan bo‘lsa → chiqmasin
-if (departureTime.getTime() < Date.now()) return false;
-
-    // === DATE FILTER ===
+    // DATE filter (today / tomorrow / 3days)
     if (filterDate) {
       const raw = a.departureTime || a.startTime || a.time || a.date || null;
-
       let adTime = null;
       if (typeof raw === "number") adTime = new Date(raw);
       else if (typeof raw === "string" && raw.trim() !== "") {
         const tryFix = raw.replace(" ", "T");
-        adTime = !isNaN(Date.parse(raw)) ? new Date(raw) :
-                 (!isNaN(Date.parse(tryFix)) ? new Date(tryFix) : null);
+        if (!isNaN(Date.parse(raw))) adTime = new Date(raw);
+        else if (!isNaN(Date.parse(tryFix))) adTime = new Date(tryFix);
       }
-
       if (!adTime) return false;
-
       const now = new Date();
       if (filterDate === "today") {
-        if (adTime.getFullYear() !== now.getFullYear() ||
-            adTime.getMonth() !== now.getMonth() ||
-            adTime.getDate() !== now.getDate()) return false;
-      } 
-      else if (filterDate === "tomorrow") {
-        const t = new Date(now);
-        t.setDate(now.getDate() + 1);
-        if (adTime.getFullYear() !== t.getFullYear() ||
-            adTime.getMonth() !== t.getMonth() ||
-            adTime.getDate() !== t.getDate()) return false;
-      } 
-      else if (filterDate === "3days") {
+        if (adTime.getFullYear() !== now.getFullYear() || adTime.getMonth() !== now.getMonth() || adTime.getDate() !== now.getDate()) return false;
+      } else if (filterDate === "tomorrow") {
+        const t = new Date(now); t.setDate(now.getDate() + 1);
+        if (adTime.getFullYear() !== t.getFullYear() || adTime.getMonth() !== t.getMonth() || adTime.getDate() !== t.getDate()) return false;
+      } else if (filterDate === "3days") {
         const diff = adTime.getTime() - now.getTime();
         if (diff < 0 || diff > 1000 * 60 * 60 * 24 * 3) return false;
       }
     }
 
-    // === SEARCH ===
+    // SEARCH
     const hay = [
       a.fromRegion, a.fromDistrict,
       a.toRegion, a.toDistrict,
       a.comment, a.price, a.type, a.carModel, a.userId
     ].join(" ").toLowerCase();
-
     if (!hay.includes(q)) return false;
 
     return true;
   });
 
-  // === REMOVE DUPLICATES BY ID ===
-  filtered = filtered.filter((v, i, arr) =>
-    arr.findIndex(x => x.id === v.id) === i
-  );
+  // dedupe by id robustly (Map)
+  const map = new Map();
+  filtered.forEach(x => { if (x && x.id) map.set(x.id, x); });
+  filtered = Array.from(map.values());
 
   if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
     return;
   }
 
-  if (sortBy === "newest") {
-    filtered.sort((a, b) =>
-      new Date(b.createdAt || b.created || b.postedAt || 0) -
-      new Date(a.createdAt || a.created || a.postedAt || 0)
-    );
-  } else if (sortBy === "oldest") {
-    filtered.sort((a, b) =>
-      new Date(a.createdAt || a.created || a.postedAt || 0) -
-      new Date(b.createdAt || b.created || b.postedAt || 0)
-    );
-  }
+  // SORT
+  filtered.sort((a,b) => {
+    const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
+    const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
+    return sortBy === "oldest" ? ta - tb : tb - ta;
+  });
 
+  // create cards in parallel (user info fetched per card)
   const cards = await Promise.all(filtered.map(a => createAdCard(a)));
-  cards.forEach(c => list.appendChild(c));
+  // append in DOM once
+  const frag = document.createDocumentFragment();
+  cards.forEach(c => frag.appendChild(c));
+  list.appendChild(frag);
 }
-
 
 // ===============================
 // CREATE CARD
@@ -474,25 +427,24 @@ async function createAdCard(ad) {
   div.setAttribute("data-ad-id", ad.id || "");
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-
   const depTimeRaw = ad.departureTime || ad.startTime || ad.time || ad.date || "";
   const depTime = formatTime(depTimeRaw);
-
   const createdRaw = ad.createdAt || ad.created || ad.postedAt || "";
   const created = formatTime(createdRaw);
 
+  // NEW badge: created within 24h and not read
   let isNew = false;
   if (createdRaw) {
-    const ct = new Date(createdRaw).getTime();
-    if ((Date.now() - ct <= 86400000) && !isRead(ad.id)) {
-      isNew = true;
-    }
+    try {
+      const ct = new Date(createdRaw).getTime();
+      if (!isNaN(ct) && (Date.now() - ct <= 24*60*60*1000) && !isRead(ad.id)) isNew = true;
+    } catch(e){}
   }
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
-  const available = (typeof totalSeats === "number") ? Math.max(totalSeats - booked, 0) : null;
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
 
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
@@ -501,37 +453,28 @@ async function createAdCard(ad) {
 
   div.innerHTML = `
     <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
-
     <div class="ad-main">
       <div class="ad-route">
         ${escapeHtml(route)}
-        ${isNew ? '<span class="ad-badge-new">Yangi</span>' : ''}
+        ${isNew ? '<span class="ad-badge-new" style="margin-left:8px;background:#0069d9;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px">Yangi</span>' : ''}
       </div>
-
       <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModel)}</div>
-
       <div class="ad-meta" style="margin-top:8px">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
         ${
           totalSeats !== null
             ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
-            : requested !== null
-              ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
-              : `<div class="ad-chip">👥 -</div>`
+            : (requested !== null ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>` : `<div class="ad-chip">👥 -</div>`)
         }
       </div>
     </div>
-
     <div class="ad-price">💰 ${escapeHtml(ad.price ? String(ad.price) : "-")} so‘m</div>
-
     <div class="ad-created">${escapeHtml(created)}</div>
   `;
 
   div.onclick = () => openAdModal(ad);
-
   return div;
 }
-
 
 // ===============================
 // OPEN MODAL
@@ -545,23 +488,16 @@ async function openAdModal(ad) {
   }
 
   const u = await getUserInfo(ad.userId);
-
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
-
-  const fullname = u.fullName ||
-    ((u.firstname || u.lastname)
-      ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
-      : "") ||
-    "Foydalanuvchi";
-
+  const fullname = u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "Foydalanuvchi";
   const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
-  const available = (typeof totalSeats === "number") ? Math.max(totalSeats - booked, 0) : null;
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
@@ -627,23 +563,18 @@ async function openAdModal(ad) {
   `;
 
   modal.style.display = "flex";
-
   const closeBtn = document.getElementById("modalCloseBtn");
   const callBtn = document.getElementById("modalCallBtn");
   if (closeBtn) closeBtn.onclick = closeAdModal;
   if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
 
-  // *** Mark as read ***
-  markAsRead(ad.id);
+  // mark as read and re-render so badge disappears
+  try { markAsRead(ad.id); } catch(e) {}
   scheduleRenderAds();
 
   modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
 
-
-// ===============================
-// CLOSE MODAL
-// ===============================
 function closeAdModal() {
   const modal = document.getElementById("adFullModal");
   if (!modal) return;
@@ -660,7 +591,6 @@ window.openAdModal = openAdModal;
 window.closeAdModal = closeAdModal;
 window.onContact = onContact;
 
-
 // ===============================
 // DEBOUNCE
 // ===============================
@@ -673,15 +603,15 @@ function scheduleRenderAds() {
   }, 120);
 }
 
+// listen for district checkbox changes globally
 document.addEventListener("change", (e) => {
-  if (e.target && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
+  if (!e.target) return;
+  if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
     scheduleRenderAds();
   }
 });
-
 
 // ===============================
 // LOGOUT
 // ===============================
 window.logout = () => signOut(auth);
-
