@@ -362,6 +362,10 @@ async function renderAds(ads) {
     if (toDistricts.length > 0) {
       if (!toDistricts.includes(a.toDistrict)) return false;
     }
+// PRICE EXTRACT (FIX)
+const adPrice = a.price ? Number(a.price) : NaN;
+const priceMin = Number(document.getElementById("priceMin").value || 0);
+const priceMax = Number(document.getElementById("priceMax").value || 0);
 
    // --- FIXED PRICE FILTER (NO DUPLICATES) ---
 const isPriceMinSet = document.getElementById("priceMin").value !== "";
