@@ -25,48 +25,41 @@ const db = getDatabase(app);
 const REGIONS = window.regionsData || window.regions || {};
 
 // ===============================
-// TYPE NORMALIZATION
+// HELPERS
 // ===============================
+function escapeHtml(str) {
+  if (str === 0) return "0";
+  if (!str && str !== 0) return "";
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function normalizeType(t) {
   if (!t) return "";
   t = String(t).trim().toLowerCase();
   t = t.replace(/[‘’`ʼ']/g, "'");
-
   if (t.includes("haydov")) return "Haydovchi";
   if (t.includes("yo") && t.includes("lov")) return "Yo‘lovchi";
-  if (t === "yo'lovchi") return "Yo‘lovchi";
-
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-// ===============================
-// DATE FORMATTER
-// ===============================
 function formatTime(val) {
   if (!val) return "—";
-
-  if (typeof val === "number") {
-    return new Date(val).toLocaleString("uz-UZ", {
-      year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit"
-    });
-  }
-
-  if (typeof val === "string") {
+  try {
     if (!isNaN(Date.parse(val))) {
       return new Date(val).toLocaleString("uz-UZ", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit"
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
       });
     }
-    const fix = val.replace(" ", "T");
-    if (!isNaN(Date.parse(fix))) {
-      return new Date(fix).toLocaleString("uz-UZ", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit"
-      });
-    }
-  }
+  } catch {}
   return val;
 }
 
@@ -74,92 +67,143 @@ function formatTime(val) {
 // GET USER INFO
 // ===============================
 async function getUserInfo(userId) {
-  if (!userId) return {
-    phone: "", avatar: "",
-    fullName: "",
-    carModel: "", carColor: "", carNumber: "",
-    seatCount: 0,
-    role: ""
-  };
+  if (!userId) return defaultUser();
 
-  const snap = await get(ref(db, "users/" + userId));
-  if (!snap.exists()) return {
-    phone: "", avatar: "",
-    fullName: "",
-    carModel: "", carColor: "", carNumber: "",
-    seatCount: 0,
-    role: ""
-  };
+  try {
+    const snap = await get(ref(db, "users/" + userId));
+    if (!snap.exists()) return defaultUser();
 
-  const u = snap.val();
+    const u = snap.val();
+    return {
+      phone: u.phone || "",
+      avatar: u.avatar || "",
+      fullName: u.fullName || "",
+      role: u.role || "",
+      carModel: u.carModel || "",
+      carColor: u.carColor || "",
+      carNumber: u.carNumber || "",
+      seatCount: u.seatCount || 0
+    };
+  } catch {
+    return defaultUser();
+  }
+}
+
+function defaultUser() {
   return {
-    phone: u.phone || "",
-    avatar: u.avatar || "",
-    fullName: u.fullName || "",
-    carModel: u.carModel || "",
-    carColor: u.carColor || "",
-    carNumber: u.carNumber || "",
-    seatCount: u.seatCount || 0,
-    role: u.role || ""       // <<< MUHIM!
+    phone: "",
+    avatar: "",
+    fullName: "",
+    role: "",
+    carModel: "",
+    carColor: "",
+    carNumber: "",
+    seatCount: 0
   };
 }
 
 // ===============================
-// AUTH CHECK
+// GLOBAL STATES
 // ===============================
-onAuthStateChanged(auth, (user) => {
-  if (!user) { window.location.href = "login.html"; return; }
-  loadRegionsFilter();
-  loadAllAds();
+let ALL_ADS = [];
+let CURRENT_USER = null;
+
+// ===============================
+// AUTH
+// ===============================
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return (window.location.href = "login.html");
+
+  CURRENT_USER = await getUserInfo(user.uid);
+  loadRouteFilters();
+  await loadAllAds();
 });
 
 // ===============================
-// LOAD REGION FILTER
+// ROUTE FILTERS
 // ===============================
-function loadRegionsFilter() {
-  const el = document.getElementById("filterRegion");
-  if (!el) return;
+function loadRouteFilters() {
+  const fromRegion = document.getElementById("fromRegion");
+  const toRegion = document.getElementById("toRegion");
 
-  el.innerHTML = '<option value="">Viloyat (filter)</option>';
-  Object.keys(REGIONS).forEach(region => {
-    el.innerHTML += `<option value="${region}">${region}</option>`;
+  if (!fromRegion || !toRegion) return;
+
+  fromRegion.innerHTML = `<option value="">Viloyat</option>`;
+  toRegion.innerHTML = `<option value="">Viloyat</option>`;
+
+  Object.keys(REGIONS).forEach(r => {
+    fromRegion.innerHTML += `<option value="${r}">${r}</option>`;
+    toRegion.innerHTML += `<option value="${r}">${r}</option>`;
   });
+
+  fromRegion.onchange = () => { fillFromDistricts(); renderAds(ALL_ADS); };
+  toRegion.onchange = () => { fillToDistricts(); renderAds(ALL_ADS); };
+
+  fillFromDistricts();
+  fillToDistricts();
+}
+
+function fillFromDistricts() {
+  const region = document.getElementById("fromRegion").value;
+  const box = document.getElementById("fromDistrictBox");
+  box.innerHTML = "";
+
+  if (!region || !REGIONS[region]) return;
+
+  REGIONS[region].forEach(d => {
+    box.innerHTML += `
+      <label class="district-item">
+        <input type="checkbox" value="${d}" class="fromDistrict"> ${d}
+      </label>
+    `;
+  });
+
+  box.querySelectorAll("input").forEach(i => i.onchange = () => renderAds(ALL_ADS));
+}
+
+function fillToDistricts() {
+  const region = document.getElementById("toRegion").value;
+  const box = document.getElementById("toDistrictBox");
+  box.innerHTML = "";
+
+  if (!region || !REGIONS[region]) return;
+
+  REGIONS[region].forEach(d => {
+    box.innerHTML += `
+      <label class="district-item">
+        <input type="checkbox" value="${d}" class="toDistrict"> ${d}
+      </label>
+    `;
+  });
+
+  box.querySelectorAll("input").forEach(i => i.onchange = () => renderAds(ALL_ADS));
 }
 
 // ===============================
-// LOAD ALL ADS
+// LOAD ADS
 // ===============================
 async function loadAllAds() {
   const snap = await get(ref(db, "ads"));
   const list = document.getElementById("adsList");
 
   if (!snap.exists()) {
-    if (list) list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+    list.innerHTML = "<p>Hozircha e’lon yo‘q</p>";
     return;
   }
 
-  const ads = [];
-  snap.forEach(child => {
-    const v = child.val();
-    ads.push({
-      id: child.key,
-      ...v,
-      typeNormalized: normalizeType(v.type)
+  ALL_ADS = [];
+  snap.forEach(c => {
+    ALL_ADS.push({
+      id: c.key,
+      ...c.val(),
+      typeNormalized: normalizeType(c.val().type)
     });
   });
 
-  // Asl eventlar
-  document.getElementById("search").oninput = () => renderAds(ads);
-  document.getElementById("filterRole").onchange = () => renderAds(ads);
-  document.getElementById("filterRegion").onchange = () => renderAds(ads);
+  document.getElementById("search").oninput = () => renderAds(ALL_ADS);
+  document.getElementById("filterRole").onchange = () => renderAds(ALL_ADS);
 
-  // === YANGI FILTR EVENTLARI ===
-  document.getElementById("sortBy").onchange = () => renderAds(ads);
-  document.getElementById("filterDate").onchange = () => renderAds(ads);
-  document.getElementById("priceMin").oninput = () => renderAds(ads);
-  document.getElementById("priceMax").oninput = () => renderAds(ads);
-
-  renderAds(ads);
+  renderAds(ALL_ADS);
 }
 
 // ===============================
@@ -167,114 +211,64 @@ async function loadAllAds() {
 // ===============================
 async function renderAds(ads) {
   const list = document.getElementById("adsList");
-  if (!list) return;
   list.innerHTML = "";
 
-  const q = (document.getElementById("search")?.value || "").toLowerCase();
-  const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
-  const regionFilter = document.getElementById("filterRegion")?.value || "";
+  const q = (document.getElementById("search").value || "").toLowerCase();
+  const roleFilter = normalizeType(document.getElementById("filterRole").value);
 
-  const currentUserId = auth.currentUser?.uid;
-  const currentUser = currentUserId ? await getUserInfo(currentUserId) : null;
-  const currentRole = currentUser?.role || ""; // haydovchi / yolovchi
+  const fromRegion = document.getElementById("fromRegion").value;
+  const toRegion = document.getElementById("toRegion").value;
+
+  const fromDistricts = [...document.querySelectorAll(".fromDistrict:checked")].map(i => i.value);
+  const toDistricts = [...document.querySelectorAll(".toDistrict:checked")].map(i => i.value);
 
   const filtered = ads.filter(a => {
+    // auto role by signed-in user
+    let userRole = (CURRENT_USER?.role || "").toLowerCase();
 
-    // ============================
-    // ROLE GA KO‘RA FILTR
-    // ============================
-    if (currentRole === "driver") {
-      if (a.type?.toLowerCase() !== "yo‘lovchi") return false;
-    }
-    else if (currentRole === "passenger") {
-      if (a.type?.toLowerCase() !== "haydovchi") return false;
-    }
+    if (userRole.includes("haydov") && a.typeNormalized !== "Yo‘lovchi") return false;
+    if (userRole.includes("yo") && a.typeNormalized !== "Haydovchi") return false;
 
-    if (a.userId === currentUserId) return false;
+    // manual role filter
+    if (roleFilter && a.typeNormalized !== roleFilter) return false;
 
-    // ============================
-    // REGION
-    // ============================
-    if (
-      regionFilter &&
-      a.fromRegion !== regionFilter &&
-      a.toRegion !== regionFilter
-    ) return false;
+    // don't show own ads
+    if (a.userId === auth.currentUser?.uid) return false;
 
-    // ============================
-    // QIDIRUV
-    // ============================
-    const hay = [
+    // from region
+    if (fromRegion && a.fromRegion !== fromRegion) return false;
+
+    // from district
+    if (fromDistricts.length && !fromDistricts.includes(a.fromDistrict)) return false;
+
+    // to region
+    if (toRegion && a.toRegion !== toRegion) return false;
+
+    // to district
+    if (toDistricts.length && !toDistricts.includes(a.toDistrict)) return false;
+
+    // search
+    if (![
       a.fromRegion, a.fromDistrict,
       a.toRegion, a.toDistrict,
-      a.comment, a.price, a.type
-    ].join(" ").toLowerCase();
-
-    if (!hay.includes(q)) return false;
-
-    // ============================
-    // YANGI FILTR 1 — NARX
-    // ============================
-    const minPrice = Number(document.getElementById("priceMin").value || 0);
-    const maxPrice = Number(document.getElementById("priceMax").value || 999999999);
-
-    if (a.price) {
-      const p = Number(a.price);
-      if (p < minPrice || p > maxPrice) return false;
-    }
-
-    // ============================
-    // YANGI FILTR 2 — SANAGA KO‘RA
-    // ============================
-    const dateFilter = document.getElementById("filterDate").value;
-
-    if (dateFilter) {
-      const now = new Date();
-      const adDate = new Date(a.departureTime);
-
-      if (dateFilter === "today") {
-        if (adDate.toDateString() !== now.toDateString()) return false;
-      }
-
-      if (dateFilter === "tomorrow") {
-        const t = new Date(now); t.setDate(now.getDate() + 1);
-        if (adDate.toDateString() !== t.toDateString()) return false;
-      }
-
-      if (dateFilter === "3days") {
-        const limit = new Date(now); limit.setDate(now.getDate() + 3);
-        if (adDate < now || adDate > limit) return false;
-      }
-    }
+      a.comment, a.price
+    ].join(" ").toLowerCase().includes(q)) return false;
 
     return true;
   });
 
-  // ============================
-  // YANGI FILTR 3 — SARALASH
-  // ============================
-  const sortBy = document.getElementById("sortBy").value;
-
-  filtered.sort((a, b) => {
-    const da = new Date(a.createdAt || a.postedAt || 0).getTime();
-    const db = new Date(b.createdAt || b.postedAt || 0).getTime();
-    return sortBy === "newest" ? db - da : da - db;
-  });
-
-  // ============================
-  // RENDER
-  // ============================
   if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
     return;
   }
 
+  // create cards
   const cards = await Promise.all(filtered.map(a => createAdCard(a)));
-  cards.forEach(card => list.appendChild(card));
+  cards.forEach(c => list.appendChild(c));
 }
 
 // ===============================
-// MINI CARD
+// CREATE CARD
 // ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
@@ -282,40 +276,24 @@ async function createAdCard(ad) {
   const div = document.createElement("div");
   div.className = "ad-card";
 
-  const route =
-    `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ` +
-    `${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "", { shortYear: true });
-
-  const totalSeats = Number(ad.totalSeats || ad.seatCount || ad.seats || 0);
-  const booked = Number(ad.bookedSeats || 0);
-  const available = totalSeats ? Math.max(totalSeats - booked, 0) : null;
-
-  const requested = Number(ad.passengerCount || ad.requestedSeats || ad.peopleCount || 0);
+  const route = `${ad.fromRegion}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const dep = formatTime(ad.departureTime || ad.startTime);
+  const created = formatTime(ad.createdAt);
 
   div.innerHTML = `
-    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" />
+    <img class="ad-avatar" src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}">
 
     <div class="ad-main">
-      <div class="ad-route">${escapeHtml(route)}</div>
-      <div class="ad-car">${escapeHtml(u.carModel || "")}</div>
+      <div class="ad-route">${route}</div>
+      <div class="ad-car">${u.carModel || ""}</div>
 
       <div class="ad-meta">
-        <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
-        ${
-          totalSeats ?
-            `<div class="ad-chip">👥 ${available}/${totalSeats} bo‘sh</div>`
-            :
-            (requested ? `<div class="ad-chip">👥 ${requested} odam</div>` : "")
-        }
+        <div class="ad-chip">⏰ ${dep}</div>
       </div>
     </div>
 
-    <div class="ad-price">💰 ${escapeHtml(ad.price || "-")} so‘m</div>
-
-    <div class="ad-created">${escapeHtml(created)}</div>
+    <div class="ad-price">💰 ${ad.price} so‘m</div>
+    <div class="ad-created">${created}</div>
   `;
 
   div.onclick = () => openAdModal(ad);
@@ -334,82 +312,45 @@ async function openAdModal(ad) {
   }
 
   const u = await getUserInfo(ad.userId);
-  const fullname = u.fullName || "Foydalanuvchi";
-
-  const route =
-    `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ` +
-    `${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
-
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || "");
-
-  const totalSeats = Number(ad.totalSeats || ad.seatCount || ad.seats || 0);
-  const booked = Number(ad.bookedSeats || 0);
-  const available = totalSeats ? Math.max(totalSeats - booked, 0) : null;
-
-  const requested = Number(ad.passengerCount || ad.requestedSeats || ad.peopleCount || 0);
 
   modal.innerHTML = `
     <div class="ad-modal-box">
       <div class="modal-header">
-        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}">
+        <img class="modal-avatar" src="${u.avatar || "https://i.ibb.co/2W0z7Lx/user.png"}">
         <div>
-          <div class="modal-name">${escapeHtml(fullname)}</div>
-          <div class="modal-car">
-            ${escapeHtml(u.carModel || "")}
-            ${u.carColor ? " • " + escapeHtml(u.carColor) : ""}
-            ${u.carNumber ? " • " + escapeHtml(u.carNumber) : ""}
-          </div>
+          <div class="modal-name">${u.fullName}</div>
+          <div class="modal-car">${u.carModel}</div>
         </div>
       </div>
 
       <div class="modal-row">
-        <div class="modal-col">
-          <div class="label">Yo‘nalish</div>
-          <div class="value">${escapeHtml(route)}</div>
-        </div>
-        <div class="modal-col">
-          <div class="label">Jo‘nash</div>
-          <div class="value">${escapeHtml(depTime)}</div>
-        </div>
+        <div class="label">Yo‘nalish</div>
+        <div class="value">${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}</div>
       </div>
 
       <div class="modal-row">
-        <div class="modal-col">
-          <div class="label">Joylar</div>
-          <div class="value">
-            ${
-              totalSeats
-                ? `${available}/${totalSeats} bo‘sh`
-                : (requested ? `${requested} odam` : "-")
-            }
-          </div>
-        </div>
-
-        <div class="modal-col">
-          <div class="label">Narx</div>
-          <div class="value">${escapeHtml(ad.price || "-")} so‘m</div>
-        </div>
+        <div class="label">Jo‘nash</div>
+        <div class="value">${formatTime(ad.departureTime)}</div>
       </div>
 
-      <div style="margin-top:12px">
+      <div class="modal-row">
+        <div class="label">Narx</div>
+        <div class="value">${ad.price} so‘m</div>
+      </div>
+
+      <div class="modal-row">
         <div class="label">Izoh</div>
-        <div class="value">${escapeHtml(ad.comment || "-")}</div>
+        <div class="value">${ad.comment || "-"}</div>
       </div>
 
-      <div style="margin-top:12px">
-        <div class="label">Aloqa</div>
-        <div class="value">${escapeHtml(u.phone || "-")}</div>
-      </div>
-
-      <div style="margin-top:12px; font-size:13px; color:#777;">
-        Joylashtirilgan: ${escapeHtml(created)}
+      <div class="modal-row">
+        <div class="label">Kontakt</div>
+        <div class="value">${u.phone}</div>
       </div>
 
       <div class="modal-actions">
         <button class="btn-primary" onclick="closeAdModal()">Yopish</button>
-        <button class="btn-ghost" onclick="onContact('${escapeHtml(u.phone || "")}')">Qo‘ng‘iroq</button>
+        <button class="btn-ghost" onclick="onContact('${u.phone}')">Qo‘ng‘iroq</button>
       </div>
     </div>
   `;
@@ -418,37 +359,21 @@ async function openAdModal(ad) {
   modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
 
-// ===============================
-// CLOSE MODAL
-// ===============================
-window.closeAdModal = () => {
+function closeAdModal() {
   const modal = document.getElementById("adFullModal");
-  if (modal) modal.style.display = "none";
-};
+  modal.style.display = "none";
+}
 
-// ===============================
-// CONTACT
-// ===============================
-window.onContact = (phone) => {
-  if (!phone) return alert("Telefon raqami mavjud emas");
+function onContact(phone) {
   window.location.href = `tel:${phone}`;
-};
+}
 
 // ===============================
 // LOGOUT
 // ===============================
 window.logout = () => signOut(auth);
 
-// ===============================
-// ESCAPE HTML
-// ===============================
-function escapeHtml(str) {
-  if (str === 0) return "0";
-  if (!str && str !== 0) return "";
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#039;");
-}
+// expose global
+window.closeAdModal = closeAdModal;
+window.onContact = onContact;
+window.openAdModal = openAdModal;
