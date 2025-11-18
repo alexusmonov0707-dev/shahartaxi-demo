@@ -417,8 +417,20 @@ function attachInputsOnce() {
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
+  // ADS soft clear (smooth fade)
+function softClearList(list) {
+  return new Promise(resolve => {
+    list.style.opacity = "0";
+    setTimeout(() => {
+      list.innerHTML = "";
+      list.style.opacity = "1";
+      resolve();
+    }, 120); // fade time
+  });
+}
+
   // clear safely
-  list.innerHTML = "";
+await softClearList(list);
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
