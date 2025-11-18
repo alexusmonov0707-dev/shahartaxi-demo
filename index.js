@@ -981,3 +981,125 @@ async function renderAds(adsArr = [], isReset = false) {
 // PART 2 end
 // Next: PART 3 (pagination helpers, any remaining utilities)
 // ===============================
+// ===============================
+// PAGINATION CONTROLS RENDERING (unchanged except styling)
+// ===============================
+function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 0) {
+  // Ensure container exists
+  let container = document.getElementById("paginationControls");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "paginationControls";
+    container.style = "display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:center;";
+    // Append after adsList (if exists)
+    const list = document.getElementById("adsList");
+    if (list && list.parentNode) {
+      list.parentNode.insertBefore(container, list.nextSibling);
+    } else {
+      document.body.appendChild(container);
+    }
+  }
+
+  container.innerHTML = ""; // clear
+
+  if (!totalPages || totalPages <= 1) {
+    // show small info if >0
+    if (totalItems > 0) {
+      const info = document.createElement("div");
+      info.textContent = `Ko‘rsatilyapti: ${Math.min(PAGE_SIZE, totalItems)} / ${totalItems}`;
+      info.style = "color:#6b7280;font-size:14px;";
+      container.appendChild(info);
+    }
+    return;
+  }
+
+  // helper to create pagination button
+  const btn = (text, disabled, handler) => {
+    const b = document.createElement("button");
+    b.textContent = text;
+    b.disabled = !!disabled;
+    b.style = `
+      padding:6px 10px;
+      border-radius:8px;
+      border:1px solid #e5e7eb;
+      background:white;
+      cursor:pointer;
+    `;
+    if (!disabled) b.onclick = handler;
+    return b;
+  };
+
+  // First, Prev
+  container.appendChild(btn("« Birinchi", currentPage === 1, () => {
+    CURRENT_PAGE = 1;
+    scheduleRenderAds();
+  }));
+  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => {
+    CURRENT_PAGE = Math.max(1, currentPage - 1);
+    scheduleRenderAds();
+  }));
+
+  // page numbers window
+  const windowSize = 5;
+  let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+  let end = Math.min(totalPages, start + windowSize - 1);
+  if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
+
+  for (let p = start; p <= end; p++) {
+    const isCurrent = p === currentPage;
+    const pbtn = document.createElement("button");
+    pbtn.textContent = p.toString();
+    pbtn.disabled = isCurrent;
+    pbtn.style = `
+      padding:6px 10px;
+      border-radius:8px;
+      border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};
+      background:${isCurrent ? "#0069d9" : "white"};
+      color:${isCurrent ? "white" : "#111"};
+      cursor:pointer;
+    `;
+    if (!isCurrent)
+      pbtn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
+    container.appendChild(pbtn);
+  }
+
+  // Next, Last
+  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => {
+    CURRENT_PAGE = Math.min(totalPages, currentPage + 1);
+    scheduleRenderAds();
+  }));
+  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => {
+    CURRENT_PAGE = totalPages;
+    scheduleRenderAds();
+  }));
+
+  // info
+  const info = document.createElement("div");
+  info.textContent = `Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
+  info.style = "color:#6b7280;font-size:13px;margin-left:8px;";
+  container.appendChild(info);
+}
+
+// ===============================
+// CONTACT / CALL helper
+// ===============================
+function onContact(phone) {
+  if (!phone) return alert("Telefon raqami mavjud emas");
+  window.location.href = `tel:${phone}`;
+}
+window.onContact = onContact;
+
+// ===============================
+// LOGOUT
+// ===============================
+window.logout = () => signOut(auth);
+
+// ===============================
+// OPEN/CLOSE modal exposure for external calls (unchanged)
+// ===============================
+window.openAdModal = openAdModal;
+window.closeAdModal = closeAdModal;
+
+// ===============================
+// END OF INDEX.JS (PART 3)
+// ===============================
