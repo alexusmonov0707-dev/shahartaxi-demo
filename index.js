@@ -1,4 +1,4 @@
-// index.js (final + pagination)
+// index.js (final — to'liq, hech narsa o'chirilmagan, pagination + realtime + smoother filter)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -113,6 +113,11 @@ function slugify(s) {
   return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
 }
 
+// safe escape for attribute selector
+function escapeSelector(s) {
+  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
+}
+
 // ===============================
 //  GET USER INFO (keeps existing behavior)
 // ===============================
@@ -156,9 +161,9 @@ let ALL_ADS_ARR = [];       // derived from ADS_MAP (keeps insertion order from 
 let CURRENT_USER = null;
 let useRealtime = true;     // set true to attach child_* listeners
 
-// Pagination state
-const PAGE_SIZE = 10;       // default items per page (you asked 10 for test)
-let CURRENT_PAGE = 1;       // current page (1-based)
+// Pagination state (you asked 7)
+const PAGE_SIZE = 7;
+let CURRENT_PAGE = 1;
 
 // ===============================
 //  AUTH CHECK
@@ -319,11 +324,6 @@ function attachRealtimeHandlers() {
   }
 }
 
-// small helper to escape attribute selector special chars
-function escapeSelector(s) {
-  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
-}
-
 // ===============================
 //  ATTACH INPUT HANDLERS (once)
 // ===============================
@@ -364,11 +364,12 @@ function attachInputsOnce() {
 
 // ===============================
 //  RENDER ADS (full pipeline, respects all existing filters + pagination)
+//  - optimized: compute filtered list, but render only page slice
 // ===============================
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
-  // clear safely
+  // (we will set innerHTML later; but clear early to avoid old content flashing)
   list.innerHTML = "";
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
@@ -487,7 +488,7 @@ async function renderAds(adsArr) {
 
   if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
-    renderPaginationControls(0, 0); // empty
+    renderPaginationControls(0, 0, 0); // empty
     return;
   }
 
@@ -511,6 +512,7 @@ async function renderAds(adsArr) {
   const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
   const frag = document.createDocumentFragment();
   cards.forEach(c => frag.appendChild(c));
+  // faster replace: append frag to list
   list.appendChild(frag);
 
   // render pagination controls
