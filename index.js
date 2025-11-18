@@ -1,4 +1,4 @@
-// index.js (PART 1 of 3)
+// index.js (final — districts close on scroll/click + keep all existing features)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -414,8 +414,158 @@ function attachInputsOnce() {
 // ===============================
 //  RENDER ADS (full pipeline, respects all existing filters + pagination)
 // ===============================
-/* renderAds is in PART 2 */
-//
+async function renderAds(adsArr) {
+  const list = document.getElementById("adsList");
+  if (!list) return;
+  // clear safely
+  list.innerHTML = "";
+
+  const q = (document.getElementById("search")?.value || "").toLowerCase();
+  const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
+  const regionFilter = document.getElementById("filterRegion")?.value || "";
+  const sortBy = document.getElementById("sortBy")?.value || "newest";
+  const filterDate = document.getElementById("filterDate")?.value || "";
+
+  // price parsing robustly
+  const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
+  const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
+  const isPriceMinSet = priceMinInput !== "";
+  const isPriceMaxSet = priceMaxInput !== "";
+  const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g,"")) : null;
+  const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
+
+  const currentUserId = auth.currentUser?.uid || null;
+
+  const currentRoleRaw = (CURRENT_USER?.role || "").toString().toLowerCase();
+  let currentRole = "";
+  if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov")) currentRole = "driver";
+  else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo")) currentRole = "passenger";
+
+  const fromRegion = document.getElementById("fromRegion")?.value || "";
+  const toRegion = document.getElementById("toRegion")?.value || "";
+  const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
+  const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
+
+  // filter + validate
+  let filtered = (adsArr || []).filter(a => {
+    if (!a) return false;
+
+    // automatic role filter (driver sees passenger ads, passenger sees driver ads)
+    if (currentRole === "driver") {
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
+    } else if (currentRole === "passenger") {
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("haydov")) return false;
+    }
+
+    // explicit role dropdown
+    if (roleFilter) { if (a.typeNormalized !== roleFilter) return false; }
+
+    // hide own ads
+    if (currentUserId && a.userId === currentUserId) return false;
+
+    // top region filter (either from or to)
+    if (regionFilter) {
+      if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
+    }
+
+    // from region / districts
+    if (fromRegion && a.fromRegion !== fromRegion) return false;
+    if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
+
+    // to region / districts
+    if (toRegion && a.toRegion !== toRegion) return false;
+    if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
+
+    // PRICE
+    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
+    if (isPriceMinSet && isNaN(adPrice)) return false; // ad has no price but user requested min
+    if (isPriceMaxSet && isNaN(adPrice)) return false; // ad has no price but user requested max
+    if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
+    if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
+
+    // HIDE EXPIRED ADS by departure time (if no valid departureTime -> hide)
+    const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
+    let departureTime = null;
+    if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
+    else if (typeof departureRaw === "string" && departureRaw.trim() !== "") {
+      const fixed = departureRaw.replace(" ", "T");
+      if (!isNaN(Date.parse(departureRaw))) departureTime = new Date(departureRaw);
+      else if (!isNaN(Date.parse(fixed))) departureTime = new Date(fixed);
+    }
+    if (!departureTime) return false;
+    if (departureTime.getTime() < Date.now()) return false;
+
+    // DATE filter (today/tomorrow/3days)
+    if (filterDate) {
+      const raw = a.departureTime || a.startTime || a.time || a.date || null;
+      let adTime = null;
+      if (typeof raw === "number") adTime = new Date(raw);
+      else if (typeof raw === "string" && raw.trim() !== "") {
+        const tryFix = raw.replace(" ", "T");
+        if (!isNaN(Date.parse(raw))) adTime = new Date(raw);
+        else if (!isNaN(Date.parse(tryFix))) adTime = new Date(tryFix);
+      }
+      if (!adTime) return false;
+      const now = new Date();
+      if (filterDate === "today") {
+        if (adTime.getFullYear() !== now.getFullYear() || adTime.getMonth() !== now.getMonth() || adTime.getDate() !== now.getDate()) return false;
+      } else if (filterDate === "tomorrow") {
+        const t = new Date(now); t.setDate(now.getDate() + 1);
+        if (adTime.getFullYear() !== t.getFullYear() || adTime.getMonth() !== t.getMonth() || adTime.getDate() !== t.getDate()) return false;
+      } else if (filterDate === "3days") {
+        const diff = adTime.getTime() - now.getTime();
+        if (diff < 0 || diff > 1000 * 60 * 60 * 24 * 3) return false;
+      }
+    }
+
+    // SEARCH concat fields
+    const hay = [
+      a.fromRegion, a.fromDistrict,
+      a.toRegion, a.toDistrict,
+      a.comment, a.price, a.type, a.carModel, a.userId
+    ].join(" ").toLowerCase();
+    if (!hay.includes(q)) return false;
+
+    return true;
+  });
+
+  // dedupe by id -> Map will keep last set
+  const resultMap = new Map();
+  filtered.forEach(x => { if (x && x.id) resultMap.set(x.id, x); });
+  filtered = Array.from(resultMap.values());
+
+  if (!filtered.length) {
+    list.innerHTML = "<p>Natija topilmadi.</p>";
+    renderPaginationControls(0, 0); // empty
+    return;
+  }
+
+  // SORT by createdAt / fallback
+  filtered.sort((a,b) => {
+    const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
+    const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
+    return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
+  });
+
+  // PAGINATION: compute total/pages, clamp CURRENT_PAGE
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
+  if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
+
+  const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
+  const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
+
+  // build DOM fragment with cards (createAdCard is async)
+  const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
+  const frag = document.createDocumentFragment();
+  cards.forEach(c => frag.appendChild(c));
+  list.appendChild(frag);
+
+  // render pagination controls
+  renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
+}
+
 // ===============================
 //  CREATE CARD (no-name vs full modal preserved)
 // ===============================
@@ -741,365 +891,4 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
 // ensure createAdCard returns unique node per ad id — we already set data-ad-id
 // Deduplication handled in renderAds (Map) and in realtime remove handler.
 // ===============================
-// PART 2 (renderAds + smooth fade + schedule + reset override)
-// ===============================
 
-// Updated scheduleRenderAds to accept isReset flag and pass it to renderAds
-let __render_timeout = null;
-function scheduleRenderAds(isReset = false) {
-  if (__render_timeout) clearTimeout(__render_timeout);
-  __render_timeout = setTimeout(() => {
-    // pass current ads snapshot and whether this is a reset-triggered render
-    renderAds(Array.from(ADS_MAP.values()), !!isReset);
-    __render_timeout = null;
-  }, 110);
-}
-
-// Override/resetFilters to ensure it triggers a "reset" smooth render
-// (this will replace earlier definition if present)
-function resetFilters() {
-  const searchEl = document.getElementById("search");
-  const roleEl = document.getElementById("filterRole");
-  const regionEl = document.getElementById("filterRegion");
-  const fromRegionEl = document.getElementById("fromRegion");
-  const toRegionEl = document.getElementById("toRegion");
-  const sortByEl = document.getElementById("sortBy");
-  const filterDateEl = document.getElementById("filterDate");
-  const priceMinEl = document.getElementById("priceMin");
-  const priceMaxEl = document.getElementById("priceMax");
-
-  if (searchEl) searchEl.value = "";
-  if (roleEl) roleEl.value = "";
-  if (regionEl) regionEl.value = "";
-  if (fromRegionEl) fromRegionEl.value = "";
-  if (toRegionEl) toRegionEl.value = "";
-  if (sortByEl) sortByEl.value = "newest";
-  if (filterDateEl) filterDateEl.value = "";
-  if (priceMinEl) priceMinEl.value = "";
-  if (priceMaxEl) priceMaxEl.value = "";
-
-  // uncheck all district checkboxes but keep the panels hidden or visible depending on region
-  document.querySelectorAll("#fromDistrictBox input.fromDistrict").forEach(i => i.checked = false);
-  document.querySelectorAll("#toDistrictBox input.toDistrict").forEach(i => i.checked = false);
-
-  // ensure district panels reflect region selection
-  if (document.getElementById("fromRegion")?.value) fillFromDistricts(); else {
-    const fb = document.getElementById("fromDistrictBox"); if (fb) fb.style.display = "none";
-  }
-  if (document.getElementById("toRegion")?.value) fillToDistricts(); else {
-    const tb = document.getElementById("toDistrictBox"); if (tb) tb.style.display = "none";
-  }
-
-  CURRENT_PAGE = 1;
-  // call scheduleRenderAds with isReset = true for smoother UX
-  scheduleRenderAds(true);
-}
-window.resetFilters = resetFilters;
-
-// ===============================
-// renderAds (with smooth fade and full filtering & pagination)
-// adsArr: array of ads (from ADS_MAP.values())
-// isReset: when true, use slightly longer fade to indicate reset action
-// ===============================
-async function renderAds(adsArr = [], isReset = false) {
-  const list = document.getElementById("adsList");
-  if (!list) return;
-
-  // Ensure CSS classes for fade are present on element (if not, add default)
-  // (You still need to include the CSS: .ads-fade / .ads-show)
-  try {
-    // Trigger fade-out
-    list.classList.remove("ads-show");
-    list.classList.add("ads-fade");
-  } catch (e) {
-    // ignore class issues
-  }
-
-  // delay to allow fade-out to be visible (shorter on normal updates, longer on reset)
-  const delay = isReset ? 220 : 120;
-
-  setTimeout(async () => {
-    // Clear content safely
-    list.innerHTML = "";
-
-    const q = (document.getElementById("search")?.value || "").toLowerCase();
-    const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
-    const regionFilter = document.getElementById("filterRegion")?.value || "";
-    const sortBy = document.getElementById("sortBy")?.value || "newest";
-    const filterDate = document.getElementById("filterDate")?.value || "";
-
-    // price parsing robustly
-    const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
-    const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
-    const isPriceMinSet = priceMinInput !== "";
-    const isPriceMaxSet = priceMaxInput !== "";
-    const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g,"")) : null;
-    const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
-
-    const currentUserId = auth.currentUser?.uid || null;
-
-    const currentRoleRaw = (CURRENT_USER?.role || "").toString().toLowerCase();
-    let currentRole = "";
-    if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov")) currentRole = "driver";
-    else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo")) currentRole = "passenger";
-
-    const fromRegion = document.getElementById("fromRegion")?.value || "";
-    const toRegion = document.getElementById("toRegion")?.value || "";
-    const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
-    const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
-
-    // filter + validate
-    let filtered = (adsArr || []).filter(a => {
-      if (!a) return false;
-
-      // automatic role filter (driver sees passenger ads, passenger sees driver ads)
-      if (currentRole === "driver") {
-        if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
-      } else if (currentRole === "passenger") {
-        if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("haydov")) return false;
-      }
-
-      // explicit role dropdown
-      if (roleFilter) { if (a.typeNormalized !== roleFilter) return false; }
-
-      // hide own ads
-      if (currentUserId && a.userId === currentUserId) return false;
-
-      // top region filter (either from or to)
-      if (regionFilter) {
-        if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
-      }
-
-      // from region / districts
-      if (fromRegion && a.fromRegion !== fromRegion) return false;
-      if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
-
-      // to region / districts
-      if (toRegion && a.toRegion !== toRegion) return false;
-      if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
-
-      // PRICE
-      const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
-      if (isPriceMinSet && isNaN(adPrice)) return false; // ad has no price but user requested min
-      if (isPriceMaxSet && isNaN(adPrice)) return false; // ad has no price but user requested max
-      if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
-      if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
-
-      // HIDE EXPIRED ADS by departure time (if no valid departureTime -> hide)
-      const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
-      let departureTime = null;
-      if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
-      else if (typeof departureRaw === "string" && departureRaw.trim() !== "") {
-        const fixed = departureRaw.replace(" ", "T");
-        if (!isNaN(Date.parse(departureRaw))) departureTime = new Date(departureRaw);
-        else if (!isNaN(Date.parse(fixed))) departureTime = new Date(fixed);
-      }
-      if (!departureTime) return false;
-      if (departureTime.getTime() < Date.now()) return false;
-
-      // DATE filter (today/tomorrow/3days)
-      if (filterDate) {
-        const raw = a.departureTime || a.startTime || a.time || a.date || null;
-        let adTime = null;
-        if (typeof raw === "number") adTime = new Date(raw);
-        else if (typeof raw === "string" && raw.trim() !== "") {
-          const tryFix = raw.replace(" ", "T");
-          if (!isNaN(Date.parse(raw))) adTime = new Date(raw);
-          else if (!isNaN(Date.parse(tryFix))) adTime = new Date(tryFix);
-        }
-        if (!adTime) return false;
-        const now = new Date();
-        if (filterDate === "today") {
-          if (adTime.getFullYear() !== now.getFullYear() || adTime.getMonth() !== now.getMonth() || adTime.getDate() !== now.getDate()) return false;
-        } else if (filterDate === "tomorrow") {
-          const t = new Date(now); t.setDate(now.getDate() + 1);
-          if (adTime.getFullYear() !== t.getFullYear() || adTime.getMonth() !== t.getMonth() || adTime.getDate() !== t.getDate()) return false;
-        } else if (filterDate === "3days") {
-          const diff = adTime.getTime() - now.getTime();
-          if (diff < 0 || diff > 1000 * 60 * 60 * 24 * 3) return false;
-        }
-      }
-
-      // SEARCH concat fields
-      const hay = [
-        a.fromRegion, a.fromDistrict,
-        a.toRegion, a.toDistrict,
-        a.comment, a.price, a.type, a.carModel, a.userId
-      ].join(" ").toLowerCase();
-      if (!hay.includes(q)) return false;
-
-      return true;
-    });
-
-    // dedupe by id -> Map will keep last set
-    const resultMap = new Map();
-    filtered.forEach(x => { if (x && x.id) resultMap.set(x.id, x); });
-    filtered = Array.from(resultMap.values());
-
-    if (!filtered.length) {
-      list.innerHTML = "<p>Natija topilmadi.</p>";
-      renderPaginationControls(0, 0, 0); // empty
-      // Fade-in even if empty so UI doesn't look broken
-      try { list.classList.remove("ads-fade"); list.classList.add("ads-show"); } catch(e){}
-      return;
-    }
-
-    // SORT by createdAt / fallback
-    filtered.sort((a,b) => {
-      const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
-      const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
-      return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
-    });
-
-    // PAGINATION: compute total/pages, clamp CURRENT_PAGE
-    const totalItems = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-    if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
-    if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
-
-    const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
-    const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
-
-    // build DOM fragment with cards (createAdCard is async)
-    const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
-    const frag = document.createDocumentFragment();
-    cards.forEach(c => frag.appendChild(c));
-    list.appendChild(frag);
-
-    // render pagination controls
-    renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
-
-    // Fade-in after DOM updated
-    try {
-      list.classList.remove("ads-fade");
-      list.classList.add("ads-show");
-    } catch (e) {}
-  }, delay);
-}
-
-// ===============================
-// PART 2 end
-// Next: PART 3 (pagination helpers, any remaining utilities)
-// ===============================
-// ===============================
-// PAGINATION CONTROLS RENDERING (unchanged except styling)
-// ===============================
-function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 0) {
-  // Ensure container exists
-  let container = document.getElementById("paginationControls");
-  if (!container) {
-    container = document.createElement("div");
-    container.id = "paginationControls";
-    container.style = "display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:center;";
-    // Append after adsList (if exists)
-    const list = document.getElementById("adsList");
-    if (list && list.parentNode) {
-      list.parentNode.insertBefore(container, list.nextSibling);
-    } else {
-      document.body.appendChild(container);
-    }
-  }
-
-  container.innerHTML = ""; // clear
-
-  if (!totalPages || totalPages <= 1) {
-    // show small info if >0
-    if (totalItems > 0) {
-      const info = document.createElement("div");
-      info.textContent = `Ko‘rsatilyapti: ${Math.min(PAGE_SIZE, totalItems)} / ${totalItems}`;
-      info.style = "color:#6b7280;font-size:14px;";
-      container.appendChild(info);
-    }
-    return;
-  }
-
-  // helper to create pagination button
-  const btn = (text, disabled, handler) => {
-    const b = document.createElement("button");
-    b.textContent = text;
-    b.disabled = !!disabled;
-    b.style = `
-      padding:6px 10px;
-      border-radius:8px;
-      border:1px solid #e5e7eb;
-      background:white;
-      cursor:pointer;
-    `;
-    if (!disabled) b.onclick = handler;
-    return b;
-  };
-
-  // First, Prev
-  container.appendChild(btn("« Birinchi", currentPage === 1, () => {
-    CURRENT_PAGE = 1;
-    scheduleRenderAds();
-  }));
-  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => {
-    CURRENT_PAGE = Math.max(1, currentPage - 1);
-    scheduleRenderAds();
-  }));
-
-  // page numbers window
-  const windowSize = 5;
-  let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
-  let end = Math.min(totalPages, start + windowSize - 1);
-  if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
-
-  for (let p = start; p <= end; p++) {
-    const isCurrent = p === currentPage;
-    const pbtn = document.createElement("button");
-    pbtn.textContent = p.toString();
-    pbtn.disabled = isCurrent;
-    pbtn.style = `
-      padding:6px 10px;
-      border-radius:8px;
-      border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};
-      background:${isCurrent ? "#0069d9" : "white"};
-      color:${isCurrent ? "white" : "#111"};
-      cursor:pointer;
-    `;
-    if (!isCurrent)
-      pbtn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
-    container.appendChild(pbtn);
-  }
-
-  // Next, Last
-  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => {
-    CURRENT_PAGE = Math.min(totalPages, currentPage + 1);
-    scheduleRenderAds();
-  }));
-  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => {
-    CURRENT_PAGE = totalPages;
-    scheduleRenderAds();
-  }));
-
-  // info
-  const info = document.createElement("div");
-  info.textContent = `Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
-  info.style = "color:#6b7280;font-size:13px;margin-left:8px;";
-  container.appendChild(info);
-}
-
-// ===============================
-// CONTACT / CALL helper
-// ===============================
-function onContact(phone) {
-  if (!phone) return alert("Telefon raqami mavjud emas");
-  window.location.href = `tel:${phone}`;
-}
-window.onContact = onContact;
-
-// ===============================
-// LOGOUT
-// ===============================
-window.logout = () => signOut(auth);
-
-// ===============================
-// OPEN/CLOSE modal exposure for external calls (unchanged)
-// ===============================
-window.openAdModal = openAdModal;
-window.closeAdModal = closeAdModal;
-
-// ===============================
-// END OF INDEX.JS (PART 3)
-// ===============================
