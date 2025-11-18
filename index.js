@@ -1,4 +1,4 @@
-// index.js (final + smooth render + user cache + pagination)
+// index.js (final + pagination + reset & close-district-panels)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -113,16 +113,6 @@ function slugify(s) {
   return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
 }
 
-// simple djb2 hash for ad object (used to detect changes)
-function hashString(str) {
-  let h = 5381;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) + h) + str.charCodeAt(i);
-    h = h & h;
-  }
-  return String(h >>> 0);
-}
-
 // ===============================
 //  GET USER INFO (keeps existing behavior)
 // ===============================
@@ -158,25 +148,6 @@ async function getUserInfo(userId) {
 }
 
 // ===============================
-//  USER CACHE (new) — reduces repeated DB calls when rendering many ads
-// ===============================
-const USER_CACHE = new Map(); // userId -> {data, ts}
-const USER_CACHE_TTL = 1000 * 60 * 5; // 5 minutes cache TTL (adjustable)
-
-async function getUserInfoCached(userId) {
-  if (!userId) return getUserInfo(null);
-  const now = Date.now();
-  const cached = USER_CACHE.get(userId);
-  if (cached && (now - cached.ts) < USER_CACHE_TTL && cached.data) {
-    return cached.data;
-  }
-  // fetch fresh and cache
-  const data = await getUserInfo(userId);
-  USER_CACHE.set(userId, { data, ts: Date.now() });
-  return data;
-}
-
-// ===============================
 //  GLOBALS
 // ===============================
 // We'll keep both a Map and an Array: Map for quick add/update/remove, Array for ordered rendering
@@ -186,8 +157,8 @@ let CURRENT_USER = null;
 let useRealtime = true;     // set true to attach child_* listeners
 
 // Pagination state
-const PAGE_SIZE = 10;       // test size you requested
-let CURRENT_PAGE = 1;       // current page (1-based)
+let PAGE_SIZE = 10;       // default items per page (you can change later)
+let CURRENT_PAGE = 1;     // current page (1-based)
 
 // ===============================
 //  AUTH CHECK
@@ -218,6 +189,7 @@ function loadRegionsFilter() {
 
 // ===============================
 //  Route Filters (from/to + districts)
+//  — note: district boxes can be hidden (display: none) while preserving checkboxes
 // ===============================
 function loadRouteFilters() {
   const fromRegion = document.getElementById("fromRegion");
@@ -246,7 +218,12 @@ function fillFromDistricts() {
   const box = document.getElementById("fromDistrictBox");
   if (!box) return;
   box.innerHTML = "";
-  if (!region || !REGIONS[region]) return;
+  // if no region selected -> hide panel but keep it empty
+  if (!region || !REGIONS[region]) {
+    box.style.display = "none";
+    return;
+  }
+  box.style.display = ""; // show
   REGIONS[region].forEach(d => {
     const label = document.createElement("label");
     label.className = "district-item";
@@ -261,7 +238,11 @@ function fillToDistricts() {
   const box = document.getElementById("toDistrictBox");
   if (!box) return;
   box.innerHTML = "";
-  if (!region || !REGIONS[region]) return;
+  if (!region || !REGIONS[region]) {
+    box.style.display = "none";
+    return;
+  }
+  box.style.display = "";
   REGIONS[region].forEach(d => {
     const label = document.createElement("label");
     label.className = "district-item";
@@ -370,16 +351,19 @@ function attachInputsOnce() {
   const filterDateEl = document.getElementById("filterDate");
   const priceMinEl = document.getElementById("priceMin");
   const priceMaxEl = document.getElementById("priceMax");
+  const resetBtn = document.getElementById("resetFiltersBtn");
 
-  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
+  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
+  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
   if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
   if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
+  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
+  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
+  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
+
+  if (resetBtn) resetBtn.onclick = () => { resetFilters(); };
 
   // checkbox global listener already in scheduleRenderAds usage
   document.addEventListener("change", (e) => {
@@ -392,11 +376,13 @@ function attachInputsOnce() {
 }
 
 // ===============================
-//  RENDER ADS (full pipeline, respects all existing filters + pagination + smooth render)
+//  RENDER ADS (full pipeline, respects all existing filters + pagination)
 // ===============================
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
+  // clear safely
+  list.innerHTML = "";
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
@@ -534,88 +520,21 @@ async function renderAds(adsArr) {
   const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
   const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
-  // --- SMOOTH RENDER: reuse DOM nodes when possible ---
-  await smoothRenderPage(list, pageSlice);
+  // build DOM fragment with cards (createAdCard is async)
+  const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
+  const frag = document.createDocumentFragment();
+  cards.forEach(c => frag.appendChild(c));
+  list.appendChild(frag);
 
   // render pagination controls
   renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
 }
 
 // ===============================
-//  SMOOTH RENDER: reuse nodes, update only changed cards
-//  - listEl: container element
-//  - pageSlice: array of ad objects (in desired order)
-// ===============================
-async function smoothRenderPage(listEl, pageSlice) {
-  // build map of existing child nodes (only direct children that are .ad-card)
-  const existingNodes = new Map();
-  Array.from(listEl.querySelectorAll(".ad-card")).forEach(n => {
-    const id = n.getAttribute("data-ad-id");
-    if (id) existingNodes.set(id, n);
-  });
-
-  // desired order ids
-  const desiredIds = pageSlice.map(a => a.id);
-
-  // remove nodes that are in DOM but not part of desiredIds (this prevents leakage)
-  Array.from(listEl.children).forEach(child => {
-    if (!child.classList || !child.classList.contains("ad-card")) return;
-    const aid = child.getAttribute("data-ad-id");
-    if (!desiredIds.includes(aid)) {
-      // remove extra
-      child.remove();
-      existingNodes.delete(aid);
-    }
-  });
-
-  // prepare fragment
-  const frag = document.createDocumentFragment();
-
-  // process each ad in order: reuse node if hash equal, else create new
-  for (const ad of pageSlice) {
-    const id = ad.id;
-    const str = JSON.stringify({
-      id: ad.id,
-      price: ad.price,
-      fromRegion: ad.fromRegion, fromDistrict: ad.fromDistrict,
-      toRegion: ad.toRegion, toDistrict: ad.toDistrict,
-      departureTime: ad.departureTime,
-      createdAt: ad.createdAt,
-      bookedSeats: ad.bookedSeats,
-      totalSeats: ad.totalSeats,
-      comment: ad.comment,
-      type: ad.type
-    });
-    const h = hashString(str);
-    const existing = existingNodes.get(id);
-
-    if (existing && existing.dataset.adHash === h) {
-      // reuse as-is
-      frag.appendChild(existing);
-      existingNodes.delete(id); // consumed
-      continue;
-    }
-
-    // create new node (async)
-    const node = await createAdCard(ad);
-    node.setAttribute("data-ad-id", id);
-    node.dataset.adHash = h;
-    frag.appendChild(node);
-    // if an old version existed, remove it (it will be removed from DOM by earlier loop or here)
-    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
-    existingNodes.delete(id);
-  }
-
-  // Append fragment to list (this replaces the visible children in one operation)
-  listEl.appendChild(frag);
-}
-
-// ===============================
-//  CREATE CARD (uses cached user info)
+//  CREATE CARD (no-name vs full modal preserved)
 // ===============================
 async function createAdCard(ad) {
-  // use cached user info to avoid repeated DB calls
-  const u = await getUserInfoCached(ad.userId);
+  const u = await getUserInfo(ad.userId);
 
   const div = document.createElement("div");
   div.className = "ad-card";
@@ -685,7 +604,7 @@ async function openAdModal(ad) {
     document.body.appendChild(modal);
   }
 
-  const u = await getUserInfoCached(ad.userId);
+  const u = await getUserInfo(ad.userId);
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
@@ -788,8 +707,6 @@ function updateBadgeForAd(adId) {
   if (!node) return;
   const badge = node.querySelector(".ad-badge-new");
   if (badge) badge.remove();
-  // also recalc hash so subsequent compare doesn't keep old cached hash
-  // recompute hash from node's stored ad? We can't access ad here — force a small re-render for that ad when scheduleRenderAds runs next.
 }
 
 // contact helper
@@ -800,13 +717,66 @@ function onContact(phone) {
 window.onContact = onContact;
 
 // ===============================
+//  NEW: closeDistrictPanels()
+//  — hides district selection UI (keeps checkbox states)
+//  Use case: when user switches to another filter, district panels retract for cleaner UI.
+// ===============================
+function closeDistrictPanels() {
+  const fromBox = document.getElementById("fromDistrictBox");
+  const toBox = document.getElementById("toDistrictBox");
+  if (fromBox) fromBox.style.display = "none";
+  if (toBox) toBox.style.display = "none";
+}
+
+// ===============================
+//  NEW: resetFilters()
+//  — clears all filter inputs, unchecks districts, resets to page 1 and re-renders
+// ===============================
+function resetFilters() {
+  const searchEl = document.getElementById("search");
+  const roleEl = document.getElementById("filterRole");
+  const regionEl = document.getElementById("filterRegion");
+  const fromRegionEl = document.getElementById("fromRegion");
+  const toRegionEl = document.getElementById("toRegion");
+  const sortByEl = document.getElementById("sortBy");
+  const filterDateEl = document.getElementById("filterDate");
+  const priceMinEl = document.getElementById("priceMin");
+  const priceMaxEl = document.getElementById("priceMax");
+
+  if (searchEl) searchEl.value = "";
+  if (roleEl) roleEl.value = "";
+  if (regionEl) regionEl.value = "";
+  if (fromRegionEl) fromRegionEl.value = "";
+  if (toRegionEl) toRegionEl.value = "";
+  if (sortByEl) sortByEl.value = "newest";
+  if (filterDateEl) filterDateEl.value = "";
+  if (priceMinEl) priceMinEl.value = "";
+  if (priceMaxEl) priceMaxEl.value = "";
+
+  // uncheck all district checkboxes but keep the panels hidden or visible depending on region
+  document.querySelectorAll("#fromDistrictBox input.fromDistrict").forEach(i => i.checked = false);
+  document.querySelectorAll("#toDistrictBox input.toDistrict").forEach(i => i.checked = false);
+
+  // ensure district panels reflect region selection
+  if (document.getElementById("fromRegion")?.value) fillFromDistricts(); else {
+    const fb = document.getElementById("fromDistrictBox"); if (fb) fb.style.display = "none";
+  }
+  if (document.getElementById("toRegion")?.value) fillToDistricts(); else {
+    const tb = document.getElementById("toDistrictBox"); if (tb) tb.style.display = "none";
+  }
+
+  CURRENT_PAGE = 1;
+  scheduleRenderAds();
+}
+window.resetFilters = resetFilters;
+
+// ===============================
 // DEBOUNCE scheduling to avoid flicker
 // ===============================
 let __render_timeout = null;
 function scheduleRenderAds() {
   if (__render_timeout) clearTimeout(__render_timeout);
   __render_timeout = setTimeout(() => {
-    // we render from ADS_MAP values (Map preserves insertion but not strict order) — we keep Map.values()
     renderAds(Array.from(ADS_MAP.values()));
     __render_timeout = null;
   }, 110);
