@@ -157,7 +157,7 @@ let CURRENT_USER = null;
 let useRealtime = true;     // set true to attach child_* listeners
 
 // Pagination state
-const PAGE_SIZE = 10;       // default items per page (you asked 10 for test)
+const PAGE_SIZE = 5;       // default items per page (you asked 10 for test)
 let CURRENT_PAGE = 1;       // current page (1-based)
 
 // ===============================
