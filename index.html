@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -15,23 +16,6 @@
 }
 
 body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:#111; }
-
-/* =============================
-   Smooth fade for ads loading
-   ============================= */
-.ads-fade {
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.ads-show {
-  opacity: 1;
-  transition: opacity 0.15s ease;
-}
-
-/* =============================
-   UI styles
-   ============================= */
 
 .topbar {
   background:var(--primary); color:#fff; padding:14px 20px; font-size:20px;
@@ -69,7 +53,18 @@ body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; co
   transition:0.12s ease; cursor:pointer;
 }
 .ad-card:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(16,24,40,0.04); }
-
+.new-badge {
+  position:absolute;
+  top:8px;
+  left:8px;
+  background:#ff4444;
+  padding:3px 8px;
+  font-size:11px;
+  color:white;
+  font-weight:600;
+  border-radius:6px;
+  z-index:3;
+}
 .ad-badge-new {
   background: #ff3b30;
   color: #fff;
@@ -135,30 +130,30 @@ body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; co
 
     <div class="filters">
       <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
+<!-- SARALASH -->
+<select id="sortBy">
+  <option value="newest">Eng yangi</option>
+  <option value="oldest">Eng eski</option>
+</select>
 
-      <!-- SARALASH -->
-      <select id="sortBy">
-        <option value="newest">Eng yangi</option>
-        <option value="oldest">Eng eski</option>
-      </select>
+<!-- JO‘NASH VAQTI -->
+<select id="filterDate">
+  <option value="">Vaqt (hammasi)</option>
+  <option value="today">Bugun</option>
+  <option value="tomorrow">Ertaga</option>
+  <option value="3days">3 kun ichida</option>
+</select>
 
-      <!-- JO‘NASH VAQTI -->
-      <select id="filterDate">
-        <option value="">Vaqt (hammasi)</option>
-        <option value="today">Bugun</option>
-        <option value="tomorrow">Ertaga</option>
-        <option value="3days">3 kun ichida</option>
-      </select>
-
-      <!-- NARX ORALIG‘I -->
-      <input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
-      <input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
+<!-- NARX ORALIG‘I -->
+<input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
+<input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
 
       <select id="filterRole">
         <option value="">Hammasi</option>
         <option value="Haydovchi">Haydovchi</option>
         <option value="Yo‘lovchi">Yo‘lovchi</option>
       </select>
+
     </div>
 
     <!-- Qayerdan -->
@@ -175,9 +170,9 @@ body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; co
       <div id="toDistrictBox" class="district-box"></div>
     </div>
 
-    <div id="adsList" class="ads-show">Yuklanmoqda...</div>
-
-    <div id="paginationControls" style="margin-top:20px; text-align:center;"></div>
+    <div id="adsList">Yuklanmoqda...</div>
+    <!-- Paste this directly UNDER adsList -->
+<div id="pagination" style="margin-top:20px; text-align:center;"></div>
   </div>
 </div>
 
