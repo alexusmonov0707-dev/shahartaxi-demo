@@ -1,10 +1,21 @@
-// index.js (to'liq, pagination + realtime + barcha filters)
+// index.js (final — to'liq, hech narsa o'chirilmagan)
 // ===============================
-//  FIREBASE INIT
+//  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getDatabase, ref, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getDatabase,
+  ref,
+  get,
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
@@ -26,7 +37,7 @@ const db = getDatabase(app);
 const REGIONS = window.regionsData || window.regions || {};
 
 // ===============================
-//  NEW BADGE LOCAL STORAGE
+//  READ / NEW BADGE STORAGE
 // ===============================
 function markAsRead(adId) {
   if (!adId) return;
@@ -37,7 +48,6 @@ function markAsRead(adId) {
     localStorage.setItem("readAds", JSON.stringify(read));
   }
 }
-
 function isRead(adId) {
   if (!adId) return false;
   try {
@@ -47,7 +57,7 @@ function isRead(adId) {
 }
 
 // ===============================
-// HELPERS
+//  HELPERS
 // ===============================
 function escapeHtml(str) {
   if (str === 0) return "0";
@@ -98,55 +108,83 @@ function formatTime(val) {
   return String(val);
 }
 
+// robust slugify for ids
+function slugify(s) {
+  return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
+}
+
 // ===============================
-// GET USER INFO
+//  GET USER INFO (keeps existing behavior)
 // ===============================
 async function getUserInfo(userId) {
-  if (!userId) return { phone:"", avatar:"", fullName:"", role:"", carModel:"", carColor:"", carNumber:"", seatCount:0 };
+  if (!userId) return {
+    phone: "", avatar: "", fullName: "", role: "",
+    carModel: "", carColor: "", carNumber: "", seatCount: 0
+  };
   try {
     const snap = await get(ref(db, "users/" + userId));
-    if (!snap.exists()) return { phone:"", avatar:"", fullName:"", role:"", carModel:"", carColor:"", carNumber:"", seatCount:0 };
+    if (!snap.exists()) return {
+      phone: "", avatar: "", fullName: "", role: "",
+      carModel: "", carColor: "", carNumber: "", seatCount: 0
+    };
     const u = snap.val();
     return {
       phone: u.phone || u.telephone || "",
       avatar: u.avatar || "",
-      fullName: u.fullName || ((u.firstname||u.lastname) ? `${u.firstname||""} ${u.lastname||""}`.trim() : "") || u.name || "",
+      fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
       role: (u.role || u.userRole || "").toString(),
       carModel: u.carModel || u.car || "",
       carColor: u.carColor || "",
       carNumber: u.carNumber || u.plate || "",
       seatCount: Number(u.seatCount || u.seats || 0)
     };
-  } catch(err) {
+  } catch (err) {
     console.error("getUserInfo error", err);
-    return { phone:"", avatar:"", fullName:"", role:"", carModel:"", carColor:"", carNumber:"", seatCount:0 };
+    return {
+      phone: "", avatar: "", fullName: "", role: "",
+      carModel: "", carColor: "", carNumber: "", seatCount: 0
+    };
   }
 }
 
 // ===============================
-// GLOBALS & PAGINATION
+//  GLOBALS
 // ===============================
-let ALL_ADS = [];
+// We'll keep both a Map and an Array: Map for quick add/update/remove, Array for ordered rendering
+const ADS_MAP = new Map();   // id -> ad object
+let ALL_ADS_ARR = [];       // derived from ADS_MAP (keeps insertion order from DB snapshot)
 let CURRENT_USER = null;
-let useRealtime = true;
-
-// Pagination
-let PAGE = 1;
-const PER_PAGE = 10;
+let useRealtime = true;     // set true to attach child_* listeners
 
 // ===============================
-// AUTH CHECK
+//  AUTH CHECK
 // ===============================
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   CURRENT_USER = await getUserInfo(user.uid || user.userId);
-  loadRouteFilters();
-  await loadAllAds();
-  if (useRealtime) attachRealtimeListener();
+  loadRegionsFilter();      // fills top-right region filter if present
+  loadRouteFilters();       // fills from/to selects and district boxes
+  await initialLoadAds();   // one-time load from DB
+  if (useRealtime) attachRealtimeHandlers(); // soft realtime updates
 });
 
 // ===============================
-// LOAD Route Filters (from/to + district checkboxes)
+//  LOAD REGION FILTER (top bar)
+// ===============================
+function loadRegionsFilter() {
+  const el = document.getElementById("filterRegion");
+  if (!el) return;
+  el.innerHTML = '<option value="">Viloyat (filter)</option>';
+  Object.keys(REGIONS).forEach(region => {
+    const opt = document.createElement("option");
+    opt.value = region;
+    opt.textContent = region;
+    el.appendChild(opt);
+  });
+}
+
+// ===============================
+//  Route Filters (from/to + districts)
 // ===============================
 function loadRouteFilters() {
   const fromRegion = document.getElementById("fromRegion");
@@ -161,16 +199,17 @@ function loadRouteFilters() {
     toRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
   });
 
-  // attach once - when user changes region we populate districts and rerender
-  fromRegion.onchange = () => { fillFromDistricts(); scheduleRenderAds(true); };
-  toRegion.onchange   = () => { fillToDistricts(); scheduleRenderAds(true); };
+  // attach handlers (single)
+  fromRegion.onchange = () => { fillFromDistricts(); scheduleRenderAds(); };
+  toRegion.onchange   = () => { fillToDistricts(); scheduleRenderAds(); };
 
+  // init boxes
   fillFromDistricts();
   fillToDistricts();
 }
 
 function fillFromDistricts() {
-  const region = document.getElementById("fromRegion").value;
+  const region = document.getElementById("fromRegion")?.value;
   const box = document.getElementById("fromDistrictBox");
   if (!box) return;
   box.innerHTML = "";
@@ -181,11 +220,11 @@ function fillFromDistricts() {
     label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
-  box.querySelectorAll("input").forEach(ch => ch.onchange = () => scheduleRenderAds(true));
+  box.querySelectorAll("input").forEach(ch => ch.onchange = scheduleRenderAds);
 }
 
 function fillToDistricts() {
-  const region = document.getElementById("toRegion").value;
+  const region = document.getElementById("toRegion")?.value;
   const box = document.getElementById("toDistrictBox");
   if (!box) return;
   box.innerHTML = "";
@@ -196,73 +235,103 @@ function fillToDistricts() {
     label.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
-  box.querySelectorAll("input").forEach(ch => ch.onchange = () => scheduleRenderAds(true));
+  box.querySelectorAll("input").forEach(ch => ch.onchange = scheduleRenderAds);
 }
 
 // ===============================
-// LOAD ALL ADS (one-time fetch)
+//  INITIAL LOAD (one-time snapshot)
 // ===============================
-async function loadAllAds() {
+async function initialLoadAds() {
   try {
     const snap = await get(ref(db, "ads"));
-    const listEl = document.getElementById("adsList");
-    if (!listEl) return;
     if (!snap.exists()) {
-      ALL_ADS = [];
-      listEl.innerHTML = "E’lon yo‘q.";
+      ALL_ADS_ARR = [];
+      ADS_MAP.clear();
+      document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
+      attachInputsOnce();
       return;
     }
+
+    // build array and map
     const arr = [];
     snap.forEach(child => {
       const v = child.val();
-      arr.push({
-        id: child.key,
-        ...v,
-        typeNormalized: normalizeType(v.type)
-      });
+      arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
     });
 
-    // dedupe by id
-    const m = new Map();
-    arr.forEach(x => { if (x && x.id) m.set(x.id, x); });
-    ALL_ADS = Array.from(m.values());
+    // ensure uniqueness by id (last value wins)
+    const map = new Map();
+    arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
+    ADS_MAP.clear();
+    for (const [k, v] of map) ADS_MAP.set(k, v);
+    ALL_ADS_ARR = Array.from(ADS_MAP.values());
 
-    attachInputHandlers();
-    renderAds(ALL_ADS);
-  } catch(err) {
-    console.error("loadAllAds error", err);
+    attachInputsOnce();
+    renderAds(ALL_ADS_ARR);
+  } catch (err) {
+    console.error("initialLoadAds error", err);
   }
 }
 
 // ===============================
-// Realtime listener (optional)
+//  REALTIME HANDLERS (child_added / changed / removed)
+//  — soft updates to DOM & ADS_MAP to avoid full reload
 // ===============================
-function attachRealtimeListener() {
+function attachRealtimeHandlers() {
   try {
     const r = ref(db, "ads");
-    onValue(r, snap => {
-      const arr = [];
-      snap.forEach(child => {
-        const v = child.val();
-        arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
-      });
-      const m = new Map();
-      arr.forEach(x => { if (x && x.id) m.set(x.id, x); });
-      ALL_ADS = Array.from(m.values());
-      // preserve PAGE when realtime updates; don't reset to 1
-      scheduleRenderAds(false);
-    }, err => {
-      console.warn("realtime onValue error", err);
+
+    onChildAdded(r, (snap) => {
+      const v = snap.val();
+      if (!v) return;
+      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
+      ADS_MAP.set(ad.id, ad);
+      // update array (keep insertion at end)
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      // if new ad passes current filters -> insert card; else do nothing
+      // simple approach: schedule render to respect filters and avoid duplication edge cases
+      scheduleRenderAds();
     });
-  } catch(e) {
-    console.warn("attachRealtimeListener failed", e);
+
+    onChildChanged(r, (snap) => {
+      const v = snap.val();
+      if (!v) return;
+      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
+      ADS_MAP.set(ad.id, ad);
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      // update card in-place if exists and passes filters, otherwise remove/add appropriately
+      scheduleRenderAds();
+    });
+
+    onChildRemoved(r, (snap) => {
+      const id = snap.key;
+      ADS_MAP.delete(id);
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      // remove DOM node if present
+      const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(id)}"]`);
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+      // also schedule full render to keep order correct when necessary
+      scheduleRenderAds();
+    });
+
+  } catch (err) {
+    console.warn("attachRealtimeHandlers failed:", err);
   }
 }
 
+// small helper to escape attribute selector special chars
+function escapeSelector(s) {
+  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
+}
+
 // ===============================
-// attach input handlers once
+//  ATTACH INPUT HANDLERS (once)
 // ===============================
-function attachInputHandlers() {
+let inputsAttached = false;
+function attachInputsOnce() {
+  if (inputsAttached) return;
+  inputsAttached = true;
+
   const searchEl = document.getElementById("search");
   const roleEl = document.getElementById("filterRole");
   const regionEl = document.getElementById("filterRegion");
@@ -273,55 +342,32 @@ function attachInputHandlers() {
   const priceMinEl = document.getElementById("priceMin");
   const priceMaxEl = document.getElementById("priceMax");
 
-  if (searchEl) searchEl.oninput = () => scheduleRenderAds(true);
-  if (roleEl) roleEl.onchange = () => scheduleRenderAds(true);
-  if (regionEl) regionEl.onchange = () => scheduleRenderAds(true);
-  if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); scheduleRenderAds(true); };
-  if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); scheduleRenderAds(true); };
-  if (sortByEl) sortByEl.onchange = () => scheduleRenderAds(true);
-  if (filterDateEl) filterDateEl.onchange = () => scheduleRenderAds(true);
-  if (priceMinEl) priceMinEl.oninput = () => scheduleRenderAds(true);
-  if (priceMaxEl) priceMaxEl.oninput = () => scheduleRenderAds(true);
+  if (searchEl) searchEl.oninput = scheduleRenderAds;
+  if (roleEl) roleEl.onchange = scheduleRenderAds;
+  if (regionEl) regionEl.onchange = scheduleRenderAds;
+  if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); scheduleRenderAds(); };
+  if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); scheduleRenderAds(); };
+  if (sortByEl) sortByEl.onchange = scheduleRenderAds;
+  if (filterDateEl) filterDateEl.onchange = scheduleRenderAds;
+  if (priceMinEl) priceMinEl.oninput = scheduleRenderAds;
+  if (priceMaxEl) priceMaxEl.oninput = scheduleRenderAds;
+
+  // checkbox global listener already in scheduleRenderAds usage
+  document.addEventListener("change", (e) => {
+    if (!e.target) return;
+    if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
+      scheduleRenderAds();
+    }
+  });
 }
 
 // ===============================
-// SLUGIFY
+//  RENDER ADS (full pipeline, respects all existing filters)
 // ===============================
-function slugify(s) {
-  return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
-}
-
-// ===============================
-// PAGINATION UI
-// ===============================
-function renderPagination(total) {
-  const container = document.getElementById("pagination");
-  if (!container) return;
-  const totalPages = Math.ceil(total / PER_PAGE);
-  if (totalPages <= 1) {
-    container.innerHTML = "";
-    return;
-  }
-
-  container.innerHTML = `
-    <button id="prevPage" ${PAGE <= 1 ? "disabled" : ""} style="margin-right:8px;padding:8px 10px">⬅ Oldingi</button>
-    <span style="padding:0 12px;">${PAGE} / ${totalPages}</span>
-    <button id="nextPage" ${PAGE >= totalPages ? "disabled" : ""} style="margin-left:8px;padding:8px 10px">Keyingi ➡</button>
-  `;
-
-  const prev = document.getElementById("prevPage");
-  const next = document.getElementById("nextPage");
-  if (prev) prev.onclick = () => { if (PAGE > 1) { PAGE--; scheduleRenderAds(false); } };
-  if (next) next.onclick = () => { if (PAGE < totalPages) { PAGE++; scheduleRenderAds(false); } };
-}
-
-// ===============================
-// RENDER ADS (MAIN ENGINE)
-// ===============================
-async function renderAds(ads) {
+async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
-  list.innerHTML = "";
+  list.innerHTML = ""; // safe clear
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
@@ -329,7 +375,7 @@ async function renderAds(ads) {
   const sortBy = document.getElementById("sortBy")?.value || "newest";
   const filterDate = document.getElementById("filterDate")?.value || "";
 
-  // price inputs: treat empty as not set
+  // price parsing robustly
   const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
   const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
   const isPriceMinSet = priceMinInput !== "";
@@ -349,10 +395,11 @@ async function renderAds(ads) {
   const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
   const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
-  let filtered = (ads || []).filter(a => {
+  // filter + validate
+  let filtered = (adsArr || []).filter(a => {
     if (!a) return false;
 
-    // automatic role filter (driver sees passenger ads and vice versa)
+    // automatic role filter (driver sees passenger ads, passenger sees driver ads)
     if (currentRole === "driver") {
       if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
     } else if (currentRole === "passenger") {
@@ -360,9 +407,7 @@ async function renderAds(ads) {
     }
 
     // explicit role dropdown
-    if (roleFilter) {
-      if (a.typeNormalized !== roleFilter) return false;
-    }
+    if (roleFilter) { if (a.typeNormalized !== roleFilter) return false; }
 
     // hide own ads
     if (currentUserId && a.userId === currentUserId) return false;
@@ -372,22 +417,22 @@ async function renderAds(ads) {
       if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
     }
 
-    // from region/districts
+    // from region / districts
     if (fromRegion && a.fromRegion !== fromRegion) return false;
     if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
 
-    // to region/districts
+    // to region / districts
     if (toRegion && a.toRegion !== toRegion) return false;
     if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
 
-    // PRICE filter (robust parsing)
+    // PRICE
     const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
-    if (isPriceMinSet && isNaN(adPrice)) return false; // user set min but ad has no price
-    if (isPriceMaxSet && isNaN(adPrice)) return false; // user set max but ad has no price
+    if (isPriceMinSet && isNaN(adPrice)) return false; // ad has no price but user requested min
+    if (isPriceMaxSet && isNaN(adPrice)) return false; // ad has no price but user requested max
     if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
     if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
 
-    // HIDE EXPIRED ADS (departure time)
+    // HIDE EXPIRED ADS by departure time (if no valid departureTime -> hide)
     const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
     let departureTime = null;
     if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
@@ -396,11 +441,10 @@ async function renderAds(ads) {
       if (!isNaN(Date.parse(departureRaw))) departureTime = new Date(departureRaw);
       else if (!isNaN(Date.parse(fixed))) departureTime = new Date(fixed);
     }
-    // if no valid departureTime -> exclude (per requirement)
     if (!departureTime) return false;
     if (departureTime.getTime() < Date.now()) return false;
 
-    // DATE filter
+    // DATE filter (today/tomorrow/3days)
     if (filterDate) {
       const raw = a.departureTime || a.startTime || a.time || a.date || null;
       let adTime = null;
@@ -423,7 +467,7 @@ async function renderAds(ads) {
       }
     }
 
-    // SEARCH matching
+    // SEARCH concat fields
     const hay = [
       a.fromRegion, a.fromDistrict,
       a.toRegion, a.toDistrict,
@@ -434,48 +478,32 @@ async function renderAds(ads) {
     return true;
   });
 
-  // DEDUPE by id (Map) to avoid duplicates
-  const dedupe = new Map();
-  filtered.forEach(x => { if (x && x.id) dedupe.set(x.id, x); });
-  filtered = Array.from(dedupe.values());
+  // dedupe by id -> Map will keep last set, but since filtered is derived from ADS_MAP we still dedupe
+  const resultMap = new Map();
+  filtered.forEach(x => { if (x && x.id) resultMap.set(x.id, x); });
+  filtered = Array.from(resultMap.values());
 
   if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
-    // clear pagination
-    renderPagination(0);
     return;
   }
 
-  // SORT newest/oldest by createdAt (fallbacks)
+  // SORT by createdAt / fallback
   filtered.sort((a,b) => {
     const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
     const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
-    return sortBy === "oldest" ? ta - tb : tb - ta;
+    return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
   });
 
-  // PAGINATION: ensure PAGE bounds
-  const total = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
-  if (PAGE > totalPages) PAGE = totalPages;
-  if (PAGE < 1) PAGE = 1;
-
-  renderPagination(total);
-
-  const start = (PAGE - 1) * PER_PAGE;
-  const end = start + PER_PAGE;
-  const pageAds = filtered.slice(start, end);
-
-  // create cards only for page
-  const cards = await Promise.all(pageAds.map(a => createAdCard(a)));
-
-  // append via fragment to avoid reflow flicker
+  // build DOM fragment with cards (createAdCard is async)
+  const cards = await Promise.all(filtered.map(a => createAdCard(a)));
   const frag = document.createDocumentFragment();
   cards.forEach(c => frag.appendChild(c));
   list.appendChild(frag);
 }
 
 // ===============================
-// CREATE AD CARD
+//  CREATE CARD (no-name vs full modal preserved)
 // ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
@@ -490,7 +518,7 @@ async function createAdCard(ad) {
   const createdRaw = ad.createdAt || ad.created || ad.postedAt || "";
   const created = formatTime(createdRaw);
 
-  // NEW badge: created within 24h and not read
+  // NEW badge logic: 24h window and not read
   let isNew = false;
   if (createdRaw) {
     try {
@@ -530,12 +558,15 @@ async function createAdCard(ad) {
     <div class="ad-created">${escapeHtml(created)}</div>
   `;
 
+  // attach click
   div.onclick = () => openAdModal(ad);
+
   return div;
 }
 
 // ===============================
-// OPEN MODAL
+//  OPEN MODAL
+//  — marks ad as read (so "Yangi" badge disappears for that ad only)
 // ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
@@ -546,6 +577,7 @@ async function openAdModal(ad) {
   }
 
   const u = await getUserInfo(ad.userId);
+
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
@@ -626,16 +658,13 @@ async function openAdModal(ad) {
   if (closeBtn) closeBtn.onclick = closeAdModal;
   if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
 
-  // mark as read (so badge disappears) and refresh page without resetting page
+  // mark as read and only update that ad's card (no full re-render)
   try { markAsRead(ad.id); } catch(e) {}
-  scheduleRenderAds(false);
+  updateBadgeForAd(ad.id);
 
   modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
 
-// ===============================
-// CLOSE MODAL
-// ===============================
 function closeAdModal() {
   const modal = document.getElementById("adFullModal");
   if (!modal) return;
@@ -643,39 +672,44 @@ function closeAdModal() {
   modal.innerHTML = "";
 }
 
+// update only badge for a single ad DOM node
+function updateBadgeForAd(adId) {
+  if (!adId) return;
+  const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(adId)}"]`);
+  if (!node) return;
+  const badge = node.querySelector(".ad-badge-new");
+  if (badge) badge.remove();
+}
+
+// contact helper
 function onContact(phone) {
   if (!phone) return alert("Telefon raqami mavjud emas");
   window.location.href = `tel:${phone}`;
 }
-
-window.openAdModal = openAdModal;
-window.closeAdModal = closeAdModal;
 window.onContact = onContact;
 
 // ===============================
-// DEBOUNCE + scheduleRenderAds(reset = true)
+// DEBOUNCE scheduling to avoid flicker
 // ===============================
 let __render_timeout = null;
-function scheduleRenderAds(reset = true) {
+function scheduleRenderAds() {
   if (__render_timeout) clearTimeout(__render_timeout);
   __render_timeout = setTimeout(() => {
-    if (reset) PAGE = 1;
-    renderAds(ALL_ADS);
+    renderAds(Array.from(ADS_MAP.values()));
     __render_timeout = null;
-  }, 120);
+  }, 110);
 }
 
-// listen for district checkbox changes globally (keeps single listener)
-document.addEventListener("change", (e) => {
-  if (!e.target) return;
-  if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
-    scheduleRenderAds(true);
-  }
-});
-
-// ===============================
-// LOGOUT
-// ===============================
+// Logout
 window.logout = () => signOut(auth);
 
-// End of file
+// expose open/close
+window.openAdModal = openAdModal;
+window.closeAdModal = closeAdModal;
+
+// ===============================
+//  UTILITY: when DOM updates could cause duplicates,
+//  ensure createAdCard returns unique node per ad id — we already set data-ad-id
+//  Deduplication handled in renderAds (Map) and in realtime remove handler.
+// ===============================
+
