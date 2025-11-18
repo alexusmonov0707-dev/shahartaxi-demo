@@ -1,4 +1,4 @@
-// index.js (final — districts close on scroll/click + keep all existing features)
+// index.js (final + smooth render + user cache + pagination)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -108,13 +108,22 @@ function formatTime(val) {
   return String(val);
 }
 
-// robust slugify for ids
 function slugify(s) {
   return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
 }
 
+// simple djb2 hash
+function hashString(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h) + str.charCodeAt(i);
+    h = h & h;
+  }
+  return String(h >>> 0);
+}
+
 // ===============================
-//  GET USER INFO (keeps existing behavior)
+//  GET USER INFO
 // ===============================
 async function getUserInfo(userId) {
   if (!userId) return {
@@ -148,17 +157,33 @@ async function getUserInfo(userId) {
 }
 
 // ===============================
+//  USER CACHE
+// ===============================
+const USER_CACHE = new Map();
+const USER_CACHE_TTL = 1000 * 60 * 5;
+
+async function getUserInfoCached(userId) {
+  if (!userId) return getUserInfo(null);
+  const now = Date.now();
+  const cached = USER_CACHE.get(userId);
+  if (cached && (now - cached.ts) < USER_CACHE_TTL && cached.data) {
+    return cached.data;
+  }
+  const data = await getUserInfo(userId);
+  USER_CACHE.set(userId, { data, ts: now });
+  return data;
+}
+
+// ===============================
 //  GLOBALS
 // ===============================
-// We'll keep both a Map and an Array: Map for quick add/update/remove, Array for ordered rendering
-const ADS_MAP = new Map();   // id -> ad object
-let ALL_ADS_ARR = [];       // derived from ADS_MAP (keeps insertion order from DB snapshot)
+const ADS_MAP = new Map();
+let ALL_ADS_ARR = [];
 let CURRENT_USER = null;
-let useRealtime = true;     // set true to attach child_* listeners
+let useRealtime = true;
 
-// Pagination state
-let PAGE_SIZE = 10;       // default items per page
-let CURRENT_PAGE = 1;     // current page (1-based)
+const PAGE_SIZE = 10;
+let CURRENT_PAGE = 1;
 
 // ===============================
 //  AUTH CHECK
@@ -166,14 +191,14 @@ let CURRENT_PAGE = 1;     // current page (1-based)
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   CURRENT_USER = await getUserInfo(user.uid || user.userId);
-  loadRegionsFilter();      // fills top-right region filter if present
-  loadRouteFilters();       // fills from/to selects and district boxes
-  await initialLoadAds();   // one-time load from DB
-  if (useRealtime) attachRealtimeHandlers(); // soft realtime updates
+  loadRegionsFilter();
+  loadRouteFilters();
+  await initialLoadAds();
+  if (useRealtime) attachRealtimeHandlers();
 });
 
 // ===============================
-//  LOAD REGION FILTER (top bar)
+//  REGION FILTER
 // ===============================
 function loadRegionsFilter() {
   const el = document.getElementById("filterRegion");
@@ -186,232 +211,12 @@ function loadRegionsFilter() {
     el.appendChild(opt);
   });
 }
-
 // ===============================
-//  Route Filters (from/to + districts)
-//  — district boxes show only when region selected
-//  — district boxes hide on scroll or clicking outside
-// ===============================
-function loadRouteFilters() {
-  const fromRegion = document.getElementById("fromRegion");
-  const toRegion = document.getElementById("toRegion");
-  if (!fromRegion || !toRegion) return;
-
-  fromRegion.innerHTML = '<option value="">Viloyat</option>';
-  toRegion.innerHTML = '<option value="">Viloyat</option>';
-
-  Object.keys(REGIONS).forEach(region => {
-    fromRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
-    toRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
-  });
-
-  fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-  toRegion.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-
-  fillFromDistricts();
-  fillToDistricts();
-}
-
-function fillFromDistricts() {
-  const region = document.getElementById("fromRegion")?.value;
-  const box = document.getElementById("fromDistrictBox");
-  if (!box) return;
-  box.innerHTML = "";
-
-  if (!region || !REGIONS[region]) {
-    box.style.display = "none";
-    return;
-  }
-  box.style.display = "";
-
-  REGIONS[region].forEach(d => {
-    const label = document.createElement("label");
-    label.className = "district-item";
-    label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
-    box.appendChild(label);
-  });
-
-  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
-}
-
-function fillToDistricts() {
-  const region = document.getElementById("toRegion")?.value;
-  const box = document.getElementById("toDistrictBox");
-  if (!box) return;
-  box.innerHTML = "";
-
-  if (!region || !REGIONS[region]) {
-    box.style.display = "none";
-    return;
-  }
-  box.style.display = "";
-
-  REGIONS[region].forEach(d => {
-    const label = document.createElement("label");
-    label.className = "district-item";
-    label.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
-    box.appendChild(label);
-  });
-
-  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
-}
-
-// ===============================
-//  INITIAL LOAD
-// ===============================
-async function initialLoadAds() {
-  try {
-    const snap = await get(ref(db, "ads"));
-    if (!snap.exists()) {
-      ALL_ADS_ARR = [];
-      ADS_MAP.clear();
-      document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
-      attachInputsOnce();
-      renderPaginationControls();
-      return;
-    }
-
-    const arr = [];
-    snap.forEach(child => {
-      const v = child.val();
-      arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
-    });
-
-    const map = new Map();
-    arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
-    ADS_MAP.clear();
-    for (const [k, v] of map) ADS_MAP.set(k, v);
-
-    ALL_ADS_ARR = Array.from(ADS_MAP.values());
-
-    attachInputsOnce();
-    scheduleRenderAds();
-
-  } catch (err) {
-    console.error("initialLoadAds error", err);
-  }
-}
-
-// ===============================
-//  REALTIME HANDLERS
-// ===============================
-function attachRealtimeHandlers() {
-  try {
-    const r = ref(db, "ads");
-
-    onChildAdded(r, (snap) => {
-      const v = snap.val();
-      if (!v) return;
-      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
-      ADS_MAP.set(ad.id, ad);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      scheduleRenderAds();
-    });
-
-    onChildChanged(r, (snap) => {
-      const v = snap.val();
-      if (!v) return;
-      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
-      ADS_MAP.set(ad.id, ad);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      scheduleRenderAds();
-    });
-
-    onChildRemoved(r, (snap) => {
-      const id = snap.key;
-      ADS_MAP.delete(id);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(id)}"]`);
-      if (node && node.parentNode) node.parentNode.removeChild(node);
-      scheduleRenderAds();
-    });
-
-  } catch (err) {
-    console.warn("attachRealtimeHandlers failed:", err);
-  }
-}
-
-function escapeSelector(s) {
-  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
-}
-
-// ===============================
-//  ATTACH INPUT HANDLERS
-// ===============================
-let inputsAttached = false;
-let documentClickListenerAttached = false;
-
-function attachInputsOnce() {
-  if (inputsAttached) return;
-  inputsAttached = true;
-
-  const searchEl = document.getElementById("search");
-  const roleEl = document.getElementById("filterRole");
-  const regionEl = document.getElementById("filterRegion");
-  const fromRegionEl = document.getElementById("fromRegion");
-  const toRegionEl = document.getElementById("toRegion");
-  const sortByEl = document.getElementById("sortBy");
-  const filterDateEl = document.getElementById("filterDate");
-  const priceMinEl = document.getElementById("priceMin");
-  const priceMaxEl = document.getElementById("priceMax");
-  const resetBtn = document.getElementById("resetFiltersBtn");
-
-  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-
-  if (resetBtn) resetBtn.onclick = () => { resetFilters(); };
-
-  document.addEventListener("change", (e) => {
-    if (!e.target) return;
-    if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
-      CURRENT_PAGE = 1;
-      scheduleRenderAds();
-    }
-  });
-
-  // CLICK OUTSIDE TO CLOSE DISTRICT PANELS
-  if (!documentClickListenerAttached) {
-    document.addEventListener("click", (e) => {
-      const fromBox = document.getElementById("fromDistrictBox");
-      const toBox = document.getElementById("toDistrictBox");
-      const fromRegion = document.getElementById("fromRegion");
-      const toRegion = document.getElementById("toRegion");
-
-      const insideFromBox = fromBox && (e.target === fromBox || fromBox.contains(e.target));
-      const insideToBox = toBox && (e.target === toBox || toBox.contains(e.target));
-      const onFromSelect = fromRegion && (e.target === fromRegion || fromRegion.contains(e.target));
-      const onToSelect = toRegion && (e.target === toRegion || toRegion.contains(e.target));
-
-      if (!insideFromBox && !onFromSelect && fromBox) fromBox.style.display = "none";
-      if (!insideToBox && !onToSelect && toBox) toBox.style.display = "none";
-    }, { capture: true });
-
-    window.addEventListener("scroll", () => {
-      const fromBox = document.getElementById("fromDistrictBox");
-      const toBox = document.getElementById("toDistrictBox");
-      if (fromBox) fromBox.style.display = "none";
-      if (toBox) toBox.style.display = "none";
-    }, { passive: true });
-
-    documentClickListenerAttached = true;
-  }
-}
-
-// ===============================
-//  RENDER ADS (full pipeline, respects all existing filters + pagination)
+//  RENDER ADS (full pipeline, respects all existing filters + pagination + smooth render)
 // ===============================
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
-list.innerHTML = "";
-
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
@@ -549,21 +354,88 @@ list.innerHTML = "";
   const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
   const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
-  // build DOM fragment with cards (createAdCard is async)
-  const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
-  const frag = document.createDocumentFragment();
-  cards.forEach(c => frag.appendChild(c));
-  list.appendChild(frag);
+  // --- SMOOTH RENDER: reuse DOM nodes when possible ---
+  await smoothRenderPage(list, pageSlice);
 
   // render pagination controls
   renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
 }
 
 // ===============================
-//  CREATE CARD (no-name vs full modal preserved)
+//  SMOOTH RENDER: reuse nodes, update only changed cards
+//  - listEl: container element
+//  - pageSlice: array of ad objects (in desired order)
+// ===============================
+async function smoothRenderPage(listEl, pageSlice) {
+  // build map of existing child nodes (only direct children that are .ad-card)
+  const existingNodes = new Map();
+  Array.from(listEl.querySelectorAll(".ad-card")).forEach(n => {
+    const id = n.getAttribute("data-ad-id");
+    if (id) existingNodes.set(id, n);
+  });
+
+  // desired order ids
+  const desiredIds = pageSlice.map(a => a.id);
+
+  // remove nodes that are in DOM but not part of desiredIds (this prevents leakage)
+  Array.from(listEl.children).forEach(child => {
+    if (!child.classList || !child.classList.contains("ad-card")) return;
+    const aid = child.getAttribute("data-ad-id");
+    if (!desiredIds.includes(aid)) {
+      // remove extra
+      child.remove();
+      existingNodes.delete(aid);
+    }
+  });
+
+  // prepare fragment
+  const frag = document.createDocumentFragment();
+
+  // process each ad in order: reuse node if hash equal, else create new
+  for (const ad of pageSlice) {
+    const id = ad.id;
+    const str = JSON.stringify({
+      id: ad.id,
+      price: ad.price,
+      fromRegion: ad.fromRegion, fromDistrict: ad.fromDistrict,
+      toRegion: ad.toRegion, toDistrict: ad.toDistrict,
+      departureTime: ad.departureTime,
+      createdAt: ad.createdAt,
+      bookedSeats: ad.bookedSeats,
+      totalSeats: ad.totalSeats,
+      comment: ad.comment,
+      type: ad.type
+    });
+    const h = hashString(str);
+    const existing = existingNodes.get(id);
+
+    if (existing && existing.dataset.adHash === h) {
+      // reuse as-is
+      frag.appendChild(existing);
+      existingNodes.delete(id); // consumed
+      continue;
+    }
+
+    // create new node (async)
+    const node = await createAdCard(ad);
+    node.setAttribute("data-ad-id", id);
+    node.dataset.adHash = h;
+    frag.appendChild(node);
+    // if an old version existed, remove it (it will be removed from DOM by earlier loop or here)
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    existingNodes.delete(id);
+  }
+
+  // Append fragment to list (this replaces the visible children in one operation)
+  listEl.appendChild(frag);
+}
+
+// ===============================
+//  CREATE CARD (uses cached user info)
 // ===============================
 async function createAdCard(ad) {
-  const u = await getUserInfo(ad.userId);
+  // use cached user info to avoid repeated DB calls
+  const u = await getUserInfoCached(ad.userId);
 
   const div = document.createElement("div");
   div.className = "ad-card";
@@ -633,7 +505,7 @@ async function openAdModal(ad) {
     document.body.appendChild(modal);
   }
 
-  const u = await getUserInfo(ad.userId);
+  const u = await getUserInfoCached(ad.userId);
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
@@ -736,6 +608,8 @@ function updateBadgeForAd(adId) {
   if (!node) return;
   const badge = node.querySelector(".ad-badge-new");
   if (badge) badge.remove();
+  // also recalc hash so subsequent compare doesn't keep old cached hash
+  // recompute hash from node's stored ad? We can't access ad here — force a small re-render for that ad when scheduleRenderAds runs next.
 }
 
 // contact helper
@@ -744,91 +618,274 @@ function onContact(phone) {
   window.location.href = `tel:${phone}`;
 }
 window.onContact = onContact;
-
 // ===============================
-//  NEW: resetFilters()
-//  — clears all filter inputs, unchecks districts, resets to page 1 and re-renders
+//  SMOOTH RENDER: reuse nodes, update only changed cards
+//  - listEl: container element
+//  - pageSlice: array of ad objects (in desired order)
 // ===============================
-function resetFilters() {
-  const searchEl = document.getElementById("search");
-  const roleEl = document.getElementById("filterRole");
-  const regionEl = document.getElementById("filterRegion");
-  const fromRegionEl = document.getElementById("fromRegion");
-  const toRegionEl = document.getElementById("toRegion");
-  const sortByEl = document.getElementById("sortBy");
-  const filterDateEl = document.getElementById("filterDate");
-  const priceMinEl = document.getElementById("priceMin");
-  const priceMaxEl = document.getElementById("priceMax");
+async function smoothRenderPage(listEl, pageSlice) {
+  // build map of existing child nodes (only direct children that are .ad-card)
+  const existingNodes = new Map();
+  Array.from(listEl.querySelectorAll(".ad-card")).forEach(n => {
+    const id = n.getAttribute("data-ad-id");
+    if (id) existingNodes.set(id, n);
+  });
 
-  if (searchEl) searchEl.value = "";
-  if (roleEl) roleEl.value = "";
-  if (regionEl) regionEl.value = "";
-  if (fromRegionEl) fromRegionEl.value = "";
-  if (toRegionEl) toRegionEl.value = "";
-  if (sortByEl) sortByEl.value = "newest";
-  if (filterDateEl) filterDateEl.value = "";
-  if (priceMinEl) priceMinEl.value = "";
-  if (priceMaxEl) priceMaxEl.value = "";
+  // desired order ids
+  const desiredIds = pageSlice.map(a => a.id);
 
-  // uncheck all district checkboxes but keep the panels hidden or visible depending on region
-  document.querySelectorAll("#fromDistrictBox input.fromDistrict").forEach(i => i.checked = false);
-  document.querySelectorAll("#toDistrictBox input.toDistrict").forEach(i => i.checked = false);
+  // remove nodes that are in DOM but not part of desiredIds (this prevents leakage)
+  Array.from(listEl.children).forEach(child => {
+    if (!child.classList || !child.classList.contains("ad-card")) return;
+    const aid = child.getAttribute("data-ad-id");
+    if (!desiredIds.includes(aid)) {
+      // remove extra
+      child.remove();
+      existingNodes.delete(aid);
+    }
+  });
 
-  // ensure district panels reflect region selection
-  if (document.getElementById("fromRegion")?.value) fillFromDistricts(); else {
-    const fb = document.getElementById("fromDistrictBox"); if (fb) fb.style.display = "none";
+  // prepare fragment
+  const frag = document.createDocumentFragment();
+
+  // process each ad in order: reuse node if hash equal, else create new
+  for (const ad of pageSlice) {
+    const id = ad.id;
+    const str = JSON.stringify({
+      id: ad.id,
+      price: ad.price,
+      fromRegion: ad.fromRegion, fromDistrict: ad.fromDistrict,
+      toRegion: ad.toRegion, toDistrict: ad.toDistrict,
+      departureTime: ad.departureTime,
+      createdAt: ad.createdAt,
+      bookedSeats: ad.bookedSeats,
+      totalSeats: ad.totalSeats,
+      comment: ad.comment,
+      type: ad.type
+    });
+    const h = hashString(str);
+    const existing = existingNodes.get(id);
+
+    if (existing && existing.dataset.adHash === h) {
+      // reuse as-is
+      frag.appendChild(existing);
+      existingNodes.delete(id); // consumed
+      continue;
+    }
+
+    // create new node (async)
+    const node = await createAdCard(ad);
+    node.setAttribute("data-ad-id", id);
+    node.dataset.adHash = h;
+    frag.appendChild(node);
+    // if an old version existed, remove it (it will be removed from DOM by earlier loop or here)
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    existingNodes.delete(id);
   }
-  if (document.getElementById("toRegion")?.value) fillToDistricts(); else {
-    const tb = document.getElementById("toDistrictBox"); if (tb) tb.style.display = "none";
+
+  // Append fragment to list (this replaces the visible children in one operation)
+  listEl.appendChild(frag);
+}
+
+// ===============================
+//  CREATE CARD (uses cached user info)
+// ===============================
+async function createAdCard(ad) {
+  // use cached user info to avoid repeated DB calls
+  const u = await getUserInfoCached(ad.userId);
+
+  const div = document.createElement("div");
+  div.className = "ad-card";
+  div.setAttribute("data-ad-id", ad.id || "");
+
+  const route =
+    `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+
+  const depTimeRaw = ad.departureTime || ad.startTime || ad.time || ad.date || "";
+  const depTime = formatTime(depTimeRaw);
+  const createdRaw = ad.createdAt || ad.created || ad.postedAt || "";
+  const created = formatTime(createdRaw);
+
+  // NEW badge logic: 24h window and not read
+  let isNew = false;
+  if (createdRaw) {
+    try {
+      const ct = new Date(createdRaw).getTime();
+      if (!isNaN(ct) && (Date.now() - ct <= 24 * 60 * 60 * 1000) && !isRead(ad.id)) isNew = true;
+    } catch (e) {}
   }
 
-  CURRENT_PAGE = 1;
-  scheduleRenderAds();
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
+  const booked = Number(ad.bookedSeats || 0);
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) 
+    ? Math.max(totalSeats - booked, 0)
+    : null;
+
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
+
+  const carModel = u.carModel || ad.car || "";
+
+  div.innerHTML = `
+    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
+    <div class="ad-main">
+      <div class="ad-route">
+        ${escapeHtml(route)}
+        ${isNew ? '<span class="ad-badge-new" style="margin-left:8px;background:#0069d9;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px">Yangi</span>' : ''}
+      </div>
+      <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModel)}</div>
+      <div class="ad-meta" style="margin-top:8px">
+        <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
+        ${
+          totalSeats !== null
+            ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
+            : (requested !== null
+                ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>`
+                : `<div class="ad-chip">👥 -</div>`)
+        }
+      </div>
+    </div>
+    <div class="ad-price">💰 ${escapeHtml(ad.price ? String(ad.price) : "-")} so‘m</div>
+    <div class="ad-created">${escapeHtml(created)}</div>
+  `;
+
+  div.onclick = () => openAdModal(ad);
+
+  return div;
 }
-window.resetFilters = resetFilters;
 
 // ===============================
-// DEBOUNCE scheduling to avoid flicker
+//  OPEN MODAL (marks ad as read)
 // ===============================
-let __render_timeout = null;
-function scheduleRenderAds() {
-  if (__render_timeout) clearTimeout(__render_timeout);
-  __render_timeout = setTimeout(() => {
-    renderAds(Array.from(ADS_MAP.values()));
-    __render_timeout = null;
-  }, 110);
+async function openAdModal(ad) {
+  let modal = document.getElementById("adFullModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "adFullModal";
+    document.body.appendChild(modal);
+  }
+
+  const u = await getUserInfoCached(ad.userId);
+
+  const route =
+    `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+
+  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
+  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
+
+  const fullname =
+    u.fullName ||
+    ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") ||
+    "Foydalanuvchi";
+
+  const carFull =
+    `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
+
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
+
+  const booked = Number(ad.bookedSeats || 0);
+  const available =
+    (typeof totalSeats === "number" && !isNaN(totalSeats))
+      ? Math.max(totalSeats - booked, 0)
+      : null;
+
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
+
+  modal.innerHTML = `
+    <div class="ad-modal-box">
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
+        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
+        <div>
+          <div class="modal-name">${escapeHtml(fullname)}</div>
+          <div class="modal-car" style="color:#6b7280">${escapeHtml(carFull)}</div>
+        </div>
+      </div>
+
+      <div class="modal-row">
+        <div class="modal-col">
+          <div class="label">Yo‘nalish</div>
+          <div class="value">${escapeHtml(route)}</div>
+        </div>
+        <div class="modal-col" style="text-align:right">
+          <div class="label">Jo‘nash vaqti</div>
+          <div class="value">${escapeHtml(depTime)}</div>
+        </div>
+      </div>
+
+      <div class="modal-row">
+        <div class="modal-col">
+          <div class="label">Joylar</div>
+          <div class="value">
+            ${
+              totalSeats !== null
+                ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})`
+                : requested !== null
+                  ? `Talab: ${escapeHtml(String(requested))} odam`
+                  : "-"
+            }
+          </div>
+        </div>
+        <div class="modal-col" style="text-align:right">
+          <div class="label">Narx</div>
+          <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="label">Izoh</div>
+        <div class="value">${escapeHtml(ad.comment || "-")}</div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="label">Kontakt</div>
+        <div class="value">${escapeHtml(u.phone || "-")}</div>
+      </div>
+
+      <div style="margin-top:12px;color:#88919a;font-size:13px;">
+        Joylashtirilgan: ${escapeHtml(created)}
+      </div>
+
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="btn-primary" id="modalCloseBtn">Yopish</button>
+        <button class="btn-ghost" id="modalCallBtn">Qo'ng'iroq</button>
+      </div>
+    </div>
+  `;
+
+  modal.style.display = "flex";
+  const closeBtn = document.getElementById("modalCloseBtn");
+  const callBtn = document.getElementById("modalCallBtn");
+
+  if (closeBtn) closeBtn.onclick = closeAdModal;
+  if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
+
+  // mark as read
+  try { markAsRead(ad.id); } catch (e) {}
+
+  updateBadgeForAd(ad.id);
+
+  modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
-
-// Logout
-window.logout = () => signOut(auth);
-
-// expose open/close
-window.openAdModal = openAdModal;
-window.closeAdModal = closeAdModal;
-
 // ===============================
 // PAGINATION CONTROLS RENDERING
 // ===============================
 function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 0) {
-  // Ensure container exists
   let container = document.getElementById("paginationControls");
   if (!container) {
     container = document.createElement("div");
     container.id = "paginationControls";
     container.style = "display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:center;";
-    // Append after adsList (if exists)
     const list = document.getElementById("adsList");
-    if (list && list.parentNode) {
-      list.parentNode.insertBefore(container, list.nextSibling);
-    } else {
-      document.body.appendChild(container);
-    }
+    if (list && list.parentNode) list.parentNode.insertBefore(container, list.nextSibling);
+    else document.body.appendChild(container);
   }
 
-  container.innerHTML = ""; // clear
+  container.innerHTML = "";
 
   if (!totalPages || totalPages <= 1) {
-    // show small info if >0
     if (totalItems > 0) {
       const info = document.createElement("div");
       info.textContent = `Ko‘rsatilyapti: ${Math.min(PAGE_SIZE, totalItems)} / ${totalItems}`;
@@ -838,7 +895,6 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     return;
   }
 
-  // helper to create button
   const btn = (text, disabled, handler) => {
     const b = document.createElement("button");
     b.textContent = text;
@@ -848,13 +904,18 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     return b;
   };
 
-  // First, Prev
-  container.appendChild(btn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; scheduleRenderAds(); }));
-  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = Math.max(1, currentPage - 1); scheduleRenderAds(); }));
+  container.appendChild(btn("« Birinchi", currentPage === 1, () => {
+    CURRENT_PAGE = 1;
+    scheduleRenderAds();
+  }));
 
-  // page numbers (show window)
+  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => {
+    CURRENT_PAGE = Math.max(1, currentPage - 1);
+    scheduleRenderAds();
+  }));
+
   const windowSize = 5;
-  let start = Math.max(1, currentPage - Math.floor(windowSize/2));
+  let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
   let end = Math.min(totalPages, start + windowSize - 1);
   if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
 
@@ -864,22 +925,37 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     pbtn.textContent = p.toString();
     pbtn.disabled = isCurrent;
     pbtn.style = `padding:6px 10px;border-radius:8px;border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};background:${isCurrent ? "#0069d9" : "white"};color:${isCurrent ? "white" : "#111"};cursor:pointer`;
-    if (!isCurrent) pbtn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
+    if (!isCurrent) pbtn.onclick = () => {
+      CURRENT_PAGE = p;
+      scheduleRenderAds();
+    };
     container.appendChild(pbtn);
   }
 
-  // Next, Last
-  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => { CURRENT_PAGE = Math.min(totalPages, currentPage + 1); scheduleRenderAds(); }));
-  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
+  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => {
+    CURRENT_PAGE = Math.min(totalPages, currentPage + 1);
+    scheduleRenderAds();
+  }));
 
-  // info
+  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => {
+    CURRENT_PAGE = totalPages;
+    scheduleRenderAds();
+  }));
+
   const info = document.createElement("div");
   info.textContent = ` Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
   info.style = "color:#6b7280;font-size:13px;margin-left:8px;";
   container.appendChild(info);
 }
 
+// =======================================
+// LOGOUT + WINDOW EXPOSURE (FINISHERS)
+// =======================================
+window.logout = () => signOut(auth);
+window.openAdModal = openAdModal;
+window.closeAdModal = closeAdModal;
+window.onContact = onContact;
+
 // ===============================
-// UTILITY: when DOM updates could cause duplicates,
-// ensure createAdCard returns unique node per ad id — we already set data-ad-id
-// Deduplication handled in renderAds (Map) and in realtime remove handler.
+// END OF INDEX.JS
+// ===============================
