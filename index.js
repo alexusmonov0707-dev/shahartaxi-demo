@@ -1,4 +1,4 @@
-// index.js (final — to'liq, hech narsa o'chirilmagan, pagination + realtime + smoother filter)
+// index.js (final + smooth render + user cache + pagination)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -113,9 +113,14 @@ function slugify(s) {
   return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
 }
 
-// safe escape for attribute selector
-function escapeSelector(s) {
-  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
+// simple djb2 hash for ad object (used to detect changes)
+function hashString(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h) + str.charCodeAt(i);
+    h = h & h;
+  }
+  return String(h >>> 0);
 }
 
 // ===============================
@@ -153,6 +158,25 @@ async function getUserInfo(userId) {
 }
 
 // ===============================
+//  USER CACHE (new) — reduces repeated DB calls when rendering many ads
+// ===============================
+const USER_CACHE = new Map(); // userId -> {data, ts}
+const USER_CACHE_TTL = 1000 * 60 * 5; // 5 minutes cache TTL (adjustable)
+
+async function getUserInfoCached(userId) {
+  if (!userId) return getUserInfo(null);
+  const now = Date.now();
+  const cached = USER_CACHE.get(userId);
+  if (cached && (now - cached.ts) < USER_CACHE_TTL && cached.data) {
+    return cached.data;
+  }
+  // fetch fresh and cache
+  const data = await getUserInfo(userId);
+  USER_CACHE.set(userId, { data, ts: Date.now() });
+  return data;
+}
+
+// ===============================
 //  GLOBALS
 // ===============================
 // We'll keep both a Map and an Array: Map for quick add/update/remove, Array for ordered rendering
@@ -161,9 +185,9 @@ let ALL_ADS_ARR = [];       // derived from ADS_MAP (keeps insertion order from 
 let CURRENT_USER = null;
 let useRealtime = true;     // set true to attach child_* listeners
 
-// Pagination state (you asked 7)
-const PAGE_SIZE = 7;
-let CURRENT_PAGE = 1;
+// Pagination state
+const PAGE_SIZE = 10;       // test size you requested
+let CURRENT_PAGE = 1;       // current page (1-based)
 
 // ===============================
 //  AUTH CHECK
@@ -324,6 +348,11 @@ function attachRealtimeHandlers() {
   }
 }
 
+// small helper to escape attribute selector special chars
+function escapeSelector(s) {
+  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
+}
+
 // ===============================
 //  ATTACH INPUT HANDLERS (once)
 // ===============================
@@ -363,14 +392,11 @@ function attachInputsOnce() {
 }
 
 // ===============================
-//  RENDER ADS (full pipeline, respects all existing filters + pagination)
-//  - optimized: compute filtered list, but render only page slice
+//  RENDER ADS (full pipeline, respects all existing filters + pagination + smooth render)
 // ===============================
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
-  // (we will set innerHTML later; but clear early to avoid old content flashing)
-  list.innerHTML = "";
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
@@ -488,7 +514,7 @@ async function renderAds(adsArr) {
 
   if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
-    renderPaginationControls(0, 0, 0); // empty
+    renderPaginationControls(0, 0); // empty
     return;
   }
 
@@ -508,22 +534,88 @@ async function renderAds(adsArr) {
   const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
   const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
-  // build DOM fragment with cards (createAdCard is async)
-  const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
-  const frag = document.createDocumentFragment();
-  cards.forEach(c => frag.appendChild(c));
-  // faster replace: append frag to list
-  list.appendChild(frag);
+  // --- SMOOTH RENDER: reuse DOM nodes when possible ---
+  await smoothRenderPage(list, pageSlice);
 
   // render pagination controls
   renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
 }
 
 // ===============================
-//  CREATE CARD (no-name vs full modal preserved)
+//  SMOOTH RENDER: reuse nodes, update only changed cards
+//  - listEl: container element
+//  - pageSlice: array of ad objects (in desired order)
+// ===============================
+async function smoothRenderPage(listEl, pageSlice) {
+  // build map of existing child nodes (only direct children that are .ad-card)
+  const existingNodes = new Map();
+  Array.from(listEl.querySelectorAll(".ad-card")).forEach(n => {
+    const id = n.getAttribute("data-ad-id");
+    if (id) existingNodes.set(id, n);
+  });
+
+  // desired order ids
+  const desiredIds = pageSlice.map(a => a.id);
+
+  // remove nodes that are in DOM but not part of desiredIds (this prevents leakage)
+  Array.from(listEl.children).forEach(child => {
+    if (!child.classList || !child.classList.contains("ad-card")) return;
+    const aid = child.getAttribute("data-ad-id");
+    if (!desiredIds.includes(aid)) {
+      // remove extra
+      child.remove();
+      existingNodes.delete(aid);
+    }
+  });
+
+  // prepare fragment
+  const frag = document.createDocumentFragment();
+
+  // process each ad in order: reuse node if hash equal, else create new
+  for (const ad of pageSlice) {
+    const id = ad.id;
+    const str = JSON.stringify({
+      id: ad.id,
+      price: ad.price,
+      fromRegion: ad.fromRegion, fromDistrict: ad.fromDistrict,
+      toRegion: ad.toRegion, toDistrict: ad.toDistrict,
+      departureTime: ad.departureTime,
+      createdAt: ad.createdAt,
+      bookedSeats: ad.bookedSeats,
+      totalSeats: ad.totalSeats,
+      comment: ad.comment,
+      type: ad.type
+    });
+    const h = hashString(str);
+    const existing = existingNodes.get(id);
+
+    if (existing && existing.dataset.adHash === h) {
+      // reuse as-is
+      frag.appendChild(existing);
+      existingNodes.delete(id); // consumed
+      continue;
+    }
+
+    // create new node (async)
+    const node = await createAdCard(ad);
+    node.setAttribute("data-ad-id", id);
+    node.dataset.adHash = h;
+    frag.appendChild(node);
+    // if an old version existed, remove it (it will be removed from DOM by earlier loop or here)
+    if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    existingNodes.delete(id);
+  }
+
+  // Append fragment to list (this replaces the visible children in one operation)
+  listEl.appendChild(frag);
+}
+
+// ===============================
+//  CREATE CARD (uses cached user info)
 // ===============================
 async function createAdCard(ad) {
-  const u = await getUserInfo(ad.userId);
+  // use cached user info to avoid repeated DB calls
+  const u = await getUserInfoCached(ad.userId);
 
   const div = document.createElement("div");
   div.className = "ad-card";
@@ -593,7 +685,7 @@ async function openAdModal(ad) {
     document.body.appendChild(modal);
   }
 
-  const u = await getUserInfo(ad.userId);
+  const u = await getUserInfoCached(ad.userId);
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
@@ -696,6 +788,8 @@ function updateBadgeForAd(adId) {
   if (!node) return;
   const badge = node.querySelector(".ad-badge-new");
   if (badge) badge.remove();
+  // also recalc hash so subsequent compare doesn't keep old cached hash
+  // recompute hash from node's stored ad? We can't access ad here — force a small re-render for that ad when scheduleRenderAds runs next.
 }
 
 // contact helper
@@ -712,6 +806,7 @@ let __render_timeout = null;
 function scheduleRenderAds() {
   if (__render_timeout) clearTimeout(__render_timeout);
   __render_timeout = setTimeout(() => {
+    // we render from ADS_MAP values (Map preserves insertion but not strict order) — we keep Map.values()
     renderAds(Array.from(ADS_MAP.values()));
     __render_timeout = null;
   }, 110);
