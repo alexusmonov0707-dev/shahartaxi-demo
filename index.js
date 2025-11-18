@@ -1,4 +1,4 @@
-// index.js (final + pagination)
+// index.js (final — pagination + lazy loading + optimized filtering)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -108,57 +108,111 @@ function formatTime(val) {
   return String(val);
 }
 
+function escapeSelector(s) {
+  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
+}
+
 // robust slugify for ids
 function slugify(s) {
   return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
 }
 
 // ===============================
-//  GET USER INFO (keeps existing behavior)
+//  USER INFO CACHE (lazy fetch)
 // ===============================
-async function getUserInfo(userId) {
+const USERS_CACHE = new Map(); // userId -> { promise, data }
+
+// fetch and cache user info to avoid repeated DB calls
+async function fetchUserInfoCached(userId) {
   if (!userId) return {
     phone: "", avatar: "", fullName: "", role: "",
     carModel: "", carColor: "", carNumber: "", seatCount: 0
   };
+
+  if (USERS_CACHE.has(userId)) {
+    const cached = USERS_CACHE.get(userId);
+    // cached can be { promise } during in-flight or { data }
+    if (cached.data) return cached.data;
+    return cached.promise;
+  }
+
+  const p = (async () => {
+    try {
+      const snap = await get(ref(db, "users/" + userId));
+      if (!snap.exists()) return {
+        phone: "", avatar: "", fullName: "", role: "",
+        carModel: "", carColor: "", carNumber: "", seatCount: 0
+      };
+      const u = snap.val();
+      const out = {
+        phone: u.phone || u.telephone || "",
+        avatar: u.avatar || "",
+        fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
+        role: (u.role || u.userRole || "").toString(),
+        carModel: u.carModel || u.car || "",
+        carColor: u.carColor || "",
+        carNumber: u.carNumber || u.plate || "",
+        seatCount: Number(u.seatCount || u.seats || 0)
+      };
+      USERS_CACHE.set(userId, { data: out });
+      return out;
+    } catch (err) {
+      console.error("fetchUserInfoCached error", err);
+      USERS_CACHE.set(userId, { data: {
+        phone: "", avatar: "", fullName: "", role: "",
+        carModel: "", carColor: "", carNumber: "", seatCount: 0
+      }});
+      return USERS_CACHE.get(userId).data;
+    }
+  })();
+
+  USERS_CACHE.set(userId, { promise: p });
+  return p;
+}
+
+// shortcut wrapper for createAdCard to fill user info after card placed
+async function populateUserOnCard(ad, card) {
   try {
-    const snap = await get(ref(db, "users/" + userId));
-    if (!snap.exists()) return {
-      phone: "", avatar: "", fullName: "", role: "",
-      carModel: "", carColor: "", carNumber: "", seatCount: 0
-    };
-    const u = snap.val();
-    return {
-      phone: u.phone || u.telephone || "",
-      avatar: u.avatar || "",
-      fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
-      role: (u.role || u.userRole || "").toString(),
-      carModel: u.carModel || u.car || "",
-      carColor: u.carColor || "",
-      carNumber: u.carNumber || u.plate || "",
-      seatCount: Number(u.seatCount || u.seats || 0)
-    };
-  } catch (err) {
-    console.error("getUserInfo error", err);
-    return {
-      phone: "", avatar: "", fullName: "", role: "",
-      carModel: "", carColor: "", carNumber: "", seatCount: 0
-    };
+    const u = await fetchUserInfoCached(ad.userId);
+    // update parts of card
+    const avatar = card.querySelector(".ad-avatar");
+    if (avatar && u.avatar) avatar.src = u.avatar;
+    const carNode = card.querySelector(".ad-car");
+    if (carNode) carNode.textContent = u.carModel || (ad.car || "");
+    // additionally we can add accessible name if needed
+  } catch(e) {
+    // ignore
   }
 }
 
 // ===============================
-//  GLOBALS
+//  GET USER INFO (legacy sync wrapper — kept for compatibility)
 // ===============================
-// We'll keep both a Map and an Array: Map for quick add/update/remove, Array for ordered rendering
-const ADS_MAP = new Map();   // id -> ad object
-let ALL_ADS_ARR = [];       // derived from ADS_MAP (keeps insertion order from DB snapshot)
-let CURRENT_USER = null;
-let useRealtime = true;     // set true to attach child_* listeners
+async function getUserInfo(userId) {
+  // try cache first
+  const c = USERS_CACHE.get(userId);
+  if (c && c.data) return c.data;
+  return fetchUserInfoCached(userId);
+}
 
-// Pagination state
-const PAGE_SIZE = 10;       // default items per page (you asked 10 for test)
-let CURRENT_PAGE = 1;       // current page (1-based)
+// ===============================
+//  GLOBALS: ADS storage & pagination/lazy state
+// ===============================
+const ADS_MAP = new Map();   // id -> ad object (single source of truth)
+let ALL_ADS_ARR = [];       // derived ordered array (from ADS_MAP values)
+let CURRENT_USER = null;
+let useRealtime = true;     // realtime updates
+
+// Pagination / Lazy config
+let PAGE_SIZE = 10;         // user requested test = 10, adjustable later
+let CURRENT_PAGE = 1;
+let TOTAL_PAGES = 1;
+
+// IntersectionObserver for lazy-loading "populate details" when card becomes visible
+let CARD_OBSERVER = null;
+
+// A flag to prevent overlapping renders
+let isRendering = false;
 
 // ===============================
 //  AUTH CHECK
@@ -166,10 +220,11 @@ let CURRENT_PAGE = 1;       // current page (1-based)
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   CURRENT_USER = await getUserInfo(user.uid || user.userId);
-  loadRegionsFilter();      // fills top-right region filter if present
-  loadRouteFilters();       // fills from/to selects and district boxes
-  await initialLoadAds();   // one-time load from DB
-  if (useRealtime) attachRealtimeHandlers(); // soft realtime updates
+  loadRegionsFilter();
+  loadRouteFilters();
+  await initialLoadAds();
+  if (useRealtime) attachRealtimeHandlers();
+  initCardObserver(); // start observer
 });
 
 // ===============================
@@ -203,11 +258,9 @@ function loadRouteFilters() {
     toRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
   });
 
-  // attach handlers (single)
   fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
   toRegion.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
 
-  // init boxes
   fillFromDistricts();
   fillToDistricts();
 }
@@ -253,22 +306,21 @@ async function initialLoadAds() {
       ADS_MAP.clear();
       document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
       attachInputsOnce();
-      renderPaginationControls(); // ensure pagination cleared
+      renderPaginationControls(0,0,0);
       return;
     }
 
-    // build array and map
     const arr = [];
     snap.forEach(child => {
       const v = child.val();
       arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
     });
 
-    // ensure uniqueness by id (last value wins)
+    // dedupe and fill ADS_MAP
     const map = new Map();
     arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
     ADS_MAP.clear();
-    for (const [k, v] of map) ADS_MAP.set(k, v);
+    for (const [k,v] of map) ADS_MAP.set(k, v);
     ALL_ADS_ARR = Array.from(ADS_MAP.values());
 
     attachInputsOnce();
@@ -280,7 +332,6 @@ async function initialLoadAds() {
 
 // ===============================
 //  REALTIME HANDLERS (child_added / changed / removed)
-//  — soft updates to DOM & ADS_MAP to avoid full reload
 // ===============================
 function attachRealtimeHandlers() {
   try {
@@ -292,7 +343,7 @@ function attachRealtimeHandlers() {
       const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
       ADS_MAP.set(ad.id, ad);
       ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      // schedule render, do not reset page (so user stays on current page)
+      // do not reset CURRENT_PAGE — user stays where they are
       scheduleRenderAds();
     });
 
@@ -317,11 +368,6 @@ function attachRealtimeHandlers() {
   } catch (err) {
     console.warn("attachRealtimeHandlers failed:", err);
   }
-}
-
-// small helper to escape attribute selector special chars
-function escapeSelector(s) {
-  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
 }
 
 // ===============================
@@ -352,7 +398,7 @@ function attachInputsOnce() {
   if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
   if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
 
-  // checkbox global listener already in scheduleRenderAds usage
+  // checkbox listener
   document.addEventListener("change", (e) => {
     if (!e.target) return;
     if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
@@ -360,24 +406,74 @@ function attachInputsOnce() {
       scheduleRenderAds();
     }
   });
+
+  // scroll listener for "load more" (lazy pagination)
+  window.addEventListener("scroll", onWindowScrollForLoadMore, { passive: true });
 }
 
 // ===============================
-//  RENDER ADS (full pipeline, respects all existing filters + pagination)
+//  LAZY: IntersectionObserver for cards (populate user info once visible)
 // ===============================
-async function renderAds(adsArr) {
-  const list = document.getElementById("adsList");
-  if (!list) return;
-  // clear safely
-  list.innerHTML = "";
+function initCardObserver() {
+  if (CARD_OBSERVER) return;
+  CARD_OBSERVER = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const adId = el.getAttribute("data-ad-id");
+      if (!adId) return;
+      // find ad in ADS_MAP and populate user info
+      const ad = ADS_MAP.get(adId);
+      if (ad) {
+        populateUserOnCard(ad, el);
+      }
+      // unobserve once populated (avoid repeated fetch triggers)
+      CARD_OBSERVER.unobserve(el);
+    });
+  }, {
+    root: null,
+    rootMargin: "200px", // prefetch a bit before visible
+    threshold: 0.1
+  });
+}
 
+// window scroll handler to auto "load next page" when near bottom
+let loadingMoreFromScroll = false;
+function onWindowScrollForLoadMore() {
+  // if pagination not used or only 1 page, skip
+  if (TOTAL_PAGES <= 1) return;
+  // if already on last page, skip
+  if (CURRENT_PAGE >= TOTAL_PAGES) return;
+  if (loadingMoreFromScroll) return;
+  const scrolled = window.innerHeight + window.scrollY;
+  const near = document.body.offsetHeight - 350; // 350px from bottom triggers load
+  if (scrolled >= near) {
+    loadingMoreFromScroll = true;
+    CURRENT_PAGE = Math.min(TOTAL_PAGES, CURRENT_PAGE + 1);
+    // scheduleRenderAds will append the next page's cards (we'll adjust to append instead of full replace)
+    scheduleRenderAds(true /* appendMode */).finally(()=>{ loadingMoreFromScroll = false; });
+  }
+}
+
+// ===============================
+//  RENDER ADS (pipeline + pagination + optimized lazy user fetch)
+//    appendMode: if true, attempt to append next page instead of full replace
+// ===============================
+async function renderAds(adsArr, appendMode = false) {
+  // prevent re-entrancy
+  if (isRendering && !appendMode) return;
+  isRendering = true;
+
+  const list = document.getElementById("adsList");
+  if (!list) { isRendering = false; return; }
+
+  // gather filter inputs
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
   const regionFilter = document.getElementById("filterRegion")?.value || "";
   const sortBy = document.getElementById("sortBy")?.value || "newest";
   const filterDate = document.getElementById("filterDate")?.value || "";
 
-  // price parsing robustly
   const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
   const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
   const isPriceMinSet = priceMinInput !== "";
@@ -397,11 +493,11 @@ async function renderAds(adsArr) {
   const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
   const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
-  // filter + validate
+  // FILTERING
   let filtered = (adsArr || []).filter(a => {
     if (!a) return false;
 
-    // automatic role filter (driver sees passenger ads, passenger sees driver ads)
+    // automatic role filter
     if (currentRole === "driver") {
       if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
     } else if (currentRole === "passenger") {
@@ -414,27 +510,27 @@ async function renderAds(adsArr) {
     // hide own ads
     if (currentUserId && a.userId === currentUserId) return false;
 
-    // top region filter (either from or to)
+    // region top filter
     if (regionFilter) {
       if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
     }
 
-    // from region / districts
+    // from region/districts
     if (fromRegion && a.fromRegion !== fromRegion) return false;
     if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
 
-    // to region / districts
+    // to region/districts
     if (toRegion && a.toRegion !== toRegion) return false;
     if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
 
-    // PRICE
+    // price filter
     const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
-    if (isPriceMinSet && isNaN(adPrice)) return false; // ad has no price but user requested min
-    if (isPriceMaxSet && isNaN(adPrice)) return false; // ad has no price but user requested max
+    if (isPriceMinSet && isNaN(adPrice)) return false;
+    if (isPriceMaxSet && isNaN(adPrice)) return false;
     if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
     if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
 
-    // HIDE EXPIRED ADS by departure time (if no valid departureTime -> hide)
+    // hide expired: need valid departureTime
     const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
     let departureTime = null;
     if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
@@ -446,7 +542,7 @@ async function renderAds(adsArr) {
     if (!departureTime) return false;
     if (departureTime.getTime() < Date.now()) return false;
 
-    // DATE filter (today/tomorrow/3days)
+    // date filter (today/tomorrow/3days)
     if (filterDate) {
       const raw = a.departureTime || a.startTime || a.time || a.date || null;
       let adTime = null;
@@ -469,7 +565,7 @@ async function renderAds(adsArr) {
       }
     }
 
-    // SEARCH concat fields
+    // SEARCH
     const hay = [
       a.fromRegion, a.fromDistrict,
       a.toRegion, a.toDistrict,
@@ -480,49 +576,69 @@ async function renderAds(adsArr) {
     return true;
   });
 
-  // dedupe by id -> Map will keep last set
+  // dedupe by id
   const resultMap = new Map();
   filtered.forEach(x => { if (x && x.id) resultMap.set(x.id, x); });
   filtered = Array.from(resultMap.values());
 
   if (!filtered.length) {
-    list.innerHTML = "<p>Natija topilmadi.</p>";
-    renderPaginationControls(0, 0); // empty
+    if (!appendMode) list.innerHTML = "<p>Natija topilmadi.</p>";
+    renderPaginationControls(0,0,0);
+    isRendering = false;
     return;
   }
 
-  // SORT by createdAt / fallback
+  // sort
   filtered.sort((a,b) => {
     const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
     const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
     return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
   });
 
-  // PAGINATION: compute total/pages, clamp CURRENT_PAGE
+  // pagination
   const totalItems = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  TOTAL_PAGES = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
-  if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
+  if (CURRENT_PAGE > TOTAL_PAGES) CURRENT_PAGE = TOTAL_PAGES;
 
   const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
   const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
-  // build DOM fragment with cards (createAdCard is async)
-  const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
+  // if appendMode -> append to existing list instead of clearing
+  if (!appendMode) {
+    list.innerHTML = "";
+  }
+
+  // create cards but with minimal blocking: create placeholders synchronously, then populate users lazily via observer
   const frag = document.createDocumentFragment();
-  cards.forEach(c => frag.appendChild(c));
+  for (const ad of pageSlice) {
+    const card = await createAdCardPlaceholder(ad); // returns DOM node quickly (no DB calls)
+    frag.appendChild(card);
+    // observe for lazy population
+    if (CARD_OBSERVER) CARD_OBSERVER.observe(card);
+  }
+
+  // append fragment
   list.appendChild(frag);
 
-  // render pagination controls
-  renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
+  // after DOM insertion, render pagination
+  renderPaginationControls(TOTAL_PAGES, CURRENT_PAGE, totalItems);
+
+  // small optimization: prefetch user info for all items on current page in parallel but non-blocking
+  Promise.all(pageSlice.map(a => fetchUserInfoCached(a.userId))).then(()=> {
+    // once cached, populate visible cards ASAP
+    pageSlice.forEach(ad => {
+      const card = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(ad.id)}"]`);
+      if (card) populateUserOnCard(ad, card);
+    });
+  }).catch(()=>{});
+
+  isRendering = false;
 }
 
-// ===============================
-//  CREATE CARD (no-name vs full modal preserved)
-// ===============================
-async function createAdCard(ad) {
-  const u = await getUserInfo(ad.userId);
-
+// create card quickly (placeholder) — no DB calls, minimal content
+async function createAdCardPlaceholder(ad) {
+  const uPlaceholder = { avatar: "https://i.ibb.co/2W0z7Lx/user.png" }; // temporary avatar
   const div = document.createElement("div");
   div.className = "ad-card";
   div.setAttribute("data-ad-id", ad.id || "");
@@ -533,7 +649,7 @@ async function createAdCard(ad) {
   const createdRaw = ad.createdAt || ad.created || ad.postedAt || "";
   const created = formatTime(createdRaw);
 
-  // NEW badge logic: 24h window and not read
+  // NEW badge
   let isNew = false;
   if (createdRaw) {
     try {
@@ -550,10 +666,10 @@ async function createAdCard(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  const carModel = u.carModel || ad.car || "";
+  const carModel = ""; // will populate later from user cache
 
   div.innerHTML = `
-    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
+    <img class="ad-avatar" src="${escapeHtml(uPlaceholder.avatar)}" alt="avatar">
     <div class="ad-main">
       <div class="ad-route">
         ${escapeHtml(route)}
@@ -573,15 +689,17 @@ async function createAdCard(ad) {
     <div class="ad-created">${escapeHtml(created)}</div>
   `;
 
-  // attach click
-  div.onclick = () => openAdModal(ad);
+  // attach click — when clicked, we need full user info for modal; that will be fetched inside openAdModal
+  div.onclick = (e) => {
+    // prevent click if clicking on a button inside card (none currently), but ok
+    openAdModal(ad);
+  };
 
   return div;
 }
 
 // ===============================
-//  OPEN MODAL
-//  — marks ad as read (so "Yangi" badge disappears for that ad only)
+//  OPEN MODAL (full fetch & mark read)
 // ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
@@ -591,7 +709,8 @@ async function openAdModal(ad) {
     document.body.appendChild(modal);
   }
 
-  const u = await getUserInfo(ad.userId);
+  // ensure full user info (cached fetch will return fast if prefetched)
+  const u = await fetchUserInfoCached(ad.userId);
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
@@ -673,8 +792,8 @@ async function openAdModal(ad) {
   if (closeBtn) closeBtn.onclick = closeAdModal;
   if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
 
-  // mark as read and only update that ad's card (no full re-render)
-  try { markAsRead(ad.id); } catch(e) {}
+  // mark as read and update badge only for that card
+  try { markAsRead(ad.id); } catch(e){}
   updateBadgeForAd(ad.id);
 
   modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
@@ -707,32 +826,25 @@ window.onContact = onContact;
 // DEBOUNCE scheduling to avoid flicker
 // ===============================
 let __render_timeout = null;
-function scheduleRenderAds() {
+function scheduleRenderAds(appendMode = false) {
+  // if appendMode true, we want to bypass full clear if possible
   if (__render_timeout) clearTimeout(__render_timeout);
-  __render_timeout = setTimeout(() => {
-    renderAds(Array.from(ADS_MAP.values()));
+  __render_timeout = setTimeout(async () => {
+    // pass current ADS_MAP values in stable order
+    await renderAds(Array.from(ADS_MAP.values()), appendMode);
     __render_timeout = null;
-  }, 110);
+  }, 90);
 }
-
-// Logout
-window.logout = () => signOut(auth);
-
-// expose open/close
-window.openAdModal = openAdModal;
-window.closeAdModal = closeAdModal;
 
 // ===============================
 // PAGINATION CONTROLS RENDERING
 // ===============================
 function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 0) {
-  // Ensure container exists
   let container = document.getElementById("paginationControls");
   if (!container) {
     container = document.createElement("div");
     container.id = "paginationControls";
     container.style = "display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:center;";
-    // Append after adsList (if exists)
     const list = document.getElementById("adsList");
     if (list && list.parentNode) {
       list.parentNode.insertBefore(container, list.nextSibling);
@@ -741,10 +853,9 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     }
   }
 
-  container.innerHTML = ""; // clear
+  container.innerHTML = "";
 
   if (!totalPages || totalPages <= 1) {
-    // show small info if >0
     if (totalItems > 0) {
       const info = document.createElement("div");
       info.textContent = `Ko‘rsatilyapti: ${Math.min(PAGE_SIZE, totalItems)} / ${totalItems}`;
@@ -754,7 +865,6 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     return;
   }
 
-  // helper to create button
   const btn = (text, disabled, handler) => {
     const b = document.createElement("button");
     b.textContent = text;
@@ -764,11 +874,9 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     return b;
   };
 
-  // First, Prev
   container.appendChild(btn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; scheduleRenderAds(); }));
   container.appendChild(btn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = Math.max(1, currentPage - 1); scheduleRenderAds(); }));
 
-  // page numbers (show window)
   const windowSize = 5;
   let start = Math.max(1, currentPage - Math.floor(windowSize/2));
   let end = Math.min(totalPages, start + windowSize - 1);
@@ -784,11 +892,9 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     container.appendChild(pbtn);
   }
 
-  // Next, Last
   container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => { CURRENT_PAGE = Math.min(totalPages, currentPage + 1); scheduleRenderAds(); }));
   container.appendChild(btn("Oxiri »", currentPage === totalPages, () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
 
-  // info
   const info = document.createElement("div");
   info.textContent = ` Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
   info.style = "color:#6b7280;font-size:13px;margin-left:8px;";
@@ -796,7 +902,12 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
 }
 
 // ===============================
-// UTILITY: when DOM updates could cause duplicates,
-// ensure createAdCard returns unique node per ad id — we already set data-ad-id
-// Deduplication handled in renderAds (Map) and in realtime remove handler.
+// UTILITY: expose functions and logout
+// ===============================
+window.logout = () => signOut(auth);
+window.openAdModal = openAdModal;
+window.closeAdModal = closeAdModal;
+
+// ===============================
+// END OF FILE
 // ===============================
