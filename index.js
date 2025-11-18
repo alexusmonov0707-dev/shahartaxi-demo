@@ -1,4 +1,4 @@
-// index.js (final — districts close on scroll/click + keep all existing features)
+// index.js (PART 1 of 3)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -414,158 +414,8 @@ function attachInputsOnce() {
 // ===============================
 //  RENDER ADS (full pipeline, respects all existing filters + pagination)
 // ===============================
-async function renderAds(adsArr) {
-  const list = document.getElementById("adsList");
-  if (!list) return;
-list.innerHTML = "";
-
-
-  const q = (document.getElementById("search")?.value || "").toLowerCase();
-  const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
-  const regionFilter = document.getElementById("filterRegion")?.value || "";
-  const sortBy = document.getElementById("sortBy")?.value || "newest";
-  const filterDate = document.getElementById("filterDate")?.value || "";
-
-  // price parsing robustly
-  const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
-  const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
-  const isPriceMinSet = priceMinInput !== "";
-  const isPriceMaxSet = priceMaxInput !== "";
-  const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g,"")) : null;
-  const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
-
-  const currentUserId = auth.currentUser?.uid || null;
-
-  const currentRoleRaw = (CURRENT_USER?.role || "").toString().toLowerCase();
-  let currentRole = "";
-  if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov")) currentRole = "driver";
-  else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo")) currentRole = "passenger";
-
-  const fromRegion = document.getElementById("fromRegion")?.value || "";
-  const toRegion = document.getElementById("toRegion")?.value || "";
-  const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
-  const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
-
-  // filter + validate
-  let filtered = (adsArr || []).filter(a => {
-    if (!a) return false;
-
-    // automatic role filter (driver sees passenger ads, passenger sees driver ads)
-    if (currentRole === "driver") {
-      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
-    } else if (currentRole === "passenger") {
-      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("haydov")) return false;
-    }
-
-    // explicit role dropdown
-    if (roleFilter) { if (a.typeNormalized !== roleFilter) return false; }
-
-    // hide own ads
-    if (currentUserId && a.userId === currentUserId) return false;
-
-    // top region filter (either from or to)
-    if (regionFilter) {
-      if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
-    }
-
-    // from region / districts
-    if (fromRegion && a.fromRegion !== fromRegion) return false;
-    if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
-
-    // to region / districts
-    if (toRegion && a.toRegion !== toRegion) return false;
-    if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
-
-    // PRICE
-    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
-    if (isPriceMinSet && isNaN(adPrice)) return false; // ad has no price but user requested min
-    if (isPriceMaxSet && isNaN(adPrice)) return false; // ad has no price but user requested max
-    if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
-    if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
-
-    // HIDE EXPIRED ADS by departure time (if no valid departureTime -> hide)
-    const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
-    let departureTime = null;
-    if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
-    else if (typeof departureRaw === "string" && departureRaw.trim() !== "") {
-      const fixed = departureRaw.replace(" ", "T");
-      if (!isNaN(Date.parse(departureRaw))) departureTime = new Date(departureRaw);
-      else if (!isNaN(Date.parse(fixed))) departureTime = new Date(fixed);
-    }
-    if (!departureTime) return false;
-    if (departureTime.getTime() < Date.now()) return false;
-
-    // DATE filter (today/tomorrow/3days)
-    if (filterDate) {
-      const raw = a.departureTime || a.startTime || a.time || a.date || null;
-      let adTime = null;
-      if (typeof raw === "number") adTime = new Date(raw);
-      else if (typeof raw === "string" && raw.trim() !== "") {
-        const tryFix = raw.replace(" ", "T");
-        if (!isNaN(Date.parse(raw))) adTime = new Date(raw);
-        else if (!isNaN(Date.parse(tryFix))) adTime = new Date(tryFix);
-      }
-      if (!adTime) return false;
-      const now = new Date();
-      if (filterDate === "today") {
-        if (adTime.getFullYear() !== now.getFullYear() || adTime.getMonth() !== now.getMonth() || adTime.getDate() !== now.getDate()) return false;
-      } else if (filterDate === "tomorrow") {
-        const t = new Date(now); t.setDate(now.getDate() + 1);
-        if (adTime.getFullYear() !== t.getFullYear() || adTime.getMonth() !== t.getMonth() || adTime.getDate() !== t.getDate()) return false;
-      } else if (filterDate === "3days") {
-        const diff = adTime.getTime() - now.getTime();
-        if (diff < 0 || diff > 1000 * 60 * 60 * 24 * 3) return false;
-      }
-    }
-
-    // SEARCH concat fields
-    const hay = [
-      a.fromRegion, a.fromDistrict,
-      a.toRegion, a.toDistrict,
-      a.comment, a.price, a.type, a.carModel, a.userId
-    ].join(" ").toLowerCase();
-    if (!hay.includes(q)) return false;
-
-    return true;
-  });
-
-  // dedupe by id -> Map will keep last set
-  const resultMap = new Map();
-  filtered.forEach(x => { if (x && x.id) resultMap.set(x.id, x); });
-  filtered = Array.from(resultMap.values());
-
-  if (!filtered.length) {
-    list.innerHTML = "<p>Natija topilmadi.</p>";
-    renderPaginationControls(0, 0); // empty
-    return;
-  }
-
-  // SORT by createdAt / fallback
-  filtered.sort((a,b) => {
-    const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
-    const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
-    return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
-  });
-
-  // PAGINATION: compute total/pages, clamp CURRENT_PAGE
-  const totalItems = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-  if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
-  if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
-
-  const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
-  const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
-
-  // build DOM fragment with cards (createAdCard is async)
-  const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
-  const frag = document.createDocumentFragment();
-  cards.forEach(c => frag.appendChild(c));
-  list.appendChild(frag);
-
-  // render pagination controls
-  renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
-}
-
+/* renderAds is in PART 2 */
+//
 // ===============================
 //  CREATE CARD (no-name vs full modal preserved)
 // ===============================
@@ -890,5 +740,3 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
 // UTILITY: when DOM updates could cause duplicates,
 // ensure createAdCard returns unique node per ad id — we already set data-ad-id
 // Deduplication handled in renderAds (Map) and in realtime remove handler.
-// ===============================
-
