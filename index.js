@@ -205,11 +205,9 @@ function loadRouteFilters() {
     toRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
   });
 
-  // attach handlers (single)
   fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
   toRegion.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
 
-  // init boxes (hidden unless region present)
   fillFromDistricts();
   fillToDistricts();
 }
@@ -219,20 +217,20 @@ function fillFromDistricts() {
   const box = document.getElementById("fromDistrictBox");
   if (!box) return;
   box.innerHTML = "";
-  // if no region selected -> hide panel but keep it empty
+
   if (!region || !REGIONS[region]) {
     box.style.display = "none";
     return;
   }
-  // show and populate
   box.style.display = "";
+
   REGIONS[region].forEach(d => {
     const label = document.createElement("label");
     label.className = "district-item";
     label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
-  // keep existing checked states (do not reset)
+
   box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
@@ -241,22 +239,25 @@ function fillToDistricts() {
   const box = document.getElementById("toDistrictBox");
   if (!box) return;
   box.innerHTML = "";
+
   if (!region || !REGIONS[region]) {
     box.style.display = "none";
     return;
   }
   box.style.display = "";
+
   REGIONS[region].forEach(d => {
     const label = document.createElement("label");
     label.className = "district-item";
     label.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
+
   box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
 // ===============================
-//  INITIAL LOAD (one-time snapshot)
+//  INITIAL LOAD
 // ===============================
 async function initialLoadAds() {
   try {
@@ -266,34 +267,33 @@ async function initialLoadAds() {
       ADS_MAP.clear();
       document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
       attachInputsOnce();
-      renderPaginationControls(); // ensure pagination cleared
+      renderPaginationControls();
       return;
     }
 
-    // build array and map
     const arr = [];
     snap.forEach(child => {
       const v = child.val();
       arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
     });
 
-    // ensure uniqueness by id (last value wins)
     const map = new Map();
     arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
     ADS_MAP.clear();
     for (const [k, v] of map) ADS_MAP.set(k, v);
+
     ALL_ADS_ARR = Array.from(ADS_MAP.values());
 
     attachInputsOnce();
     scheduleRenderAds();
+
   } catch (err) {
     console.error("initialLoadAds error", err);
   }
 }
 
 // ===============================
-//  REALTIME HANDLERS (child_added / changed / removed)
-//  — soft updates to DOM & ADS_MAP to avoid full reload
+//  REALTIME HANDLERS
 // ===============================
 function attachRealtimeHandlers() {
   try {
@@ -305,7 +305,6 @@ function attachRealtimeHandlers() {
       const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
       ADS_MAP.set(ad.id, ad);
       ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      // schedule render, do not reset page (so user stays on current page)
       scheduleRenderAds();
     });
 
@@ -332,16 +331,16 @@ function attachRealtimeHandlers() {
   }
 }
 
-// small helper to escape attribute selector special chars
 function escapeSelector(s) {
   return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
 }
 
 // ===============================
-//  ATTACH INPUT HANDLERS (once)
+//  ATTACH INPUT HANDLERS
 // ===============================
 let inputsAttached = false;
 let documentClickListenerAttached = false;
+
 function attachInputsOnce() {
   if (inputsAttached) return;
   inputsAttached = true;
@@ -369,7 +368,6 @@ function attachInputsOnce() {
 
   if (resetBtn) resetBtn.onclick = () => { resetFilters(); };
 
-  // checkbox global listener already in scheduleRenderAds usage
   document.addEventListener("change", (e) => {
     if (!e.target) return;
     if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
@@ -378,35 +376,30 @@ function attachInputsOnce() {
     }
   });
 
-  // attach click-outside handler (only once)
+  // CLICK OUTSIDE TO CLOSE DISTRICT PANELS
   if (!documentClickListenerAttached) {
     document.addEventListener("click", (e) => {
-      // if click is inside any of the district boxes or their associated region selects, do nothing
       const fromBox = document.getElementById("fromDistrictBox");
       const toBox = document.getElementById("toDistrictBox");
       const fromRegion = document.getElementById("fromRegion");
       const toRegion = document.getElementById("toRegion");
 
-      const clickedInsideFromBox = fromBox && (e.target === fromBox || fromBox.contains(e.target));
-      const clickedInsideToBox = toBox && (e.target === toBox || toBox.contains(e.target));
-      const clickedOnFromSelect = fromRegion && (e.target === fromRegion || fromRegion.contains(e.target));
-      const clickedOnToSelect = toRegion && (e.target === toRegion || toRegion.contains(e.target));
+      const insideFromBox = fromBox && (e.target === fromBox || fromBox.contains(e.target));
+      const insideToBox = toBox && (e.target === toBox || toBox.contains(e.target));
+      const onFromSelect = fromRegion && (e.target === fromRegion || fromRegion.contains(e.target));
+      const onToSelect = toRegion && (e.target === toRegion || toRegion.contains(e.target));
 
-      // If click outside both boxes and outside their selects -> close panels
-      if (!clickedInsideFromBox && !clickedOnFromSelect) {
-        if (fromBox) fromBox.style.display = "none";
-      }
-      if (!clickedInsideToBox && !clickedOnToSelect) {
-        if (toBox) toBox.style.display = "none";
-      }
+      if (!insideFromBox && !onFromSelect && fromBox) fromBox.style.display = "none";
+      if (!insideToBox && !onToSelect && toBox) toBox.style.display = "none";
     }, { capture: true });
-    // close on scroll as well
+
     window.addEventListener("scroll", () => {
       const fromBox = document.getElementById("fromDistrictBox");
       const toBox = document.getElementById("toDistrictBox");
       if (fromBox) fromBox.style.display = "none";
       if (toBox) toBox.style.display = "none";
     }, { passive: true });
+
     documentClickListenerAttached = true;
   }
 }
@@ -417,8 +410,8 @@ function attachInputsOnce() {
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
-  // clear safely
-  list.innerHTML = "";
+list.innerHTML = "";
+
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
@@ -890,5 +883,3 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
 // UTILITY: when DOM updates could cause duplicates,
 // ensure createAdCard returns unique node per ad id — we already set data-ad-id
 // Deduplication handled in renderAds (Map) and in realtime remove handler.
-// ===============================
-
