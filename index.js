@@ -1,4 +1,4 @@
-// index.js (final + pagination + infinite lazy load, PAGE_SIZE = 7)
+// index.js (final + pagination)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -156,14 +156,9 @@ let ALL_ADS_ARR = [];       // derived from ADS_MAP (keeps insertion order from 
 let CURRENT_USER = null;
 let useRealtime = true;     // set true to attach child_* listeners
 
-// Pagination / lazy state
-const PAGE_SIZE = 7;       // user asked 7
+// Pagination state
+const PAGE_SIZE = 10;       // default items per page (you asked 10 for test)
 let CURRENT_PAGE = 1;       // current page (1-based)
-let LAST_RENDERED_PAGE = 0; // used by append-mode to avoid duplicate appends
-let INFINITE_LOADING = true; // always on as requested
-
-// guard to avoid multiple scroll triggers
-let __scroll_loading = false;
 
 // ===============================
 //  AUTH CHECK
@@ -175,8 +170,6 @@ onAuthStateChanged(auth, async (user) => {
   loadRouteFilters();       // fills from/to selects and district boxes
   await initialLoadAds();   // one-time load from DB
   if (useRealtime) attachRealtimeHandlers(); // soft realtime updates
-  // attach infinite scroll listener
-  attachInfiniteScroll();
 });
 
 // ===============================
@@ -211,8 +204,8 @@ function loadRouteFilters() {
   });
 
   // attach handlers (single)
-  fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  toRegion.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
+  fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
+  toRegion.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
 
   // init boxes
   fillFromDistricts();
@@ -231,7 +224,7 @@ function fillFromDistricts() {
     label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
-  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); });
+  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
 function fillToDistricts() {
@@ -246,7 +239,7 @@ function fillToDistricts() {
     label.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
-  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); });
+  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
 // ===============================
@@ -279,9 +272,6 @@ async function initialLoadAds() {
     ALL_ADS_ARR = Array.from(ADS_MAP.values());
 
     attachInputsOnce();
-    // reset pagination/lazy
-    CURRENT_PAGE = 1;
-    LAST_RENDERED_PAGE = 0;
     scheduleRenderAds();
   } catch (err) {
     console.error("initialLoadAds error", err);
@@ -303,7 +293,6 @@ function attachRealtimeHandlers() {
       ADS_MAP.set(ad.id, ad);
       ALL_ADS_ARR = Array.from(ADS_MAP.values());
       // schedule render, do not reset page (so user stays on current page)
-      // but when new ads arrive at top (newest), keep user position stable -> use scheduleRenderAds()
       scheduleRenderAds();
     });
 
@@ -353,43 +342,42 @@ function attachInputsOnce() {
   const priceMinEl = document.getElementById("priceMin");
   const priceMaxEl = document.getElementById("priceMax");
 
-  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
-  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
+  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
 
   // checkbox global listener already in scheduleRenderAds usage
   document.addEventListener("change", (e) => {
     if (!e.target) return;
     if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
       CURRENT_PAGE = 1;
-      LAST_RENDERED_PAGE = 0;
       scheduleRenderAds();
     }
   });
 }
 
 // ===============================
-//  RENDER ADS (full pipeline, respects all existing filters + pagination + append-mode)
-//    - if options.append === true => do not clear list; append only next page
-//    - otherwise (default) => clear list and render pages up to CURRENT_PAGE
+//  RENDER ADS (full pipeline, respects all existing filters + pagination)
 // ===============================
-async function renderAds(adsArr, options = { append: false }) {
+async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
+  // clear safely
+  list.innerHTML = "";
 
-  // price & filter parsing (repeat to be safe)
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
   const regionFilter = document.getElementById("filterRegion")?.value || "";
   const sortBy = document.getElementById("sortBy")?.value || "newest";
   const filterDate = document.getElementById("filterDate")?.value || "";
 
+  // price parsing robustly
   const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
   const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
   const isPriceMinSet = priceMinInput !== "";
@@ -498,7 +486,7 @@ async function renderAds(adsArr, options = { append: false }) {
   filtered = Array.from(resultMap.values());
 
   if (!filtered.length) {
-    if (!options.append) list.innerHTML = "<p>Natija topilmadi.</p>";
+    list.innerHTML = "<p>Natija topilmadi.</p>";
     renderPaginationControls(0, 0); // empty
     return;
   }
@@ -510,44 +498,22 @@ async function renderAds(adsArr, options = { append: false }) {
     return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
   });
 
-  // PAGINATION / slicing
+  // PAGINATION: compute total/pages, clamp CURRENT_PAGE
   const totalItems = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
   if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
 
-  // If append-mode: we only want to append the slice for CURRENT_PAGE if not already appended
-  if (options.append) {
-    if (CURRENT_PAGE <= LAST_RENDERED_PAGE) {
-      // nothing to append
-      renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
-      return;
-    }
-    const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
-    const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
-    const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
-    const frag = document.createDocumentFragment();
-    cards.forEach(c => frag.appendChild(c));
-    list.appendChild(frag);
-    LAST_RENDERED_PAGE = CURRENT_PAGE;
-    renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
-    return;
-  }
+  const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
+  const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
 
-  // Normal (non-append) render: clear and render pages from 1..CURRENT_PAGE
-  list.innerHTML = "";
-  LAST_RENDERED_PAGE = 0;
-
-  const startIndex = 0;
-  const endIndex = Math.min(totalItems, CURRENT_PAGE * PAGE_SIZE);
-  const pageSlice = filtered.slice(startIndex, endIndex);
-
+  // build DOM fragment with cards (createAdCard is async)
   const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
   const frag = document.createDocumentFragment();
   cards.forEach(c => frag.appendChild(c));
   list.appendChild(frag);
 
-  LAST_RENDERED_PAGE = CURRENT_PAGE;
+  // render pagination controls
   renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
 }
 
@@ -739,59 +705,17 @@ window.onContact = onContact;
 
 // ===============================
 // DEBOUNCE scheduling to avoid flicker
-//   scheduleRenderAds can accept options: { append: boolean }
 // ===============================
 let __render_timeout = null;
-function scheduleRenderAds(options = { append: false }) {
+function scheduleRenderAds() {
   if (__render_timeout) clearTimeout(__render_timeout);
   __render_timeout = setTimeout(() => {
-    // If append requested but infinite loading turned off, fallback to normal render
-    const append = (INFINITE_LOADING && options.append) ? true : false;
-    // If append true, renderAds will append only next page
-    renderAds(Array.from(ADS_MAP.values()), { append });
+    renderAds(Array.from(ADS_MAP.values()));
     __render_timeout = null;
-  }, 120);
+  }, 110);
 }
 
-// ===============================
-// INFINITE SCROLL (lazy load) implementation
-// - always ON for everyone (INFINITE_LOADING = true)
-// - load next page automatically when user nears bottom
-// ===============================
-function attachInfiniteScroll() {
-  if (!INFINITE_LOADING) return;
-  // guard: attach only once
-  if (window._infiniteScrollAttached) return;
-  window._infiniteScrollAttached = true;
-
-  window.addEventListener("scroll", async () => {
-    if (!INFINITE_LOADING) return;
-    // tiny throttle
-    if (__scroll_loading) return;
-    // compute how close to bottom
-    const threshold = 300; // px from bottom to trigger
-    const pos = window.innerHeight + window.scrollY;
-    const height = document.documentElement.offsetHeight;
-    if (pos >= height - threshold) {
-      // try to load next page if exists
-      __scroll_loading = true;
-      try {
-        // We need to compute current filtered total pages to know whether to load more.
-        // We'll run renderAds in append-mode: it will check LAST_RENDERED_PAGE and append if needed.
-        // Increase CURRENT_PAGE and request append render
-        CURRENT_PAGE = CURRENT_PAGE + 1;
-        await scheduleRenderAds({ append: true });
-      } finally {
-        // small delay to avoid double triggers
-        setTimeout(() => { __scroll_loading = false; }, 350);
-      }
-    }
-  }, { passive: true });
-}
-
-// ===============================
 // Logout
-// ===============================
 window.logout = () => signOut(auth);
 
 // expose open/close
@@ -800,7 +724,6 @@ window.closeAdModal = closeAdModal;
 
 // ===============================
 // PAGINATION CONTROLS RENDERING
-// (kept for user awareness and navigation — infinite scroll works alongside)
 // ===============================
 function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 0) {
   // Ensure container exists
@@ -824,7 +747,7 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     // show small info if >0
     if (totalItems > 0) {
       const info = document.createElement("div");
-      info.textContent = `Ko‘rsatilyapti: ${Math.min(PAGE_SIZE * LAST_RENDERED_PAGE || PAGE_SIZE, totalItems)} / ${totalItems}`;
+      info.textContent = `Ko‘rsatilyapti: ${Math.min(PAGE_SIZE, totalItems)} / ${totalItems}`;
       info.style = "color:#6b7280;font-size:14px;";
       container.appendChild(info);
     }
@@ -842,8 +765,8 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
   };
 
   // First, Prev
-  container.appendChild(btn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); }));
-  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = Math.max(1, currentPage - 1); LAST_RENDERED_PAGE = 0; scheduleRenderAds(); }));
+  container.appendChild(btn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; scheduleRenderAds(); }));
+  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = Math.max(1, currentPage - 1); scheduleRenderAds(); }));
 
   // page numbers (show window)
   const windowSize = 5;
@@ -857,13 +780,13 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     pbtn.textContent = p.toString();
     pbtn.disabled = isCurrent;
     pbtn.style = `padding:6px 10px;border-radius:8px;border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};background:${isCurrent ? "#0069d9" : "white"};color:${isCurrent ? "white" : "#111"};cursor:pointer`;
-    if (!isCurrent) pbtn.onclick = () => { CURRENT_PAGE = p; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); };
+    if (!isCurrent) pbtn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
     container.appendChild(pbtn);
   }
 
   // Next, Last
-  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => { CURRENT_PAGE = Math.min(totalPages, currentPage + 1); LAST_RENDERED_PAGE = 0; scheduleRenderAds(); }));
-  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => { CURRENT_PAGE = totalPages; LAST_RENDERED_PAGE = 0; scheduleRenderAds(); }));
+  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => { CURRENT_PAGE = Math.min(totalPages, currentPage + 1); scheduleRenderAds(); }));
+  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
 
   // info
   const info = document.createElement("div");
