@@ -1,4 +1,4 @@
-// index.js (final + pagination + reset & close-district-panels)
+// index.js (final — districts close on scroll/click + keep all existing features)
 // ===============================
 //  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
@@ -157,7 +157,7 @@ let CURRENT_USER = null;
 let useRealtime = true;     // set true to attach child_* listeners
 
 // Pagination state
-let PAGE_SIZE = 10;       // default items per page (you can change later)
+let PAGE_SIZE = 10;       // default items per page
 let CURRENT_PAGE = 1;     // current page (1-based)
 
 // ===============================
@@ -189,7 +189,8 @@ function loadRegionsFilter() {
 
 // ===============================
 //  Route Filters (from/to + districts)
-//  — note: district boxes can be hidden (display: none) while preserving checkboxes
+//  — district boxes show only when region selected
+//  — district boxes hide on scroll or clicking outside
 // ===============================
 function loadRouteFilters() {
   const fromRegion = document.getElementById("fromRegion");
@@ -208,7 +209,7 @@ function loadRouteFilters() {
   fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
   toRegion.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
 
-  // init boxes
+  // init boxes (hidden unless region present)
   fillFromDistricts();
   fillToDistricts();
 }
@@ -223,13 +224,15 @@ function fillFromDistricts() {
     box.style.display = "none";
     return;
   }
-  box.style.display = ""; // show
+  // show and populate
+  box.style.display = "";
   REGIONS[region].forEach(d => {
     const label = document.createElement("label");
     label.className = "district-item";
     label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
+  // keep existing checked states (do not reset)
   box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
@@ -338,6 +341,7 @@ function escapeSelector(s) {
 //  ATTACH INPUT HANDLERS (once)
 // ===============================
 let inputsAttached = false;
+let documentClickListenerAttached = false;
 function attachInputsOnce() {
   if (inputsAttached) return;
   inputsAttached = true;
@@ -353,15 +357,15 @@ function attachInputsOnce() {
   const priceMaxEl = document.getElementById("priceMax");
   const resetBtn = document.getElementById("resetFiltersBtn");
 
-  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
-  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
-  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
+  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
   if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
   if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
-  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
-  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
-  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; closeDistrictPanels(); scheduleRenderAds(); };
+  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
 
   if (resetBtn) resetBtn.onclick = () => { resetFilters(); };
 
@@ -373,6 +377,38 @@ function attachInputsOnce() {
       scheduleRenderAds();
     }
   });
+
+  // attach click-outside handler (only once)
+  if (!documentClickListenerAttached) {
+    document.addEventListener("click", (e) => {
+      // if click is inside any of the district boxes or their associated region selects, do nothing
+      const fromBox = document.getElementById("fromDistrictBox");
+      const toBox = document.getElementById("toDistrictBox");
+      const fromRegion = document.getElementById("fromRegion");
+      const toRegion = document.getElementById("toRegion");
+
+      const clickedInsideFromBox = fromBox && (e.target === fromBox || fromBox.contains(e.target));
+      const clickedInsideToBox = toBox && (e.target === toBox || toBox.contains(e.target));
+      const clickedOnFromSelect = fromRegion && (e.target === fromRegion || fromRegion.contains(e.target));
+      const clickedOnToSelect = toRegion && (e.target === toRegion || toRegion.contains(e.target));
+
+      // If click outside both boxes and outside their selects -> close panels
+      if (!clickedInsideFromBox && !clickedOnFromSelect) {
+        if (fromBox) fromBox.style.display = "none";
+      }
+      if (!clickedInsideToBox && !clickedOnToSelect) {
+        if (toBox) toBox.style.display = "none";
+      }
+    }, { capture: true });
+    // close on scroll as well
+    window.addEventListener("scroll", () => {
+      const fromBox = document.getElementById("fromDistrictBox");
+      const toBox = document.getElementById("toDistrictBox");
+      if (fromBox) fromBox.style.display = "none";
+      if (toBox) toBox.style.display = "none";
+    }, { passive: true });
+    documentClickListenerAttached = true;
+  }
 }
 
 // ===============================
@@ -717,18 +753,6 @@ function onContact(phone) {
 window.onContact = onContact;
 
 // ===============================
-//  NEW: closeDistrictPanels()
-//  — hides district selection UI (keeps checkbox states)
-//  Use case: when user switches to another filter, district panels retract for cleaner UI.
-// ===============================
-function closeDistrictPanels() {
-  const fromBox = document.getElementById("fromDistrictBox");
-  const toBox = document.getElementById("toDistrictBox");
-  if (fromBox) fromBox.style.display = "none";
-  if (toBox) toBox.style.display = "none";
-}
-
-// ===============================
 //  NEW: resetFilters()
 //  — clears all filter inputs, unchecks districts, resets to page 1 and re-renders
 // ===============================
@@ -867,3 +891,4 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
 // ensure createAdCard returns unique node per ad id — we already set data-ad-id
 // Deduplication handled in renderAds (Map) and in realtime remove handler.
 // ===============================
+
