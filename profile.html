@@ -18,7 +18,7 @@
       max-width:900px; margin:20px auto; background:#fff; padding:20px;
       border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);
     }
-    .profile { display:flex; align-items:center; gap:20px; }
+    .profile { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
 
     .profile img {
       width:90px; height:90px; border-radius:12px;
@@ -30,11 +30,13 @@
     select, input, textarea {
       width:100%; padding:10px; margin-top:8px; border-radius:6px;
       border:1px solid #ccc; font-size:15px;
+      box-sizing:border-box;
     }
 
     button { padding:10px 20px; border:none; border-radius:6px; cursor:pointer; }
     .blue-btn { background:#0069d9; color:#fff; }
     .gray-btn { background:#ccc; }
+    .green-btn { background:#28a745; color:#fff; }
 
     /* MY ADS ITEMS */
     .ad-box {
@@ -44,6 +46,9 @@
       margin-bottom:12px;
     }
 
+    /* small helpers */
+    .muted { color:#666; }
+
     /* MODAL */
     #editModal, #editAdModal, #balanceModal {
       position:fixed; left:0; top:0; right:0; bottom:0;
@@ -52,9 +57,16 @@
       z-index:999;
     }
     .modal-box {
-      background:#fff; padding:20px; border-radius:12px; width:350px;
+      background:#fff; padding:20px; border-radius:12px; width:360px;
       box-shadow:0 4px 12px rgba(0,0,0,0.3);
     }
+
+    /* responsive */
+    @media (max-width:640px) {
+      .profile { flex-direction:column; align-items:flex-start; }
+      .modal-box { width:92%; }
+    }
+
   </style>
 </head>
 
@@ -73,27 +85,34 @@
 
     <input id="avatarInput" type="file" accept="image/*" style="display:none">
 
-    <div>
+    <div style="flex:1; min-width:220px;">
       <div id="fullName" style="font-size:20px; font-weight:bold;">Yuklanmoqda...</div>
-      <div id="phone" style="color:#555;"></div>
+      <div id="phone" class="muted" style="margin-top:6px;"></div>
+
+      <!-- extended details block -->
+      <div id="userDetails" style="margin-top:12px; line-height:1.6; color:#333; font-size:15px;">
+        <!-- filled by JS -->
+      </div>
     </div>
 
-    <!-- BALANCE BLOCK ADDED -->
-    <div style="margin-left:auto;">
-      <div id="balanceBox" style="font-size:18px; color:#0069d9; font-weight:bold;">
+    <!-- BALANCE BLOCK -->
+    <div style="margin-left:10px; text-align:right; min-width:220px;">
+      <div id="balanceBox" style="font-size:16px; color:#0069d9; font-weight:bold; margin-bottom:8px;">
         Balans: 0 so‘m
       </div>
 
-      <button onclick="openBalanceModal()"
-        style="margin-top:6px; background:#28a745; color:#fff; border:none; padding:8px 14px; border-radius:8px;">
-        Balansni to‘ldirish
-      </button>
+      <button onclick="openBalanceModal()" class="green-btn" style="margin-bottom:8px; width:100%;">Balansni to‘ldirish</button>
+
+      <button onclick="openEditProfile()" 
+        style="background:#444; color:white; padding:8px 12px; border-radius:8px; width:100%;">Profilni tahrirlash</button>
     </div>
 
-    <button onclick="openEditProfile()" 
-      style="margin-left:20px; background:#444; color:white; padding:10px 18px; border-radius:8px;">
-      Profilni tahrirlash
-    </button>
+    <div style="width:100%; margin-top:14px;">
+      <div id="carDetailsBox" style="display:none; margin-top:6px;">
+        <h4 style="margin:6px 0 6px 0; color:#444;">Avtomobil ma’lumotlari</h4>
+        <div id="carDetails" style="line-height:1.6; color:#333; font-size:15px;"></div>
+      </div>
+    </div>
 
   </div>
 
@@ -120,13 +139,15 @@
     <input id="price" placeholder="Narx (so‘m)">
     <input id="departureTime" type="datetime-local" placeholder="Jo'nash vaqti">
 
-    <!-- UPDATED FIELD (universal seats input) -->
+    <!-- universal seats input -->
     <input id="seats" type="number" min="1" placeholder="Bo‘sh joylar / yo‘lovchilar soni">
 
     <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
-    <button onclick="addAd()" class="blue-btn" style="margin-top:15px;">E’lonni joylash</button>
-    <button onclick="clearAddForm()" class="gray-btn" style="margin-top:5px;">Tozalash</button>
+    <div style="display:flex; gap:10px; margin-top:12px;">
+      <button onclick="addAd()" class="blue-btn">E’lonni joylash</button>
+      <button onclick="clearAddForm()" class="gray-btn">Tozalash</button>
+    </div>
   </div>
 
   <!-- MY ADS SECTION -->
@@ -140,17 +161,36 @@
     <div class="modal-box">
       <h3>Profilni tahrirlash</h3>
 
-      <input id="editFullName" placeholder="Ism">
+      <input id="editFullName" placeholder="Ism va familiya">
       <input id="editPhoneInput" placeholder="Telefon" readonly>
 
-      <h3 style="margin-top:15px;">Avtomobil ma’lumotlari</h3>
+      <h4 style="margin-top:12px;">Qo'shimcha ma'lumotlar</h4>
+      <input id="editBirthdate" type="date" placeholder="Tug‘ilgan sana">
+      <select id="editGender">
+        <option value="">Jinsi</option>
+        <option value="Erkak">Erkak</option>
+        <option value="Ayol">Ayol</option>
+      </select>
+
+      <div style="display:flex; gap:10px;">
+        <select id="editRegion" onchange="fillEditDistricts()" style="flex:1;">
+          <option value="">Viloyat</option>
+        </select>
+        <select id="editDistrict" style="flex:1;">
+          <option value="">Tuman</option>
+        </select>
+      </div>
+
+      <h4 style="margin-top:12px;">Avtomobil ma’lumotlari (haydovchilar uchun)</h4>
       <input id="carModel" placeholder="Model (Nexia 3, Malibu...)">
       <input id="carNumber" placeholder="Davlat raqami (01A123BC)">
       <input id="carColor" placeholder="Rangi (Oq, qora...)">
       <input id="seatCount" placeholder="O‘rindiqlar soni" type="number" min="1">
 
-      <button onclick="saveProfileEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
-      <button onclick="closeEditProfile()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button onclick="saveProfileEdit()" class="blue-btn" style="flex:1;">Saqlash</button>
+        <button onclick="closeEditProfile()" class="gray-btn" style="flex:1;">Bekor qilish</button>
+      </div>
     </div>
   </div>
 
@@ -181,10 +221,13 @@
 
       <input id="editPrice" placeholder="Narx">
       <input id="editTime" type="datetime-local">
+      <input id="editSeats" type="number" placeholder="Bo'sh o'rinlar / yo'lovchilar soni" min="0">
       <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
 
-      <button onclick="saveAdEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
-      <button onclick="closeEditAd()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button onclick="saveAdEdit()" class="blue-btn" style="flex:1;">Saqlash</button>
+        <button onclick="closeEditAd()" class="gray-btn" style="flex:1;">Bekor qilish</button>
+      </div>
     </div>
   </div>
 
@@ -193,13 +236,15 @@
     <div class="modal-box">
       <h3>Balansni to‘ldirish</h3>
       <input id="balanceAmount" type="number" placeholder="Summani kiriting (so‘m)">
-      <button onclick="addBalance()" class="blue-btn" style="margin-top:10px; width:100%;">Tasdiqlash</button>
-      <button onclick="closeBalanceModal()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button onclick="addBalance()" class="blue-btn" style="flex:1;">Tasdiqlash</button>
+        <button onclick="closeBalanceModal()" class="gray-btn" style="flex:1;">Bekor qilish</button>
+      </div>
     </div>
   </div>
 
 <script src="regions.js?v=1"></script>
-<script type="module" src="profile.js?v=9999"></script>
+<script type="module" src="profile.js?v=10000"></script>
 
 </body>
 </html>
