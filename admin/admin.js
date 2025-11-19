@@ -25,8 +25,9 @@ window.loginAdmin = async function () {
 
         localStorage.setItem("admin", login);
         window.location.href = "./dashboard.html";
+
     } catch (err) {
         console.error(err);
-        error.textContent = "Server xatosi, keyinroq urinib ko‘ring!";
+        error.textContent = "Server xatosi!";
     }
 };
