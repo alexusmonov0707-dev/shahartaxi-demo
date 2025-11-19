@@ -1,19 +1,13 @@
 import { db, ref, get } from "./firebase.js";
 
-async function loginAdmin() {
+window.loginAdmin = async function () {
     const login = document.getElementById("login").value.trim();
     const pass = document.getElementById("pass").value.trim();
     const error = document.getElementById("error");
 
     error.textContent = "";
 
-    if (!login || !pass) {
-        error.textContent = "Iltimos, maydonlarni to‘ldiring!";
-        return;
-    }
-
     try {
-        // admins bo‘limidan o‘qish
         const adminRef = ref(db, "admins/" + login);
         const snapshot = await get(adminRef);
 
@@ -22,21 +16,17 @@ async function loginAdmin() {
             return;
         }
 
-        const data = snapshot.val();
+        const admin = snapshot.val();
 
-        if (data.password !== pass) {
+        if (admin.password !== pass) {
             error.textContent = "Login yoki parol noto‘g‘ri!";
             return;
         }
 
-        // Kirish muvaffaqiyatli
         localStorage.setItem("admin", login);
         window.location.href = "./dashboard.html";
-
     } catch (err) {
         console.error(err);
-        error.textContent = "Serverda xatolik!";
+        error.textContent = "Server xatosi, keyinroq urinib ko‘ring!";
     }
-}
-
-window.loginAdmin = loginAdmin;
+};
