@@ -1,53 +1,48 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin panel</title>
-    <style>
-        body {
-            background:#f1f3f8;
-            font-family: Arial;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            height:100vh;
-            margin:0;
-        }
-        .box {
-            background:#fff;
-            width:330px;
-            padding:25px;
-            border-radius:12px;
-            box-shadow:0 4px 12px rgba(0,0,0,0.1);
-            text-align:center;
-        }
-        input {
-            width:100%;
-            padding:12px;
-            margin-top:10px;
-            border:1px solid #ccc;
-            border-radius:6px;
-            font-size:15px;
-        }
-        button {
-            width:100%;
-            padding:12px;
-            margin-top:15px;
-            background:#0069d9;
-            color:#fff;
-            border:none;
-            border-radius:6px;
-            font-size:16px;
-            cursor:pointer;
-        }
-        .err {
-            color:#d9534f;
-            margin-top:10px;
-            display:block;
-            height:20px;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Admin panel</title>
+
+<style>
+body {
+    background:#e9edf3;
+    font-family:Arial;
+}
+.box {
+    width:350px;
+    padding:25px;
+    background:white;
+    margin:120px auto;
+    border-radius:10px;
+    box-shadow:0 0 10px #ccc;
+}
+input {
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border-radius:6px;
+    border:1px solid #ddd;
+}
+button {
+    width:100%;
+    padding:12px;
+    margin-top:15px;
+    border:none;
+    background:#007bff;
+    color:white;
+    border-radius:6px;
+    cursor:pointer;
+}
+.err {
+    color:#d9534f ;
+    margin-top:10px;
+    display:block;
+    height:20px;
+}
+</style>
 </head>
+
 <body>
 
 <div class="box">
@@ -55,12 +50,12 @@
 
     <input id="login" type="text" placeholder="Login (admin001)">
     <input id="pass" type="password" placeholder="Parol (123456)">
+
     <span id="error" class="err"></span>
 
     <button onclick="loginAdmin()">Kirish</button>
 </div>
 
-<script type="module" src="./admin.js"></script>
-
+<script type="module" src="admin.js"></script>
 </body>
 </html>
