@@ -43,19 +43,13 @@
       padding:12px;
       margin-bottom:12px;
     }
-    .ad-actions {
-      display:flex;
-      gap:10px;
-      margin-top:10px;
-    }
-    .edit-btn { background:#00a65a; color:#fff; }
-    .delete-btn { background:#d9534f; color:#fff; }
 
     /* MODAL */
-    #editModal, #editAdModal {
+    #editModal, #editAdModal, #balanceModal {
       position:fixed; left:0; top:0; right:0; bottom:0;
       background:rgba(0,0,0,0.6); display:none;
       justify-content:center; align-items:center;
+      z-index:999;
     }
     .modal-box {
       background:#fff; padding:20px; border-radius:12px; width:350px;
@@ -84,10 +78,23 @@
       <div id="phone" style="color:#555;"></div>
     </div>
 
+    <!-- BALANCE BLOCK ADDED -->
+    <div style="margin-left:auto;">
+      <div id="balanceBox" style="font-size:18px; color:#0069d9; font-weight:bold;">
+        Balans: 0 so‘m
+      </div>
+
+      <button onclick="openBalanceModal()"
+        style="margin-top:6px; background:#28a745; color:#fff; border:none; padding:8px 14px; border-radius:8px;">
+        Balansni to‘ldirish
+      </button>
+    </div>
+
     <button onclick="openEditProfile()" 
-      style="margin-left:auto; background:#444; color:white; padding:10px 18px; border-radius:8px;">
+      style="margin-left:20px; background:#444; color:white; padding:10px 18px; border-radius:8px;">
       Profilni tahrirlash
     </button>
+
   </div>
 
   <!-- ADD AD SECTION -->
@@ -112,7 +119,10 @@
 
     <input id="price" placeholder="Narx (so‘m)">
     <input id="departureTime" type="datetime-local" placeholder="Jo'nash vaqti">
-    <input id="seats" type="number" min="1" placeholder="Yo‘lovchilar soni (faqat yo‘lovchi uchun)">
+
+    <!-- UPDATED FIELD (universal seats input) -->
+    <input id="seats" type="number" min="1" placeholder="Bo‘sh joylar / yo‘lovchilar soni">
+
     <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
     <button onclick="addAd()" class="blue-btn" style="margin-top:15px;">E’lonni joylash</button>
@@ -124,7 +134,6 @@
     <div class="title">Mening e’lonlarim</div>
     <div id="myAdsList" style="margin-top:15px;">Yuklanmoqda...</div>
   </div>
-
 
   <!-- PROFILE EDIT MODAL -->
   <div id="editModal">
@@ -145,44 +154,52 @@
     </div>
   </div>
 
-
   <!-- EDIT AD MODAL -->
-<div id="editAdModal">
-  <div class="modal-box">
-    <h3>E’lonni tahrirlash</h3>
+  <div id="editAdModal">
+    <div class="modal-box">
+      <h3>E’lonni tahrirlash</h3>
 
-    <label>Qayerdan (Viloyat)</label>
-    <select id="editFromRegion" onchange="updateEditDistricts('from')">
-      <option value="">Viloyat</option>
-    </select>
+      <label>Qayerdan (Viloyat)</label>
+      <select id="editFromRegion" onchange="updateEditDistricts('from')">
+        <option value="">Viloyat</option>
+      </select>
 
-    <label>Tuman</label>
-    <select id="editFromDistrict">
-      <option value="">Tuman</option>
-    </select>
+      <label>Tuman</label>
+      <select id="editFromDistrict">
+        <option value="">Tuman</option>
+      </select>
 
-    <label>Qayerga (Viloyat)</label>
-    <select id="editToRegion" onchange="updateEditDistricts('to')">
-      <option value="">Viloyat</option>
-    </select>
+      <label>Qayerga (Viloyat)</label>
+      <select id="editToRegion" onchange="updateEditDistricts('to')">
+        <option value="">Viloyat</option>
+      </select>
 
-    <label>Tuman</label>
-    <select id="editToDistrict">
-      <option value="">Tuman</option>
-    </select>
+      <label>Tuman</label>
+      <select id="editToDistrict">
+        <option value="">Tuman</option>
+      </select>
 
-    <input id="editPrice" placeholder="Narx">
-    <input id="editTime" type="datetime-local">
-    <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
+      <input id="editPrice" placeholder="Narx">
+      <input id="editTime" type="datetime-local">
+      <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
 
-    <button onclick="saveAdEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
-    <button onclick="closeEditAd()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
+      <button onclick="saveAdEdit()" class="blue-btn" style="margin-top:15px; width:100%;">Saqlash</button>
+      <button onclick="closeEditAd()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
+    </div>
   </div>
-</div>
 
+  <!-- BALANCE MODAL -->
+  <div id="balanceModal">
+    <div class="modal-box">
+      <h3>Balansni to‘ldirish</h3>
+      <input id="balanceAmount" type="number" placeholder="Summani kiriting (so‘m)">
+      <button onclick="addBalance()" class="blue-btn" style="margin-top:10px; width:100%;">Tasdiqlash</button>
+      <button onclick="closeBalanceModal()" class="gray-btn" style="margin-top:5px; width:100%;">Bekor qilish</button>
+    </div>
+  </div>
 
 <script src="regions.js?v=1"></script>
-<script type="module" src="profile.js?v=3001"></script>
+<script type="module" src="profile.js?v=9999"></script>
 
 </body>
 </html>
