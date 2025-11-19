@@ -1,8 +1,8 @@
-// index.js (FINAL — smooth filter loading + reset + all old features preserved)
+// ===============================
+// PART 1/3
+// index.js — imports + helpers + auth + route filters + initial load + realtime + inputs
+// ===============================
 
-// ===============================
-//  FIREBASE INIT + MODULAR IMPORTS
-// ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
@@ -32,14 +32,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// ===============================
-//  REGIONS DATA (from regions.js)
-// ===============================
+// REGIONS data (from regions.js)
 const REGIONS = window.regionsData || window.regions || {};
 
-// ===============================
-//  READ / NEW BADGE STORAGE
-// ===============================
+// READ / NEW BADGE STORAGE
 function markAsRead(adId) {
   if (!adId) return;
   let read = [];
@@ -57,9 +53,7 @@ function isRead(adId) {
   } catch(e) { return false; }
 }
 
-// ===============================
-//  HELPERS
-// ===============================
+// HELPERS
 function escapeHtml(str) {
   if (str === 0) return "0";
   if (!str && str !== 0) return "";
@@ -113,67 +107,59 @@ function slugify(s) {
   return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
 }
 
-// ===============================
-//  GLOBALS
-// ===============================
-const ADS_MAP = new Map();   
-let ALL_ADS_ARR = [];       
-let CURRENT_USER = null;
-let useRealtime = true;     
+// GET USER INFO
+async function getUserInfo(userId) {
+  if (!userId) return {
+    phone: "", avatar: "", fullName: "", role: "",
+    carModel: "", carColor: "", carNumber: "", seatCount: 0
+  };
+  try {
+    const snap = await get(ref(db, "users/" + userId));
+    if (!snap.exists()) return {
+      phone: "", avatar: "", fullName: "", role: "",
+      carModel: "", carColor: "", carNumber: "", seatCount: 0
+    };
+    const u = snap.val();
+    return {
+      phone: u.phone || u.telephone || "",
+      avatar: u.avatar || "",
+      fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
+      role: (u.role || u.userRole || "").toString(),
+      carModel: u.carModel || u.car || "",
+      carColor: u.carColor || "",
+      carNumber: u.carNumber || u.plate || "",
+      seatCount: Number(u.seatCount || u.seats || 0)
+    };
+  } catch (err) {
+    console.error("getUserInfo error", err);
+    return {
+      phone: "", avatar: "", fullName: "", role: "",
+      carModel: "", carColor: "", carNumber: "", seatCount: 0
+    };
+  }
+}
 
+// GLOBALS
+const ADS_MAP = new Map();
+let ALL_ADS_ARR = [];
+let CURRENT_USER = null;
+let useRealtime = true;
+
+// Pagination
 let PAGE_SIZE = 10;
 let CURRENT_PAGE = 1;
 
-// ===============================
-//  LOADING OVERLAY (NEW — smooth filter animation)
-// ===============================
-let loadingTimer = null;
-
-function showLoading() {
-  let box = document.getElementById("smoothLoadingBox");
-  if (!box) {
-    box = document.createElement("div");
-    box.id = "smoothLoadingBox";
-    box.style = `
-      position: fixed; top:0; left:0; width:100%; height:100%;
-      background: rgba(255,255,255,0.65);
-      backdrop-filter: blur(3px);
-      display:flex; align-items:center; justify-content:center;
-      z-index: 9999; font-size:22px; color:#111;
-      transition: opacity .2s ease;
-    `;
-    box.innerHTML = `<div class="loading-spinner"></div>`;
-    document.body.appendChild(box);
-  }
-  box.style.opacity = "1";
-  box.style.pointerEvents = "auto";
-}
-
-function hideLoading() {
-  let box = document.getElementById("smoothLoadingBox");
-  if (!box) return;
-  box.style.opacity = "0";
-  box.style.pointerEvents = "none";
-}
-
-// ===============================
-//  AUTH CHECK
-// ===============================
+// AUTH CHECK
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = "login.html"; return; }
   CURRENT_USER = await getUserInfo(user.uid || user.userId);
-
   loadRegionsFilter();
   loadRouteFilters();
-
   await initialLoadAds();
-
   if (useRealtime) attachRealtimeHandlers();
 });
 
-// ===============================
-//  REGION FILTER (TOP BAR)
-// ===============================
+// LOAD REGION FILTER
 function loadRegionsFilter() {
   const el = document.getElementById("filterRegion");
   if (!el) return;
@@ -186,9 +172,7 @@ function loadRegionsFilter() {
   });
 }
 
-// ===============================
-//  ROUTE FILTERS + DISTRICTS
-// ===============================
+// ROUTE FILTERS (districts show/hide)
 function loadRouteFilters() {
   const fromRegion = document.getElementById("fromRegion");
   const toRegion = document.getElementById("toRegion");
@@ -214,12 +198,10 @@ function fillFromDistricts() {
   const box = document.getElementById("fromDistrictBox");
   if (!box) return;
   box.innerHTML = "";
-
   if (!region || !REGIONS[region]) {
     box.style.display = "none";
     return;
   }
-
   box.style.display = "";
   REGIONS[region].forEach(d => {
     const label = document.createElement("label");
@@ -227,7 +209,6 @@ function fillFromDistricts() {
     label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
-
   box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
@@ -236,12 +217,10 @@ function fillToDistricts() {
   const box = document.getElementById("toDistrictBox");
   if (!box) return;
   box.innerHTML = "";
-
   if (!region || !REGIONS[region]) {
     box.style.display = "none";
     return;
   }
-
   box.style.display = "";
   REGIONS[region].forEach(d => {
     const label = document.createElement("label");
@@ -249,16 +228,85 @@ function fillToDistricts() {
     label.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
     box.appendChild(label);
   });
-
   box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
-// ===============================
-//  INPUT HANDLERS + DISTRICT PANEL CLOSERS
-// ===============================
+// INITIAL LOAD
+async function initialLoadAds() {
+  try {
+    const snap = await get(ref(db, "ads"));
+    if (!snap.exists()) {
+      ALL_ADS_ARR = [];
+      ADS_MAP.clear();
+      document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
+      attachInputsOnce();
+      renderPaginationControls();
+      return;
+    }
+
+    const arr = [];
+    snap.forEach(child => {
+      const v = child.val();
+      arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
+    });
+
+    const map = new Map();
+    arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
+    ADS_MAP.clear();
+    for (const [k, v] of map) ADS_MAP.set(k, v);
+    ALL_ADS_ARR = Array.from(ADS_MAP.values());
+
+    attachInputsOnce();
+    scheduleRenderAds();
+  } catch (err) {
+    console.error("initialLoadAds error", err);
+  }
+}
+
+// REALTIME HANDLERS
+function attachRealtimeHandlers() {
+  try {
+    const r = ref(db, "ads");
+
+    onChildAdded(r, (snap) => {
+      const v = snap.val();
+      if (!v) return;
+      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
+      ADS_MAP.set(ad.id, ad);
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      scheduleRenderAds();
+    });
+
+    onChildChanged(r, (snap) => {
+      const v = snap.val();
+      if (!v) return;
+      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
+      ADS_MAP.set(ad.id, ad);
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      scheduleRenderAds();
+    });
+
+    onChildRemoved(r, (snap) => {
+      const id = snap.key;
+      ADS_MAP.delete(id);
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(id)}"]`);
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+      scheduleRenderAds();
+    });
+
+  } catch (err) {
+    console.warn("attachRealtimeHandlers failed:", err);
+  }
+}
+
+function escapeSelector(s) {
+  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
+}
+
+// ATTACH INPUT HANDLERS (once)
 let inputsAttached = false;
 let documentClickListenerAttached = false;
-
 function attachInputsOnce() {
   if (inputsAttached) return;
   inputsAttached = true;
@@ -284,137 +332,54 @@ function attachInputsOnce() {
   if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
   if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
 
-  if (resetBtn) resetBtn.onclick = () => resetFilters();
+  if (resetBtn) resetBtn.onclick = () => { resetFilters(); };
 
   document.addEventListener("change", (e) => {
+    if (!e.target) return;
     if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
       CURRENT_PAGE = 1;
       scheduleRenderAds();
     }
   });
 
-  // close district panels when clicking outside
   if (!documentClickListenerAttached) {
     document.addEventListener("click", (e) => {
       const fromBox = document.getElementById("fromDistrictBox");
-      const toBox   = document.getElementById("toDistrictBox");
-      const fromSel = document.getElementById("fromRegion");
-      const toSel   = document.getElementById("toRegion");
+      const toBox = document.getElementById("toDistrictBox");
+      const fromRegion = document.getElementById("fromRegion");
+      const toRegion = document.getElementById("toRegion");
 
-      const insideFrom = fromBox && (fromBox.contains(e.target) || fromSel.contains(e.target));
-      const insideTo   = toBox && (toBox.contains(e.target) || toSel.contains(e.target));
+      const clickedInsideFromBox = fromBox && (e.target === fromBox || fromBox.contains(e.target));
+      const clickedInsideToBox = toBox && (e.target === toBox || toBox.contains(e.target));
+      const clickedOnFromSelect = fromRegion && (e.target === fromRegion || fromRegion.contains(e.target));
+      const clickedOnToSelect = toRegion && (e.target === toRegion || toRegion.contains(e.target));
 
-      if (!insideFrom && fromBox) fromBox.style.display = "none";
-      if (!insideTo   && toBox)   toBox.style.display   = "none";
-    });
+      if (!clickedInsideFromBox && !clickedOnFromSelect) {
+        if (fromBox) fromBox.style.display = "none";
+      }
+      if (!clickedInsideToBox && !clickedOnToSelect) {
+        if (toBox) toBox.style.display = "none";
+      }
+    }, { capture: true });
 
     window.addEventListener("scroll", () => {
       const fromBox = document.getElementById("fromDistrictBox");
-      const toBox   = document.getElementById("toDistrictBox");
+      const toBox = document.getElementById("toDistrictBox");
       if (fromBox) fromBox.style.display = "none";
-      if (toBox)   toBox.style.display   = "none";
-    });
+      if (toBox) toBox.style.display = "none";
+    }, { passive: true });
 
     documentClickListenerAttached = true;
   }
 }
-
 // ===============================
-//  SCHEDULE RENDER (SMOOTH UPDATED)
+// PART 2/3
+// renderAds + createAdCard + modal + badge + contact
 // ===============================
-let __render_timeout = null;
 
-function scheduleRenderAds() {
-  if (__render_timeout) clearTimeout(__render_timeout);
-
-  showLoading();  // NEW
-
-  __render_timeout = setTimeout(() => {
-    renderAds(Array.from(ADS_MAP.values()));
-    hideLoading(); // NEW
-    __render_timeout = null;
-  }, 130); // slightly increased for smoother feel
-}
-// ===============================
-//  INITIAL LOAD (one-time snapshot)
-// ===============================
-async function initialLoadAds() {
-  try {
-    const snap = await get(ref(db, "ads"));
-    if (!snap.exists()) {
-      ALL_ADS_ARR = [];
-      ADS_MAP.clear();
-      document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
-      attachInputsOnce();
-      renderPaginationControls();
-      return;
-    }
-
-    const arr = [];
-    snap.forEach(child => {
-      const v = child.val();
-      arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
-    });
-
-    const map = new Map();
-    arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
-
-    ADS_MAP.clear();
-    for (const [k, v] of map) ADS_MAP.set(k, v);
-    ALL_ADS_ARR = Array.from(ADS_MAP.values());
-
-    attachInputsOnce();
-    scheduleRenderAds();
-  } catch (err) {
-    console.error("initialLoadAds error", err);
-  }
-}
-
-// ===============================
-//  REALTIME HANDLERS
-// ===============================
-function attachRealtimeHandlers() {
-  try {
-    const r = ref(db, "ads");
-
-    onChildAdded(r, (snap) => {
-      const v = snap.val();
-      if (!v) return;
-      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
-      ADS_MAP.set(ad.id, ad);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      scheduleRenderAds();
-    });
-
-    onChildChanged(r, (snap) => {
-      const v = snap.val();
-      if (!v) return;
-      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
-      ADS_MAP.set(ad.id, ad);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      scheduleRenderAds();
-    });
-
-    onChildRemoved(r, (snap) => {
-      ADS_MAP.delete(snap.key);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(snap.key)}"]`);
-      if (node && node.parentNode) node.parentNode.removeChild(node);
-      scheduleRenderAds();
-    });
-
-  } catch (err) {
-    console.warn("attachRealtimeHandlers failed:", err);
-  }
-}
-
-// ===============================
-//  RENDER ADS (full filters + pagination + smooth loading)
-// ===============================
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
-
   list.innerHTML = "";
 
   const q = (document.getElementById("search")?.value || "").toLowerCase();
@@ -423,38 +388,35 @@ async function renderAds(adsArr) {
   const sortBy = document.getElementById("sortBy")?.value || "newest";
   const filterDate = document.getElementById("filterDate")?.value || "";
 
-  // PRICE
-  const priceMinInput = (document.getElementById("priceMin")?.value || "").trim();
-  const priceMaxInput = (document.getElementById("priceMax")?.value || "").trim();
+  const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
+  const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
   const isPriceMinSet = priceMinInput !== "";
   const isPriceMaxSet = priceMaxInput !== "";
-  const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g, "")) : null;
-  const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g, "")) : null;
+  const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g,"")) : null;
+  const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
 
   const currentUserId = auth.currentUser?.uid || null;
 
-  // CURRENT ROLE LOGIC
-  const roleRaw = (CURRENT_USER?.role || "").toLowerCase();
+  const currentRoleRaw = (CURRENT_USER?.role || "").toString().toLowerCase();
   let currentRole = "";
-  if (roleRaw.includes("haydov") || roleRaw.includes("driver")) currentRole = "driver";
-  else if (roleRaw.includes("yo") || roleRaw.includes("pass")) currentRole = "passenger";
+  if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov")) currentRole = "driver";
+  else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo")) currentRole = "passenger";
 
-  // ROUTE FILTERS
   const fromRegion = document.getElementById("fromRegion")?.value || "";
   const toRegion = document.getElementById("toRegion")?.value || "";
   const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
   const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
-  // FILTERING
   let filtered = (adsArr || []).filter(a => {
     if (!a) return false;
 
-    // auto: driver sees passengers, passenger sees drivers
-    if (currentRole === "driver" && !a.typeNormalized.toLowerCase().includes("yo")) return false;
-    if (currentRole === "passenger" && !a.typeNormalized.toLowerCase().includes("haydov")) return false;
+    if (currentRole === "driver") {
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
+    } else if (currentRole === "passenger") {
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("haydov")) return false;
+    }
 
-    if (roleFilter && a.typeNormalized !== roleFilter) return false;
-
+    if (roleFilter) { if (a.typeNormalized !== roleFilter) return false; }
     if (currentUserId && a.userId === currentUserId) return false;
 
     if (regionFilter) {
@@ -462,42 +424,47 @@ async function renderAds(adsArr) {
     }
 
     if (fromRegion && a.fromRegion !== fromRegion) return false;
-    if (fromDistricts.length && !fromDistricts.includes(a.fromDistrict)) return false;
+    if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
 
     if (toRegion && a.toRegion !== toRegion) return false;
-    if (toDistricts.length && !toDistricts.includes(a.toDistrict)) return false;
+    if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
 
-    // price
-    const adPrice = a.price ? Number(String(a.price).replace(/\s+/g, "")) : NaN;
-    if (isPriceMinSet && (isNaN(adPrice) || adPrice < priceMin)) return false;
-    if (isPriceMaxSet && (isNaN(adPrice) || adPrice > priceMax)) return false;
+    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
+    if (isPriceMinSet && isNaN(adPrice)) return false;
+    if (isPriceMaxSet && isNaN(adPrice)) return false;
+    if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
+    if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
 
-    // hide expired departure time
-    const raw = a.departureTime || a.startTime || a.time || a.date;
-    let dep = null;
-    if (typeof raw === "number") dep = new Date(raw);
-    else if (typeof raw === "string" && raw.trim() !== "") {
-      const fixed = raw.replace(" ", "T");
-      if (!isNaN(Date.parse(raw))) dep = new Date(raw);
-      else if (!isNaN(Date.parse(fixed))) dep = new Date(fixed);
+    const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
+    let departureTime = null;
+    if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
+    else if (typeof departureRaw === "string" && departureRaw.trim() !== "") {
+      const fixed = departureRaw.replace(" ", "T");
+      if (!isNaN(Date.parse(departureRaw))) departureTime = new Date(departureRaw);
+      else if (!isNaN(Date.parse(fixed))) departureTime = new Date(fixed);
     }
-    if (!dep || dep.getTime() < Date.now()) return false;
+    if (!departureTime) return false;
+    if (departureTime.getTime() < Date.now()) return false;
 
-    // date filter
     if (filterDate) {
+      const raw = a.departureTime || a.startTime || a.time || a.date || null;
+      let adTime = null;
+      if (typeof raw === "number") adTime = new Date(raw);
+      else if (typeof raw === "string" && raw.trim() !== "") {
+        const tryFix = raw.replace(" ", "T");
+        if (!isNaN(Date.parse(raw))) adTime = new Date(raw);
+        else if (!isNaN(Date.parse(tryFix))) adTime = new Date(tryFix);
+      }
+      if (!adTime) return false;
       const now = new Date();
-      const d = dep;
-
       if (filterDate === "today") {
-        if (d.toDateString() !== now.toDateString()) return false;
-      }
-      if (filterDate === "tomorrow") {
-        const t = new Date(now); t.setDate(t.getDate() + 1);
-        if (d.toDateString() !== t.toDateString()) return false;
-      }
-      if (filterDate === "3days") {
-        const diff = d.getTime() - now.getTime();
-        if (diff < 0 || diff > 3 * 24 * 60 * 60 * 1000) return false;
+        if (adTime.getFullYear() !== now.getFullYear() || adTime.getMonth() !== now.getMonth() || adTime.getDate() !== now.getDate()) return false;
+      } else if (filterDate === "tomorrow") {
+        const t = new Date(now); t.setDate(now.getDate() + 1);
+        if (adTime.getFullYear() !== t.getFullYear() || adTime.getMonth() !== t.getMonth() || adTime.getDate() !== t.getDate()) return false;
+      } else if (filterDate === "3days") {
+        const diff = adTime.getTime() - now.getTime();
+        if (diff < 0 || diff > 1000 * 60 * 60 * 24 * 3) return false;
       }
     }
 
@@ -511,10 +478,9 @@ async function renderAds(adsArr) {
     return true;
   });
 
-  // dedupe
-  const m = new Map();
-  filtered.forEach(x => m.set(x.id, x));
-  filtered = Array.from(m.values());
+  const resultMap = new Map();
+  filtered.forEach(x => { if (x && x.id) resultMap.set(x.id, x); });
+  filtered = Array.from(resultMap.values());
 
   if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
@@ -522,14 +488,12 @@ async function renderAds(adsArr) {
     return;
   }
 
-  // sort
-  filtered.sort((a, b) => {
+  filtered.sort((a,b) => {
     const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
     const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
-    return sortBy === "oldest" ? (ta - tb) : (tb - ta);
+    return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
   });
 
-  // pagination
   const totalItems = filtered.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
   if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
@@ -546,58 +510,55 @@ async function renderAds(adsArr) {
   renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
 }
 
-// ===============================
-//  CREATE AD CARD
-// ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
 
   const div = document.createElement("div");
   div.className = "ad-card";
-  div.setAttribute("data-ad-id", ad.id);
+  div.setAttribute("data-ad-id", ad.id || "");
 
-  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", "+ad.fromDistrict:""} → ${ad.toRegion || ""}${ad.toDistrict ? ", "+ad.toDistrict:""}`;
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date);
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt);
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const depTimeRaw = ad.departureTime || ad.startTime || ad.time || ad.date || "";
+  const depTime = formatTime(depTimeRaw);
+  const createdRaw = ad.createdAt || ad.created || ad.postedAt || "";
+  const created = formatTime(createdRaw);
 
   let isNew = false;
-  if (ad.createdAt || ad.created || ad.postedAt) {
+  if (createdRaw) {
     try {
-      const ct = new Date(ad.createdAt || ad.created || ad.postedAt).getTime();
-      if (!isNaN(ct) && (Date.now() - ct <= 24 * 60 * 60 * 1000) && !isRead(ad.id)) {
-        isNew = true;
-      }
+      const ct = new Date(createdRaw).getTime();
+      if (!isNaN(ct) && (Date.now() - ct <= 24*60*60*1000) && !isRead(ad.id)) isNew = true;
     } catch(e){}
   }
 
-  const totalSeats = Number(ad.totalSeats || ad.seatCount || ad.seats || 0);
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
-  const available = Math.max(totalSeats - booked, 0);
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
 
-  const requested = Number(ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || 0);
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
   const carModel = u.carModel || ad.car || "";
 
   div.innerHTML = `
-    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" />
+    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
     <div class="ad-main">
       <div class="ad-route">
         ${escapeHtml(route)}
-        ${isNew ? '<span class="ad-badge-new" style="margin-left:8px;background:#0069d9;color:#fff;padding:3px 8px;border-radius:8px;font-size:12px">Yangi</span>' : ''}
+        ${isNew ? '<span class="ad-badge-new" style="margin-left:8px;background:#0069d9;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px">Yangi</span>' : ''}
       </div>
       <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModel)}</div>
-
       <div class="ad-meta" style="margin-top:8px">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
         ${
-          totalSeats
-            ? `<div class="ad-chip">👥 ${available}/${totalSeats} bo‘sh</div>`
-            : `<div class="ad-chip">👥 ${requested || "-"} odam</div>`
+          totalSeats !== null
+            ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
+            : (requested !== null ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>` : `<div class="ad-chip">👥 -</div>`)
         }
       </div>
     </div>
-
-    <div class="ad-price">💰 ${escapeHtml(ad.price || "-")} so‘m</div>
+    <div class="ad-price">💰 ${escapeHtml(ad.price ? String(ad.price) : "-")} so‘m</div>
     <div class="ad-created">${escapeHtml(created)}</div>
   `;
 
@@ -605,9 +566,6 @@ async function createAdCard(ad) {
   return div;
 }
 
-// ===============================
-//  OPEN MODAL (mark read)
-// ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
   if (!modal) {
@@ -618,25 +576,23 @@ async function openAdModal(ad) {
 
   const u = await getUserInfo(ad.userId);
 
-  const route =
-    `${ad.fromRegion || ""}${ad.fromDistrict ? ", "+ad.fromDistrict : ""}` +
-    ` → ${ad.toRegion || ""}${ad.toDistrict ? ", "+ad.toDistrict : ""}`;
-
-  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date);
-  const created = formatTime(ad.createdAt || ad.created || ad.postedAt);
-
-  const fullname = u.fullName || "Foydalanuvchi";
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
+  const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
+  const fullname = u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "Foydalanuvchi";
   const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
-  const totalSeats = Number(ad.totalSeats || ad.seatCount || ad.seats || 0);
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
-  const available = Math.max(totalSeats - booked, 0);
-  const requested = Number(ad.passengerCount || ad.requestedSeats || ad.peopleCount || 0);
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
   modal.innerHTML = `
-    <div class="ad-modal-box">
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
-        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}">
+    <div class="ad-modal-box" role="dialog" aria-modal="true">
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
+        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
           <div class="modal-name">${escapeHtml(fullname)}</div>
           <div class="modal-car" style="color:#6b7280">${escapeHtml(carFull)}</div>
@@ -657,16 +613,19 @@ async function openAdModal(ad) {
       <div class="modal-row">
         <div class="modal-col">
           <div class="label">Joylar</div>
-          <div class="value">${
-            totalSeats
-              ? `${totalSeats} ta (Bo‘sh: ${available})`
-              : (requested ? `Talab: ${requested} odam` : "-")
-          }</div>
+          <div class="value">
+            ${
+              totalSeats !== null
+                ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})`
+                : requested !== null
+                  ? `Talab: ${escapeHtml(String(requested))} odam`
+                  : "-"
+            }
+          </div>
         </div>
-
         <div class="modal-col" style="text-align:right">
           <div class="label">Narx</div>
-          <div class="value">${escapeHtml(ad.price || "-")} so‘m</div>
+          <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
         </div>
       </div>
 
@@ -686,16 +645,17 @@ async function openAdModal(ad) {
 
       <div class="modal-actions" style="margin-top:14px">
         <button class="btn-primary" id="modalCloseBtn">Yopish</button>
-        <button class="btn-ghost" id="modalCallBtn">Qo‘ng‘iroq</button>
+        <button class="btn-ghost" id="modalCallBtn">Qo'ng'iroq</button>
       </div>
     </div>
   `;
 
   modal.style.display = "flex";
-  document.getElementById("modalCloseBtn").onclick = closeAdModal;
-  document.getElementById("modalCallBtn").onclick = () => onContact(u.phone || "");
+  const closeBtn = document.getElementById("modalCloseBtn");
+  const callBtn = document.getElementById("modalCallBtn");
+  if (closeBtn) closeBtn.onclick = closeAdModal;
+  if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
 
-  // mark read
   try { markAsRead(ad.id); } catch(e) {}
   updateBadgeForAd(ad.id);
 
@@ -710,6 +670,7 @@ function closeAdModal() {
 }
 
 function updateBadgeForAd(adId) {
+  if (!adId) return;
   const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(adId)}"]`);
   if (!node) return;
   const badge = node.querySelector(".ad-badge-new");
@@ -722,8 +683,11 @@ function onContact(phone) {
 }
 window.onContact = onContact;
 // ===============================
-//  RESET FILTERS (FULL)
+// PART 3/3
+// resetFilters + scheduleRenderAds + logout + pagination controls
 // ===============================
+
+// resetFilters()
 function resetFilters() {
   const searchEl = document.getElementById("search");
   const roleEl = document.getElementById("filterRole");
@@ -745,26 +709,22 @@ function resetFilters() {
   if (priceMinEl) priceMinEl.value = "";
   if (priceMaxEl) priceMaxEl.value = "";
 
-  // checkboxlarni ham nolga qaytaramiz
   document.querySelectorAll("#fromDistrictBox input.fromDistrict").forEach(i => i.checked = false);
   document.querySelectorAll("#toDistrictBox input.toDistrict").forEach(i => i.checked = false);
 
-  // panel ko‘rinishini qayta moslash
-  if (document.getElementById("fromRegion")?.value) fillFromDistricts();
-  else document.getElementById("fromDistrictBox").style.display = "none";
-
-  if (document.getElementById("toRegion")?.value) fillToDistricts();
-  else document.getElementById("toDistrictBox").style.display = "none";
+  if (document.getElementById("fromRegion")?.value) fillFromDistricts(); else {
+    const fb = document.getElementById("fromDistrictBox"); if (fb) fb.style.display = "none";
+  }
+  if (document.getElementById("toRegion")?.value) fillToDistricts(); else {
+    const tb = document.getElementById("toDistrictBox"); if (tb) tb.style.display = "none";
+  }
 
   CURRENT_PAGE = 1;
   scheduleRenderAds();
 }
 window.resetFilters = resetFilters;
 
-
-// ===============================
-//  SCHEDULE RENDER (smooth)
-// ===============================
+// DEBOUNCE scheduling to avoid flicker
 let __render_timeout = null;
 function scheduleRenderAds() {
   if (__render_timeout) clearTimeout(__render_timeout);
@@ -774,23 +734,20 @@ function scheduleRenderAds() {
   }, 110);
 }
 
+// Logout
+window.logout = () => signOut(auth);
 
-// ===============================
-//  PAGINATION CONTROLS
-// ===============================
+// expose open/close
+window.openAdModal = openAdModal;
+window.closeAdModal = closeAdModal;
+
+// PAGINATION CONTROLS RENDERING
 function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 0) {
   let container = document.getElementById("paginationControls");
   if (!container) {
     container = document.createElement("div");
     container.id = "paginationControls";
-    container.style = `
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin-top:12px;
-      justify-content:center;
-    `;
-
+    container.style = "display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:center;";
     const list = document.getElementById("adsList");
     if (list && list.parentNode) {
       list.parentNode.insertBefore(container, list.nextSibling);
@@ -815,61 +772,31 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     const b = document.createElement("button");
     b.textContent = text;
     b.disabled = !!disabled;
-    b.style = `
-      padding:6px 10px;
-      border-radius:8px;
-      border:1px solid #e5e7eb;
-      background:white;
-      cursor:pointer;
-    `;
+    b.style = "padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;cursor:pointer";
     if (!disabled) b.onclick = handler;
     return b;
   };
 
-  container.appendChild(btn("« Birinchi", currentPage === 1, () => {
-    CURRENT_PAGE = 1;
-    scheduleRenderAds();
-  }));
-
-  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => {
-    CURRENT_PAGE = Math.max(1, currentPage - 1);
-    scheduleRenderAds();
-  }));
+  container.appendChild(btn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; scheduleRenderAds(); }));
+  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = Math.max(1, currentPage - 1); scheduleRenderAds(); }));
 
   const windowSize = 5;
-  let start = Math.max(1, currentPage - Math.floor(windowSize / 2));
+  let start = Math.max(1, currentPage - Math.floor(windowSize/2));
   let end = Math.min(totalPages, start + windowSize - 1);
   if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
 
   for (let p = start; p <= end; p++) {
     const isCurrent = p === currentPage;
     const pbtn = document.createElement("button");
-    pbtn.textContent = p;
+    pbtn.textContent = p.toString();
     pbtn.disabled = isCurrent;
-    pbtn.style = `
-      padding:6px 10px;
-      border-radius:8px;
-      border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};
-      background:${isCurrent ? "#0069d9" : "white"};
-      color:${isCurrent ? "white" : "#111"};
-      cursor:pointer;
-    `;
-    if (!isCurrent) pbtn.onclick = () => {
-      CURRENT_PAGE = p;
-      scheduleRenderAds();
-    };
+    pbtn.style = `padding:6px 10px;border-radius:8px;border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};background:${isCurrent ? "#0069d9" : "white"};color:${isCurrent ? "white" : "#111"};cursor:pointer`;
+    if (!isCurrent) pbtn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
     container.appendChild(pbtn);
   }
 
-  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => {
-    CURRENT_PAGE = Math.min(totalPages, currentPage + 1);
-    scheduleRenderAds();
-  }));
-
-  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => {
-    CURRENT_PAGE = totalPages;
-    scheduleRenderAds();
-  }));
+  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => { CURRENT_PAGE = Math.min(totalPages, currentPage + 1); scheduleRenderAds(); }));
+  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
 
   const info = document.createElement("div");
   info.textContent = ` Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
