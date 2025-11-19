@@ -1,5 +1,6 @@
+// index.js (combined — final)
 // ===============================
-//  FIREBASE INIT + IMPORTS
+//  FIREBASE INIT + MODULAR IMPORTS
 // ===============================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -36,22 +37,23 @@ const db = getDatabase(app);
 const REGIONS = window.regionsData || window.regions || {};
 
 // ===============================
-//  NEW BADGE LOCAL STORAGE
+//  READ / NEW BADGE STORAGE
 // ===============================
-function markAsRead(id) {
-  if (!id) return;
-  let arr = [];
-  try { arr = JSON.parse(localStorage.getItem("readAds") || "[]"); } catch(e){}
-  if (!arr.includes(id)) {
-    arr.push(id);
-    localStorage.setItem("readAds", JSON.stringify(arr));
+function markAsRead(adId) {
+  if (!adId) return;
+  let read = [];
+  try { read = JSON.parse(localStorage.getItem("readAds") || "[]"); } catch(e){ read = []; }
+  if (!read.includes(adId)) {
+    read.push(adId);
+    localStorage.setItem("readAds", JSON.stringify(read));
   }
 }
-function isRead(id) {
+function isRead(adId) {
+  if (!adId) return false;
   try {
-    const arr = JSON.parse(localStorage.getItem("readAds") || "[]");
-    return arr.includes(id);
-  } catch(e){ return false; }
+    const read = JSON.parse(localStorage.getItem("readAds") || "[]");
+    return read.includes(adId);
+  } catch(e) { return false; }
 }
 
 // ===============================
@@ -61,16 +63,17 @@ function escapeHtml(str) {
   if (str === 0) return "0";
   if (!str && str !== 0) return "";
   return String(str)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function normalizeType(t) {
   if (!t) return "";
-  t = t.toLowerCase().trim().replace(/[‘’`ʼ']/g,"'");
+  t = String(t).trim().toLowerCase();
+  t = t.replace(/[‘’`ʼ']/g, "'");
   if (t.includes("haydov")) return "Haydovchi";
   if (t.includes("yo") && t.includes("lov")) return "Yo‘lovchi";
   if (t === "yo'lovchi") return "Yo‘lovchi";
@@ -79,120 +82,123 @@ function normalizeType(t) {
 
 function formatTime(val) {
   if (!val) return "—";
-  if (!isNaN(Date.parse(val))) {
-    return new Date(val).toLocaleString("uz-UZ",{
-      year:"numeric", month:"2-digit", day:"2-digit",
-      hour:"2-digit", minute:"2-digit"
-    });
+  if (typeof val === "number") {
+    try {
+      return new Date(val).toLocaleString("uz-UZ", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+    } catch(e) { return String(val); }
   }
-  const fix = val.replace(" ","T");
-  if (!isNaN(Date.parse(fix))) {
-    return new Date(fix).toLocaleString("uz-UZ",{
-      year:"numeric", month:"2-digit", day:"2-digit",
-      hour:"2-digit", minute:"2-digit"
-    });
+  if (typeof val === "string") {
+    if (!isNaN(Date.parse(val))) {
+      return new Date(val).toLocaleString("uz-UZ", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
+    const fix = val.replace(" ", "T");
+    if (!isNaN(Date.parse(fix))) {
+      return new Date(fix).toLocaleString("uz-UZ", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      });
+    }
   }
   return String(val);
 }
 
-function escapeSelector(s) {
-  return String(s||"").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
+function slugify(s) {
+  return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, "");
 }
 
-// ===============================
-//  GET USER INFO
-// ===============================
-async function getUserInfo(uid) {
-  if (!uid) return {
-    phone:"",avatar:"",fullName:"",role:"",
-    carModel:"",carColor:"",carNumber:"",seatCount:0
+async function getUserInfo(userId) {
+  if (!userId) return {
+    phone: "", avatar: "", fullName: "", role: "",
+    carModel: "", carColor: "", carNumber: "", seatCount: 0
   };
   try {
-    const snap = await get(ref(db,"users/"+uid));
+    const snap = await get(ref(db, "users/" + userId));
     if (!snap.exists()) return {
-      phone:"",avatar:"",fullName:"",role:"",
-      carModel:"",carColor:"",carNumber:"",seatCount:0
+      phone: "", avatar: "", fullName: "", role: "",
+      carModel: "", carColor: "", carNumber: "", seatCount: 0
     };
-
     const u = snap.val();
     return {
       phone: u.phone || u.telephone || "",
       avatar: u.avatar || "",
-      fullName:
-        u.fullName ||
-        ((u.firstname || u.lastname) ? `${u.firstname||""} ${u.lastname||""}`.trim() : "") ||
-        u.name || "",
+      fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
       role: (u.role || u.userRole || "").toString(),
       carModel: u.carModel || u.car || "",
       carColor: u.carColor || "",
       carNumber: u.carNumber || u.plate || "",
       seatCount: Number(u.seatCount || u.seats || 0)
     };
-  } catch(err){ return {
-    phone:"",avatar:"",fullName:"",role:"",
-    carModel:"",carColor:"",carNumber:"",seatCount:0
-  }; }
+  } catch (err) {
+    console.error("getUserInfo error", err);
+    return {
+      phone: "", avatar: "", fullName: "", role: "",
+      carModel: "", carColor: "", carNumber: "", seatCount: 0
+    };
+  }
 }
 
 // ===============================
-//  GLOBALS
+// GLOBALS
 // ===============================
 const ADS_MAP = new Map();
 let ALL_ADS_ARR = [];
 let CURRENT_USER = null;
-let CURRENT_PAGE = 1;
+let useRealtime = true;
+
 let PAGE_SIZE = 10;
+let CURRENT_PAGE = 1;
 
 // ===============================
-//  AUTH
+// AUTH CHECK
 // ===============================
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
-  CURRENT_USER = await getUserInfo(user.uid);
-
+  if (!user) { window.location.href = "login.html"; return; }
+  CURRENT_USER = await getUserInfo(user.uid || user.userId);
   loadRegionsFilter();
   loadRouteFilters();
-
   await initialLoadAds();
-  attachRealtimeHandlers();
+  if (useRealtime) attachRealtimeHandlers();
 });
 
 // ===============================
-//  REGION FILTER (top)
+// LOAD REGION FILTER (top bar)
 // ===============================
 function loadRegionsFilter() {
   const el = document.getElementById("filterRegion");
   if (!el) return;
   el.innerHTML = '<option value="">Viloyat (filter)</option>';
-  Object.keys(REGIONS).forEach(r=>{
-    el.insertAdjacentHTML("beforeend",
-      `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`
-    );
+  Object.keys(REGIONS).forEach(region => {
+    const opt = document.createElement("option");
+    opt.value = region;
+    opt.textContent = region;
+    el.appendChild(opt);
   });
 }
 
 // ===============================
-// ROUTE FILTERS
+// Route Filters (from/to + districts)
 // ===============================
 function loadRouteFilters() {
-  const fr = document.getElementById("fromRegion");
-  const tr = document.getElementById("toRegion");
-  if (!fr || !tr) return;
+  const fromRegion = document.getElementById("fromRegion");
+  const toRegion = document.getElementById("toRegion");
+  if (!fromRegion || !toRegion) return;
 
-  fr.innerHTML = '<option value="">Viloyat</option>';
-  tr.innerHTML = '<option value="">Viloyat</option>';
+  fromRegion.innerHTML = '<option value="">Viloyat</option>';
+  toRegion.innerHTML = '<option value="">Viloyat</option>';
 
-  Object.keys(REGIONS).forEach(region=>{
-    const opt = `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`;
-    fr.insertAdjacentHTML("beforeend", opt);
-    tr.insertAdjacentHTML("beforeend", opt);
+  Object.keys(REGIONS).forEach(region => {
+    fromRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
+    toRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
   });
 
-  fr.onchange = () => { fillFromDistricts(); CURRENT_PAGE=1; scheduleRenderAds(); };
-  tr.onchange = () => { fillToDistricts(); CURRENT_PAGE=1; scheduleRenderAds(); };
+  fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
+  toRegion.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
 
   fillFromDistricts();
   fillToDistricts();
@@ -203,23 +209,15 @@ function fillFromDistricts() {
   const box = document.getElementById("fromDistrictBox");
   if (!box) return;
   box.innerHTML = "";
-
-  if (!region || !REGIONS[region]) {
-    box.style.display = "none";
-    return;
-  }
+  if (!region || !REGIONS[region]) { box.style.display = "none"; return; }
   box.style.display = "";
-  REGIONS[region].forEach(d=>{
-    box.insertAdjacentHTML("beforeend",
-      `<label class="district-item">
-         <input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}">
-         ${escapeHtml(d)}
-       </label>`
-    );
+  REGIONS[region].forEach(d => {
+    const label = document.createElement("label");
+    label.className = "district-item";
+    label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
+    box.appendChild(label);
   });
-  box.querySelectorAll("input").forEach(ch=>{
-    ch.onchange = () => { CURRENT_PAGE=1; scheduleRenderAds(); };
-  });
+  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
 function fillToDistricts() {
@@ -227,263 +225,311 @@ function fillToDistricts() {
   const box = document.getElementById("toDistrictBox");
   if (!box) return;
   box.innerHTML = "";
-
-  if (!region || !REGIONS[region]) {
-    box.style.display = "none";
-    return;
-  }
+  if (!region || !REGIONS[region]) { box.style.display = "none"; return; }
   box.style.display = "";
-  REGIONS[region].forEach(d=>{
-    box.insertAdjacentHTML("beforeend",
-      `<label class="district-item">
-         <input type="checkbox" class="toDistrict" value="${escapeHtml(d)}">
-         ${escapeHtml(d)}
-       </label>`
-    );
+  REGIONS[region].forEach(d => {
+    const label = document.createElement("label");
+    label.className = "district-item";
+    label.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
+    box.appendChild(label);
   });
-  box.querySelectorAll("input").forEach(ch=>{
-    ch.onchange = () => { CURRENT_PAGE=1; scheduleRenderAds(); };
-  });
+  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
 // ===============================
 // INITIAL LOAD
 // ===============================
 async function initialLoadAds() {
-  const snap = await get(ref(db,"ads"));
-  ADS_MAP.clear();
-  if (snap.exists()) {
-    snap.forEach(ch=>{
-      const v = ch.val();
-      ADS_MAP.set(ch.key, {...v, id:ch.key, typeNormalized: normalizeType(v.type)});
-    });
-  }
-  ALL_ADS_ARR = Array.from(ADS_MAP.values());
+  try {
+    const snap = await get(ref(db, "ads"));
+    if (!snap.exists()) {
+      ALL_ADS_ARR = [];
+      ADS_MAP.clear();
+      document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
+      attachInputsOnce();
+      renderPaginationControls(0,0,0);
+      return;
+    }
 
-  attachInputsOnce();
-  scheduleRenderAds();
+    const arr = [];
+    snap.forEach(child => {
+      const v = child.val();
+      arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
+    });
+
+    const map = new Map();
+    arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
+    ADS_MAP.clear();
+    for (const [k,v] of map) ADS_MAP.set(k, v);
+    ALL_ADS_ARR = Array.from(ADS_MAP.values());
+
+    attachInputsOnce();
+    scheduleRenderAds();
+  } catch (err) {
+    console.error("initialLoadAds error", err);
+  }
 }
 
 // ===============================
 // REALTIME HANDLERS
 // ===============================
 function attachRealtimeHandlers() {
-  const r = ref(db,"ads");
+  try {
+    const r = ref(db, "ads");
 
-  onChildAdded(r,(snap)=>{
-    const v = snap.val();
-    if (!v) return;
-    ADS_MAP.set(snap.key, {...v, id:snap.key, typeNormalized: normalizeType(v.type)});
-    ALL_ADS_ARR = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
+    onChildAdded(r, (snap) => {
+      const v = snap.val();
+      if (!v) return;
+      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
+      ADS_MAP.set(ad.id, ad);
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      scheduleRenderAds();
+    });
 
-  onChildChanged(r,(snap)=>{
-    const v = snap.val();
-    ADS_MAP.set(snap.key, {...v, id:snap.key, typeNormalized: normalizeType(v.type)});
-    ALL_ADS_ARR = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
+    onChildChanged(r, (snap) => {
+      const v = snap.val();
+      if (!v) return;
+      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
+      ADS_MAP.set(ad.id, ad);
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      scheduleRenderAds();
+    });
 
-  onChildRemoved(r,(snap)=>{
-    ADS_MAP.delete(snap.key);
-    ALL_ADS_ARR = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
+    onChildRemoved(r, (snap) => {
+      const id = snap.key;
+      ADS_MAP.delete(id);
+      ALL_ADS_ARR = Array.from(ADS_MAP.values());
+      const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(id)}"]`);
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+      scheduleRenderAds();
+    });
+
+  } catch (err) {
+    console.warn("attachRealtimeHandlers failed:", err);
+  }
+}
+
+function escapeSelector(s) {
+  return String(s || "").replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g,'\\$1');
 }
 
 // ===============================
-// INPUT HANDLERS (debounced)
+// ATTACH INPUT HANDLERS (once)
 // ===============================
 let inputsAttached = false;
+let documentClickListenerAttached = false;
 function attachInputsOnce() {
   if (inputsAttached) return;
   inputsAttached = true;
 
-  const events = ["search","filterRole","filterRegion","sortBy",
-    "filterDate","priceMin","priceMax","fromRegion","toRegion"];
+  const searchEl = document.getElementById("search");
+  const roleEl = document.getElementById("filterRole");
+  const regionEl = document.getElementById("filterRegion");
+  const fromRegionEl = document.getElementById("fromRegion");
+  const toRegionEl = document.getElementById("toRegion");
+  const sortByEl = document.getElementById("sortBy");
+  const filterDateEl = document.getElementById("filterDate");
+  const priceMinEl = document.getElementById("priceMin");
+  const priceMaxEl = document.getElementById("priceMax");
 
-  events.forEach(id=>{
-    const el = document.getElementById(id);
-    if (el) el.oninput = el.onchange = () => {
+  // create reset button if not present
+  let resetBtn = document.getElementById("resetFiltersBtn");
+  if (!resetBtn) {
+    const filtersDiv = document.querySelector(".filters");
+    if (filtersDiv) {
+      resetBtn = document.createElement("button");
+      resetBtn.id = "resetFiltersBtn";
+      resetBtn.textContent = "Reset";
+      resetBtn.style = "background:#ff4d4f;color:#fff;padding:8px 14px;border-radius:8px;border:none;cursor:pointer";
+      // insert after role select (if exists) or at end
+      const roleNode = document.getElementById("filterRole");
+      if (roleNode && roleNode.parentNode) roleNode.parentNode.insertBefore(resetBtn, roleNode.nextSibling);
+      else filtersDiv.appendChild(resetBtn);
+    }
+  }
+
+  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+
+  if (resetBtn) resetBtn.onclick = () => { resetFilters(); };
+
+  document.addEventListener("change", (e) => {
+    if (!e.target) return;
+    if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
       CURRENT_PAGE = 1;
       scheduleRenderAds();
-    };
+    }
   });
+
+  if (!documentClickListenerAttached) {
+    document.addEventListener("click", (e) => {
+      const fromBox = document.getElementById("fromDistrictBox");
+      const toBox = document.getElementById("toDistrictBox");
+      const fromRegion = document.getElementById("fromRegion");
+      const toRegion = document.getElementById("toRegion");
+
+      const clickedInsideFromBox = fromBox && (e.target === fromBox || fromBox.contains(e.target));
+      const clickedInsideToBox = toBox && (e.target === toBox || toBox.contains(e.target));
+      const clickedOnFromSelect = fromRegion && (e.target === fromRegion || fromRegion.contains(e.target));
+      const clickedOnToSelect = toRegion && (e.target === toRegion || toRegion.contains(e.target));
+
+      if (!clickedInsideFromBox && !clickedOnFromSelect) { if (fromBox) fromBox.style.display = "none"; }
+      if (!clickedInsideToBox && !clickedOnToSelect) { if (toBox) toBox.style.display = "none"; }
+    }, { capture: true });
+
+    window.addEventListener("scroll", () => {
+      const fromBox = document.getElementById("fromDistrictBox");
+      const toBox = document.getElementById("toDistrictBox");
+      if (fromBox) fromBox.style.display = "none";
+      if (toBox) toBox.style.display = "none";
+    }, { passive: true });
+
+    documentClickListenerAttached = true;
+  }
 }
 
 // ===============================
-// SCHEDULE RENDER (smooth filter)
-// ===============================
-let __rt=null;
-function scheduleRenderAds() {
-  const list = document.getElementById("adsList");
-  if (list) list.style.opacity = "0.3";
-
-  if (__rt) clearTimeout(__rt);
-  __rt = setTimeout(()=>{
-    renderAds(Array.from(ADS_MAP.values())).then(()=>{
-      if (list) list.style.opacity = "1";
-    });
-    __rt=null;
-  },120);
-}
-// ===============================
-//  RENDER ADS (FILTER + SORT + PAGINATION)
+// RENDER ADS (full pipeline + pagination)
 // ===============================
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
   list.innerHTML = "";
 
-  // =============== FILTER VALUES ===============
   const q = (document.getElementById("search")?.value || "").toLowerCase();
   const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
   const regionFilter = document.getElementById("filterRegion")?.value || "";
-
   const sortBy = document.getElementById("sortBy")?.value || "newest";
   const filterDate = document.getElementById("filterDate")?.value || "";
 
-  // PRICE
-  const priceMinInput = (document.getElementById("priceMin")?.value || "").trim();
-  const priceMaxInput = (document.getElementById("priceMax")?.value || "").trim();
-  const isMin = priceMinInput !== "";
-  const isMax = priceMaxInput !== "";
-  const priceMin = isMin ? Number(priceMinInput.replace(/\s+/g,"")) : null;
-  const priceMax = isMax ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
+  const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
+  const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
+  const isPriceMinSet = priceMinInput !== "";
+  const isPriceMaxSet = priceMaxInput !== "";
+  const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g,"")) : null;
+  const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
 
-  // ROUTE
+  const currentUserId = auth.currentUser?.uid || null;
+
+  const currentRoleRaw = (CURRENT_USER?.role || "").toString().toLowerCase();
+  let currentRole = "";
+  if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov")) currentRole = "driver";
+  else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo")) currentRole = "passenger";
+
   const fromRegion = document.getElementById("fromRegion")?.value || "";
   const toRegion = document.getElementById("toRegion")?.value || "";
+  const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
+  const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
-  const fromDistricts = Array
-      .from(document.querySelectorAll("#fromDistrictBox .fromDistrict:checked"))
-      .map(x => x.value);
-
-  const toDistricts = Array
-      .from(document.querySelectorAll("#toDistrictBox .toDistrict:checked"))
-      .map(x => x.value);
-
-  const userId = auth.currentUser?.uid || null;
-
-  // Auto role: driver sees passengers, passenger sees drivers
-  const rawRole = (CURRENT_USER?.role || "").toLowerCase();
-  let currentRole = "";
-  if (rawRole.includes("haydov")) currentRole = "driver";
-  if (rawRole.includes("yo")) currentRole = "passenger";
-
-  // ===============================
-  //        FILTER PIPELINE
-  // ===============================
-  let filtered = adsArr.filter(a=>{
+  // filter + validate
+  let filtered = (adsArr || []).filter(a => {
     if (!a) return false;
 
-    // auto role filter
     if (currentRole === "driver") {
-      if (!a.typeNormalized.toLowerCase().includes("yo")) return false;
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
+    } else if (currentRole === "passenger") {
+      if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("haydov")) return false;
     }
-    if (currentRole === "passenger") {
-      if (!a.typeNormalized.toLowerCase().includes("haydov")) return false;
-    }
 
-    // dropdown role
-    if (roleFilter && a.typeNormalized !== roleFilter) return false;
+    if (roleFilter) { if (a.typeNormalized !== roleFilter) return false; }
 
-    // hide own ads
-    if (userId && a.userId === userId) return false;
+    if (currentUserId && a.userId === currentUserId) return false;
 
-    // top region filter
     if (regionFilter) {
       if (a.fromRegion !== regionFilter && a.toRegion !== regionFilter) return false;
     }
 
-    // from
     if (fromRegion && a.fromRegion !== fromRegion) return false;
-    if (fromDistricts.length && !fromDistricts.includes(a.fromDistrict)) return false;
+    if (fromDistricts.length > 0 && !fromDistricts.includes(a.fromDistrict)) return false;
 
-    // to
     if (toRegion && a.toRegion !== toRegion) return false;
-    if (toDistricts.length && !toDistricts.includes(a.toDistrict)) return false;
+    if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
 
-    // PRICE
-    const adPrice = a.price ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
-    if (isMin && !isNaN(adPrice) && adPrice < priceMin) return false;
-    if (isMax && !isNaN(adPrice) && adPrice > priceMax) return false;
-    if ((isMin || isMax) && isNaN(adPrice)) return false;
+    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
+    if (isPriceMinSet && isNaN(adPrice)) return false;
+    if (isPriceMaxSet && isNaN(adPrice)) return false;
+    if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
+    if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
 
-    // EXPIRED — hide
-    const raw = a.departureTime || a.startTime || a.time || a.date;
-    let dep = null;
-    if (raw) {
-      const fix = raw.replace(" ","T");
-      dep = !isNaN(Date.parse(raw)) ? new Date(raw) :
-            !isNaN(Date.parse(fix)) ? new Date(fix) : null;
+    const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
+    let departureTime = null;
+    if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
+    else if (typeof departureRaw === "string" && departureRaw.trim() !== "") {
+      const fixed = departureRaw.replace(" ", "T");
+      if (!isNaN(Date.parse(departureRaw))) departureTime = new Date(departureRaw);
+      else if (!isNaN(Date.parse(fixed))) departureTime = new Date(fixed);
     }
-    if (!dep || dep.getTime() < Date.now()) return false;
+    if (!departureTime) return false;
+    if (departureTime.getTime() < Date.now()) return false;
 
-    // DATE FILTER
-    if (filterDate && dep) {
+    if (filterDate) {
+      const raw = a.departureTime || a.startTime || a.time || a.date || null;
+      let adTime = null;
+      if (typeof raw === "number") adTime = new Date(raw);
+      else if (typeof raw === "string" && raw.trim() !== "") {
+        const tryFix = raw.replace(" ", "T");
+        if (!isNaN(Date.parse(raw))) adTime = new Date(raw);
+        else if (!isNaN(Date.parse(tryFix))) adTime = new Date(tryFix);
+      }
+      if (!adTime) return false;
       const now = new Date();
-
       if (filterDate === "today") {
-        if (dep.toDateString() !== now.toDateString()) return false;
-      }
-      else if (filterDate === "tomorrow") {
-        const t = new Date(now); t.setDate(t.getDate()+1);
-        if (dep.toDateString() !== t.toDateString()) return false;
-      }
-      else if (filterDate === "3days") {
-        const diff = dep.getTime() - now.getTime();
-        if (diff < 0 || diff > 3*24*60*60*1000) return false;
+        if (adTime.getFullYear() !== now.getFullYear() || adTime.getMonth() !== now.getMonth() || adTime.getDate() !== now.getDate()) return false;
+      } else if (filterDate === "tomorrow") {
+        const t = new Date(now); t.setDate(now.getDate() + 1);
+        if (adTime.getFullYear() !== t.getFullYear() || adTime.getMonth() !== t.getMonth() || adTime.getDate() !== t.getDate()) return false;
+      } else if (filterDate === "3days") {
+        const diff = adTime.getTime() - now.getTime();
+        if (diff < 0 || diff > 1000 * 60 * 60 * 24 * 3) return false;
       }
     }
 
-    // SEARCH
     const hay = [
       a.fromRegion, a.fromDistrict,
       a.toRegion, a.toDistrict,
-      a.comment, a.price, a.type
+      a.comment, a.price, a.type, a.carModel, a.userId
     ].join(" ").toLowerCase();
-
     if (!hay.includes(q)) return false;
 
     return true;
   });
 
-  // remove duplicates forcibly
-  const m = new Map();
-  filtered.forEach(a => m.set(a.id, a));
-  filtered = Array.from(m.values());
+  // dedupe
+  const resultMap = new Map();
+  filtered.forEach(x => { if (x && x.id) resultMap.set(x.id, x); });
+  filtered = Array.from(resultMap.values());
 
-  // ===============================
-  //            SORT
-  // ===============================
-  filtered.sort((a,b)=>{
-    const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
-    const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
-    return sortBy === "oldest" ? (ta - tb) : (tb - ta);
-  });
-
-  // ===============================
-  //          PAGINATION
-  // ===============================
-  const totalItems = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-
-  if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
-  if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
-
-  const start = (CURRENT_PAGE - 1) * PAGE_SIZE;
-  const slice = filtered.slice(start, start + PAGE_SIZE);
-
-  if (slice.length === 0) {
+  if (!filtered.length) {
     list.innerHTML = "<p>Natija topilmadi.</p>";
-    renderPaginationControls(0,0);
+    renderPaginationControls(0,0,0);
     return;
   }
 
-  // render each card in parallel
-  const cards = await Promise.all(slice.map(x => createAdCard(x)));
+  // sort
+  filtered.sort((a,b) => {
+    const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
+    const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
+    return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
+  });
+
+  // pagination compute
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+  if (CURRENT_PAGE < 1) CURRENT_PAGE = 1;
+  if (CURRENT_PAGE > totalPages) CURRENT_PAGE = totalPages;
+
+  const startIndex = (CURRENT_PAGE - 1) * PAGE_SIZE;
+  const pageSlice = filtered.slice(startIndex, startIndex + PAGE_SIZE);
+
+  // create cards
+  const cards = await Promise.all(pageSlice.map(a => createAdCard(a)));
   const frag = document.createDocumentFragment();
   cards.forEach(c => frag.appendChild(c));
   list.appendChild(frag);
@@ -492,75 +538,67 @@ async function renderAds(adsArr) {
 }
 
 // ===============================
-//  CREATE CARD — QISM BOSHLANDI
+// CREATE CARD
 // ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
 
   const div = document.createElement("div");
   div.className = "ad-card";
-  div.dataset.adId = ad.id;
+  div.setAttribute("data-ad-id", ad.id || "");
 
-  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", "+ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", "+ad.toDistrict : ""}`;
-
-  // New badge 24h rule
-  let isNew = false;
+  const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
+  const depTimeRaw = ad.departureTime || ad.startTime || ad.time || ad.date || "";
+  const depTime = formatTime(depTimeRaw);
   const createdRaw = ad.createdAt || ad.created || ad.postedAt || "";
-  if (createdRaw) {
-    const ct = new Date(createdRaw).getTime();
-    if (!isNaN(ct)) {
-      if (Date.now() - ct <= 24*60*60*1000 && !isRead(ad.id)) {
-        isNew = true;
-      }
-    }
-  }
-
-  const depRaw = ad.departureTime || ad.startTime || ad.time || ad.date;
-  const dep = formatTime(depRaw);
-
   const created = formatTime(createdRaw);
 
-  const seatsRaw = ad.totalSeats || ad.seatCount || ad.seats;
-  const seats = seatsRaw ? Number(seatsRaw) : null;
-  const booked = Number(ad.bookedSeats || 0);
-  const free = seats !== null ? Math.max(seats - booked,0) : null;
+  let isNew = false;
+  if (createdRaw) {
+    try {
+      const ct = new Date(createdRaw).getTime();
+      if (!isNaN(ct) && (Date.now() - ct <= 24*60*60*1000) && !isRead(ad.id)) isNew = true;
+    } catch(e){}
+  }
 
-  const reqRaw = ad.passengerCount || ad.requestSeats || ad.peopleCount;
-  const req = reqRaw ? Number(reqRaw) : null;
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
+  const booked = Number(ad.bookedSeats || 0);
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
+
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
+
+  const carModel = u.carModel || ad.car || "";
 
   div.innerHTML = `
-    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" />
-
+    <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
     <div class="ad-main">
       <div class="ad-route">
         ${escapeHtml(route)}
-        ${isNew ? `<span class="ad-badge-new">Yangi</span>` : ""}
+        ${isNew ? '<span class="ad-badge-new">Yangi</span>' : ''}
       </div>
-
-      <div class="ad-car" style="color:#6b7280;font-size:13px;">${escapeHtml(u.carModel || "")}</div>
-
-      <div class="ad-meta">
-        <div class="ad-chip">⏰ ${escapeHtml(dep)}</div>
+      <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModel)}</div>
+      <div class="ad-meta" style="margin-top:8px">
+        <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
         ${
-          seats !== null
-            ? `<div class="ad-chip">👥 ${free}/${seats} bo‘sh</div>`
-            : (req !== null 
-                ? `<div class="ad-chip">👥 ${req} odam</div>`
-                : `<div class="ad-chip">👥 -</div>`
-              )
+          totalSeats !== null
+            ? `<div class="ad-chip">👥 ${escapeHtml(String(available))}/${escapeHtml(String(totalSeats))} bo‘sh</div>`
+            : (requested !== null ? `<div class="ad-chip">👥 ${escapeHtml(String(requested))} odam</div>` : `<div class="ad-chip">👥 -</div>`)
         }
       </div>
     </div>
-
-    <div class="ad-price">💰 ${escapeHtml(ad.price || "-")} so‘m</div>
+    <div class="ad-price">💰 ${escapeHtml(ad.price ? String(ad.price) : "-")} so‘m</div>
     <div class="ad-created">${escapeHtml(created)}</div>
   `;
 
   div.onclick = () => openAdModal(ad);
+
   return div;
 }
+
 // ===============================
-//  OPEN MODAL
+// OPEN / CLOSE MODAL, BADGE UPDATE, CONTACT
 // ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
@@ -573,32 +611,22 @@ async function openAdModal(ad) {
   const u = await getUserInfo(ad.userId);
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
-
-  const dep = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
+  const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
-
-  const fullname =
-    u.fullName ||
-    ((u.firstname || u.lastname)
-      ? `${u.firstname || ""} ${u.lastname || ""}`.trim()
-      : "") ||
-    "Foydalanuvchi";
-
+  const fullname = u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "Foydalanuvchi";
   const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
 
-  const seatsRaw = ad.totalSeats || ad.seatCount || ad.seats;
-  const seats = seatsRaw ? Number(seatsRaw) : null;
+  const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
+  const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
   const booked = Number(ad.bookedSeats || 0);
-  const free = seats !== null ? Math.max(seats - booked, 0) : null;
-
-  const reqRaw = ad.passengerCount || ad.requestSeats || ad.peopleCount;
-  const req = reqRaw ? Number(reqRaw) : null;
+  const available = (typeof totalSeats === "number" && !isNaN(totalSeats)) ? Math.max(totalSeats - booked, 0) : null;
+  const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
+  const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
   modal.innerHTML = `
-    <div class="ad-modal-box">
-      <div style="display:flex; gap:12px; margin-bottom:12px;">
-        <img class="modal-avatar"
-             src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" />
+    <div class="ad-modal-box" role="dialog" aria-modal="true">
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
+        <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
           <div class="modal-name">${escapeHtml(fullname)}</div>
           <div class="modal-car" style="color:#6b7280">${escapeHtml(carFull)}</div>
@@ -612,7 +640,7 @@ async function openAdModal(ad) {
         </div>
         <div class="modal-col" style="text-align:right">
           <div class="label">Jo‘nash vaqti</div>
-          <div class="value">${escapeHtml(dep)}</div>
+          <div class="value">${escapeHtml(depTime)}</div>
         </div>
       </div>
 
@@ -621,17 +649,17 @@ async function openAdModal(ad) {
           <div class="label">Joylar</div>
           <div class="value">
             ${
-              seats !== null
-                ? `${seats} ta (Bo‘sh: ${free})`
-                : req !== null
-                ? `Talab: ${req} odam`
-                : "-"
+              totalSeats !== null
+                ? `${escapeHtml(String(totalSeats))} ta (Bo‘sh: ${escapeHtml(String(available))})`
+                : requested !== null
+                  ? `Talab: ${escapeHtml(String(requested))} odam`
+                  : "-"
             }
           </div>
         </div>
         <div class="modal-col" style="text-align:right">
           <div class="label">Narx</div>
-          <div class="value">${escapeHtml(ad.price || "-")} so‘m</div>
+          <div class="value">${escapeHtml(ad.price ? ad.price + " so‘m" : "-")}</div>
         </div>
       </div>
 
@@ -649,7 +677,7 @@ async function openAdModal(ad) {
         Joylashtirilgan: ${escapeHtml(created)}
       </div>
 
-      <div class="modal-actions">
+      <div class="modal-actions" style="margin-top:14px">
         <button class="btn-primary" id="modalCloseBtn">Yopish</button>
         <button class="btn-ghost" id="modalCallBtn">Qo'ng'iroq</button>
       </div>
@@ -657,20 +685,17 @@ async function openAdModal(ad) {
   `;
 
   modal.style.display = "flex";
+  const closeBtn = document.getElementById("modalCloseBtn");
+  const callBtn = document.getElementById("modalCallBtn");
+  if (closeBtn) closeBtn.onclick = closeAdModal;
+  if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
 
-  document.getElementById("modalCloseBtn").onclick = closeAdModal;
-  document.getElementById("modalCallBtn").onclick = () => onContact(u.phone || "");
-
-  modal.onclick = e => { if (e.target === modal) closeAdModal(); };
-
-  // mark as read
-  markAsRead(ad.id);
+  try { markAsRead(ad.id); } catch(e) {}
   updateBadgeForAd(ad.id);
+
+  modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
 
-// ===============================
-// CLOSE MODAL
-// ===============================
 function closeAdModal() {
   const modal = document.getElementById("adFullModal");
   if (!modal) return;
@@ -678,19 +703,14 @@ function closeAdModal() {
   modal.innerHTML = "";
 }
 
-// ===============================
-// BADGE UPDATE FOR ONE CARD
-// ===============================
 function updateBadgeForAd(adId) {
-  const card = document.querySelector(`.ad-card[data-ad-id="${adId}"]`);
-  if (!card) return;
-  const badge = card.querySelector(".ad-badge-new");
+  if (!adId) return;
+  const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(adId)}"]`);
+  if (!node) return;
+  const badge = node.querySelector(".ad-badge-new");
   if (badge) badge.remove();
 }
 
-// ===============================
-// CONTACT HELPER
-// ===============================
 function onContact(phone) {
   if (!phone) return alert("Telefon raqami mavjud emas");
   window.location.href = `tel:${phone}`;
@@ -698,28 +718,38 @@ function onContact(phone) {
 window.onContact = onContact;
 
 // ===============================
-// RESET FILTERS
+// RESET FILTERS (exposed)
 // ===============================
 function resetFilters() {
-  const ids = [
-    "search","filterRole","filterRegion","fromRegion","toRegion",
-    "sortBy","filterDate","priceMin","priceMax"
-  ];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      if (id === "sortBy") el.value = "newest";
-      else el.value = "";
-    }
-  });
+  const searchEl = document.getElementById("search");
+  const roleEl = document.getElementById("filterRole");
+  const regionEl = document.getElementById("filterRegion");
+  const fromRegionEl = document.getElementById("fromRegion");
+  const toRegionEl = document.getElementById("toRegion");
+  const sortByEl = document.getElementById("sortBy");
+  const filterDateEl = document.getElementById("filterDate");
+  const priceMinEl = document.getElementById("priceMin");
+  const priceMaxEl = document.getElementById("priceMax");
 
-  // remove district checks
-  document.querySelectorAll("#fromDistrictBox input").forEach(i=>i.checked=false);
-  document.querySelectorAll("#toDistrictBox input").forEach(i=>i.checked=false);
+  if (searchEl) searchEl.value = "";
+  if (roleEl) roleEl.value = "";
+  if (regionEl) regionEl.value = "";
+  if (fromRegionEl) fromRegionEl.value = "";
+  if (toRegionEl) toRegionEl.value = "";
+  if (sortByEl) sortByEl.value = "newest";
+  if (filterDateEl) filterDateEl.value = "";
+  if (priceMinEl) priceMinEl.value = "";
+  if (priceMaxEl) priceMaxEl.value = "";
 
-  // hide district boxes
-  document.getElementById("fromDistrictBox").style.display = "none";
-  document.getElementById("toDistrictBox").style.display = "none";
+  document.querySelectorAll("#fromDistrictBox input.fromDistrict").forEach(i => i.checked = false);
+  document.querySelectorAll("#toDistrictBox input.toDistrict").forEach(i => i.checked = false);
+
+  if (document.getElementById("fromRegion")?.value) fillFromDistricts(); else {
+    const fb = document.getElementById("fromDistrictBox"); if (fb) fb.style.display = "none";
+  }
+  if (document.getElementById("toRegion")?.value) fillToDistricts(); else {
+    const tb = document.getElementById("toDistrictBox"); if (tb) tb.style.display = "none";
+  }
 
   CURRENT_PAGE = 1;
   scheduleRenderAds();
@@ -727,83 +757,76 @@ function resetFilters() {
 window.resetFilters = resetFilters;
 
 // ===============================
-// DEBOUNCED RENDER
+// DEBOUNCE scheduling to avoid flicker (single definition)
 // ===============================
 let __render_timeout = null;
 function scheduleRenderAds() {
   if (__render_timeout) clearTimeout(__render_timeout);
-  __render_timeout = setTimeout(()=>{
+  __render_timeout = setTimeout(() => {
     renderAds(Array.from(ADS_MAP.values()));
     __render_timeout = null;
-  },110);
+  }, 110);
 }
 
 // ===============================
-// LOGOUT
+// Logout
 // ===============================
 window.logout = () => signOut(auth);
 
 // ===============================
-// PAGINATION RENDER
+// PAGINATION CONTROLS (uses #pagination from your HTML)
 // ===============================
-function renderPaginationControls(totalPages=0, currentPage=0, totalItems=0) {
-  let box = document.getElementById("pagination");
-  if (!box) return;
-
-  box.innerHTML = "";
+function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 0) {
+  const container = document.getElementById("pagination");
+  if (!container) return;
+  container.innerHTML = "";
 
   if (!totalPages || totalPages <= 1) {
     if (totalItems > 0) {
-      box.innerHTML = `<div style="color:#6b7280;font-size:14px;">
-        Ko‘rsatilyapti: ${Math.min(PAGE_SIZE,totalItems)} / ${totalItems}
-      </div>`;
+      const info = document.createElement("div");
+      info.textContent = `Ko‘rsatilyapti: ${Math.min(PAGE_SIZE, totalItems)} / ${totalItems}`;
+      info.style = "color:#6b7280;font-size:14px;";
+      container.appendChild(info);
     }
     return;
   }
 
-  const mkBtn = (txt, disabled, cb)=>{
+  const btn = (text, disabled, handler) => {
     const b = document.createElement("button");
-    b.textContent = txt;
-    b.disabled = disabled;
-    b.style = `
-      margin:0 4px;padding:6px 10px;
-      border-radius:8px;border:1px solid #d0d0d0;
-      background:${disabled?"#e5e7eb":"white"};
-      cursor:${disabled?"default":"pointer"}
-    `;
-    if (!disabled) b.onclick = cb;
+    b.textContent = text;
+    b.disabled = !!disabled;
+    b.style = "padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;margin:0 4px;cursor:pointer";
+    if (!disabled) b.onclick = handler;
     return b;
   };
 
-  box.appendChild(mkBtn("« Birinchi", currentPage===1, ()=>{ CURRENT_PAGE=1; scheduleRenderAds(); }));
-  box.appendChild(mkBtn("‹ Oldingi", currentPage===1, ()=>{ CURRENT_PAGE--; scheduleRenderAds(); }));
+  container.appendChild(btn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; scheduleRenderAds(); }));
+  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = Math.max(1, currentPage - 1); scheduleRenderAds(); }));
 
   const windowSize = 5;
   let start = Math.max(1, currentPage - Math.floor(windowSize/2));
   let end = Math.min(totalPages, start + windowSize - 1);
-  if (end - start < windowSize - 1)
-    start = Math.max(1, end - windowSize + 1);
+  if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
 
   for (let p = start; p <= end; p++) {
-    const isCur = p === currentPage;
-    const b = document.createElement("button");
-    b.textContent = p;
-    b.disabled = isCur;
-    b.style = `
-      margin:0 4px;padding:6px 10px;
-      border-radius:8px;border:1px solid ${isCur?"#0069d9":"#ccc"};
-      background:${isCur?"#0069d9":"white"};
-      color:${isCur?"white":"#111"};
-    `;
-    if (!isCur) b.onclick = ()=>{ CURRENT_PAGE = p; scheduleRenderAds(); };
-    box.appendChild(b);
+    const isCurrent = p === currentPage;
+    const pbtn = document.createElement("button");
+    pbtn.textContent = p.toString();
+    pbtn.disabled = isCurrent;
+    pbtn.style = `padding:6px 10px;border-radius:8px;border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};background:${isCurrent ? "#0069d9" : "white"};color:${isCurrent ? "white" : "#111"};margin:0 4px;cursor:pointer`;
+    if (!isCurrent) pbtn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
+    container.appendChild(pbtn);
   }
 
-  box.appendChild(mkBtn("Keyingi ›", currentPage===totalPages, ()=>{ CURRENT_PAGE++; scheduleRenderAds(); }));
-  box.appendChild(mkBtn("Oxiri »", currentPage===totalPages, ()=>{ CURRENT_PAGE=totalPages; scheduleRenderAds(); }));
+  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => { CURRENT_PAGE = Math.min(totalPages, currentPage + 1); scheduleRenderAds(); }));
+  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
 
   const info = document.createElement("div");
-  info.style = "margin-top:6px;color:#6b7280;font-size:13px;";
-  info.textContent = `Sahifa ${currentPage}/${totalPages} — Jami: ${totalItems}`;
-  box.appendChild(info);
+  info.textContent = ` Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
+  info.style = "color:#6b7280;font-size:13px;margin-left:8px;margin-top:8px;";
+  container.appendChild(info);
 }
+
+// ===============================
+// END OF FILE
+// ===============================
