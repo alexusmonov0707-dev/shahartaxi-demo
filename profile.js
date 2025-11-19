@@ -229,14 +229,13 @@ async function loadUserProfile(uid) {
 
   // Extended details block
   if ($("userDetails")) {
-    $("userDetails").innerHTML = `
-      <b>Ism:</b> ${u.fullName || "-"}<br>
-      <b>Telefon:</b> ${u.phone || "-"}<br>
-      <b>Tug‘ilgan sana:</b> ${u.birthdate || "-"}<br>
-      <b>Jinsi:</b> ${u.gender || "-"}<br>
-      <b>Viloyat:</b> ${u.region || "-"}<br>
-      <b>Tuman:</b> ${u.district || "-"}
-    `;
+   $("userDetails").innerHTML = `
+  <b>Tug‘ilgan sana:</b> ${u.birthdate || "-"}<br>
+  <b>Jinsi:</b> ${u.gender || "-"}<br>
+  <b>Viloyat:</b> ${u.region || "-"}<br>
+  <b>Tuman:</b> ${u.district || "-"}
+`;
+
   }
 
   // Car block
