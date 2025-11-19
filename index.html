@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -129,30 +128,46 @@ body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; co
     <h2 style="text-align:center; color:var(--primary); margin:0 0 12px 0;">Barcha e’lonlar</h2>
 
     <div class="filters">
+
       <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
-<!-- SARALASH -->
-<select id="sortBy">
-  <option value="newest">Eng yangi</option>
-  <option value="oldest">Eng eski</option>
-</select>
 
-<!-- JO‘NASH VAQTI -->
-<select id="filterDate">
-  <option value="">Vaqt (hammasi)</option>
-  <option value="today">Bugun</option>
-  <option value="tomorrow">Ertaga</option>
-  <option value="3days">3 kun ichida</option>
-</select>
+      <!-- SARALASH -->
+      <select id="sortBy">
+        <option value="newest">Eng yangi</option>
+        <option value="oldest">Eng eski</option>
+      </select>
 
-<!-- NARX ORALIG‘I -->
-<input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
-<input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
+      <!-- JO‘NASH VAQTI -->
+      <select id="filterDate">
+        <option value="">Vaqt (hammasi)</option>
+        <option value="today">Bugun</option>
+        <option value="tomorrow">Ertaga</option>
+        <option value="3days">3 kun ichida</option>
+      </select>
+
+      <!-- NARX ORALIG‘I -->
+      <input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
+      <input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
 
       <select id="filterRole">
         <option value="">Hammasi</option>
         <option value="Haydovchi">Haydovchi</option>
         <option value="Yo‘lovchi">Yo‘lovchi</option>
       </select>
+
+      <!-- 🔥 RESET BUTTON (YANGI) -->
+      <button id="resetFiltersBtn"
+              style="
+                padding:10px 16px;
+                border:none;
+                background:#ff4444;
+                color:white;
+                border-radius:8px;
+                font-size:14px;
+                cursor:pointer;
+                min-width:120px;">
+        Reset
+      </button>
 
     </div>
 
@@ -171,8 +186,9 @@ body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; co
     </div>
 
     <div id="adsList">Yuklanmoqda...</div>
-    <!-- Paste this directly UNDER adsList -->
-<div id="pagination" style="margin-top:20px; text-align:center;"></div>
+
+    <div id="pagination" style="margin-top:20px; text-align:center;"></div>
+
   </div>
 </div>
 
