@@ -1,62 +1,65 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  auth,
-  db,
-  signInWithEmailAndPassword,
-  onAuthStateChanged,
+  getAuth,
+  signInWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  getDatabase,
   ref,
   get
-} from "./firebase.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+const firebaseConfig = {
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.firebasestorage.app",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
 
-// === LOGIN
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
 window.loginAdmin = async function () {
-  const email = email.value.trim();
-  const password = password.value.trim();
+  const email = document.getElementById("email").value.trim();
+  const pass = document.getElementById("pass").value.trim();
   const err = document.getElementById("error");
-  err.style.display = "none";
 
-  if (!email || !password) {
-    err.innerText = "Maydonlarni to‘ldiring!";
-    err.style.display = "block";
+  err.textContent = "";
+
+  if (!email || !pass) {
+    err.textContent = "Email va parol kiriting!";
     return;
   }
 
   try {
-    const res = await signInWithEmailAndPassword(auth, email, password);
-    const uid = res.user.uid;
+    // Firebase Authentication orqali login
+    const userCred = await signInWithEmailAndPassword(auth, email, pass);
+    const uid = userCred.user.uid;
 
-    // admin roli tekshirish
-    const snap = await get(ref(db, "admins/" + uid));
+    // Realtime Database orqali role ni tekshiramiz
+    const snap = await get(ref(db, "users/" + uid));
+
     if (!snap.exists()) {
-      err.innerText = "Siz admin emassiz!";
-      err.style.display = "block";
+      err.textContent = "Bu foydalanuvchi topilmadi!";
       return;
     }
 
-    // ADMIN ICHI
+    const info = snap.val();
+
+    if (info.role !== "admin") {
+      err.textContent = "Siz admin emassiz!";
+      return;
+    }
+
+    // Admin panelga yuborish
     window.location.href = "dashboard.html";
 
   } catch (e) {
-    err.innerText = "Email yoki parol noto‘g‘ri!";
-    err.style.display = "block";
+    err.textContent = "Login yoki parol noto‘g‘ri!";
   }
 };
-
-
-// === AGAR ADMIN EMAS BO'LSA — KIRITA OLMAYDI
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
-
-  const uid = user.uid;
-  const snap = await get(ref(db, "admins/" + uid));
-
-  if (!snap.exists()) {
-    return;
-  }
-
-  // admin bo'lsa dashboardga o'tkazamiz
-  if (location.pathname.includes("login.html")) {
-    window.location.href = "dashboard.html";
-  }
-});
-
