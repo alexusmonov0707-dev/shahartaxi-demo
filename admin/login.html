@@ -1,1 +1,68 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Kirish</title>
+  <style>
+    body {
+      background:#f1f3f8;
+      font-family: Arial;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      height:100vh;
+      margin:0;
+    }
+    .box {
+      background:#fff;
+      width:330px;
+      padding:25px;
+      border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,0.1);
+      text-align:center;
+    }
+    input {
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:6px;
+      border:1px solid #ccc;
+      font-size:15px;
+    }
+    button {
+      width:100%;
+      padding:12px;
+      background:#0069d9;
+      border:none;
+      color:#fff;
+      font-size:16px;
+      border-radius:6px;
+      margin-top:15px;
+      cursor:pointer;
+    }
+    .err {
+      color:#d9534f;
+      margin-top:10px;
+      display:none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+    <h2>Admin panel</h2>
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Parol">
+    <button onclick="loginAdmin()">Kirish</button>
+
+    <div id="error" class="err"></div>
+  </div>
+
+  <script type="module" src="firebase.js"></script>
+  <script type="module" src="admin.js"></script>
+
+</body>
+</html>
 
