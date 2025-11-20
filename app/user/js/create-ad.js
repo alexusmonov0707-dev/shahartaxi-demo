@@ -25,14 +25,19 @@ onAuthStateChanged(auth, user => {
   }
 });
 
-window.updateDistricts = function(type) {
+window.updateDistricts = function (type) {
   const region = document.getElementById(type + "Region").value;
-  const districtSelect = document.getElementById(type + "District");
-  districtSelect.innerHTML = '<option value="">Tuman</option>';
-  if (window.regionsData && window.regionsData[region]) {
-    window.regionsData[region].forEach(t => districtSelect.innerHTML += `<option value="${t}">${t}</option>`);
-  }
+  const district = document.getElementById(type + "District");
+
+  district.innerHTML = '<option value="">Tuman</option>';
+
+  if (!window.regionsData || !window.regionsData[region]) return;
+
+  window.regionsData[region].forEach(t => {
+    district.innerHTML += `<option value="${t}">${t}</option>`;
+  });
 };
+
 
 submitAdBtn && submitAdBtn.addEventListener("click", async () => {
   const user = auth.currentUser;
