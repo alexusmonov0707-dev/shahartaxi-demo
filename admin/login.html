@@ -1,61 +1,18 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Admin panel</title>
-
-  <style>
-    body {
-      font-family: Arial;
-      background:#eef1f8;
-    }
-    .box {
-      width:350px;
-      margin:100px auto;
-      padding:20px;
-      background:#fff;
-      border-radius:10px;
-      text-align:center;
-      box-shadow:0 0 20px rgba(0,0,0,0.1);
-    }
-    input {
-      width:100%;
-      padding:12px;
-      margin-top:10px;
-      border-radius:6px;
-      border:1px solid #ccc;
-    }
-    button {
-      width:100%;
-      padding:12px;
-      margin-top:15px;
-      background:#0059ff;
-      color:white;
-      border:none;
-      border-radius:6px;
-      cursor:pointer;
-    }
-    .err {
-      color:#d9534f;
-      margin-top:10px;
-      display:block;
-      min-height:20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Admin panel</title>
 </head>
 
 <body>
+    <div>
+        <input id="login" placeholder="Login">
+        <input id="pass" placeholder="Parol" type="password">
+        <p id="error" style="color:red"></p>
+        <button onclick="loginAdmin()">Kirish</button>
+    </div>
 
-<div class="box">
-  <h2>Admin panel</h2>
-
-  <input id="login" type="text" placeholder="Login (admin001)">
-  <input id="pass" type="password" placeholder="Parol (123456)">
-  <span id="error" class="err"></span>
-
-  <button onclick="loginAdmin()">Kirish</button>
-</div>
-
-<script type="module" src="./admin.js"></script>
+    <script type="module" src="./admin.js"></script>
 </body>
 </html>
