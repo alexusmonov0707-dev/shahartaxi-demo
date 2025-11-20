@@ -1,35 +1,23 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kirish</title>
-<style>
-body { background:#f5f5f5; padding:20px; font-family:Arial; }
-.box { background:#fff; max-width:360px; margin:auto; padding:20px; border-radius:12px;
-       box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-input, button {
-    width:100%; padding:12px; margin-top:10px; border-radius:8px;
-    border:1px solid #ccc; font-size:16px;
-}
-button { background:#007bff; color:white; border:none; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirish</title>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
-<div class="box">
-    <h2 style="text-align:center;">Kirish</h2>
+<div class="container">
+    <h2>Kirish</h2>
 
-    <input id="phone" placeholder="Telefon raqam">
+    <input id="phone" type="text" placeholder="+998901234567">
 
     <button onclick="loginUser()">Kirish</button>
 
-    <p style="text-align:center; margin-top:10px;">
-        <a href="register.html">Ro‘yxatdan o‘tish</a>
-    </p>
+    <a href="register.html">Ro‘yxatdan o‘tish</a>
 </div>
 
-<script type="module" src="login.js"></script>
-
+<script src="js/login.js"></script>
 </body>
 </html>
