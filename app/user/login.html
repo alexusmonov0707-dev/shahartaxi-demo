@@ -1,42 +1,37 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Kirish — ShaharTaxi</title>
-  <link rel="stylesheet" href="../css/style.css"> <!-- agar bor bo'lsa -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirish</title>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div style="max-width:520px;margin:40px auto;padding:24px;background:#fff;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.06)">
-    <h2 style="text-align:center">Kirish</h2>
 
-    <div>
-      <label for="phone">Telefon raqam ( +998... )</label><br>
-      <input id="phone" type="text" placeholder="+998901234567" style="width:100%;padding:10px;margin:8px 0">
-    </div>
+<div class="container">
+    <h2>Kirish</h2>
 
-    <!-- reCAPTCHA container required by Firebase phone auth -->
-    <div id="recaptcha-container" style="margin:10px 0"></div>
+    <input id="phone" type="text" placeholder="+998901234567">
 
-    <div style="display:flex;gap:8px;">
-      <button id="sendCodeBtn" style="flex:1;padding:10px;background:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer">
-        SMS kod yuborish
-      </button>
-    </div>
+    <button onclick="sendCode()">SMS kod yuborish</button>
 
-    <div style="margin-top:12px;">
-      <input id="smsCode" type="text" placeholder="SMS kod" style="width:100%;padding:10px;margin-bottom:8px">
-      <button id="verifyBtn" style="width:100%;padding:10px;background:#28a745;color:#fff;border:none;border-radius:6px;cursor:pointer">
-        Tasdiqlash va kirish
-      </button>
-    </div>
+    <input id="smsCode" type="text" placeholder="123456">
 
-    <p style="text-align:center;margin-top:12px">
-      <a href="register.html">Roʻyxatdan oʻtish</a>
-    </p>
-  </div>
+    <button onclick="verifyCode()">Tasdiqlash va kirish</button>
 
-  <!-- module script -->
-  <script type="module" src="js/login.js"></script>
+    <a href="register.html">Ro‘yxatdan o‘tish</a>
+</div>
+
+<!-- Firebase CDN -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<!-- Bizning lib.js -->
+<script src="js/lib.js"></script>
+
+<!-- Login logic -->
+<script src="js/login.js"></script>
+
 </body>
 </html>
