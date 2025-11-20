@@ -76,14 +76,19 @@ submitAdBtn && submitAdBtn.addEventListener("click", async () => {
 
 clearFormBtn && clearFormBtn.addEventListener("click", clearForm);
 
-function clearForm() {
-  if (fromRegion) fromRegion.value = "";
-  if (fromDistrict) fromDistrict.innerHTML = '<option value="">Tuman</option>';
-  if (toRegion) toRegion.value = "";
-  if (toDistrict) toDistrict.innerHTML = '<option value="">Tuman</option>';
-  if (price) price.value = "";
-  if (adComment) adComment.value = "";
-  if (seats) seats.value = "";
-  if (departureTime) departureTime.value = "";
-}
+// LOAD REGIONS FOR TAXI
+function loadTaxiRegions() {
+  if (!window.taxiRegions) return;
 
+  // From region
+  fromRegion.innerHTML = '<option value="">Qayerdan (Viloyat)</option>';
+  Object.keys(window.taxiRegions).forEach(r => {
+    fromRegion.innerHTML += `<option value="${r}">${r}</option>`;
+  });
+
+  // To region
+  toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
+  Object.keys(window.taxiRegions).forEach(r => {
+    toRegion.innerHTML += `<option value="${r}">${r}</option>`;
+  });
+}
