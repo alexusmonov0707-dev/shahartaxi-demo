@@ -6,7 +6,7 @@ const firebaseConfig = {
     authDomain: "shahartaxi-demo.firebaseapp.com",
     databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
     projectId: "shahartaxi-demo",
-    storageBucket: "shahartaxi-demo.firebasestorage.app",
+    storageBucket: "shahartaxi-demo.appspot.com",   // ✔ TO‘G‘RI QIYMAT
     messagingSenderId: "874241795701",
     appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
