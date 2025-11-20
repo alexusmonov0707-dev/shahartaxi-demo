@@ -1,45 +1,53 @@
-let confirmationResult;
+console.log("LOGIN JS loaded");
 
-// Telefon raqamiga SMS yuborish
+// ReCAPTCHA
+let recaptchaVerifier;
+
+window.onload = function () {
+    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        size: 'invisible'
+    });
+};
+
 function sendCode() {
     const phone = document.getElementById("phone").value;
-
     if (!phone.startsWith("+998")) {
-        alert("Telefon raqamni +998 bilan yozing!");
+        alert("Raqam +998 bilan boshlanishi kerak");
         return;
     }
 
-    const verifier = new firebase.auth.RecaptchaVerifier('phone', {
-        size: 'invisible'
-    });
-
-    auth.signInWithPhoneNumber(phone, verifier)
-        .then(result => {
-            confirmationResult = result;
-            alert("SMS kod yuborildi!");
+    firebase.auth().signInWithPhoneNumber(phone, recaptchaVerifier)
+        .then((confirmation) => {
+            window.confirmationResult = confirmation;
+            alert("SMS yuborildi");
         })
-        .catch(err => {
+        .catch((err) => {
             console.error(err);
-            alert("Xatolik: " + err.message);
+            alert("Xato: " + err.message);
         });
 }
 
-// SMS kodni tasdiqlash
 function verifyCode() {
-    const code = document.getElementById("smsCode").value;
+    const code = document.getElementById("code").value;
 
-    confirmationResult.confirm(code)
-        .then(res => {
-            const user = res.user;
+    window.confirmationResult.confirm(code)
+        .then((result) => {
+            const user = result.user;
 
-            saveUserLocal(user.uid);
+            // Session saqlash
+            localStorage.setItem("uid", user.uid);
 
-            window.location.href = "index.html";
+            // User bor yoki yo‘qligini tekshiramiz
+            firebase.database().ref("users/" + user.uid).once("value", snap => {
+                if (snap.exists()) {
+                    location.href = "index.html";
+                } else {
+                    location.href = "register.html";
+                }
+            });
         })
-        .catch(err => {
+        .catch((err) => {
             console.error(err);
             alert("Kod noto‘g‘ri!");
         });
 }
-
-console.log("LOGIN JS loaded");
