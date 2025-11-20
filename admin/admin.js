@@ -1,4 +1,5 @@
 import { db, ref, get } from "./firebase.js";
+console.log("ADMIN.JS LOADED!!!");
 
 window.loginAdmin = async function () {
     const login = document.getElementById("login").value.trim();
