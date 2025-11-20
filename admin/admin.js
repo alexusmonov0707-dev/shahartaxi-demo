@@ -1,33 +1,25 @@
 import { db, ref, get } from "./firebase.js";
 
 window.loginAdmin = async function () {
-    const login = document.getElementById("login").value.trim();
-    const pass = document.getElementById("pass").value.trim();
     const error = document.getElementById("error");
-
-    error.textContent = "";
+    error.textContent = "Tekshiryapman...";
 
     try {
-        const adminRef = ref(db, "admins/" + login);
+        const adminRef = ref(db, "admins/admin001");
         const snap = await get(adminRef);
 
+        console.log("SNAPSHOT RAW:", snap);
+        console.log("SNAPSHOT EXISTS:", snap.exists());
+        console.log("SNAPSHOT VALUE:", snap.val());
+
         if (!snap.exists()) {
-            error.textContent = "Login yoki parol noto‘g‘ri!";
-            return;
+            error.textContent = "❌ Firebase admin001 ni O‘QIMAYAPTI!";
+        } else {
+            error.textContent = "✅ Firebase admin001 MA'LUMOTNI O‘QIDI!";
         }
-
-        const admin = snap.val();
-
-        if (admin.password !== pass) {
-            error.textContent = "Login yoki parol noto‘g‘ri!";
-            return;
-        }
-
-        localStorage.setItem("admin", login);
-        window.location.href = "./dashboard.html";
 
     } catch (e) {
-        console.error(e);
-        error.textContent = "Server xatosi!";
+        console.error("XATO:", e);
+        error.textContent = "❌ Firebase ERROR — console'ni tekshir!";
     }
 };
