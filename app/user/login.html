@@ -4,15 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kirish</title>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+
+    <!-- Firebase V8 (barqaror ishlaydi) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
 </head>
 <body>
 
 <h2>Kirish</h2>
 
 <input id="phone" type="text" placeholder="+998901234567">
-<button onclick="sendCode()">SMS kod yuborish</button>
+<button id="send-btn" onclick="sendCode()">SMS kod yuborish</button>
 
 <br><br>
 
@@ -22,6 +25,7 @@
 <br><br>
 <a href="register.html">Ro‘yxatdan o‘tish</a>
 
+<!-- Login JS -->
 <script src="js/login.js"></script>
 
 </body>
