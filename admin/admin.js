@@ -23,7 +23,6 @@ window.loginAdmin = async function () {
             return;
         }
 
-        // Login OK
         localStorage.setItem("admin", login);
         window.location.href = "./dashboard.html";
 
