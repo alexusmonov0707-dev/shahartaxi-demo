@@ -7,7 +7,7 @@ const firebaseConfig = {
     databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
     projectId: "shahartaxi-demo",
     storageBucket: "shahartaxi-demo.appspot.com",
-    messagingSenderId: "499577358676",
+    messagingSenderId: "874241795701",
     appId: "1:499577358676:web:64ebf7f1a8f2e189cdaf4e"
 };
 
