@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kirish</title>
+
     <link rel="stylesheet" href="../css/style.css">
 </head>
-<body>
 
+<body>
 <div class="container">
     <h2>Kirish</h2>
 
@@ -15,23 +16,21 @@
 
     <button onclick="sendCode()">SMS kod yuborish</button>
 
-    <input id="smsCode" type="text" placeholder="123456">
+    <input id="code" type="text" placeholder="123456">
 
     <button onclick="verifyCode()">Tasdiqlash va kirish</button>
 
     <a href="register.html">Ro‘yxatdan o‘tish</a>
+
+    <div id="recaptcha-container"></div>
 </div>
 
-<!-- Firebase CDN -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-<!-- Bizning lib.js -->
-<script src="js/lib.js"></script>
-
-<!-- Login logic -->
-<script src="js/login.js"></script>
+<script src="../js/lib.js"></script>
+<script src="../js/login.js"></script>
 
 </body>
 </html>
