@@ -1,16 +1,54 @@
-regions-taxi.js// Taxi bo‘limi uchun viloyatlar va tumanlar
-window.taxiRegionsData = {
-  "Toshkent shahri": ["Chilonzor", "Bektemir", "Mirzo Ulug‘bek", "Shayxontohur", "Olmazor", "Uchtepa", "Yunusobod", "Yakkasaroy"],
-  "Toshkent viloyati": ["Oqqo'rg‘on", "Parkent", "Piskent", "Chinoz", "Nurafshon", "Bekobod", "O‘rtachirchiq"],
-  "Andijon": ["Asaka", "Shaxrixon", "Jalaquduq", "Qo‘rg‘ontepa"],
-  "Farg‘ona": ["Qo‘qon", "Marg‘ilon", "Beshariq", "Oltiariq"],
-  "Namangan": ["Chortoq", "Uychi", "Kosonsoy", "Namangan shahri"],
-  "Samarqand": ["Payariq", "Jomboy", "Kattaqo‘rg‘on", "Urgut"],
-  "Buxoro": ["G‘ijduvon", "Vobkent", "Shofirkon"],
-  "Qashqadaryo": ["Qarshi", "Shahrisabz", "Koson"],
-  "Surxondaryo": ["Denov", "Sherobod", "Boysun"],
-  "Xorazm": ["Urganch", "Xiva", "Gurlan"],
-  "Navoiy": ["Zarafshon", "Konimex", "Nurota"],
-  "Jizzax": ["Zomin", "Gallaorol", "Forish"],
-  "Sirdaryo": ["Guliston", "Sirdaryo", "Yangiyer"]
+// app/user/js/regions-taxi.js
+
+window.regionsData = {
+  "Toshkent shahri": [
+    "Chilonzor", "Bektemir", "Sergeli", "Yunusobod", "Yakkasaroy",
+    "Shayxontohur", "Olmazor", "Uchtepa", "Mirzo Ulug‘bek", "Mirobod"
+  ],
+  "Toshkent viloyati": [
+    "Bekobod", "Bo‘ka", "Chinoz", "Qibray", "Ohangaron",
+    "Olmaliq", "Parkent", "Piskent", "Quyi Chirchiq",
+    "O‘rta Chirchiq", "Yuqori Chirchiq", "Zangiota"
+  ],
+  "Farg‘ona viloyati": [
+    "Farg‘ona", "Marg‘ilon", "Quva", "Oltiariq",
+    "Beshariq", "Rishton", "O‘zbekiston", "Toshloq"
+  ],
+  "Andijon viloyati": [
+    "Andijon", "Asaka", "Xo‘jaobod", "Buloqboshi",
+    "Shahrixon", "Paxtaobod", "Marhamat", "Jalaquduq"
+  ],
+  "Namangan viloyati": [
+    "Namangan", "Chortoq", "Uychi", "Pop",
+    "Kosonsoy", "To‘raqo‘rg‘on"
+  ],
+  "Samarqand viloyati": [
+    "Samarqand", "Urgut", "Narpay", "Ishtixon"
+  ],
+  "Buxoro viloyati": [
+    "Buxoro", "G‘ijduvon", "Kogon", "Shofirkon"
+  ],
+  "Qashqadaryo viloyati": [
+    "Qarshi", "Shahrisabz", "Kasbi", "Dehqonobod"
+  ],
+  "Surxondaryo viloyati": [
+    "Termiz", "Denov", "Sherobod", "Boysun"
+  ],
+  "Xorazm viloyati": [
+    "Urganch", "Xiva", "Shavot", "Yangibozor"
+  ],
+  "Navoiy viloyati": [
+    "Navoiy", "Zarafshon", "Konimex", "Qiziltepa"
+  ],
+  "Jizzax viloyati": [
+    "Jizzax", "G‘allaorol", "Zomin", "Baxmal"
+  ],
+  "Sirdaryo viloyati": [
+    "Guliston", "Sirdaryo", "Boyovut", "Sayxunobod"
+  ],
+  "Qoraqalpog‘iston": [
+    "Nukus", "Xo‘jayli", "Taxiatosh", "Taxtako‘pir"
+  ]
 };
+
+console.log("TAXI REGIONS loaded");
