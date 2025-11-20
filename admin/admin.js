@@ -22,10 +22,12 @@ window.loginAdmin = async function () {
 
         const admin = snap.val();
 
-        if (admin.password != pass) {
-            error.textContent = "Login yoki parol noto‘g‘ri!";
-            return;
-        }
+      
+      if (String(admin.password) !== String(pass)) {
+    error.textContent = "Login yoki parol noto‘g‘ri!";
+    return;
+}
+
 
         localStorage.setItem("admin", login);
         window.location.href = "./dashboard.html";
