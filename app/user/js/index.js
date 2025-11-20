@@ -1,135 +1,150 @@
-// ============================
-//  USER & DATA LOAD
-// ============================
+// =========================
+// 1. LOGIN TEKSHIRISH
+// =========================
+const user = JSON.parse(localStorage.getItem("user"));
 
-// LocalStorage-dan aktiv user
-const currentUser = JSON.parse(localStorage.getItem("activeUser") || "{}");
-
-// Agar user bo'lmasa login sahifasiga qaytarish
-if (!currentUser.id) {
-    window.location.href = "/shahartaxi-demo/login.html";
+if (!user || !user.uid) {
+    localStorage.removeItem("user");
+    window.location.href = "login.html";
 }
 
-// HTML elementlari
-const adsContainer = document.getElementById("ads");
-const searchInput = document.getElementById("search");
-const priceMin = document.getElementById("priceMin");
-const priceMax = document.getElementById("priceMax");
-const sortSelect = document.getElementById("sortSelect");
-const roleFilter = document.getElementById("roleFilter");
-const regionFilter = document.getElementById("regionFilter");
-const resetBtn = document.getElementById("resetBtn");
+// =========================
+// 2. ELEMENTLAR
+// =========================
+const adsList = document.getElementById("adsList");
+const loading = document.getElementById("loading");
 
-// Taxi viloyatlar (regions-taxi.js yuklangan bo'ladi)
-console.log("TAXI REGIONS loaded:", regionsData);
+const fromRegion = document.getElementById("fromRegion");
+const fromDistrict = document.getElementById("fromDistrict");
+const regionSelect = document.getElementById("regionSelect");
 
-// E’lonlar ro‘yhatini olish
+// =========================
+// 3. REGIONS LOAD
+// =========================
+
+Object.keys(regionsData).forEach(region => {
+    fromRegion.innerHTML += `<option value="${region}">${region}</option>`;
+    regionSelect.innerHTML += `<option value="${region}">${region}</option>`;
+});
+
+fromRegion.onchange = () => {
+    const region = fromRegion.value;
+    fromDistrict.innerHTML = `<option value="">Tuman</option>`;
+    if (!region) return;
+
+    regionsData[region].forEach(d => {
+        fromDistrict.innerHTML += `<option value="${d}">${d}</option>`;
+    });
+};
+
+// =========================
+// 4. E’LONLARNI YUKLASH
+// =========================
+
+let AllAds = [];
+
 async function loadAds() {
-    const ads = JSON.parse(localStorage.getItem("ads") || "[]");
-    return ads;
+    loading.style.display = "block";
+    adsList.innerHTML = "";
+
+    const db = firebase.database().ref("ads");
+    db.on("value", snapshot => {
+        AllAds = [];
+        snapshot.forEach(child => {
+            AllAds.push({ id: child.key, ...child.val() });
+        });
+
+        loading.style.display = "none";
+        renderAds(AllAds);
+    });
 }
 
-// ============================
-//   ADS RENDER FUNCTION
-// ============================
+loadAds();
+
+// =========================
+// 5. E’LONLARNI CHIZISH
+// =========================
 
 function renderAds(list) {
-    adsContainer.innerHTML = "";
+    adsList.innerHTML = "";
 
     if (list.length === 0) {
-        adsContainer.innerHTML = "<p>Hech qanday e’lon topilmadi.</p>";
+        adsList.innerHTML = "<p>E’lon topilmadi...</p>";
         return;
     }
 
     list.forEach(ad => {
-        const div = document.createElement("div");
-        div.className = "ad-item";
-
-        div.innerHTML = `
-            <h3>${ad.from.region} → ${ad.to.region}</h3>
-            <p><b>Narx:</b> ${ad.price} so'm</p>
-            <p><b>Kim:</b> ${ad.role === "driver" ? "Haydovchi" : "Yo'lovchi"}</p>
-            <small>${new Date(ad.date).toLocaleString()}</small>
+        adsList.innerHTML += `
+            <div class="ad-card">
+                <p><b>${ad.fromRegion} ${ad.fromDistrict}</b> → <b>${ad.toRegion} ${ad.toDistrict}</b></p>
+                <p>Narx: <b>${ad.price}</b> so'm</p>
+                <p>Sanasi: ${ad.date}</p>
+                <p>${ad.comment || ""}</p>
+            </div>
         `;
-
-        adsContainer.appendChild(div);
     });
 }
 
-// ============================
-//   FILTER + SORT
-// ============================
+// =========================
+// 6. FILTRLAR
+// =========================
 
-function applyFilters(allAds) {
-    let filtered = [...allAds];
+function applyFilters() {
+    let filtered = [...AllAds];
 
-    // Qidiruv
-    const s = searchInput.value.trim().toLowerCase();
+    const s = document.getElementById("searchInput").value.toLowerCase();
+    const sort = document.getElementById("sortSelect").value;
+    const time = document.getElementById("timeSelect").value;
+    const min = document.getElementById("minPrice").value;
+    const max = document.getElementById("maxPrice").value;
+
+    const region = regionSelect.value;
+    const fr = fromRegion.value;
+    const fd = fromDistrict.value;
+
     if (s) {
         filtered = filtered.filter(ad =>
-            ad.from.region.toLowerCase().includes(s) ||
-            ad.to.region.toLowerCase().includes(s) ||
-            (ad.comment || "").toLowerCase().includes(s)
+            JSON.stringify(ad).toLowerCase().includes(s)
         );
     }
 
-    // Narx bo‘yicha filtr
-    if (priceMin.value) {
-        filtered = filtered.filter(ad => ad.price >= Number(priceMin.value));
-    }
+    if (region) filtered = filtered.filter(a => a.fromRegion === region);
+    if (fr) filtered = filtered.filter(a => a.fromRegion === fr);
+    if (fd) filtered = filtered.filter(a => a.fromDistrict === fd);
 
-    if (priceMax.value) {
-        filtered = filtered.filter(ad => ad.price <= Number(priceMax.value));
-    }
+    if (min) filtered = filtered.filter(a => a.price >= min);
+    if (max) filtered = filtered.filter(a => a.price <= max);
 
-    // Rol bo‘yicha filtr
-    if (roleFilter.value !== "all") {
-        filtered = filtered.filter(ad => ad.role === roleFilter.value);
-    }
+    if (sort === "new") filtered.sort((a, b) => b.createdAt - a.createdAt);
+    if (sort === "old") filtered.sort((a, b) => a.createdAt - b.createdAt);
 
-    // Viloyat bo‘yicha filtr
-    if (regionFilter.value !== "all") {
-        filtered = filtered.filter(
-            ad => ad.from.region === regionFilter.value
-        );
-    }
-
-    // Saralash
-    if (sortSelect.value === "newest") {
-        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
-    if (sortSelect.value === "oldest") {
-        filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
-    }
-
-    return filtered;
+    renderAds(filtered);
 }
 
-// ============================
-//   LOGOUT FUNCTION
-// ============================
+document.querySelectorAll("input,select").forEach(el => {
+    el.oninput = applyFilters;
+});
 
+// =========================
+// 7. RESET
+// =========================
+function resetFilters() {
+    document.getElementById("searchInput").value = "";
+    document.getElementById("sortSelect").value = "new";
+    document.getElementById("timeSelect").value = "all";
+    document.getElementById("minPrice").value = "";
+    document.getElementById("maxPrice").value = "";
+    regionSelect.value = "";
+    fromRegion.value = "";
+    fromDistrict.innerHTML = `<option value="">Tuman</option>`;
+    renderAds(AllAds);
+}
+
+// =========================
+// 8. LOGOUT
+// =========================
 function logout() {
-    localStorage.removeItem("activeUser");
-    window.location.href = "/shahartaxi-demo/login.html";
+    localStorage.removeItem("user");
+    window.location.href = "login.html";
 }
-window.logout = logout; // HTML onclick uchun
 
-// ============================
-//   INIT
-// ============================
-
-(async () => {
-    const ads = await loadAds();
-    renderAds(ads);
-
-    // Event listeners
-    [searchInput, priceMin, priceMax, sortSelect, roleFilter, regionFilter]
-        .forEach(el => el.addEventListener("input", () => {
-            renderAds(applyFilters(ads));
-        }));
-
-    resetBtn.addEventListener("click", () => {
-        location.reload();
-    });
-})();
