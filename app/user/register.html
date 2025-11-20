@@ -1,24 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ro‘yxatdan o‘tish</title>
-
-    <link rel="stylesheet" href="../css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Roʻyxatga olish</title>
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
+  <div style="max-width:520px;margin:40px auto;padding:24px;background:#fff;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.06)">
+    <h2 style="text-align:center">Roʻyxatga olish</h2>
+    <div>
+      <label>Telefon</label><br>
+      <input id="regPhone" type="text" placeholder="+998901234567" style="width:100%;padding:10px;margin:8px 0">
+    </div>
+    <div id="reg-recaptcha"></div>
+    <div style="display:flex;gap:8px;">
+      <button id="regSend" style="flex:1;padding:10px;background:#007bff;color:#fff;border:none;border-radius:6px;cursor:pointer">Davom etish</button>
+    </div>
 
-<div class="container">
-    <h2>Ro‘yxatdan o‘tish</h2>
+    <div style="margin-top:12px;">
+      <input id="regCode" type="text" placeholder="SMS kod" style="width:100%;padding:10px;margin-bottom:8px">
+      <button id="regVerify" style="width:100%;padding:10px;background:#28a745;color:#fff;border:none;border-radius:6px;cursor:pointer">Tasdiqlash</button>
+    </div>
 
-    <input id="phone" type="text" placeholder="+998901234567">
-    <button onclick="registerUser()">Davom etish</button>
+    <p style="text-align:center;margin-top:12px"><a href="login.html">Kirish</a></p>
+  </div>
 
-    <a href="login.html">Kirish</a>
-</div>
-
-<script src="js/register.js?v=1"></script>
-
+  <script type="module" src="js/register.js"></script>
 </body>
 </html>
