@@ -1,17 +1,34 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+import { db, ref, get } from "./firebase.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-    authDomain: "shahartaxi-demo.firebaseapp.com",
-    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-    projectId: "shahartaxi-demo",
-    storageBucket: "shahartaxi-demo.firebasestorage.app",
-    messagingSenderId: "874241795701",
-    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+window.loginAdmin = async function () {
+    const login = document.getElementById("login").value.trim();
+    const pass = document.getElementById("pass").value.trim();
+    const error = document.getElementById("error");
+
+    error.textContent = "";
+
+    try {
+        const adminRef = ref(db, "admins/" + login);
+        const snap = await get(adminRef);
+
+        if (!snap.exists()) {
+            error.textContent = "Login yoki parol noto‘g‘ri!";
+            return;
+        }
+
+        const admin = snap.val();
+
+        if (admin.password !== pass) {
+            error.textContent = "Login yoki parol noto‘g‘ri!";
+            return;
+        }
+
+        // Login OK
+        localStorage.setItem("admin", login);
+        window.location.href = "./dashboard.html";
+
+    } catch (e) {
+        console.error(e);
+        error.textContent = "Server xatosi!";
+    }
 };
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-export { db, ref, get };
