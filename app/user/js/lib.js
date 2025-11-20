@@ -1,13 +1,16 @@
-// app/user/js/lib.js
-// ES module: umumiy Firebase init va yordamchi eksportlar
-// Import: yo'riqnomalarga mos ravishda <script type="module"> ichida ishlatiladi.
+// ==========================================================
+//  app/user/js/lib.js
+//  GLOBAL FIREBASE + DB HELPERS + DOM HELPERS (ES MODULE)
+// ==========================================================
 
-// Firebase v10 (CDN) modullari
+// -----------------------------
+// Firebase CDN modullari
+// -----------------------------
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
-  onAuthStateChanged as fbOnAuthStateChanged,
-  signOut as fbSignOut
+  signOut as fbSignOut,
+  onAuthStateChanged as fbOnAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getDatabase,
@@ -19,9 +22,10 @@ import {
   remove as dbRemove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// -----------------------------
-// Firebase konfiguratsiyasi
-// -----------------------------
+
+// ==========================================================
+//  FIREBASE CONFIG
+// ==========================================================
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -32,78 +36,90 @@ const firebaseConfig = {
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-// Init — agar ilgari init qilingan bo'lsa xatolik bermasligi uchun tekshir
+
+// Init — bir marta ishga tushirish uchun tekshiruv
 if (!getApps().length) {
   initializeApp(firebaseConfig);
 }
 
-// Firebase xizmatlari
 const auth = getAuth();
 const db = getDatabase();
 
-// -----------------------------
-// Qo'l yordamchilar / util'lar
-// -----------------------------
 
-/**
- * DOM elementni id orqali olish (teziroq)
- * @param {string} id
- * @returns {HTMLElement|null}
- */
-const $ = id => {
-  if (!id) return null;
-  return (typeof id === "string") ? document.getElementById(id) : id;
-};
+// ==========================================================
+//  GLOBAL HELPER FUNCTIONS
+// ==========================================================
 
-/**
- * Safe textContent setter — null tekshiradi
- * @param {string|HTMLElement} el
- * @param {string} text
- */
-function setText(el, text) {
-  const node = $(el);
-  if (!node) return;
-  node.textContent = text;
+/** DOM qisqa getter */
+export const $ = id => document.getElementById(id);
+
+/** Yozuv qo‘yish (null safe) */
+export function setText(id, text) {
+  const el = $(id);
+  if (el) el.textContent = text;
 }
 
-/**
- * Simple ISO datetime -> localized string helper
- * (Ixtiyoriy, lekin foydali)
- */
-function formatDatetime(dt) {
+/** Input qiymatini olish */
+export function val(id) {
+  const el = $(id);
+  return el ? el.value.trim() : "";
+}
+
+/** Input qiymatini o‘rnatish */
+export function setVal(id, v) {
+  const el = $(id);
+  if (el) el.value = v;
+}
+
+/** Datetime formatlash */
+export function formatDatetime(dt) {
   if (!dt) return "—";
-  try {
-    const d = new Date(dt);
-    if (isNaN(d)) return dt;
-    return d.toLocaleString("uz-UZ", {
-      year: "numeric", month: "long", day: "numeric",
-      hour: "2-digit", minute: "2-digit"
-    });
-  } catch (e) {
-    return dt;
-  }
+  const d = new Date(dt);
+  if (isNaN(d)) return dt;
+
+  return d.toLocaleString("uz-UZ", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
-// -----------------------------
-// Eksport qilinadiganlar (nomlar bilan)
-// -----------------------------
-export {
-  // Firebase obyektlari va DB helperlari
-  auth,
-  db,
-  dbRef as ref,
-  dbGet as get,
-  dbSet as set,
-  dbUpdate as update,
-  dbPush as push,
-  dbRemove as remove,
+/** Random ID generator (ads uchun kerak bo‘lishi mumkin) */
+export function uuid() {
+  return "xxxxxxx".replace(/x/g, () =>
+    Math.floor(Math.random() * 16).toString(16)
+  );
+}
 
-  // Auth hodisalari
-  fbOnAuthStateChanged as onAuthStateChanged,
-  fbSignOut as signOut,
+/** Role tekshirish */
+export function checkRole(userData, allowedRoles = []) {
+  if (!userData || !userData.role) return false;
+  return allowedRoles.includes(userData.role);
+}
 
-  // DOM / util helperlar
-  $,
-  setText,
-  formatDatetime
-};
+
+// ==========================================================
+//  DATABASE SHORTCUT EXPORTS
+// ==========================================================
+export const ref = dbRef;
+export const get = dbGet;
+export const set = dbSet;
+export const push = dbPush;
+export const update = dbUpdate;
+export const remove = dbRemove;
+
+// ==========================================================
+//  AUTH EXPORTS
+// ==========================================================
+export const onAuthStateChanged = fbOnAuthStateChanged;
+export const signOut = fbSignOut;
+
+export { auth, db };
+
+
+// ==========================================================
+//  LOG
+// ==========================================================
+console.log("LIB MODULE LOADED ✔️");
