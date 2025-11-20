@@ -1,7 +1,5 @@
-// Firebase App
+// firebase.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
-// Realtime Database
 import {
   getDatabase,
   ref,
@@ -14,7 +12,6 @@ import {
   equalTo
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyAplUAG4vqCsE9MOLXwLCyRiEhREwvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -25,9 +22,7 @@ const firebaseConfig = {
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-// INIT
 export const app = initializeApp(firebaseConfig);
 export const db = getDatabase(app);
 
-// EXPORTS
 export { ref, get, set, update, remove, query, orderByChild, equalTo };
