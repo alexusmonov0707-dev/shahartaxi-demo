@@ -1,35 +1,34 @@
 import { db, ref, get } from "./firebase.js";
 
 window.loginAdmin = async function () {
-  const loginInput = document.getElementById("login").value.trim();
-  const passInput = document.getElementById("pass").value.trim();
-  const error = document.getElementById("error");
+    const login = document.getElementById("login").value.trim();
+    const pass = document.getElementById("pass").value.trim();
+    const error = document.getElementById("error");
 
-  error.textContent = "";
+    error.textContent = "";
 
-  try {
-    // /admins/admin001
-    const adminRef = ref(db, "admins/" + loginInput);
-    const snapshot = await get(adminRef);
+    try {
+        const adminRef = ref(db, "admins/" + login);
+        const snapshot = await get(adminRef);
 
-    if (!snapshot.exists()) {
-      error.textContent = "Login yoki parol noto‘g‘ri!";
-      return;
+        if (!snapshot.exists()) {
+            error.textContent = "Login yoki parol noto‘g‘ri!";
+            return;
+        }
+
+        const admin = snapshot.val();
+
+        if (admin.password !== pass) {
+            error.textContent = "Login yoki parol noto‘g‘ri!";
+            return;
+        }
+
+        // Login OK
+        localStorage.setItem("admin", login);
+        window.location.href = "./dashboard.html";
+
+    } catch (e) {
+        console.error(e);
+        error.textContent = "Server xatosi!";
     }
-
-    const admin = snapshot.val();
-
-    if (admin.password !== passInput) {
-      error.textContent = "Login yoki parol noto‘g‘ri!";
-      return;
-    }
-
-    // Login OK
-    localStorage.setItem("admin", loginInput);
-    window.location.href = "./dashboard.html";
-
-  } catch (err) {
-    console.error(err);
-    error.textContent = "Server xatosi!";
-  }
 };
