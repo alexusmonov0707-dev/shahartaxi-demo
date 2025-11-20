@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kirish</title>
-
-    <!-- TO‘G‘RI CSS YO‘LI -->
-    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 </head>
 <body>
 
@@ -15,13 +14,14 @@
 <input id="phone" type="text" placeholder="+998901234567">
 <button onclick="sendCode()">SMS kod yuborish</button>
 
+<br><br>
+
 <input id="code" type="text" placeholder="123456">
 <button onclick="verifyCode()">Tasdiqlash va kirish</button>
 
+<br><br>
 <a href="register.html">Ro‘yxatdan o‘tish</a>
 
-<!-- TO‘G‘RI JS YO‘LLARI -->
-<script src="js/lib.js"></script>
 <script src="js/login.js"></script>
 
 </body>
