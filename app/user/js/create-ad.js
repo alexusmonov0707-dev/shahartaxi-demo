@@ -18,11 +18,11 @@ window.updateFromDistricts = function () {
 };
 
 // Qayerga → tumanlarni to‘ldirish
-window.updateToDistricts = function () {
-  const region = document.getElementById("toRegion").value;
-  const districtSelect = document.getElementById("toDistrict");
+window.updateDistricts = function(type) {
+  const region = document.getElementById(type + "Region").value;
+  const districtSelect = document.getElementById(type + "District");
 
-  districtSelect.innerHTML = "<option value=''>Tuman</option>";
+  districtSelect.innerHTML = '<option value="">Tuman</option>';
 
   if (window.regionsData[region]) {
     window.regionsData[region].forEach(t => {
@@ -30,6 +30,7 @@ window.updateToDistricts = function () {
     });
   }
 };
+
 
 
 // ===============================
