@@ -1,53 +1,48 @@
+import {
+    auth,
+    RecaptchaVerifier,
+    signInWithPhoneNumber
+} from "../../lib.js";
+
 console.log("LOGIN JS loaded");
 
-// ReCAPTCHA
-let recaptchaVerifier;
+// GLOBAL o'zgaruvchi
+let confirmationResult = null;
 
-window.onload = function () {
-    recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-        size: 'invisible'
-    });
+// Recaptcha
+window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    size: "invisible",
+});
+
+// SMS yuborish
+document.getElementById("sendBtn").onclick = async () => {
+    try {
+        const phone = document.getElementById("phone").value.trim();
+
+        confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+
+        alert("SMS kod yuborildi");
+    } catch (err) {
+        console.error(err);
+        alert("Xatolik: " + err.message);
+    }
 };
 
-function sendCode() {
-    const phone = document.getElementById("phone").value;
-    if (!phone.startsWith("+998")) {
-        alert("Raqam +998 bilan boshlanishi kerak");
-        return;
+// Kodni tasdiqlash
+document.getElementById("verifyBtn").onclick = async () => {
+    try {
+        const code = document.getElementById("code").value.trim();
+
+        const result = await confirmationResult.confirm(code);
+        const user = result.user;
+
+        console.log("Kirish muvaffaqiyatli:", user);
+
+        localStorage.setItem("uid", user.uid);
+
+        window.location.href = "index.html";
+    } catch (err) {
+        console.error(err);
+        alert("Kod noto‘g‘ri");
     }
-
-    firebase.auth().signInWithPhoneNumber(phone, recaptchaVerifier)
-        .then((confirmation) => {
-            window.confirmationResult = confirmation;
-            alert("SMS yuborildi");
-        })
-        .catch((err) => {
-            console.error(err);
-            alert("Xato: " + err.message);
-        });
-}
-
-function verifyCode() {
-    const code = document.getElementById("code").value;
-
-    window.confirmationResult.confirm(code)
-        .then((result) => {
-            const user = result.user;
-
-            // Session saqlash
-            localStorage.setItem("uid", user.uid);
-
-            // User bor yoki yo‘qligini tekshiramiz
-            firebase.database().ref("users/" + user.uid).once("value", snap => {
-                if (snap.exists()) {
-                    location.href = "index.html";
-                } else {
-                    location.href = "register.html";
-                }
-            });
-        })
-        .catch((err) => {
-            console.error(err);
-            alert("Kod noto‘g‘ri!");
-        });
-}
+};
