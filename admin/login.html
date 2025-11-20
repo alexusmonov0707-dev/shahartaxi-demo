@@ -2,57 +2,23 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <title>Admin panel</title>
-    <style>
-        body {
-            font-family: Arial;
-            background: #e9ecef;
-        }
-        .box {
-            width: 360px;
-            margin: 120px auto;
-            background: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            margin-top: 8px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-        }
-        button {
-            width: 100%;
-            padding: 12px;
-            margin-top: 15px;
-            background: #0069d9;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .err {
-            color: #d9534f;
-            margin-top: 10px;
-            min-height: 20px;
-        }
-    </style>
+    <title>Admin Login</title>
 </head>
-
 <body>
-<div class="box">
-    <h2>Admin panel</h2>
 
-    <input id="login" type="text" placeholder="Login (admin001)">
-    <input id="pass" type="password" placeholder="Parol (123456)">
-    
-    <span id="error" class="err"></span>
+<h2>Admin Login</h2>
 
-    <button onclick="loginAdmin()">Kirish</button>
-</div>
+<input type="text" id="login" placeholder="Login">
+<br><br>
 
-<script type="module" src="./admin.js"></script>
+<input type="password" id="pass" placeholder="Parol">
+<br><br>
+
+<button onclick="loginAdmin()">Kirish</button>
+
+<p id="error" style="color:red"></p>
+
+<script type="module" src="admin.js"></script>
+
 </body>
 </html>
