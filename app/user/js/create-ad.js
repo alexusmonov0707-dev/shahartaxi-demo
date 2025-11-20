@@ -1,94 +1,125 @@
-// app/user/js/create-ad.js
-import { auth, db, $, ref, push, get, onAuthStateChanged } from "./lib.js";
+// ===============================
+// Load Taxi Regions
+// ===============================
+window.regionsData = window.taxiRegionsData;
 
-const fromRegion = $("fromRegion");
-const fromDistrict = $("fromDistrict");
-const toRegion = $("toRegion");
-const toDistrict = $("toDistrict");
-const price = $("price");
-const departureTime = $("departureTime");
-const seats = $("seats");
-const adComment = $("adComment");
-const submitAdBtn = $("submitAdBtn");
-const clearFormBtn = $("clearFormBtn");
+// Qayerdan → tumanlarni to‘ldirish
+window.updateFromDistricts = function () {
+  const region = document.getElementById("fromRegion").value;
+  const districtSelect = document.getElementById("fromDistrict");
 
-onAuthStateChanged(auth, user => {
-  if (!user) location.href = "../login.html";
-  // populate selects from regions.js global
-  if (window.regionsData) {
-    fromRegion.innerHTML = '<option value="">Qayerdan (Viloyat)</option>';
-    toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
-    Object.keys(window.regionsData).forEach(r => {
-      fromRegion.innerHTML += `<option value="${r}">${r}</option>`;
-      toRegion.innerHTML += `<option value="${r}">${r}</option>`;
+  districtSelect.innerHTML = "<option value=''>Tuman</option>";
+
+  if (window.regionsData[region]) {
+    window.regionsData[region].forEach(t => {
+      districtSelect.innerHTML += `<option value="${t}">${t}</option>`;
     });
   }
-});
+};
 
-window.updateDistricts = function (type) {
-  const region = document.getElementById(type + "Region").value;
-  const district = document.getElementById(type + "District");
+// Qayerga → tumanlarni to‘ldirish
+window.updateToDistricts = function () {
+  const region = document.getElementById("toRegion").value;
+  const districtSelect = document.getElementById("toDistrict");
 
-  district.innerHTML = '<option value="">Tuman</option>';
+  districtSelect.innerHTML = "<option value=''>Tuman</option>";
 
-  if (!window.regionsData || !window.regionsData[region]) return;
-
-  window.regionsData[region].forEach(t => {
-    district.innerHTML += `<option value="${t}">${t}</option>`;
-  });
+  if (window.regionsData[region]) {
+    window.regionsData[region].forEach(t => {
+      districtSelect.innerHTML += `<option value="${t}">${t}</option>`;
+    });
+  }
 };
 
 
-submitAdBtn && submitAdBtn.addEventListener("click", async () => {
-  const user = auth.currentUser;
-  if (!user) return alert("Iltimos tizimga kiring.");
+// ===============================
+// FireBase imports
+// — eski funksiyalarning barchasi saqlangan
+// ===============================
 
-  const seatsVal = seats && seats.value ? seats.value.trim() : "";
-  const extra = {};
-  // determine role from users/uid
-  const uSnap = await get(ref(db, "users/" + user.uid));
-  const role = uSnap.exists() ? (uSnap.val().role || "passenger") : "passenger";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  update,
+  get
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+  getAuth,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  if (role === "driver") extra.driverSeats = seatsVal || "";
-  else extra.passengerCount = seatsVal || "";
 
-  const ad = {
-    userId: user.uid,
-    type: role === "driver" ? "Haydovchi" : "Yo‘lovchi",
-    fromRegion: fromRegion ? fromRegion.value : "",
-    fromDistrict: fromDistrict ? fromDistrict.value : "",
-    toRegion: toRegion ? toRegion.value : "",
-    toDistrict: toDistrict ? toDistrict.value : "",
-    price: price ? price.value : "",
-    comment: adComment ? adComment.value : "",
-    approved: false,
-    departureTime: departureTime ? departureTime.value : "",
-    createdAt: Date.now(),
-    ...extra
-  };
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.firebasestorage.app",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
 
-  await push(ref(db, "ads"), ad);
-  alert("E’lon joylandi!");
-  clearForm();
-  // optionally redirect to my-ads
-  window.location.href = "my-ads.html";
-});
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
 
-clearFormBtn && clearFormBtn.addEventListener("click", clearForm);
 
-// LOAD REGIONS FOR TAXI
-function loadTaxiRegions() {
-  if (!window.taxiRegions) return;
+// ===============================
+// LOAD REGIONS INTO SELECTS
+// ===============================
 
-  // From region
-  fromRegion.innerHTML = '<option value="">Qayerdan (Viloyat)</option>';
-  Object.keys(window.taxiRegions).forEach(r => {
-    fromRegion.innerHTML += `<option value="${r}">${r}</option>`;
-  });
+function loadRegions() {
+  const from = document.getElementById("fromRegion");
+  const to = document.getElementById("toRegion");
 
-  // To region
-  toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
-  Object.keys(window.taxiRegions).forEach(r => {
-    toRegion.innerHTML += `<option value="${r}">${r}</option>`;
+  from.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
+  to.innerHTML = `<option value="">Qayerga (Viloyat)</option>`;
+
+  Object.keys(window.regionsData).forEach(r => {
+    from.innerHTML += `<option value="${r}">${r}</option>`;
+    to.innerHTML += `<option value="${r}">${r}</option>`;
   });
 }
+
+
+// ===============================
+// AUTH CHECK
+// ===============================
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window.location.href = "../../login.html";
+    return;
+  }
+  loadRegions();
+});
+
+// ===============================
+// ADD AD
+// ===============================
+window.addAd = async function () {
+  const user = auth.currentUser;
+  if (!user) return alert("Iltimos tizimga kiring");
+
+  const data = {
+    userId: user.uid,
+    fromRegion: fromRegion.value,
+    fromDistrict: fromDistrict.value,
+    toRegion: toRegion.value,
+    toDistrict: toDistrict.value,
+    price: document.getElementById("price").value,
+    seats: document.getElementById("seats").value,
+    comment: document.getElementById("comment").value,
+    departureTime: document.getElementById("time").value,
+    createdAt: Date.now(),
+    type: "Haydovchi/Yo‘lovchi" // ESki maydon saqlangan
+  };
+
+  await push(ref(db, "ads"), data);
+
+  alert("E’lon joylandi!");
+  window.location.href = "my-ads.html";
+};
+
