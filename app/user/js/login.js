@@ -1,6 +1,6 @@
 console.log("LOGIN JS loaded");
 
-// Firebase config (sening real konfiguratsiyang)
+// Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyBNM3yMxb8TqZ7t6B5VuuxIE0s8d1xdRqs",
     authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -11,50 +11,47 @@ const firebaseConfig = {
     appId: "1:499577358676:web:64ebf7f1a8f2e189cdaf4e"
 };
 
-// Firebase ishga tushirish
+// Init Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
-let confirmResult = null;
+// recaptcha
+window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('send-btn', {
+    size: 'invisible'
+});
 
-// ➤ SMS kod yuborish
+let confirmation = null;
+
+// SMS kod yuborish
 function sendCode() {
-    let phone = document.getElementById("phone").value.trim();
+    const phone = document.getElementById("phone").value.trim();
 
-    if (!phone) {
-        alert("Telefon raqamini kiriting!");
-        return;
-    }
+    if (!phone) return alert("Telefon raqamni kiriting!");
 
-    auth.signInWithPhoneNumber(phone, new firebase.auth.RecaptchaVerifier('send-btn', {
-        size: "invisible"
-    }))
-    .then(result => {
-        confirmResult = result;
-        alert("Kod yuborildi!");
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Xatolik: " + err.message);
-    });
+    auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
+        .then(result => {
+            confirmation = result;
+            alert("Kod yuborildi!");
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Xatolik: " + err.message);
+        });
 }
 
-// ➤ Kodni tasdiqlash
+// Kodni tasdiqlash
 function verifyCode() {
-    let code = document.getElementById("code").value.trim();
+    if (!confirmation) return alert("Avval kod yuboring!");
 
-    if (!confirmResult) {
-        alert("Avval kod yuboring!");
-        return;
-    }
+    const code = document.getElementById("code").value.trim();
 
-    confirmResult.confirm(code)
-    .then(user => {
-        alert("Muvaffaqiyatli kirdingiz!");
-        window.location.href = "index.html";
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Xato kod!");
-    });
+    confirmation.confirm(code)
+        .then(res => {
+            alert("Muvaffaqiyatli kirdingiz!");
+            window.location.href = "index.html";
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Noto'g'ri kod!");
+        });
 }
