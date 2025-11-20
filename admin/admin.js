@@ -14,6 +14,9 @@ window.loginAdmin = async function () {
         console.log("Login:", login);
         console.log("Snapshot exists:", snap.exists());
         console.log("Snapshot value:", snap.val());
+console.log("Login:", login);
+console.log("Input pass:", pass);
+console.log("DB pass:", admin.password);
 
         if (!snap.exists()) {
             error.textContent = "Login yoki parol noto‘g‘ri!";
