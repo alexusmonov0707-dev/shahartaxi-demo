@@ -1,103 +1,58 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi — E’lonlar</title>
-
-  <!-- (CSS unchanged — trimmed here for brevity, keep the same styles as your original) -->
-  <style>
-  /* paste your existing styles from the original file here (unchanged) */
-  :root{ --primary:#0069d9; --muted:#6b7280; --card:#fff; --bg:#f2f4f8; --chip-bg:#eef4ff; }
-  body { font-family: Inter, Arial, sans-serif; background:var(--bg); margin:0; color:#111; }
-  /* ... keep rest of CSS exactly as in your original file ... */
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcha e’lonlar</title>
+    <link rel="stylesheet" href="../css/style.css">
 </head>
-
 <body>
 
-<div class="topbar">
-  <div>ShaharTaxi — E’lonlar</div>
-  <button class="logout" onclick="logout()">Chiqish</button>
-</div>
+<button onclick="logout()" class="logout-btn">Chiqish</button>
 
-<div class="container">
-  <div class="card">
-    <h2 style="text-align:center; color:var(--primary); margin:0 0 12px 0;">Barcha e’lonlar</h2>
+<h2>Barcha e’lonlar</h2>
 
-    <div class="filters">
+<div class="filters">
 
-      <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
+    <input type="text" id="searchInput" placeholder="Qidiruv (manzil, izoh, narx)...">
 
-      <!-- SARALASH -->
-      <select id="sortBy">
-        <option value="newest">Eng yangi</option>
-        <option value="oldest">Eng eski</option>
-      </select>
+    <select id="sortSelect">
+        <option value="new">Eng yangi</option>
+        <option value="old">Eng eski</option>
+    </select>
 
-      <!-- JO‘NASH VAQTI -->
-      <select id="filterDate">
-        <option value="">Vaqt (hammasi)</option>
+    <select id="timeSelect">
+        <option value="all">Vaqt (hammasi)</option>
         <option value="today">Bugun</option>
-        <option value="tomorrow">Ertaga</option>
-        <option value="3days">3 kun ichida</option>
-      </select>
+        <option value="week">Hafta</option>
+    </select>
 
-      <!-- NARX ORALIG‘I -->
-      <input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
-      <input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
+    <input type="number" id="minPrice" placeholder="Narx min">
+    <input type="number" id="maxPrice" placeholder="Narx max">
 
-      <select id="filterRole">
-        <option value="">Hammasi</option>
-        <option value="Haydovchi">Haydovchi</option>
-        <option value="Yo‘lovchi">Yo‘lovchi</option>
-      </select>
-
-      <!-- NEW: region filter (added) -->
-      <select id="filterRegion">
+    <select id="regionSelect">
         <option value="">Viloyat (filter)</option>
-      </select>
+    </select>
 
-      <!-- 🔥 RESET BUTTON -->
-      <button id="resetFiltersBtn"
-              style="padding:10px 16px;border:none;background:#ff4444;color:white;border-radius:8px;font-size:14px;cursor:pointer;min-width:120px;">
-        Reset
-      </button>
-
-    </div>
-
-    <!-- Qayerdan -->
-    <div class="filter-block">
-      <label><b>Qayerdan:</b></label><br>
-      <select id="fromRegion"><option value="">Viloyat</option></select>
-      <div id="fromDistrictBox" class="district-box"></div>
-    </div>
-
-    <!-- Qayerga -->
-    <div class="filter-block">
-      <label><b>Qayerga:</b></label><br>
-      <select id="toRegion"><option value="">Viloyat</option></select>
-      <div id="toDistrictBox" class="district-box"></div>
-    </div>
-
-    <div id="adsList">Yuklanmoqda...</div>
-
-    <div id="pagination" style="margin-top:20px; text-align:center;"></div>
-
-  </div>
+    <button onclick="resetFilters()" class="reset-btn">Reset</button>
 </div>
 
-<div id="adFullModal"></div>
+<div id="fromFilterBlock">
+    <p><b>Qayerdan:</b></p>
+    <select id="fromRegion">
+        <option value="">Viloyat</option>
+    </select>
+    <select id="fromDistrict">
+        <option value="">Tuman</option>
+    </select>
+</div>
 
-<!-- include taxi regions (this file must set window.regionsData) -->
-<script src="/shahartaxi-demo/assets/regions-taxi.js"></script>
+<p id="loading">Yuklanmoqda...</p>
 
-<!-- include regions helper (fillFromDistricts / fillToDistricts functions) -->
-<script src="/shahartaxi-demo/app/user/js/regions-helper.js"></script>
+<div id="adsList"></div>
 
-<!-- main index logic (module) -->
-<script type="module" src="/shahartaxi-demo/app/user/js/index.js"></script>
-
+<script src="../js/lib.js"></script>
+<script src="../js/regions-helper.js"></script>
+<script src="../js/index.js"></script>
 </body>
 </html>
-
