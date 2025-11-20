@@ -1,49 +1,54 @@
-// regions-taxi.js dagi window.regionsTaxi dan foydalanadi
-// Bu fayl HAM import/export ishlatmaydi
+// app/user/js/regions-helper.js
 
-// Selectga viloyatlarni joylash
 function fillRegions(selectId) {
-    const select = document.getElementById(selectId);
-    select.innerHTML = `<option value="">Viloyatni tanlang</option>`;
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
 
-    Object.keys(window.regionsTaxi).forEach(region => {
-        const opt = document.createElement("option");
-        opt.value = region;
-        opt.textContent = region;
-        select.appendChild(opt);
+    sel.innerHTML = '<option value="">Viloyat</option>';
+
+    Object.keys(window.regionsData).forEach(region => {
+        sel.innerHTML += `<option value="${region}">${region}</option>`;
     });
 }
 
-// Tumanlarni yuklash
 function fillDistricts(regionSelectId, districtSelectId) {
-    const region = document.getElementById(regionSelectId).value;
+    const region = document.getElementById(regionSelectId)?.value;
     const districtSelect = document.getElementById(districtSelectId);
 
-    districtSelect.innerHTML = `<option value="">Tuman</option>`;
+    if (!districtSelect) return;
 
-    if (!region || !window.regionsTaxi[region]) return;
+    districtSelect.innerHTML = '<option value="">Tuman</option>';
 
-    window.regionsTaxi[region].forEach(tuman => {
-        const opt = document.createElement("option");
-        opt.value = tuman;
-        opt.textContent = tuman;
-        districtSelect.appendChild(opt);
-    });
+    if (region && window.regionsData[region]) {
+        window.regionsData[region].forEach(dist => {
+            districtSelect.innerHTML += `<option value="${dist}">${dist}</option>`;
+        });
+    }
 }
 
-// create-ad sahifa ishga tushishi uchun
+// CREATE-AD PAGE BILAN MOS KELADI
+function updateDistricts(type) {
+    if (type === 'from') {
+        fillDistricts('fromRegion', 'fromDistrict');
+    } else {
+        fillDistricts('toRegion', 'toDistrict');
+    }
+}
+
+// EDIT-AD MODAL UCHUN
+function updateEditDistricts(type) {
+    if (type === 'from') {
+        fillDistricts('editFromRegion', 'editFromDistrict');
+    } else {
+        fillDistricts('editToRegion', 'editToDistrict');
+    }
+}
+
+// PROFILE EDIT UCHUN
+function fillEditDistricts() {
+    fillDistricts('editRegion', 'editDistrict');
+}
+
+// CREATE-AD PAGE YUKLANGANDA
 function initRegionsForm() {
-    fillRegions("fromRegion");
-    fillRegions("toRegion");
-
-    document.getElementById("fromRegion").addEventListener("change", () => {
-        fillDistricts("fromRegion", "fromDistrict");
-    });
-
-    document.getElementById("toRegion").addEventListener("change", () => {
-        fillDistricts("toRegion", "toDistrict");
-    });
-}
-
-// globalga chiqaramiz (import ishlatmaymiz)
-window.initRegionsForm = initRegionsForm;
+    if (document.getElementById('fromRegion')) fillRegions(
