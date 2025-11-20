@@ -1,3 +1,4 @@
+// admin.js
 import { db, ref, query, orderByChild, equalTo, get } from "./firebase.js";
 
 window.loginAdmin = async function () {
@@ -13,7 +14,6 @@ window.loginAdmin = async function () {
     }
 
     try {
-        // admins ichidan username bo'yicha qidirish
         const q = query(ref(db, "admins"), orderByChild("username"), equalTo(login));
         const snap = await get(q);
 
@@ -30,7 +30,7 @@ window.loginAdmin = async function () {
             return;
         }
 
-        // SUCCESS
+        // Login muvaffaqiyatli
         localStorage.setItem("admin", JSON.stringify(admin));
         window.location.href = "dashboard.html";
 
