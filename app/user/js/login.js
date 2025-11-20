@@ -2,7 +2,7 @@ console.log("LOGIN JS loaded");
 
 // Firebase config
 const firebaseConfig = {
-    apiKey: "AIzaSyBNM3yMxb8TqZ7t6B5VuuxIE0s8d1xdRqs",
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
     authDomain: "shahartaxi-demo.firebaseapp.com",
     databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
     projectId: "shahartaxi-demo",
