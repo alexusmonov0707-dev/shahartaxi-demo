@@ -1,26 +1,25 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ro‘yxatdan o‘tish</title>
-</head>
 
+    <!-- STYLE.CSS TO‘G‘RI YO‘L -->
+    <link rel="stylesheet" href="../css/style.css">
+</head>
 <body>
 
 <h2>Ro‘yxatdan o‘tish</h2>
 
-<input id="phone" type="text" placeholder="+998901234567" />
-<button id="sendBtn">Davom etish</button>
-
-<input id="code" type="text" placeholder="123456" />
-<button id="verifyBtn">Tasdiqlash</button>
+<input id="phone" type="text" placeholder="+998901234567">
+<button onclick="sendCode()">Davom etish</button>
 
 <a href="login.html">Kirish</a>
 
-<div id="recaptcha-container"></div>
-
-<script type="module" src="js/register.js"></script>
+<!-- JS FAYLLARI -->
+<script src="js/lib.js"></script>
+<script src="js/register.js"></script>
 
 </body>
 </html>
