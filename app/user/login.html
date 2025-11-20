@@ -4,33 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kirish</title>
-
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/style.css" />
 </head>
 
 <body>
+
 <div class="container">
     <h2>Kirish</h2>
 
-    <input id="phone" type="text" placeholder="+998901234567">
+    <input id="phone" type="text" placeholder="+998901234567" />
 
-    <button onclick="sendCode()">SMS kod yuborish</button>
+    <button id="sendBtn">SMS kod yuborish</button>
 
-    <input id="code" type="text" placeholder="123456">
+    <input id="code" type="text" placeholder="123456" />
 
-    <button onclick="verifyCode()">Tasdiqlash va kirish</button>
+    <button id="verifyBtn">Tasdiqlash va kirish</button>
 
     <a href="register.html">Ro‘yxatdan o‘tish</a>
 
     <div id="recaptcha-container"></div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<script src="../js/lib.js"></script>
-<script src="../js/login.js"></script>
-
+<script type="module" src="js/login.js"></script>
 </body>
 </html>
