@@ -1,1 +1,44 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mening e'lonlarim — ShaharTaxi</title>
+  <style>
+    body{font-family:Arial;background:#f2f4f8;margin:0;}
+    .card{max-width:900px;margin:20px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.06)}
+    .ad-box{border:1px solid #ddd;border-radius:10px;padding:12px;margin-bottom:12px;background:#f8faff}
+    .blue-btn{background:#0069d9;color:#fff;padding:8px;border:none;border-radius:6px;cursor:pointer}
+    .red-btn{background:#ff4444;color:#fff;padding:8px;border:none;border-radius:6px;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Mening e’lonlarim</h2>
+    <div id="myAdsList">Yuklanmoqda...</div>
+  </div>
+
+  <!-- EDIT AD MODAL (keeps same fields) -->
+  <div id="editAdModal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);justify-content:center;align-items:center;">
+    <div class="card" style="width:380px;">
+      <h3>Tahrirlash</h3>
+      <select id="editFromRegion"><option value="">Viloyat</option></select>
+      <select id="editFromDistrict"><option value="">Tuman</option></select>
+      <select id="editToRegion"><option value="">Viloyat</option></select>
+      <select id="editToDistrict"><option value="">Tuman</option></select>
+      <input id="editPrice" placeholder="Narx">
+      <input id="editTime" type="datetime-local">
+      <input id="editSeats" type="number" min="0" placeholder="Bo'sh o'rinlar">
+      <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button id="saveEditBtn" class="blue-btn">Saqlash</button>
+        <button id="closeEditBtn" class="blue-btn" style="background:#777">Bekor</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../regions.js"></script>
+  <script type="module" src="./js/my-ads.js"></script>
+</body>
+</html>
 
