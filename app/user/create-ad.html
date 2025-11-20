@@ -14,11 +14,22 @@
 <body>
   <div class="card">
     <h2>Yangi e’lon qo‘shish</h2>
-    <select id="fromRegion"><option value="">Qayerdan (Viloyat)</option></select>
-    <select id="fromDistrict"><option value="">Tuman</option></select>
+ <select id="fromRegion" onchange="updateTaxiDistricts('from')">
+    <option value="">Qayerdan (Viloyat)</option>
+</select>
 
-    <select id="toRegion"><option value="">Qayerga (Viloyat)</option></select>
-    <select id="toDistrict"><option value="">Tuman</option></select>
+<select id="fromDistrict">
+    <option value="">Tuman</option>
+</select>
+
+<select id="toRegion" onchange="updateTaxiDistricts('to')">
+    <option value="">Qayerga (Viloyat)</option>
+</select>
+
+<select id="toDistrict">
+    <option value="">Tuman</option>
+</select>
+
 
     <input id="price" placeholder="Narx (so‘m)">
     <input id="departureTime" type="datetime-local">
