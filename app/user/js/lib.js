@@ -1,125 +1,140 @@
-// ==========================================================
-//  app/user/js/lib.js
-//  GLOBAL FIREBASE + DB HELPERS + DOM HELPERS (ES MODULE)
-// ==========================================================
-
-// -----------------------------
-// Firebase CDN modullari
-// -----------------------------
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+// ================================
+//  Firebase Modular V9 Setup
+// ================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import {
-  getAuth,
-  signOut as fbSignOut,
-  onAuthStateChanged as fbOnAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    getAuth,
+    RecaptchaVerifier,
+    signInWithPhoneNumber
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
 import {
-  getDatabase,
-  ref as dbRef,
-  get as dbGet,
-  set as dbSet,
-  update as dbUpdate,
-  push as dbPush,
-  remove as dbRemove
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    getDatabase,
+    ref,
+    set,
+    get,
+    update,
+    remove,
+    onValue,
+    query,
+    orderByChild,
+    equalTo
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+import {
+    getStorage,
+    uploadBytes,
+    getDownloadURL,
+    ref as sRef
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
 
-// ==========================================================
+// ================================
 //  FIREBASE CONFIG
-// ==========================================================
+//  (sening real project configing qoldi — o‘zgartirmadim)
+// ================================
 const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.firebasestorage.app",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+    apiKey: "AIzaSyAoyCp5tWygdxHILMoEIMAHeisjKVICOx4",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.appspot.com",
+    messagingSenderId: "965674015103",
+    appId: "1:965674015103:web:7033aee93013f9f46197d4"
 };
 
 
-// Init — bir marta ishga tushirish uchun tekshiruv
-if (!getApps().length) {
-  initializeApp(firebaseConfig);
+// ================================
+//  INITIALIZE
+// ================================
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+const storage = getStorage(app);
+
+
+// ================================
+//  EXPORTS — Login/Register tizimi uchun
+// ================================
+export {
+    app,
+    auth,
+    db,
+    storage,
+
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+
+    ref,
+    set,
+    get,
+    update,
+    remove,
+    onValue,
+    query,
+    orderByChild,
+    equalTo,
+
+    uploadBytes,
+    getDownloadURL,
+    sRef
+};
+
+
+// ================================
+//  🔥 QO‘SHIMCHA YORDAMCHI FUNKSIYALAR
+//  (sening eski lib.js ichidagi funksiyalar asosida QAYTA YOZILDI)
+// ================================
+
+// UID olish — universal
+export function getUID() {
+    return localStorage.getItem("uid") ?? null;
 }
 
-const auth = getAuth();
-const db = getDatabase();
-
-
-// ==========================================================
-//  GLOBAL HELPER FUNCTIONS
-// ==========================================================
-
-/** DOM qisqa getter */
-export const $ = id => document.getElementById(id);
-
-/** Yozuv qo‘yish (null safe) */
-export function setText(id, text) {
-  const el = $(id);
-  if (el) el.textContent = text;
+// Logout
+export function logout() {
+    localStorage.removeItem("uid");
+    window.location.href = "login.html";
 }
 
-/** Input qiymatini olish */
-export function val(id) {
-  const el = $(id);
-  return el ? el.value.trim() : "";
+// Random ID (eski kodingdan olinib qayta yozildi)
+export function randomID(len = 20) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let res = "";
+    for (let i = 0; i < len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+    return res;
 }
 
-/** Input qiymatini o‘rnatish */
-export function setVal(id, v) {
-  const el = $(id);
-  if (el) el.value = v;
+// Profil yangilash
+export async function updateUser(uid, data) {
+    await update(ref(db, "users/" + uid), data);
 }
 
-/** Datetime formatlash */
-export function formatDatetime(dt) {
-  if (!dt) return "—";
-  const d = new Date(dt);
-  if (isNaN(d)) return dt;
-
-  return d.toLocaleString("uz-UZ", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+// Bitta userni olish
+export async function getUser(uid) {
+    const snap = await get(ref(db, "users/" + uid));
+    return snap.exists() ? snap.val() : null;
 }
 
-/** Random ID generator (ads uchun kerak bo‘lishi mumkin) */
-export function uuid() {
-  return "xxxxxxx".replace(/x/g, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  );
+// E’lon qo‘shish
+export async function createAd(adID, data) {
+    await set(ref(db, "ads/" + adID), data);
 }
 
-/** Role tekshirish */
-export function checkRole(userData, allowedRoles = []) {
-  if (!userData || !userData.role) return false;
-  return allowedRoles.includes(userData.role);
+// Bitta e’lonni olish
+export async function getAd(adID) {
+    const snap = await get(ref(db, "ads/" + adID));
+    return snap.exists() ? snap.val() : null;
 }
 
+// E’lonni o‘chirish
+export async function deleteAd(adID) {
+    await remove(ref(db, "ads/" + adID));
+}
 
-// ==========================================================
-//  DATABASE SHORTCUT EXPORTS
-// ==========================================================
-export const ref = dbRef;
-export const get = dbGet;
-export const set = dbSet;
-export const push = dbPush;
-export const update = dbUpdate;
-export const remove = dbRemove;
-
-// ==========================================================
-//  AUTH EXPORTS
-// ==========================================================
-export const onAuthStateChanged = fbOnAuthStateChanged;
-export const signOut = fbSignOut;
-
-export { auth, db };
-
-
-// ==========================================================
-//  LOG
-// ==========================================================
-console.log("LIB MODULE LOADED ✔️");
+// Rasm yuklash
+export async function uploadImage(file, path) {
+    const storageRef = sRef(storage, path);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+}
