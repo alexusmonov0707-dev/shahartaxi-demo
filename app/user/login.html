@@ -1,32 +1,32 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kirish</title>
-
-    <!-- Firebase V8 (barqaror ishlaydi) -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Kirish — ShaharTaxi</title>
+  <link rel="stylesheet" href="../css/style.css"> <!-- agar bor bo'lsa -->
 </head>
 <body>
+  <div class="container">
+    <h2>Kirish</h2>
 
-<h2>Kirish</h2>
+    <label for="phone">Telefon raqam (+998...)</label><br>
+    <input id="phone" type="text" placeholder="+998901234567"><br><br>
 
-<input id="phone" type="text" placeholder="+998901234567">
-<button id="send-btn" onclick="sendCode()">SMS kod yuborish</button>
+    <button id="sendBtn">SMS kod yuborish</button><br><br>
 
-<br><br>
+    <label for="code">Kod</label><br>
+    <input id="code" type="text" placeholder="123456"><br><br>
 
-<input id="code" type="text" placeholder="123456">
-<button onclick="verifyCode()">Tasdiqlash va kirish</button>
+    <button id="verifyBtn">Tasdiqlash va kirish</button><br><br>
 
-<br><br>
-<a href="register.html">Ro‘yxatdan o‘tish</a>
+    <a href="register.html">Ro'yxatdan o'tish</a>
 
-<!-- Login JS -->
-<script src="js/login.js"></script>
+    <!-- reCAPTCHA container (Firebase kerak bo'ladi) -->
+    <div id="recaptcha-container"></div>
+  </div>
 
+  <!-- modul sifatida import qilamiz -->
+  <script type="module" src="js/login.js"></script>
 </body>
 </html>
