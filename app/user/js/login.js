@@ -1,66 +1,44 @@
+import { auth } from "../lib.js";
+import {
+    RecaptchaVerifier,
+    signInWithPhoneNumber
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
 console.log("LOGIN JS loaded");
 
-// ------- FIREBASE IMPORTS -------
-import {
-    getAuth,
-    signInWithPhoneNumber,
-    RecaptchaVerifier,
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+// TEST RAQAMLAR UCHUN RECAPTCHA O‘CHIRILADI
+window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    size: 'invisible',
+}, auth);
 
-import { app } from "./lib.js"; 
-
-
-const auth = getAuth(app);
-
-let confirmationResult = null;
-
-
-// ========== 1) SMS YUBORISH FUNKSIYASI ==========
-window.sendCode = async function () {
+// --- SMS yuborish ---
+document.getElementById("sendCodeBtn").onclick = async () => {
     const phone = document.getElementById("phone").value.trim();
 
-    if (!phone) {
-        alert("Telefon raqamni kiriting!");
-        return;
-    }
-
     try {
-        // TEST MODE uchun recaptcha required emas
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, "sms-button", {
-            size: "invisible"
-        });
+        const appVerifier = window.recaptchaVerifier;
 
-        confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+        window.confirmationResult = await signInWithPhoneNumber(auth, phone, appVerifier);
 
         alert("SMS kod yuborildi!");
-
     } catch (err) {
-        console.error(err);
-        alert("Xatolik: " + err.message);
+        alert("Xato: " + err.message);
+        console.log(err);
     }
 };
 
-
-// ========== 2) KODNI TEKSHIRISH ==========
-window.verifyCode = async function () {
-    const code = document.getElementById("smsCode").value.trim();
-
-    if (!code) {
-        alert("Kodni kiriting!");
-        return;
-    }
+// --- KODNI TASDIQLASH ---
+document.getElementById("verifyBtn").onclick = async () => {
+    const code = document.getElementById("code").value.trim();
 
     try {
-        const result = await confirmationResult.confirm(code);
-        const user = result.user;
+        const result = await window.confirmationResult.confirm(code);
 
         alert("Muvaffaqiyatli kirdingiz!");
 
-        // login bo‘lgandan keyin index.html ga o‘tadi
-        window.location.href = "index.html";
+        location.href = "index.html";
 
     } catch (err) {
-        console.error(err);
-        alert("Kod xato yoki muddati tugagan!");
+        alert("Kirish xatosi: " + err.message);
     }
 };
