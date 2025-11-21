@@ -653,8 +653,9 @@ if (u.role?.toLowerCase().includes("haydov")) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  modal.innerHTML = `
+ modal.innerHTML = `
     <div class="ad-modal-box" role="dialog" aria-modal="true">
+
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
         <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
