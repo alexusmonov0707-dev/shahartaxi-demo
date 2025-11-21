@@ -1,43 +1,87 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ro'yxatdan o'tish — ShaharTaxi</title>
-  <link rel="stylesheet" href="../css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShaharTaxi — Ro‘yxatdan o‘tish</title>
+
+  <style>
+    body{
+      font-family: Arial;
+      background:#f2f4f8;
+      padding:0;margin:0;
+      display:flex;justify-content:center;align-items:center;height:100vh;
+    }
+
+    .card{
+      background:#fff;
+      width:350px;
+      padding:25px;
+      border-radius:12px;
+      box-shadow:0 4px 12px rgba(0,0,0,.1);
+      text-align:center;
+    }
+
+    .role-btn{
+      width:100%;
+      padding:15px;
+      margin-top:10px;
+      font-size:18px;
+      border:none; 
+      background:#007bff;
+      color:white;
+      border-radius:8px;
+      cursor:pointer;
+      transition:.2s;
+    }
+    .role-btn:hover{ background:#0267d8; }
+
+    input, select{
+      width:100%;
+      padding:12px;
+      margin-top:10px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      font-size:15px;
+    }
+
+    #extraFields{ display:none; margin-top:15px; }
+
+    button{
+      width:100%;
+      padding:12px;
+      background:#007bff;
+      border:none;
+      margin-top:12px;
+      color:white;
+      font-size:18px;
+      border-radius:8px;
+      cursor:pointer;
+    }
+  </style>
 </head>
+
 <body>
-  <div style="max-width:700px;margin:40px auto;">
-    <h2>Ro'yxatdan o'tish</h2>
 
-    <label>Telefon raqam</label><br/>
-    <input id="regPhone" type="text" value="+998" style="width:100%;padding:8px;margin:6px 0"><br/>
+<div class="card">
 
-    <button id="regSendBtn">Davom etish</button>
+  <h2>Ro‘yxatdan o‘tish</h2>
+  <p id="selectedRole" style="font-weight:bold;"></p>
 
-    <p>
-      <label>Ism familiya</label><br/>
-      <input id="fullName" type="text" style="width:100%;padding:8px;margin:6px 0">
-    </p>
+  <button class="role-btn" onclick="selectRole('driver')">🚕 Men Haydovchiman</button>
+  <button class="role-btn" onclick="selectRole('passenger')">🚶‍♂️ Men Yo‘lovchiman</button>
 
-    <p>
-      <label>Role (masalan: passenger yoki driver)</label><br/>
-      <input id="role" type="text" style="width:200px;padding:6px;margin:6px 0" value="passenger">
-    </p>
-
-    <p>
-      <label>Kodni kiriting</label><br/>
-      <input id="regCode" type="text" style="width:200px;padding:6px;margin:6px 0">
-    </p>
-
-    <button id="regVerifyBtn">Ro'yxatdan o'tish</button>
-
-    <p><a href="login.html">Kirish</a></p>
+  <div id="extraFields">
+      <input id="fullName" placeholder="Ism Familiya">
+      <input id="phone" placeholder="Telefon raqam" disabled>
+      <input id="carModel" placeholder="Mashina modeli" style="display:none">
+      <input id="license" placeholder="Prava raqami" style="display:none">
+      <button onclick="saveRole()">Saqlash</button>
   </div>
 
-  <div id="recaptcha-container" style="display:none"></div>
-<script type="module" src="js/lib.js"></script>
-<script type="module" src="js/register.js"></script>
+</div>
+
+<script type="module" src="register.js?v=1001"></script>
 
 </body>
 </html>
