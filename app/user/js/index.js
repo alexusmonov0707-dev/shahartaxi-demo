@@ -208,10 +208,8 @@ function loadRouteFilters() {
   toRegion.innerHTML = '<option value="">Viloyat</option>';
 
   Object.keys(REGIONS).forEach(region => {
-    fromRegion.insertAdjacentHTML("beforeend",
-      `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
-    toRegion.insertAdjacentHTML("beforeend",
-      `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
+    fromRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
+    toRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
   });
 
   fromRegion.onchange = () => {
@@ -302,70 +300,65 @@ async function initialLoadAds() {
     if (!snap.exists()) {
       ADS_MAP.clear();
       ALL_ADS = [];
-      document.getElementById("adsList").innerHTML = "E’lon yo‘q.";
+      document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
       attachInputsOnce();
-      renderPaginationControls(0, 0, 0);
+      scheduleRenderAds();
       return;
     }
 
-    const list = [];
-    snap.forEach(ch => {
-      const v = ch.val();
-      list.push({
-        id: ch.key,
-        ...v,
-        typeNormalized: normalizeType(v.type)
-      });
+    const arr = [];
+    snap.forEach(child => {
+      const v = child.val();
+      arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
     });
 
+    const map = new Map();
+    arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
     ADS_MAP.clear();
-    list.forEach(ad => ADS_MAP.set(ad.id, ad));
-
+    for (const [k,v] of map) ADS_MAP.set(k, v);
     ALL_ADS = Array.from(ADS_MAP.values());
 
     attachInputsOnce();
     scheduleRenderAds();
-
-  } catch (e) {
-    console.error("initialLoadAds error:", e);
+  } catch (err) {
+    console.error("initialLoadAds error", err);
   }
 }
 
 // ===============================
-// REALTIME UPDATE HANDLERS
+// REALTIME HANDLERS
 // ===============================
 function attachRealtimeHandlers() {
-  const adsRef = ref(db, "ads");
+  try {
+    const r = ref(db, "ads");
 
-  onChildAdded(adsRef, snap => {
-    const v = snap.val();
-    if (!v) return;
-    ADS_MAP.set(snap.key, {
-      id: snap.key,
-      ...v,
-      typeNormalized: normalizeType(v.type)
+    onChildAdded(r, (snap) => {
+      const v = snap.val();
+      if (!v) return;
+      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
+      ADS_MAP.set(ad.id, ad);
+      ALL_ADS = Array.from(ADS_MAP.values());
+      scheduleRenderAds();
     });
-    ALL_ADS = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
 
-  onChildChanged(adsRef, snap => {
-    const v = snap.val();
-    if (!v) return;
-    ADS_MAP.set(snap.key, {
-      id: snap.key,
-      ...v,
-      typeNormalized: normalizeType(v.type)
+    onChildChanged(r, (snap) => {
+      const v = snap.val();
+      if (!v) return;
+      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
+      ADS_MAP.set(ad.id, ad);
+      ALL_ADS = Array.from(ADS_MAP.values());
+      scheduleRenderAds();
     });
-    ALL_ADS = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
 
-  onChildRemoved(adsRef, snap => {
-    ADS_MAP.delete(snap.key);
-    ALL_ADS = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
+    onChildRemoved(r, (snap) => {
+      ADS_MAP.delete(snap.key);
+      ALL_ADS = Array.from(ADS_MAP.values());
+      scheduleRenderAds();
+    });
+
+  } catch (err) {
+    console.warn("attachRealtimeHandlers failed:", err);
+  }
 }
 
 // ===============================
@@ -450,9 +443,6 @@ async function renderAds(adsArr) {
   let filtered = (adsArr || []).filter(a => {
     if (!a) return false;
 
-    // role-visibility rule:
-    // if current user is driver -> show passenger ads (they need drivers)
-    // if current user is passenger -> show driver ads (they need passengers)
     if (currentRole === "driver") {
       if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
     } else if (currentRole === "passenger") {
@@ -473,7 +463,7 @@ async function renderAds(adsArr) {
     if (toRegion && a.toRegion !== toRegion) return false;
     if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
 
-    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
+    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"") ) : NaN;
     if (isPriceMinSet && isNaN(adPrice)) return false;
     if (isPriceMaxSet && isNaN(adPrice)) return false;
     if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
