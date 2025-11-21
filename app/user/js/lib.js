@@ -1,4 +1,13 @@
 /***************************************
+ *  HELPERS — eski kodlar bilan moslik
+ ****************************************/
+
+// DOM short helper
+export const $ = (sel) => document.querySelector(sel);
+export const $$ = (sel) => document.querySelectorAll(sel);
+
+
+/***************************************
  *  FIREBASE INITIALIZATION (v9 MODULAR)
  ****************************************/
 
@@ -7,21 +16,16 @@ import {
     getAuth, 
     RecaptchaVerifier,
     signInWithPhoneNumber,
-    signInWithCustomToken,
     onAuthStateChanged 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import { 
-    getDatabase, 
-    ref, 
-    set, 
-    get, 
-    update 
+    getDatabase, ref, set, get, update 
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
 /***************************************
- *  YOUR FIREBASE CONFIG
+ *  FIREBASE CONFIG
  ****************************************/
 
 const firebaseConfig = {
@@ -45,46 +49,47 @@ export const db = getDatabase(app);
 
 
 /***************************************
- *  EXPORTABLE HELPERS
+ *  AUTH HELPERS
  ****************************************/
 
-// ReCAPTCHA – LOGIN / REGISTER uchun
+// Recaptcha loader
 export function initRecaptcha(containerId = "recaptcha-container") {
-    const verifier = new RecaptchaVerifier(auth, containerId, {
-        size: "invisible"
-    });
-    return verifier;
+    return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
 }
 
 // SMS yuborish
-export async function sendLoginSMS(phone, verifier) {
-    return await signInWithPhoneNumber(auth, phone, verifier);
+export function sendLoginSMS(phone, verifier) {
+    return signInWithPhoneNumber(auth, phone, verifier);
 }
 
-// SMS kodini tasdiqlash
-export async function verifyLoginCode(confirmation, code) {
-    return await confirmation.confirm(code);
+// SMS tasdiqlash
+export function verifyLoginCode(confirmObj, code) {
+    return confirmObj.confirm(code);
 }
 
-// Userni olish
-export function subscribeAuth(callback) {
-    onAuthStateChanged(auth, callback);
+// Auth listener
+export function onUserState(callback) {
+    return onAuthStateChanged(auth, callback);
 }
 
 
-// Realtime Database – user yaratish
-export async function createUser(uid, data) {
-    return await set(ref(db, "users/" + uid), data);
+/***************************************
+ *  DATABASE HELPERS
+ ****************************************/
+
+export async function dbSet(path, data) {
+    return await set(ref(db, path), data);
 }
 
-// Userni yangilash
-export async function updateUser(uid, data) {
-    return await update(ref(db, "users/" + uid), data);
+export async function dbUpdate(path, data) {
+    return await update(ref(db, path), data);
 }
 
-// User malumotini olish
-export async function getUser(uid) {
-    const snap = await get(ref(db, "users/" + uid));
+export async function dbGet(path) {
+    const snap = await get(ref(db, path));
     return snap.exists() ? snap.val() : null;
 }
 
+export function dbRef(path) {
+    return ref(db, path);
+}
