@@ -34,12 +34,12 @@ import {
 //  (sening real project configing qoldi — o‘zgartirmadim)
 // ================================
 const firebaseConfig = {
-    apiKey: "AIzaSyAoyCp5tWygdxHILMoEIMAHeisjKVICOx4",
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
     authDomain: "shahartaxi-demo.firebaseapp.com",
     databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
     projectId: "shahartaxi-demo",
     storageBucket: "shahartaxi-demo.appspot.com",
-    messagingSenderId: "965674015103",
+    messagingSenderId: "874241795701",
     appId: "1:965674015103:web:7033aee93013f9f46197d4"
 };
 
