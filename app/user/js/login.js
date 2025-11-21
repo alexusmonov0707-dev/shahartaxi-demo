@@ -76,13 +76,17 @@ document.getElementById("verifyBtn").onclick = async () => {
 
         const snap = await get(ref(db, "users/" + user.uid));
 
-        if (snap.exists()) {
-            window.location.href = "../profile/profile.html";
-        } else {
+        // Yangi user = register.html
+        if (!snap.exists()) {
             window.location.href = "register.html";
+            return;
         }
 
-    } catch (e) {
+        // Eski user = index.html (USER ichida)
+        window.location.href = "index.html";   // ✅ OK
+    } 
+    catch (e) {
         alert("Kod xato!");
     }
 };
+
