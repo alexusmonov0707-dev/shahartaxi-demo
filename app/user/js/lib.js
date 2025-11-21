@@ -1,13 +1,19 @@
-// ==========================
-// Modular Firebase imports
-// ==========================
+// ======================================================
+//   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
+// ======================================================
+
+// -------- Imports --------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
 import {
   getAuth,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  onAuthStateChanged
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
 import {
   getDatabase,
   ref,
@@ -17,9 +23,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
-// ==========================
-// Firebase config
-// ==========================
+// -------- Firebase config --------
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -30,17 +34,33 @@ const firebaseConfig = {
 };
 
 
-// ==========================
-// INIT
-// ==========================
+// -------- Initialize Firebase --------
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
 
-// ==========================
-// EXPORT qilinadigan helperlar
-// ==========================
+// ======================================================
+//    AUTH PERSISTENCE (MUHIM!  Login loopingni tuzatadi)
+// ======================================================
+await setPersistence(auth, browserLocalPersistence);
+
+
+// ======================================================
+//    RECAPTCHA YARATIB BERADIGAN FUNKSIYA
+// ======================================================
+function createRecaptcha(containerId = "recaptcha-container") {
+  return new RecaptchaVerifier(
+    auth,
+    containerId,
+    { size: "invisible" }
+  );
+}
+
+
+// ======================================================
+//   EKSPORT QILINADIGAN MODULLAR
+// ======================================================
 export {
   auth,
   db,
@@ -48,7 +68,8 @@ export {
   get,
   set,
   update,
+  onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  onAuthStateChanged
+  createRecaptcha
 };
