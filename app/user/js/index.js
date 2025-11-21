@@ -133,7 +133,7 @@ async function getUserInfo(uid) {
     return {
       uid,
       phone: u.phone || u.telephone || "",
-      avatar: u.avatar || "",
+      avatar: u.avatar || u.image || u.photoURL || "",
       fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
       role: u.role || u.userRole || "",
       carModel: u.carModel || u.car || "",
@@ -577,21 +577,34 @@ async function createAdCard(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-// Modal oynada faqat haydovchi e’loni bo‘lsa mashina chiqaramiz
-let showCar = false;
-try {
+  // Modal oynada faqat haydovchi e’loni bo‘lsa mashina chiqaramiz
+  let showCar = false;
+  try {
+      const ownerRole = (u.role || "").toLowerCase();
+      if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
+          showCar = true;
+      }
+  } catch(e) {
+      showCar = false;
+  }
+
+  // To‘liq mashina ma’lumoti
+  const carFull = showCar
+      ? `${u.carModel || ad.car || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`
+      : "";
+
+  // show carModel on card only if owner is driver (so passengers won't see car from passenger ads)
+  let carModel = "";
+  try {
     const ownerRole = (u.role || "").toLowerCase();
     if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
-        showCar = true;
+      carModel = u.carModel || ad.car || "";
+    } else {
+      carModel = "";
     }
-} catch(e) {
-    showCar = false;
-}
-
-// To‘liq mashina ma’lumoti
-const carFull = showCar
-    ? `${u.carModel || ad.car || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`
-    : "";
+  } catch(e) {
+    carModel = ad.car || "";
+  }
 
   div.innerHTML = `
     <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
@@ -639,12 +652,12 @@ async function openAdModal(ad) {
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
   const fullname = u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "Foydalanuvchi";
  let carFull = "";
-if (u.role?.toLowerCase().includes("haydov")) {
+ if (u.role?.toLowerCase().includes("haydov")) {
   carFull =
     `${u.carModel || ""}` +
     `${u.carColor ? " • " + u.carColor : ""}` +
     `${u.carNumber ? " • " + u.carNumber : ""}`;
-}
+ }
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
