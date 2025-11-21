@@ -2,27 +2,26 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kirish</title>
+    <script type="module" src="./login.js"></script>
 </head>
 <body>
 
-    <h2>Kirish</h2>
+<h2>Kirish</h2>
 
-    <label>Telefon raqam (+998...)</label><br>
-    <input id="phone" type="text" placeholder="+998XXYYYYYY"><br><br>
+<label>Telefon raqam</label><br>
+<input id="phone" type="text" placeholder="+998901234567"><br><br>
 
-    <button onclick="sendCode()">SMS kod yuborish</button><br><br>
+<button id="sendCodeBtn">SMS kod yuborish</button><br><br>
 
-    <label>Kod</label><br>
-    <input id="smsCode" type="text" placeholder="123456"><br><br>
+<label>Kod</label><br>
+<input id="code" type="text" placeholder="123456"><br><br>
 
-    <button onclick="verifyCode()">Tasdiqlash va kirish</button><br><br>
+<button id="verifyBtn">Tasdiqlash va kirish</button><br><br>
 
-    <a href="register.html">Ro‘yxatdan o‘tish</a>
+<a href="register.html">Ro‘yxatdan o‘tish</a>
 
-    <script src="../js/lib.js"></script>
-    <script src="../js/login.js"></script>
+<div id="recaptcha-container"></div>
 
 </body>
 </html>
