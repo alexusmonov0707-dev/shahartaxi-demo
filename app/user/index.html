@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ShaharTaxi — E’lonlar</title>
 
-  <!-- style.css joylashuvi: root (shahartaxi-demo/style.css) -->
+  <!-- root style (project root) -->
   <link rel="stylesheet" href="../../style.css" />
 </head>
 
@@ -63,13 +63,13 @@
     <div class="filter-block">
       <label><b>Qayerdan:</b></label><br>
       <select id="fromRegion"><option value="">Viloyat</option></select>
-      <div id="fromDistrictBox" class="district-box"></div>
+      <div id="fromDistrictBox" class="district-box" style="display:none"></div>
     </div>
 
     <div class="filter-block">
       <label><b>Qayerga:</b></label><br>
       <select id="toRegion"><option value="">Viloyat</option></select>
-      <div id="toDistrictBox" class="district-box"></div>
+      <div id="toDistrictBox" class="district-box" style="display:none"></div>
     </div>
 
     <div id="adsList">Yuklanmoqda...</div>
@@ -81,13 +81,13 @@
 
 <div id="adFullModal"></div>
 
-<!-- REGIONS: assetsdagi fayl -->
+<!-- Regions (assets) -->
 <script src="../../assets/regions-taxi.js"></script>
 
-<!-- helper (shu papkada joylashgan bo'lsin) -->
+<!-- helper in same folder -->
 <script src="js/regions-helper.js"></script>
 
-<!-- MAIN INDEX JS (module) -->
+<!-- main script -->
 <script type="module" src="js/index.js?v=1"></script>
 
 </body>
