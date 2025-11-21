@@ -1,24 +1,29 @@
-// =======================
-//  GLOBAL FIREBASE INIT
-// =======================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+// ==========================
+//  FIREBASE IMPORTS
+// ==========================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { 
     getAuth, 
-    RecaptchaVerifier, 
     signInWithPhoneNumber,
-    signOut 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    RecaptchaVerifier,
+    onAuthStateChanged,
+    signOut
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-import { 
-    getDatabase, 
-    ref, 
-    get, 
-    set, 
-    update 
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+    getDatabase,
+    ref,
+    set,
+    get,
+    update
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+
+// ==========================
+//  FIREBASE CONFIG
+// ==========================
 const firebaseConfig = {
-    apiKey: "AIzaSyApWUG4QYuC9aCsE9MOLXwLcYgRihREWvc",
+    apiKey: "AIzaSyApWUG4OY uC9aCsE9MOLXwLcYgRihREWvc",
     authDomain: "shahartaxi-demo.firebaseapp.com",
     databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
     projectId: "shahartaxi-demo",
@@ -27,71 +32,43 @@ const firebaseConfig = {
     appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getDatabase(app);
+// START FIREBASE
+export const app    = initializeApp(firebaseConfig);
+export const auth   = getAuth(app);
+export const db     = getDatabase(app);
 
 
-// =======================
-//   HELPERS
-// =======================
-
-export function $(id) {
-    return document.getElementById(id);
+// ==========================
+//  PHONE LOGIN HELPERS
+// ==========================
+export function setupRecaptcha(buttonId) {
+    window.recaptchaVerifier = new RecaptchaVerifier(
+        buttonId,
+        { size: "invisible" },
+        auth
+    );
+    return window.recaptchaVerifier;
 }
 
-export function saveUserLocal(data) {
-    localStorage.setItem("user", JSON.stringify(data));
+export function sendSMS(phone, verifier) {
+    return signInWithPhoneNumber(auth, phone, verifier);
 }
 
-export function getUserLocal() {
-    return JSON.parse(localStorage.getItem("user"));
+export { onAuthStateChanged }; // VERY IMPORTANT FOR PROFILE
+export { signOut };             // ALSO USED IN PROFILE
+
+
+// ==========================
+//  DATABASE HELPERS
+// ==========================
+export function dbSet(path, data) {
+    return set(ref(db, path), data);
 }
 
-export function logoutUser() {
-    localStorage.removeItem("user");
-    signOut(auth);
-    window.location.href = "/shahartaxi-demo/app/user/login.html";
+export function dbUpdate(path, data) {
+    return update(ref(db, path), data);
 }
 
-
-// =======================
-//  AUTH: SMS YUBORISH
-// =======================
-
-export async function sendSMS(phone) {
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, "sms-btn", {
-        size: "invisible"
-    });
-
-    const appVerifier = window.recaptchaVerifier;
-
-    return await signInWithPhoneNumber(auth, phone, appVerifier);
+export function dbGet(path) {
+    return get(ref(db, path));
 }
-
-
-// =======================
-//  DATABASE FUNCTIONS
-// =======================
-
-// GET — profile uchun kerak
-export async function dbGet(path) {
-    return await get(ref(db, path));
-}
-
-// SAVE (register uchun)
-export async function dbSave(path, data) {
-    return await set(ref(db, path), data);
-}
-
-// UPDATE (profil tahrirlash uchun)
-export async function dbUpdate(path, data) {
-    return await update(ref(db, path), data);
-}
-
-
-// =======================
-// EXPORTS PROFILE UCHUN 
-// =======================
-
-export { get, set, update, signOut };
