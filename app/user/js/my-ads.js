@@ -58,7 +58,8 @@ async function loadMyAds(uid) {
             Vaqt: ${ad.departureTime}
             ${seatsText}
             <div style="margin-top:10px; display:flex; gap:10px;">
-                <button class="blue-btn" onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
+                <button class="blue-btn"
+                    onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
                     Tahrirlash
                 </button>
                 <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
@@ -86,7 +87,9 @@ window.deleteAd = async function (id) {
 window.openEditAd = function (id, ad) {
     editingAdId = id;
 
-    initRegionsForm();
+    // FILL REGIONS
+    if (window.initRegionsForm) window.initRegionsForm();
+
     $("editFromRegion").value = ad.fromRegion;
     updateEditDistricts("from");
     $("editFromDistrict").value = ad.fromDistrict;
@@ -134,4 +137,20 @@ window.saveAdEdit = async function () {
     alert("Yangilandi!");
     closeEditAd();
     loadMyAds(auth.currentUser.uid);
+};
+
+// ==========================
+// REGIONS HELPERS
+// ==========================
+window.updateEditDistricts = function (type) {
+    const region = $(type === "from" ? "editFromRegion" : "editToRegion").value;
+    const distSel = $(type === "from" ? "editFromDistrict" : "editToDistrict");
+
+    distSel.innerHTML = '<option value="">Tuman</option>';
+
+    if (!window.regionsData || !window.regionsData[region]) return;
+
+    window.regionsData[region].forEach(d =>
+        distSel.innerHTML += `<option value="${d}">${d}</option>`
+    );
 };
