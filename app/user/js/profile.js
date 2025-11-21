@@ -1,43 +1,25 @@
-// app/user/js/profile.js
+// profile.js rewritten to work with new lib.js
+import { auth, db, ref, get, set, update, onAuthStateChanged, createRecaptcha, signInWithPhoneNumber } from "./lib.js";
 
-import {
-  auth,
-  db,
-  ref,
-  get,
-  set,
-  update,
-  signOut,
-  onAuthStateChanged,
-  $
-} from "./lib.js";
-
-// ImgBB API
+const $ = id => document.getElementById(id);
 const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
 
-// ===============================
-// LOGIN STATE
-// ===============================
 onAuthStateChanged(auth, async user => {
   if (!user) {
     window.location.href = "../../login.html";
     return;
   }
-
   await loadUserProfile(user.uid);
-  initRegionsForm(); // fill region selects
+  if (window.initRegionsForm) initRegionsForm();
 });
 
-// ===============================
-// LOAD USER PROFILE
-// ===============================
 async function loadUserProfile(uid) {
-  const snap = await get(ref(db, "users/" + uid));
+  const snap = await get(ref(db, `users/${uid}`));
 
   if (!snap.exists()) {
-    await set(ref(db, "users/" + uid), {
+    await set(ref(db, `users/${uid}`), {
       fullName: "",
-      phone: "",
+      phone: auth.currentUser.phoneNumber || "",
       avatar: "",
       role: "passenger",
       carModel: "",
@@ -52,61 +34,49 @@ async function loadUserProfile(uid) {
     });
   }
 
-  const s = await get(ref(db, "users/" + uid));
-  const u = s.val();
+  const data = (await get(ref(db, `users/${uid}`))).val();
 
-  // Basic
-  $("fullName").textContent = u.fullName || "";
-  $("phone").textContent = u.phone || "";
+  $("fullName").textContent = data.fullName || "";
+  $("phone").textContent = data.phone || "";
 
-  $("avatar").src =
-    u.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
+  $("avatar").src = data.avatar || "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
 
-  // Extended info
   $("userDetails").innerHTML = `
-    <b>Tug‘ilgan sana:</b> ${u.birthdate || "-"}<br>
-    <b>Jinsi:</b> ${u.gender || "-"}<br>
-    <b>Viloyat:</b> ${u.region || "-"}<br>
-    <b>Tuman:</b> ${u.district || "-"}
+    <b>Tug‘ilgan sana:</b> ${data.birthdate || "-"}<br>
+    <b>Jinsi:</b> ${data.gender || "-"}<br>
+    <b>Viloyat:</b> ${data.region || "-"}<br>
+    <b>Tuman:</b> ${data.district || "-"}
   `;
 
-  // Car
-  if (u.role === "driver") {
+  if (data.role === "driver") {
     $("carDetailsBox").style.display = "block";
     $("carDetails").innerHTML = `
-      <b>Model:</b> ${u.carModel || "-"}<br>
-      <b>Raqam:</b> ${u.carNumber || "-"}<br>
-      <b>Rangi:</b> ${u.carColor || "-"}<br>
-      <b>Joylar:</b> ${u.seatCount || "-"}
+      <b>Model:</b> ${data.carModel || "-"}<br>
+      <b>Raqam:</b> ${data.carNumber || "-"}<br>
+      <b>Rangi:</b> ${data.carColor || "-"}<br>
+      <b>Joylar:</b> ${data.seatCount || "-"}
     `;
   }
 
-  // Prefill edit fields
-  $("editFullName").value = u.fullName || "";
-  $("editPhoneInput").value = u.phone || "";
-  $("editBirthdate").value = u.birthdate || "";
-  $("editGender").value = u.gender || "";
+  $("editFullName").value = data.fullName;
+  $("editPhoneInput").value = data.phone;
+  $("editBirthdate").value = data.birthdate;
+  $("editGender").value = data.gender;
+  $("editRegion").value = data.region;
+  if (window.fillEditDistricts) fillEditDistricts();
+  $("editDistrict").value = data.district;
 
-  $("editRegion").value = u.region || "";
-  fillEditDistricts();
-  $("editDistrict").value = u.district || "";
+  $("carModel").value = data.carModel;
+  $("carNumber").value = data.carNumber;
+  $("carColor").value = data.carColor;
+  $("seatCount").value = data.seatCount;
 
-  $("carModel").value = u.carModel || "";
-  $("carNumber").value = u.carNumber || "";
-  $("carColor").value = u.carColor || "";
-  $("seatCount").value = u.seatCount || "";
+  window.userBalance = Number(data.balance || 0);
+  $("balanceBox").textContent = `Balans: ${window.userBalance.toLocaleString("uz-UZ")} so‘m`;
 
-  // Balance
-  window.userBalance = Number(u.balance || 0);
-  $("balanceBox").textContent =
-    "Balans: " + window.userBalance.toLocaleString("uz-UZ") + " so‘m";
-
-  window.userRole = u.role || "passenger";
+  window.userRole = data.role;
 }
 
-// ===============================
-// EDIT PROFILE SAVE
-// ===============================
 window.saveProfileEdit = async function () {
   const user = auth.currentUser;
   if (!user) return;
@@ -123,25 +93,19 @@ window.saveProfileEdit = async function () {
     seatCount: $("seatCount").value
   };
 
-  await update(ref(db, "users/" + user.uid), updates);
+  await update(ref(db, `users/${user.uid}`), updates);
 
   alert("Profil yangilandi!");
   closeEditProfile();
   loadUserProfile(user.uid);
 };
 
-// ===============================
-// MODALS
-// ===============================
 window.openEditProfile = () => $("editModal").style.display = "flex";
 window.closeEditProfile = () => $("editModal").style.display = "none";
 
 window.openBalanceModal = () => $("balanceModal").style.display = "flex";
 window.closeBalanceModal = () => $("balanceModal").style.display = "none";
 
-// ===============================
-// AVATAR UPLOAD
-// ===============================
 window.chooseAvatar = () => $("avatarInput").click();
 
 $("avatarInput").addEventListener("change", async function () {
@@ -160,42 +124,33 @@ $("avatarInput").addEventListener("change", async function () {
       method: "POST",
       body: form
     });
-    const result = await res.json();
 
+    const result = await res.json();
     if (!result.success) return alert("Rasm yuklanmadi!");
 
-    await update(ref(db, "users/" + auth.currentUser.uid), {
-      avatar: result.data.url
-    });
+    const url = result.data.url;
 
-    $("avatar").src = result.data.url;
+    await update(ref(db, `users/${auth.currentUser.uid}`), { avatar: url });
+
+    $("avatar").src = url;
     alert("Avatar yangilandi!");
   };
   reader.readAsDataURL(file);
 });
 
-// ===============================
-// BALANCE
-// ===============================
 window.addBalance = async function () {
   const amount = Number($("balanceAmount").value || 0);
   if (amount <= 0) return alert("To‘g‘ri summa kiriting.");
 
-  const newBalance = window.userBalance + amount;
+  const newBalance = (window.userBalance || 0) + amount;
 
-  await update(ref(db, "users/" + auth.currentUser.uid), {
-    balance: newBalance
-  });
+  await update(ref(db, `users/${auth.currentUser.uid}`), { balance: newBalance });
 
   window.userBalance = newBalance;
-  $("balanceBox").textContent =
-    "Balans: " + newBalance.toLocaleString("uz-UZ") + " so‘m";
+  $("balanceBox").textContent = `Balans: ${newBalance.toLocaleString("uz-UZ")} so‘m`;
 
   alert("Balans to‘ldirildi!");
   closeBalanceModal();
 };
 
-// ===============================
-// LOGOUT
-// ===============================
-window.logout = () => signOut(auth);
+window.logout = () => auth.signOut && auth.signOut();
