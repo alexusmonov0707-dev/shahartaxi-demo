@@ -1,52 +1,43 @@
-// app/user/js/login.js
-(function(){
-  console.log('LOGIN JS loaded');
+// Modular login.js
+window.addEventListener("load", () => {
 
-  const sendBtn = document.getElementById('sendBtn');
-  const verifyBtn = document.getElementById('verifyBtn');
-  const phoneInput = document.getElementById('phoneInput');
-  const codeInput = document.getElementById('codeInput');
+  const phoneInput = document.getElementById("phoneInput");
+  const codeInput = document.getElementById("codeInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const verifyBtn = document.getElementById("verifyBtn");
 
-  // ensure lib initialized (in case not)
-  window.shahartaxi_lib.initFirebase().catch(e=>{
-    console.warn('Firebase init failed (login.js):', e);
+  const { auth, RecaptchaVerifier, signInWithPhoneNumber } = window.shahaFirebase;
+
+  // === Invisible Recaptcha ===
+  window.recaptchaVerifier = new RecaptchaVerifier(auth, "sendBtn", {
+    size: "invisible"
   });
 
-  sendBtn.addEventListener('click', async ()=>{
+  sendBtn.onclick = async () => {
     const phone = phoneInput.value.trim();
-    if(!phone){
-      alert('Telefon raqam kiriting');
-      return;
-    }
-    sendBtn.disabled = true;
-    sendBtn.textContent = 'Yuborilmoqda...';
-    const res = await window.shahartaxi_lib.sendVerificationCode(phone);
-    if(res.ok){
-      alert('Kod yuborildi. Test raqamlar ishlatilayotgan bo\'lsa, test kodni kiriting.');
-    } else {
-      console.error(res.error);
-      alert('Kod yuborishda xatolik: ' + (res.error && res.error.message ? res.error.message : res.error));
-    }
-    sendBtn.disabled = false;
-    sendBtn.textContent = 'SMS kod yuborish';
-  });
+    if (!phone) return alert("Telefon kiriting");
 
-  verifyBtn.addEventListener('click', async ()=>{
+    try {
+      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+      window.confirmationResult = confirmation;
+      alert("SMS yuborildi!");
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik (SMS): " + err.message);
+    }
+  };
+
+  verifyBtn.onclick = async () => {
     const code = codeInput.value.trim();
-    if(!code){ alert('Kod kiriting'); return; }
-    verifyBtn.disabled = true;
-    verifyBtn.textContent = 'Tekshirilmoqda...';
-    const res = await window.shahartaxi_lib.verifyCode(code);
-    if(res.ok){
-      alert('Muvaffaqiyatli kirdingiz!');
-      // redirect to profile or index
-      window.location.href = 'index.html';
-    } else {
-      console.error(res.error);
-      alert('Tekshirishda xato: ' + (res.error && res.error.message ? res.error.message : res.error));
-    }
-    verifyBtn.disabled = false;
-    verifyBtn.textContent = 'Tasdiqlash va kirish';
-  });
+    if (!code) return alert("Kod kiriting");
 
-})();
+    try {
+      const result = await window.confirmationResult.confirm(code);
+      alert("Muvaffaqiyatli kirdingiz!");
+      window.location.href = "index.html";
+    } catch (err) {
+      console.error(err);
+      alert("Kod xato!");
+    }
+  };
+});
