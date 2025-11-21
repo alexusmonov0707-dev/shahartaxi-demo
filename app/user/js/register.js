@@ -1,54 +1,53 @@
-// app/user/js/register.js
-(function(){
-  const regSendBtn = document.getElementById('regSendBtn');
-  const regVerifyBtn = document.getElementById('regVerifyBtn');
-  const regPhone = document.getElementById('regPhone');
-  const fullName = document.getElementById('fullName');
-  const regCode = document.getElementById('regCode');
-  const roleInput = document.getElementById('role');
+// Modular register.js
+window.addEventListener("load", () => {
 
-  window.shahartaxi_lib.initFirebase().catch(()=>{});
+  const regPhone = document.getElementById("regPhone");
+  const fullName = document.getElementById("fullName");
+  const roleInput = document.getElementById("role");
+  const regCode = document.getElementById("regCode");
 
-  regSendBtn.addEventListener('click', async ()=>{
+  const regSendBtn = document.getElementById("regSendBtn");
+  const regVerifyBtn = document.getElementById("regVerifyBtn");
+
+  const { auth, RecaptchaVerifier, signInWithPhoneNumber, db, ref, set, update } = window.shahaFirebase;
+
+  // === recaptcha ===
+  window.recaptchaVerifierReg = new RecaptchaVerifier(auth, "regSendBtn", {
+    size: "invisible"
+  });
+
+  regSendBtn.onclick = async () => {
     const phone = regPhone.value.trim();
-    if(!phone){ alert('Telefon kiriting'); return; }
-    regSendBtn.disabled = true;
-    regSendBtn.textContent = 'Yuborilmoqda...';
-    const res = await window.shahartaxi_lib.sendVerificationCode(phone);
-    if(res.ok){
-      alert('SMS yuborildi. Kodni kiriting.');
-    } else {
-      console.error(res.error);
-      alert('Xato: ' + (res.error && res.error.message ? res.error.message : res.error));
-    }
-    regSendBtn.disabled = false;
-    regSendBtn.textContent = 'Davom etish';
-  });
+    if (!phone) return alert("Telefonni kiriting");
 
-  regVerifyBtn.addEventListener('click', async ()=>{
-    const code = regCode.value.trim();
-    if(!code){ alert('Kod kiriting'); return; }
-    regVerifyBtn.disabled = true;
-    regVerifyBtn.textContent = 'Tekshirilmoqda...';
-    const res = await window.shahartaxi_lib.verifyCode(code);
-    if(res.ok){
-      // after succ login, update user profile fields (fullName, role)
-      const user = res.user;
-      const data = {
-        fullName: fullName.value || '',
-        role: roleInput.value || 'passenger',
-        phone: user.phoneNumber || '',
+    try {
+      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifierReg);
+      window.regConfirm = confirmation;
+      alert("SMS yuborildi");
+    } catch (err) {
+      console.error(err);
+      alert("Xatolik (SMS): " + err.message);
+    }
+  };
+
+  regVerifyBtn.onclick = async () => {
+    try {
+      const result = await window.regConfirm.confirm(regCode.value.trim());
+      const user = result.user;
+
+      await update(ref(db, "users/" + user.uid), {
+        fullName: fullName.value,
+        role: roleInput.value,
+        phone: user.phoneNumber,
         createdAt: Date.now()
-      };
-      await window.shahartaxi_lib.createOrUpdateUser(user.uid, data);
-      alert('Ro\'yxatdan muvaffaqiyatli o\'tdingiz');
-      window.location.href = 'index.html';
-    } else {
-      console.error(res.error);
-      alert('Kod tekshirilganda xatolik: ' + (res.error && res.error.message ? res.error.message : res.error));
-    }
-    regVerifyBtn.disabled = false;
-    regVerifyBtn.textContent = 'Ro\'yxatdan o\'tish';
-  });
+      });
 
-})();
+      alert("Ro‘yxatdan o‘tdingiz!");
+      window.location.href = "index.html";
+
+    } catch (err) {
+      console.error(err);
+      alert("Kod xato!");
+    }
+  };
+});
