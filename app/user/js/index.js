@@ -1,27 +1,77 @@
-// app/user/js/index.js
-// Modular version — uses app/user/js/lib.js for firebase init
-// Keeps original features: filters, pagination, modal, realtime listeners
+// ===============================
+//  FIREBASE INIT + IMPORTS
+// ===============================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getDatabase,
+  ref,
+  get,
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-import { auth, db, ref, get, onAuthStateChanged } from "./lib.js";
-import { onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-import { signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+// firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.firebasestorage.app",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
 
-// REGIONS provided by regions.js loaded in page
-const REGIONS = window.regionsData || window.regions || {};
+// init
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
-// read/new badge storage
+// ===============================
+//  REGIONS — load from regions-helper.js & regions-taxi.js
+// ===============================
+
+let REGIONS = {};
+
+if (window.regionsData) {
+  REGIONS = window.regionsData;
+} else if (window.regions) {
+  REGIONS = window.regions;
+} else {
+  REGIONS = {};
+  console.warn("REGIONS not found — check regions-helper.js or regions-taxi.js");
+}
+
+// ===============================
+// READ / NEW BADGE STORAGE
+// ===============================
 function markAsRead(adId) {
   if (!adId) return;
   let read = [];
-  try { read = JSON.parse(localStorage.getItem("readAds") || "[]"); } catch (e) { read = []; }
-  if (!read.includes(adId)) { read.push(adId); localStorage.setItem("readAds", JSON.stringify(read)); }
-}
-function isRead(adId) {
-  if (!adId) return false;
-  try { const read = JSON.parse(localStorage.getItem("readAds") || "[]"); return read.includes(adId); } catch(e) { return false; }
+  try { read = JSON.parse(localStorage.getItem("readAds") || "[]"); } catch (e) {}
+  if (!read.includes(adId)) {
+    read.push(adId);
+    localStorage.setItem("readAds", JSON.stringify(read));
+  }
 }
 
-// Helpers
+function isRead(adId) {
+  try {
+    const read = JSON.parse(localStorage.getItem("readAds") || "[]");
+    return read.includes(adId);
+  } catch (e) {
+    return false;
+  }
+}
+
+// ===============================
+// HELPERS
+// ===============================
 function escapeHtml(str) {
   if (str === 0) return "0";
   if (!str && str !== 0) return "";
@@ -32,6 +82,7 @@ function escapeHtml(str) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
 function normalizeType(t) {
   if (!t) return "";
   t = String(t).trim().toLowerCase();
@@ -41,26 +92,19 @@ function normalizeType(t) {
   if (t === "yo'lovchi") return "Yo‘lovchi";
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
+
 function formatTime(val) {
   if (!val) return "—";
   if (typeof val === "number") {
-    try {
-      return new Date(val).toLocaleString("uz-UZ", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit"
-      });
-    } catch(e) { return String(val); }
+    return new Date(val).toLocaleString("uz-UZ", {
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit"
+    });
   }
   if (typeof val === "string") {
-    if (!isNaN(Date.parse(val))) {
-      return new Date(val).toLocaleString("uz-UZ", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit"
-      });
-    }
-    const fix = val.replace(" ", "T");
-    if (!isNaN(Date.parse(fix))) {
-      return new Date(fix).toLocaleString("uz-UZ", {
+    const fixed = val.replace(" ", "T");
+    if (!isNaN(Date.parse(fixed))) {
+      return new Date(fixed).toLocaleString("uz-UZ", {
         year: "numeric", month: "2-digit", day: "2-digit",
         hour: "2-digit", minute: "2-digit"
       });
@@ -68,54 +112,74 @@ function formatTime(val) {
   }
   return String(val);
 }
-function slugify(s) { return String(s || "").toLowerCase().replace(/\s+/g, "_").replace(/[^\w\-]/g, ""); }
 
-async function getUserInfo(userId) {
-  if (!userId) return { phone: "", avatar: "", fullName: "", role: "", carModel: "", carColor: "", carNumber: "", seatCount: 0 };
+function slugify(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^\w\-]/g, "");
+}
+
+// ===============================
+// GET USER INFO
+// ===============================
+async function getUserInfo(uid) {
+  if (!uid) return {};
   try {
-    const snap = await get(ref(db, "users/" + userId));
-    if (!snap.exists()) return { phone: "", avatar: "", fullName: "", role: "", carModel: "", carColor: "", carNumber: "", seatCount: 0 };
+    const snap = await get(ref(db, "users/" + uid));
+    if (!snap.exists()) return {};
+
     const u = snap.val();
     return {
-      phone: u.phone || u.telephone || "",
+      uid,
+      phone: u.phone || "",
       avatar: u.avatar || "",
-      fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
-      role: (u.role || u.userRole || "").toString(),
-      carModel: u.carModel || u.car || "",
+      fullName: u.fullName || "",
+      role: u.role || "",
+      carModel: u.carModel || "",
       carColor: u.carColor || "",
-      carNumber: u.carNumber || u.plate || "",
-      seatCount: Number(u.seatCount || u.seats || 0)
+      carNumber: u.carNumber || "",
+      seatCount: Number(u.seatCount || 0)
     };
-  } catch (err) {
-    console.error("getUserInfo error", err);
-    return { phone: "", avatar: "", fullName: "", role: "", carModel: "", carColor: "", carNumber: "", seatCount: 0 };
+  } catch (e) {
+    console.error("getUserInfo error", e);
+    return {};
   }
 }
 
+// ===============================
 // GLOBALS
-const ADS_MAP = new Map();
-let ALL_ADS_ARR = [];
+// ===============================
+let ALL_ADS = [];
+let ADS_MAP = new Map();
 let CURRENT_USER = null;
-let useRealtime = true;
-
-let PAGE_SIZE = 10;
 let CURRENT_PAGE = 1;
+const PAGE_SIZE = 10;
 
-// AUTH CHECK — use onAuthStateChanged from lib.js
+// ===============================
+// AUTH CHECK
+// ===============================
 onAuthStateChanged(auth, async (user) => {
-  if (!user) { window.location.href = "login.html"; return; }
-  CURRENT_USER = await getUserInfo(user.uid || user.userId);
+  if (!user) {
+    window.location.href = "/app/user/login.html";
+    return;
+  }
+
+  CURRENT_USER = await getUserInfo(user.uid);
   loadRegionsFilter();
   loadRouteFilters();
   await initialLoadAds();
-  if (useRealtime) attachRealtimeHandlers();
+  attachRealtimeHandlers();
 });
-
-// LOAD REGION FILTER
+// ===============================
+// LOAD FILTER (TOP REGION)
+// ===============================
 function loadRegionsFilter() {
   const el = document.getElementById("filterRegion");
   if (!el) return;
+
   el.innerHTML = '<option value="">Viloyat (filter)</option>';
+
   Object.keys(REGIONS).forEach(region => {
     const opt = document.createElement("option");
     opt.value = region;
@@ -124,212 +188,206 @@ function loadRegionsFilter() {
   });
 }
 
-// ROUTE FILTERS
+// ===============================
+// ROUTE FILTERS (FROM / TO)
+// ===============================
 function loadRouteFilters() {
   const fromRegion = document.getElementById("fromRegion");
   const toRegion = document.getElementById("toRegion");
+
   if (!fromRegion || !toRegion) return;
 
   fromRegion.innerHTML = '<option value="">Viloyat</option>';
   toRegion.innerHTML = '<option value="">Viloyat</option>';
 
   Object.keys(REGIONS).forEach(region => {
-    fromRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
-    toRegion.insertAdjacentHTML("beforeend", `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
+    fromRegion.insertAdjacentHTML("beforeend",
+      `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
+    toRegion.insertAdjacentHTML("beforeend",
+      `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
   });
 
-  fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-  toRegion.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
+  fromRegion.onchange = () => {
+    fillFromDistricts();
+    CURRENT_PAGE = 1;
+    scheduleRenderAds();
+  };
+
+  toRegion.onchange = () => {
+    fillToDistricts();
+    CURRENT_PAGE = 1;
+    scheduleRenderAds();
+  };
 
   fillFromDistricts();
   fillToDistricts();
 }
 
 function fillFromDistricts() {
-  const region = document.getElementById("fromRegion")?.value;
+  const region = document.getElementById("fromRegion").value;
   const box = document.getElementById("fromDistrictBox");
-  if (!box) return;
+
   box.innerHTML = "";
-  if (!region || !REGIONS[region]) { box.style.display = "none"; return; }
+  if (!region || !REGIONS[region]) {
+    box.style.display = "none";
+    return;
+  }
+
   box.style.display = "";
-  REGIONS[region].forEach(d => {
+  REGIONS[region].forEach(dist => {
     const label = document.createElement("label");
     label.className = "district-item";
-    label.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
+    label.innerHTML = `
+      <input type="checkbox" class="fromDistrict" value="${escapeHtml(dist)}"> 
+      ${escapeHtml(dist)}
+    `;
     box.appendChild(label);
   });
-  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
+
+  box.querySelectorAll("input").forEach(ch => {
+    ch.onchange = () => {
+      CURRENT_PAGE = 1;
+      scheduleRenderAds();
+    };
+  });
 }
 
 function fillToDistricts() {
-  const region = document.getElementById("toRegion")?.value;
+  const region = document.getElementById("toRegion").value;
   const box = document.getElementById("toDistrictBox");
-  if (!box) return;
+
   box.innerHTML = "";
-  if (!region || !REGIONS[region]) { box.style.display = "none"; return; }
+  if (!region || !REGIONS[region]) {
+    box.style.display = "none";
+    return;
+  }
+
   box.style.display = "";
-  REGIONS[region].forEach(d => {
+  REGIONS[region].forEach(dist => {
     const label = document.createElement("label");
     label.className = "district-item";
-    label.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(d)}"> ${escapeHtml(d)}`;
+    label.innerHTML = `
+      <input type="checkbox" class="toDistrict" value="${escapeHtml(dist)}"> 
+      ${escapeHtml(dist)}
+    `;
     box.appendChild(label);
   });
-  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
+
+  box.querySelectorAll("input").forEach(ch => {
+    ch.onchange = () => {
+      CURRENT_PAGE = 1;
+      scheduleRenderAds();
+    };
+  });
 }
 
+// ===============================
 // INITIAL LOAD
+// ===============================
 async function initialLoadAds() {
   try {
     const snap = await get(ref(db, "ads"));
     if (!snap.exists()) {
-      ALL_ADS_ARR = [];
       ADS_MAP.clear();
-      document.getElementById("adsList") && (document.getElementById("adsList").innerHTML = "E’lon yo‘q.");
+      ALL_ADS = [];
+      document.getElementById("adsList").innerHTML = "E’lon yo‘q.";
       attachInputsOnce();
-      renderPaginationControls(0,0,0);
+      renderPaginationControls(0, 0, 0);
       return;
     }
 
-    const arr = [];
-    snap.forEach(child => {
-      const v = child.val();
-      arr.push({ id: child.key, ...v, typeNormalized: normalizeType(v.type) });
+    const list = [];
+    snap.forEach(ch => {
+      const v = ch.val();
+      list.push({
+        id: ch.key,
+        ...v,
+        typeNormalized: normalizeType(v.type)
+      });
     });
 
-    const map = new Map();
-    arr.forEach(x => { if (x && x.id) map.set(x.id, x); });
     ADS_MAP.clear();
-    for (const [k,v] of map) ADS_MAP.set(k, v);
-    ALL_ADS_ARR = Array.from(ADS_MAP.values());
+    list.forEach(ad => ADS_MAP.set(ad.id, ad));
+
+    ALL_ADS = Array.from(ADS_MAP.values());
 
     attachInputsOnce();
     scheduleRenderAds();
-  } catch (err) {
-    console.error("initialLoadAds error", err);
+
+  } catch (e) {
+    console.error("initialLoadAds error:", e);
   }
 }
 
-// REALTIME HANDLERS
+// ===============================
+// REALTIME UPDATE HANDLERS
+// ===============================
 function attachRealtimeHandlers() {
-  try {
-    const r = ref(db, "ads");
+  const adsRef = ref(db, "ads");
 
-    onChildAdded(r, (snap) => {
-      const v = snap.val();
-      if (!v) return;
-      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
-      ADS_MAP.set(ad.id, ad);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      scheduleRenderAds();
+  onChildAdded(adsRef, snap => {
+    const v = snap.val();
+    if (!v) return;
+    ADS_MAP.set(snap.key, {
+      id: snap.key,
+      ...v,
+      typeNormalized: normalizeType(v.type)
     });
-
-    onChildChanged(r, (snap) => {
-      const v = snap.val();
-      if (!v) return;
-      const ad = { id: snap.key, ...v, typeNormalized: normalizeType(v.type) };
-      ADS_MAP.set(ad.id, ad);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      scheduleRenderAds();
-    });
-
-    onChildRemoved(r, (snap) => {
-      const id = snap.key;
-      ADS_MAP.delete(id);
-      ALL_ADS_ARR = Array.from(ADS_MAP.values());
-      const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(id)}"]`);
-      if (node && node.parentNode) node.parentNode.removeChild(node);
-      scheduleRenderAds();
-    });
-
-  } catch (err) {
-    console.warn("attachRealtimeHandlers failed:", err);
-  }
-}
-
-function escapeSelector(s) {
-  return String(s || "").replace(/([ #;?%&,.+*~':\"!^$[\]()=>|\/@])/g,'\\$1');
-}
-
-// ATTACH INPUT HANDLERS (once)
-let inputsAttached = false;
-let documentClickListenerAttached = false;
-function attachInputsOnce() {
-  if (inputsAttached) return;
-  inputsAttached = true;
-
-  const searchEl = document.getElementById("search");
-  const roleEl = document.getElementById("filterRole");
-  const regionEl = document.getElementById("filterRegion");
-  const fromRegionEl = document.getElementById("fromRegion");
-  const toRegionEl = document.getElementById("toRegion");
-  const sortByEl = document.getElementById("sortBy");
-  const filterDateEl = document.getElementById("filterDate");
-  const priceMinEl = document.getElementById("priceMin");
-  const priceMaxEl = document.getElementById("priceMax");
-
-  // create reset button if not present
-  let resetBtn = document.getElementById("resetFiltersBtn");
-  if (!resetBtn) {
-    const filtersDiv = document.querySelector(".filters");
-    if (filtersDiv) {
-      resetBtn = document.createElement("button");
-      resetBtn.id = "resetFiltersBtn";
-      resetBtn.textContent = "Reset";
-      resetBtn.style = "background:#ff4d4f;color:#fff;padding:8px 14px;border-radius:8px;border:none;cursor:pointer";
-      const roleNode = document.getElementById("filterRole");
-      if (roleNode && roleNode.parentNode) roleNode.parentNode.insertBefore(resetBtn, roleNode.nextSibling);
-      else filtersDiv.appendChild(resetBtn);
-    }
-  }
-
-  if (searchEl) searchEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (roleEl) roleEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (regionEl) regionEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (fromRegionEl) fromRegionEl.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (toRegionEl) toRegionEl.onchange   = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (sortByEl) sortByEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (filterDateEl) filterDateEl.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (priceMinEl) priceMinEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (priceMaxEl) priceMaxEl.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-
-  if (resetBtn) resetBtn.onclick = () => { resetFilters(); };
-
-  document.addEventListener("change", (e) => {
-    if (!e.target) return;
-    if (e.target.classList && (e.target.classList.contains("fromDistrict") || e.target.classList.contains("toDistrict"))) {
-      CURRENT_PAGE = 1;
-      scheduleRenderAds();
-    }
+    ALL_ADS = Array.from(ADS_MAP.values());
+    scheduleRenderAds();
   });
 
-  if (!documentClickListenerAttached) {
-    document.addEventListener("click", (e) => {
-      const fromBox = document.getElementById("fromDistrictBox");
-      const toBox = document.getElementById("toDistrictBox");
-      const fromRegion = document.getElementById("fromRegion");
-      const toRegion = document.getElementById("toRegion");
+  onChildChanged(adsRef, snap => {
+    const v = snap.val();
+    if (!v) return;
+    ADS_MAP.set(snap.key, {
+      id: snap.key,
+      ...v,
+      typeNormalized: normalizeType(v.type)
+    });
+    ALL_ADS = Array.from(ADS_MAP.values());
+    scheduleRenderAds();
+  });
 
-      const clickedInsideFromBox = fromBox && (e.target === fromBox || fromBox.contains(e.target));
-      const clickedInsideToBox = toBox && (e.target === toBox || toBox.contains(e.target));
-      const clickedOnFromSelect = fromRegion && (e.target === fromRegion || fromRegion.contains(e.target));
-      const clickedOnToSelect = toRegion && (e.target === toRegion || toRegion.contains(e.target));
-
-      if (!clickedInsideFromBox && !clickedOnFromSelect) { if (fromBox) fromBox.style.display = "none"; }
-      if (!clickedInsideToBox && !clickedOnToSelect) { if (toBox) toBox.style.display = "none"; }
-    }, { capture: true });
-
-    window.addEventListener("scroll", () => {
-      const fromBox = document.getElementById("fromDistrictBox");
-      const toBox = document.getElementById("toDistrictBox");
-      if (fromBox) fromBox.style.display = "none";
-      if (toBox) toBox.style.display = "none";
-    }, { passive: true });
-
-    documentClickListenerAttached = true;
-  }
+  onChildRemoved(adsRef, snap => {
+    ADS_MAP.delete(snap.key);
+    ALL_ADS = Array.from(ADS_MAP.values());
+    scheduleRenderAds();
+  });
 }
 
-// RENDER ADS (pipeline + pagination)
+// ===============================
+// INPUT HANDLERS (ONCE)
+// ===============================
+let inputBound = false;
+
+function attachInputsOnce() {
+  if (inputBound) return;
+  inputBound = true;
+
+  const search = document.getElementById("search");
+  const role = document.getElementById("filterRole");
+  const sort = document.getElementById("sortBy");
+  const date = document.getElementById("filterDate");
+  const priceMin = document.getElementById("priceMin");
+  const priceMax = document.getElementById("priceMax");
+
+  if (search) search.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (role) role.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (sort) sort.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (date) date.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (priceMin) priceMin.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (priceMax) priceMax.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+
+  const resetBtn = document.getElementById("resetFiltersBtn");
+  if (resetBtn) {
+    resetBtn.onclick = () => resetFilters();
+  }
+}
+// ===============================
+// 3-BO'LIM: RENDER, CARD, MODAL, CONTACT, RESET, PAGINATION
+// ===============================
+
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
@@ -348,7 +406,7 @@ async function renderAds(adsArr) {
   const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g,"")) : null;
   const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
 
-  const currentUserId = auth.currentUser?.uid || null;
+  const currentUserId = CURRENT_USER?.uid || null;
 
   const currentRoleRaw = (CURRENT_USER?.role || "").toString().toLowerCase();
   let currentRole = "";
@@ -360,7 +418,6 @@ async function renderAds(adsArr) {
   const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
   const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
-  // filter + validate
   let filtered = (adsArr || []).filter(a => {
     if (!a) return false;
 
@@ -469,7 +526,9 @@ async function renderAds(adsArr) {
   renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
 }
 
+// ===============================
 // CREATE CARD
+// ===============================
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
 
@@ -527,7 +586,9 @@ async function createAdCard(ad) {
   return div;
 }
 
-// OPEN / CLOSE MODAL
+// ===============================
+// OPEN / CLOSE MODAL, BADGE UPDATE, CONTACT
+// ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
   if (!modal) {
@@ -591,6 +652,7 @@ async function openAdModal(ad) {
         </div>
       </div>
 
+  // (next part continues...)
       <div style="margin-top:12px">
         <div class="label">Izoh</div>
         <div class="value">${escapeHtml(ad.comment || "-")}</div>
@@ -613,15 +675,14 @@ async function openAdModal(ad) {
   `;
 
   modal.style.display = "flex";
-  const closeBtn = document.getElementById("modalCloseBtn");
-  const callBtn = document.getElementById("modalCallBtn");
-  if (closeBtn) closeBtn.onclick = closeAdModal;
-  if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
 
-  try { markAsRead(ad.id); } catch(e) {}
+  document.getElementById("modalCloseBtn").onclick = closeAdModal;
+  document.getElementById("modalCallBtn").onclick = () => onContact(u.phone);
+
+  try { markAsRead(ad.id); } catch(e){}
   updateBadgeForAd(ad.id);
 
-  modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
+  modal.onclick = e => { if (e.target === modal) closeAdModal(); };
 }
 
 function closeAdModal() {
@@ -632,7 +693,6 @@ function closeAdModal() {
 }
 
 function updateBadgeForAd(adId) {
-  if (!adId) return;
   const node = document.querySelector(`.ad-card[data-ad-id="${escapeSelector(adId)}"]`);
   if (!node) return;
   const badge = node.querySelector(".ad-badge-new");
@@ -645,63 +705,71 @@ function onContact(phone) {
 }
 window.onContact = onContact;
 
-// RESET FILTERS (exposed)
-function resetFilters() {
-  const searchEl = document.getElementById("search");
-  const roleEl = document.getElementById("filterRole");
-  const regionEl = document.getElementById("filterRegion");
-  const fromRegionEl = document.getElementById("fromRegion");
-  const toRegionEl = document.getElementById("toRegion");
-  const sortByEl = document.getElementById("sortBy");
-  const filterDateEl = document.getElementById("filterDate");
-  const priceMinEl = document.getElementById("priceMin");
-  const priceMaxEl = document.getElementById("priceMax");
 
-  if (searchEl) searchEl.value = "";
-  if (roleEl) roleEl.value = "";
-  if (regionEl) regionEl.value = "";
-  if (fromRegionEl) fromRegionEl.value = "";
-  if (toRegionEl) toRegionEl.value = "";
-  if (sortByEl) sortByEl.value = "newest";
-  if (filterDateEl) filterDateEl.value = "";
-  if (priceMinEl) priceMinEl.value = "";
-  if (priceMaxEl) priceMaxEl.value = "";
+
+
+// ===============================
+// RESET FILTERS
+// ===============================
+function resetFilters() {
+  const ids = [
+    "search","filterRole","filterRegion","fromRegion","toRegion",
+    "sortBy","filterDate","priceMin","priceMax"
+  ];
+
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
 
   document.querySelectorAll("#fromDistrictBox input.fromDistrict").forEach(i => i.checked = false);
   document.querySelectorAll("#toDistrictBox input.toDistrict").forEach(i => i.checked = false);
 
-  if (document.getElementById("fromRegion")?.value) fillFromDistricts(); else {
-    const fb = document.getElementById("fromDistrictBox"); if (fb) fb.style.display = "none";
-  }
-  if (document.getElementById("toRegion")?.value) fillToDistricts(); else {
-    const tb = document.getElementById("toDistrictBox"); if (tb) tb.style.display = "none";
-  }
+  fillFromDistricts();
+  fillToDistricts();
 
   CURRENT_PAGE = 1;
   scheduleRenderAds();
 }
 window.resetFilters = resetFilters;
 
-// DEBOUNCE scheduling
+
+
+
+// ===============================
+// DEBOUNCE RENDER — TEZLIK OPTIM
+// ===============================
 let __render_timeout = null;
+
 function scheduleRenderAds() {
   if (__render_timeout) clearTimeout(__render_timeout);
+
   __render_timeout = setTimeout(() => {
     renderAds(Array.from(ADS_MAP.values()));
     __render_timeout = null;
-  }, 110);
+  }, 140);
 }
 
+
+
+
+// ===============================
 // LOGOUT
+// ===============================
 window.logout = () => signOut(auth);
 
-// PAGINATION CONTROLS
-function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 0) {
+
+
+
+// ===============================
+// PAGINATION
+// ===============================
+function renderPaginationControls(totalPages, currentPage, totalItems) {
   const container = document.getElementById("pagination");
   if (!container) return;
   container.innerHTML = "";
 
-  if (!totalPages || totalPages <= 1) {
+  if (totalPages <= 1) {
     if (totalItems > 0) {
       const info = document.createElement("div");
       info.textContent = `Ko‘rsatilyapti: ${Math.min(PAGE_SIZE, totalItems)} / ${totalItems}`;
@@ -711,40 +779,68 @@ function renderPaginationControls(totalPages = 0, currentPage = 0, totalItems = 
     return;
   }
 
-  const btn = (text, disabled, handler) => {
+  const mkBtn = (txt, disabled, fn) => {
     const b = document.createElement("button");
-    b.textContent = text;
-    b.disabled = !!disabled;
-    b.style = "padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;margin:0 4px;cursor:pointer";
-    if (!disabled) b.onclick = handler;
+    b.textContent = txt;
+    b.disabled = disabled;
+    b.style = `
+      padding:6px 10px;
+      border-radius:8px;
+      border:1px solid #e5e7eb;
+      background:white;
+      margin:0 4px;
+      cursor:pointer
+    `;
+    if (!disabled) b.onclick = fn;
     return b;
   };
 
-  container.appendChild(btn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; scheduleRenderAds(); }));
-  container.appendChild(btn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = Math.max(1, currentPage - 1); scheduleRenderAds(); }));
+  container.appendChild(mkBtn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; scheduleRenderAds(); }));
+  container.appendChild(mkBtn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = currentPage - 1; scheduleRenderAds(); }));
 
   const windowSize = 5;
   let start = Math.max(1, currentPage - Math.floor(windowSize/2));
   let end = Math.min(totalPages, start + windowSize - 1);
+
   if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
 
   for (let p = start; p <= end; p++) {
+    const btn = document.createElement("button");
     const isCurrent = p === currentPage;
-    const pbtn = document.createElement("button");
-    pbtn.textContent = p.toString();
-    pbtn.disabled = isCurrent;
-    pbtn.style = `padding:6px 10px;border-radius:8px;border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};background:${isCurrent ? "#0069d9" : "white"};color:${isCurrent ? "white" : "#111"};margin:0 4px;cursor:pointer`;
-    if (!isCurrent) pbtn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
-    container.appendChild(pbtn);
+
+    btn.textContent = p;
+    btn.disabled = isCurrent;
+    btn.style = `
+      padding:6px 10px;
+      border-radius:8px;
+      border:1px solid ${isCurrent ? "#0069d9" : "#e5e7eb"};
+      background:${isCurrent ? "#0069d9" : "white"};
+      color:${isCurrent ? "white" : "#111"};
+      margin:0 4px;
+      cursor:pointer
+    `;
+
+    if (!isCurrent) btn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
+
+    container.appendChild(btn);
   }
 
-  container.appendChild(btn("Keyingi ›", currentPage === totalPages, () => { CURRENT_PAGE = Math.min(totalPages, currentPage + 1); scheduleRenderAds(); }));
-  container.appendChild(btn("Oxiri »", currentPage === totalPages, () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
+  container.appendChild(mkBtn("Keyingi ›", currentPage === totalPages,
+    () => { CURRENT_PAGE = currentPage + 1; scheduleRenderAds(); }));
+
+  container.appendChild(mkBtn("Oxiri »", currentPage === totalPages,
+    () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
 
   const info = document.createElement("div");
-  info.textContent = ` Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
+  info.textContent = `Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
   info.style = "color:#6b7280;font-size:13px;margin-left:8px;margin-top:8px;";
   container.appendChild(info);
 }
 
-// --- end of file ---
+
+
+
+// ===============================
+// THE END (index.js) — FULL READY
+// ===============================
+console.log("ShaharTaxi index.js loaded successfully.");
