@@ -59,6 +59,26 @@ function createRecaptcha(containerId = "recaptcha-container") {
 
 
 // ======================================================
+//   QO‘SHIMCHA HELPERLAR (profile, register, index uchun kerak)
+// ======================================================
+
+// Oddiy document.querySelector
+function $(selector) {
+  return document.querySelector(selector);
+}
+
+// Ko‘p elementlar uchun
+function $$(selector) {
+  return document.querySelectorAll(selector);
+}
+
+// Auth bo‘lsa UID qaytaradi
+function uid() {
+  return auth.currentUser ? auth.currentUser.uid : null;
+}
+
+
+// ======================================================
 //   EKSPORT QILINADIGAN MODULLAR
 // ======================================================
 export {
@@ -71,5 +91,8 @@ export {
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  createRecaptcha
+  createRecaptcha,
+  $,          // 🔥 qoʻshildi
+  $$,         // 🔥 qoʻshildi
+  uid         // 🔥 qoʻshildi
 };
