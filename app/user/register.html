@@ -1,36 +1,42 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Ro'yxatdan o'tish — ShaharTaxi</title>
-  <link rel="stylesheet" href="../css/style.css"> <!-- agar bor bo'lsa -->
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="container">
+  <div style="max-width:700px;margin:40px auto;">
     <h2>Ro'yxatdan o'tish</h2>
 
-    <label for="phone">Telefon raqam (+998...)</label><br>
-    <input id="phone" type="text" placeholder="+998901234567"><br><br>
+    <label>Telefon raqam</label><br/>
+    <input id="regPhone" type="text" value="+998" style="width:100%;padding:8px;margin:6px 0"><br/>
 
-    <label for="role">Rol</label><br>
-    <select id="role">
-      <option value="passenger">Yo'lovchi</option>
-      <option value="driver">Haydovchi</option>
-    </select><br><br>
+    <button id="regSendBtn">Davom etish</button>
 
-    <button id="sendBtn">SMS kod yuborish</button><br><br>
+    <p>
+      <label>Ism familiya</label><br/>
+      <input id="fullName" type="text" style="width:100%;padding:8px;margin:6px 0">
+    </p>
 
-    <label for="code">Kod</label><br>
-    <input id="code" type="text" placeholder="123456"><br><br>
+    <p>
+      <label>Role (masalan: passenger yoki driver)</label><br/>
+      <input id="role" type="text" style="width:200px;padding:6px;margin:6px 0" value="passenger">
+    </p>
 
-    <button id="registerBtn">Ro'yxatdan o'tish</button><br><br>
+    <p>
+      <label>Kodni kiriting</label><br/>
+      <input id="regCode" type="text" style="width:200px;padding:6px;margin:6px 0">
+    </p>
 
-    <a href="login.html">Kirish</a>
+    <button id="regVerifyBtn">Ro'yxatdan o'tish</button>
 
-    <div id="recaptcha-container"></div>
+    <p><a href="login.html">Kirish</a></p>
   </div>
 
-  <script type="module" src="js/register.js"></script>
+  <div id="recaptcha-container" style="display:none"></div>
+  <script src="js/lib.js"></script>
+  <script src="js/register.js"></script>
 </body>
 </html>
