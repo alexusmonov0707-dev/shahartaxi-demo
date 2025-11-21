@@ -38,7 +38,7 @@ const firebaseConfig = {
     authDomain: "shahartaxi-demo.firebaseapp.com",
     databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
     projectId: "shahartaxi-demo",
-    storageBucket: "shahartaxi-demo.appspot.com",
+    storageBucket: "shahartaxi-demo.firebasestorage.app",
     messagingSenderId: "874241795701",
     appId: "1:965674015103:web:7033aee93013f9f46197d4"
 };
