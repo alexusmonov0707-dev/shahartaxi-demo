@@ -1,37 +1,124 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Kirish — ShaharTaxi</title>
-  <!-- optional: your CSS -->
-  <link rel="stylesheet" href="../css/style.css">
+    <meta charset="UTF-8">
+    <title>ShaharTaxi — Tizimga kirish</title>
+    <style>
+        body { font-family: Arial; background:#eef2f7; }
+        .box { width:360px; margin:80px auto; padding:25px;
+               background:white; border-radius:10px; text-align:center; }
+        input, button {
+            width:100%; padding:12px; margin:8px 0;
+            border-radius:6px; border:1px solid #ccc; font-size:16px;
+        }
+        button { background:#007bff; color:white; border:none; }
+    </style>
 </head>
 <body>
-  <div class="container" style="max-width:700px; margin:40px auto;">
-    <h2>Kirish</h2>
 
-    <label>Telefon raqam (+998...)</label><br/>
-    <input id="phoneInput" type="text" value="+998" style="width:100%;padding:8px;margin:6px 0"><br/>
+<div class="box">
+    <h2>ShaharTaxi — Tizimga kirish</h2>
 
-    <button id="sendBtn">SMS kod yuborish</button>
+    <input id="phone" type="text" placeholder="+998901234567">
 
-    <p>
-      <label>Kod</label><br/>
-      <input id="codeInput" type="text" style="width:200px;padding:6px;margin:6px 0">
-    </p>
+    <!-- ⚠️ MUHIM -->
+    <div id="recaptcha-container"></div>
 
-    <button id="verifyBtn">Tasdiqlash va kirish</button>
+    <button onclick="sendCode()">SMS kod yuborish</button>
 
-    <p><a href="register.html">Ro'yxatdan o'tish</a></p>
-  </div>
+    <input id="smsCode" type="text" placeholder="SMS kod">
 
-  <!-- recaptcha container (hidden) -->
-  <div id="recaptcha-container" style="display:none"></div>
+    <button onclick="verifyCode()">Kirish</button>
+</div>
 
-  <!-- load our lib and login logic -->
-<script type="module" src="js/lib.js"></script>
-<script type="module" src="js/login.js"></script>
+
+<!-- ================= FIREBASE LOGIN ================= -->
+<script type="module">
+
+/* =============================
+    FIREBASE IMPORTS
+============================= */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+    getAuth, RecaptchaVerifier, signInWithPhoneNumber 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+    getDatabase, ref, get
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+
+/* =============================
+    FIREBASE CONFIG
+============================= */
+
+const firebaseConfig = {
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
+
+
+/* =============================
+    INIT FIREBASE
+============================= */
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+
+/* =============================
+    RECAPTCHA (INVISIBLE)
+============================= */
+window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+    size: "invisible"
+});
+
+
+/* =============================
+    SEND SMS
+============================= */
+window.sendCode = async function () {
+    const phone = document.getElementById("phone").value;
+
+    try {
+        const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+        window.confirmationResult = confirmation;
+        alert("SMS yuborildi!");
+    } catch (e) {
+        console.error(e);
+        alert("SMS yuborishda xato: " + e.message);
+    }
+};
+
+
+/* =============================
+    VERIFY SMS CODE
+============================= */
+window.verifyCode = async function () {
+    const code = document.getElementById("smsCode").value;
+
+    try {
+        const result = await window.confirmationResult.confirm(code);
+        const user = result.user;
+
+        const snap = await get(ref(db, "users/" + user.uid));
+
+        if (snap.exists()) {
+            window.location.href = "profile.html";
+        } else {
+            window.location.href = "register.html";
+        }
+
+    } catch (e) {
+        alert("Kod xato!");
+    }
+};
+
+</script>
 
 </body>
 </html>
