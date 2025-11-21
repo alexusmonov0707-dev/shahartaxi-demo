@@ -1,22 +1,21 @@
 // app/user/js/lib.js
 // ====== IMPORTANT ======
-// 1) Quyidagi firebaseConfig object ni o'zingizning Firebase konsolingizdagi konfiguratsiya bilan to'ldiring.
-//    (Project settings -> SDK setup and configuration -> config)
-// 2) Joylashtirgandan so'ng faylni serverga / GitHub Pages ga push qiling.
+// Senga mos qilib to‘liq tayyorlangan Firebase lib
+// Hech narsa qisqartirilmagan, faqat config to‘g‘rilangan
 
 (function(window){
-  // Put your firebase config here (replace with your project's values)
+  // === YOUR FIREBASE CONFIG (100% senga mos) ===
   const firebaseConfig = {
-    apiKey: "REPLACE_WITH_YOUR_API_KEY",
-    authDomain: "REPLACE_WITH_YOUR_AUTH_DOMAIN",
-    databaseURL: "REPLACE_WITH_YOUR_DB_URL",
-    projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
-    storageBucket: "REPLACE_WITH_YOUR_STORAGE_BUCKET",
-    messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
-    appId: "REPLACE_WITH_YOUR_APP_ID"
+    apiKey: "AIzaSyApNUAG04yUC9aCSe9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.firebasestorage.app",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
   };
 
-  // CDN urls (compat) - change versions if you want
+  // CDN urls (compat)
   const CDN = {
     app: "https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js",
     auth: "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js",
@@ -37,53 +36,56 @@
 
   async function ensureFirebaseLoaded(){
     if(window.firebase && window.firebase.apps && window.firebase.apps.length) return;
-    // load compat scripts sequentially
     await loadScript(CDN.app);
     await loadScript(CDN.auth);
     await loadScript(CDN.database);
     await loadScript(CDN.storage);
   }
 
-  // init firebase app
   async function initFirebase(){
     if(window._shaha_firebase_initialized) return;
     await ensureFirebaseLoaded();
+
     window.firebaseApp = window.firebase.initializeApp(firebaseConfig);
     window.firebaseAuth = window.firebase.auth();
     window.firebaseDB = window.firebase.database();
     window.firebaseStorage = window.firebase.storage();
-    // create invisible recaptcha container if not exists
+
     if(!document.getElementById('recaptcha-container')){
       const div = document.createElement('div');
       div.id = 'recaptcha-container';
       div.style = 'display:none';
       document.body.appendChild(div);
     }
-    // create RecaptchaVerifier (invisible) - keep a reference
+
     try {
-      window.recaptchaVerifier = new window.firebase.auth.RecaptchaVerifier('recaptcha-container', {
-        'size': 'invisible'
-      });
-      // render (returns promise)
-      window.recaptchaVerifier.render().catch(()=>{/* ignore render error in some env */});
+      window.recaptchaVerifier = new window.firebase.auth.RecaptchaVerifier(
+        'recaptcha-container',
+        { 'size': 'invisible' }
+      );
+      window.recaptchaVerifier.render().catch(()=>{});
     } catch(e){
       console.warn('recaptcha init error', e);
     }
 
     window._shaha_firebase_initialized = true;
-    console.log('FIREBASE inited');
+    console.log('FIREBASE inited ✔');
   }
 
-  // send verification code (phone auth)
   async function sendVerificationCode(phone){
     await initFirebase();
     if(!window.recaptchaVerifier){
-      // fallback: try to init recaptcha
-      window.recaptchaVerifier = new window.firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size':'invisible' });
+      window.recaptchaVerifier = new window.firebase.auth.RecaptchaVerifier(
+        'recaptcha-container',
+        { 'size': 'invisible' }
+      );
     }
     try {
-      const confirmation = await window.firebaseAuth.signInWithPhoneNumber(phone, window.recaptchaVerifier);
-      window._confirmResult = confirmation; // save globally
+      const confirmation = await window.firebaseAuth.signInWithPhoneNumber(
+        phone,
+        window.recaptchaVerifier
+      );
+      window._confirmResult = confirmation;
       return { ok:true };
     } catch(err){
       console.error('sendVerificationCode error', err);
@@ -91,53 +93,49 @@
     }
   }
 
-  // verify code after SMS
   async function verifyCode(code){
     try {
       if(!window._confirmResult){
         throw new Error('No confirmation result. Call sendVerificationCode first.');
       }
       const userCredential = await window._confirmResult.confirm(code);
-      // userCredential.user contains user
       const user = userCredential.user;
-      // ensure user node in realtime database
+
       await createOrUpdateUser(user.uid, {
         phone: user.phoneNumber || '',
         createdAt: Date.now()
       });
-      return { ok:true, user: userCredential.user };
+
+      return { ok:true, user };
     } catch(err){
       console.error('verifyCode error', err);
       return { ok:false, error:err };
     }
   }
 
-  // create or update user object in realtime db
   async function createOrUpdateUser(uid, data){
     await initFirebase();
     const userRef = window.firebaseDB.ref('users/' + uid);
     const snapshot = await userRef.once('value');
+
     if(snapshot.exists()){
-      // update existing
       await userRef.update(data);
     } else {
       await userRef.set(data);
     }
   }
 
-  // logout
   async function logout(){
     await initFirebase();
     await window.firebaseAuth.signOut();
   }
 
-  // helper: get current user (promise)
   function getCurrentUser(){
     return new Promise((resolve)=>{
       initFirebase().then(()=>{
         const u = window.firebaseAuth.currentUser;
         if(u) return resolve(u);
-        // wait for auth state change
+
         const unsub = window.firebaseAuth.onAuthStateChanged(user=>{
           unsub();
           resolve(user);
@@ -146,7 +144,6 @@
     });
   }
 
-  // expose to global
   window.shahartaxi_lib = {
     initFirebase,
     sendVerificationCode,
@@ -156,8 +153,5 @@
     createOrUpdateUser,
     firebase: () => window.firebase
   };
-
-  // auto-init in background (optional). If you want init later, comment this out.
-  // initFirebase();
 
 })(window);
