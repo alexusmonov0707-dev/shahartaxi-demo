@@ -1,44 +1,52 @@
-import { auth } from "../lib.js";
-import {
-    RecaptchaVerifier,
-    signInWithPhoneNumber
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+// app/user/js/login.js
+(function(){
+  console.log('LOGIN JS loaded');
 
-console.log("LOGIN JS loaded");
+  const sendBtn = document.getElementById('sendBtn');
+  const verifyBtn = document.getElementById('verifyBtn');
+  const phoneInput = document.getElementById('phoneInput');
+  const codeInput = document.getElementById('codeInput');
 
-// TEST RAQAMLAR UCHUN RECAPTCHA O‘CHIRILADI
-window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-    size: 'invisible',
-}, auth);
+  // ensure lib initialized (in case not)
+  window.shahartaxi_lib.initFirebase().catch(e=>{
+    console.warn('Firebase init failed (login.js):', e);
+  });
 
-// --- SMS yuborish ---
-document.getElementById("sendCodeBtn").onclick = async () => {
-    const phone = document.getElementById("phone").value.trim();
-
-    try {
-        const appVerifier = window.recaptchaVerifier;
-
-        window.confirmationResult = await signInWithPhoneNumber(auth, phone, appVerifier);
-
-        alert("SMS kod yuborildi!");
-    } catch (err) {
-        alert("Xato: " + err.message);
-        console.log(err);
+  sendBtn.addEventListener('click', async ()=>{
+    const phone = phoneInput.value.trim();
+    if(!phone){
+      alert('Telefon raqam kiriting');
+      return;
     }
-};
-
-// --- KODNI TASDIQLASH ---
-document.getElementById("verifyBtn").onclick = async () => {
-    const code = document.getElementById("code").value.trim();
-
-    try {
-        const result = await window.confirmationResult.confirm(code);
-
-        alert("Muvaffaqiyatli kirdingiz!");
-
-        location.href = "index.html";
-
-    } catch (err) {
-        alert("Kirish xatosi: " + err.message);
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Yuborilmoqda...';
+    const res = await window.shahartaxi_lib.sendVerificationCode(phone);
+    if(res.ok){
+      alert('Kod yuborildi. Test raqamlar ishlatilayotgan bo\'lsa, test kodni kiriting.');
+    } else {
+      console.error(res.error);
+      alert('Kod yuborishda xatolik: ' + (res.error && res.error.message ? res.error.message : res.error));
     }
-};
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'SMS kod yuborish';
+  });
+
+  verifyBtn.addEventListener('click', async ()=>{
+    const code = codeInput.value.trim();
+    if(!code){ alert('Kod kiriting'); return; }
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = 'Tekshirilmoqda...';
+    const res = await window.shahartaxi_lib.verifyCode(code);
+    if(res.ok){
+      alert('Muvaffaqiyatli kirdingiz!');
+      // redirect to profile or index
+      window.location.href = 'index.html';
+    } else {
+      console.error(res.error);
+      alert('Tekshirishda xato: ' + (res.error && res.error.message ? res.error.message : res.error));
+    }
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = 'Tasdiqlash va kirish';
+  });
+
+})();
