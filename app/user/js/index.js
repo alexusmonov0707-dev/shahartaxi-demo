@@ -651,13 +651,17 @@ async function openAdModal(ad) {
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
   const fullname = u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "Foydalanuvchi";
- let carFull = "";
- if (u.role?.toLowerCase().includes("haydov")) {
-  carFull =
-    `${u.carModel || ""}` +
-    `${u.carColor ? " • " + u.carColor : ""}` +
-    `${u.carNumber ? " • " + u.carNumber : ""}`;
- }
+// E’lon egasining haqiqiy roli
+const ownerRole = (u.role || "").toLowerCase();
+
+// Haydovchi bo‘lsa – mashina chiqariladi, yo‘lovchi bo‘lsa — yo‘q
+let carFull = "";
+if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
+    carFull =
+      `${u.carModel || ""}` +
+      `${u.carColor ? " • " + u.carColor : ""}` +
+      `${u.carNumber ? " • " + u.carNumber : ""}`;
+}
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
