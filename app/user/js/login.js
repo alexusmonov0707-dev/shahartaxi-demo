@@ -1,43 +1,88 @@
-// Modular login.js
-window.addEventListener("load", () => {
+// app/user/js/login.js
+// ES6 MODULE + MODULAR FIREBASE
 
-  const phoneInput = document.getElementById("phoneInput");
-  const codeInput = document.getElementById("codeInput");
-  const sendBtn = document.getElementById("sendBtn");
-  const verifyBtn = document.getElementById("verifyBtn");
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+    getAuth, RecaptchaVerifier, signInWithPhoneNumber 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+    getDatabase, ref, get
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  const { auth, RecaptchaVerifier, signInWithPhoneNumber } = window.shahaFirebase;
 
-  // === Invisible Recaptcha ===
-  window.recaptchaVerifier = new RecaptchaVerifier(auth, "sendBtn", {
-    size: "invisible"
-  });
+// =============================
+// FIREBASE CONFIG
+// =============================
+const firebaseConfig = {
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
 
-  sendBtn.onclick = async () => {
-    const phone = phoneInput.value.trim();
-    if (!phone) return alert("Telefon kiriting");
+
+// =============================
+// INIT FIREBASE
+// =============================
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+
+// =============================
+// INVISIBLE RECAPTCHA
+// =============================
+window.recaptchaVerifier = new RecaptchaVerifier(
+    auth,
+    "recaptcha-container",
+    { size: "invisible" }
+);
+
+
+// =============================
+// SEND SMS CODE
+// =============================
+document.getElementById("sendBtn").onclick = async () => {
+    const phone = document.getElementById("phone").value;
 
     try {
-      const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-      window.confirmationResult = confirmation;
-      alert("SMS yuborildi!");
-    } catch (err) {
-      console.error(err);
-      alert("Xatolik (SMS): " + err.message);
-    }
-  };
+        const confirmation = await signInWithPhoneNumber(
+            auth, 
+            phone, 
+            window.recaptchaVerifier
+        );
 
-  verifyBtn.onclick = async () => {
-    const code = codeInput.value.trim();
-    if (!code) return alert("Kod kiriting");
+        window.confirmationResult = confirmation;
+        alert("SMS yuborildi!");
+
+    } catch (e) {
+        console.error(e);
+        alert("SMS yuborishda xato: " + e.message);
+    }
+};
+
+
+// =============================
+// VERIFY CODE
+// =============================
+document.getElementById("verifyBtn").onclick = async () => {
+    const code = document.getElementById("smsCode").value;
 
     try {
-      const result = await window.confirmationResult.confirm(code);
-      alert("Muvaffaqiyatli kirdingiz!");
-      window.location.href = "index.html";
-    } catch (err) {
-      console.error(err);
-      alert("Kod xato!");
+        const result = await window.confirmationResult.confirm(code);
+        const user = result.user;
+
+        const snap = await get(ref(db, "users/" + user.uid));
+
+        if (snap.exists()) {
+            window.location.href = "../profile/profile.html";
+        } else {
+            window.location.href = "register.html";
+        }
+
+    } catch (e) {
+        alert("Kod xato!");
     }
-  };
-});
+};
