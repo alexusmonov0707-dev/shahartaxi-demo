@@ -1,98 +1,116 @@
-// ======================================================
-//   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
-// ======================================================
-
-// -------- Imports --------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+// =============================
+//   FIREBASE INIT
+// =============================
+import {
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
 
 import {
-  getAuth,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    getAuth,
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+    signOut as firebaseSignOut
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 
 import {
-  getDatabase,
-  ref,
-  get,
-  set,
-  update
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    getDatabase,
+    ref,
+    set,
+    get,
+    update,
+    onValue
+} from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
 
-
-// -------- Firebase config --------
+// =============================
+//   FIREBASE CONFIG
+// =============================
 const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+    apiKey: "AIzaSyApWUG4YuC9aCsE9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.appspot.com",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com"
 };
 
-
-// -------- Initialize Firebase --------
+// Init
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+// =============================
+//   AUTH HELPERS
+// =============================
 
-// ======================================================
-//    AUTH PERSISTENCE (MUHIM!  Login loopingni tuzatadi)
-// ======================================================
-await setPersistence(auth, browserLocalPersistence);
-
-
-// ======================================================
-//    RECAPTCHA YARATIB BERADIGAN FUNKSIYA
-// ======================================================
-function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(
-    auth,
-    containerId,
-    { size: "invisible" }
-  );
+// ReCaptcha yaratish
+export function createRecaptcha(containerId) {
+    return new RecaptchaVerifier(auth, containerId, {
+        size: "invisible"
+    });
 }
 
-
-// ======================================================
-//   QO‘SHIMCHA HELPERLAR (profile, register, index uchun kerak)
-// ======================================================
-
-// Oddiy document.querySelector
-function $(selector) {
-  return document.querySelector(selector);
+// SMS yuborish
+export async function sendCode(phone, recaptcha) {
+    return await signInWithPhoneNumber(auth, phone, recaptcha);
 }
 
-// Ko‘p elementlar uchun
-function $$(selector) {
-  return document.querySelectorAll(selector);
+// Kodni tasdiqlash
+export async function verifyCode(confirmationResult, code) {
+    return await confirmationResult.confirm(code);
 }
 
-// Auth bo‘lsa UID qaytaradi
-function uid() {
-  return auth.currentUser ? auth.currentUser.uid : null;
+// Tizimdan chiqish
+export async function signOut() {
+    return await firebaseSignOut(auth);
 }
 
+// =============================
+// DATABASE HELPERS
+// =============================
 
-// ======================================================
-//   EKSPORT QILINADIGAN MODULLAR
-// ======================================================
+// User yaratish
+export function createUser(uid, data) {
+    return set(ref(db, "users/" + uid), data);
+}
+
+// Userni olish
+export function getUser(uid) {
+    return get(ref(db, "users/" + uid));
+}
+
+// Userni yangilash
+export function updateUser(uid, data) {
+    return update(ref(db, "users/" + uid), data);
+}
+
+// Real-time listener
+export function listenUser(uid, callback) {
+    return onValue(ref(db, "users/" + uid), (snap) => {
+        callback(snap.val());
+    });
+}
+
+// Ads yaratish / olsh / yangilash
+export function createAd(id, data) {
+    return set(ref(db, "ads/" + id), data);
+}
+
+export function getAds() {
+    return get(ref(db, "ads"));
+}
+
+export function listenAds(callback) {
+    return onValue(ref(db, "ads"), snap => callback(snap.val()));
+}
+
+// Export Firebase obyektlari
 export {
-  auth,
-  db,
-  ref,
-  get,
-  set,
-  update,
-  onAuthStateChanged,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  createRecaptcha,
-  $,          // 🔥 qoʻshildi
-  $$,         // 🔥 qoʻshildi
-  uid         // 🔥 qoʻshildi
+    auth,
+    db,
+    ref,
+    get,
+    set,
+    update,
+    onValue
 };
