@@ -1,66 +1,75 @@
-// ===============================
-// FIREBASE IMPORTS
-// ===============================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+// ======================================================
+//   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
+// ======================================================
+
+// -------- Imports --------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
 import {
   getAuth,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+  onAuthStateChanged,
+  setPersistence,
+  browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   getDatabase,
   ref,
-  set,
   get,
-  update,
-  push,
-  remove,
-  onValue
-} from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+  set,
+  update
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// ===============================
-// FIREBASE CONFIG
-// ===============================
+
+// -------- Firebase config --------
 const firebaseConfig = {
-  apiKey: "AIzaSyApWUG4QYuC9aC5E9MOLXwlCv9RihREWvc",
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
   databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
   projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.appspot.com",
   messagingSenderId: "874241795701",
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-// ===============================
-// INIT
-// ===============================
+
+// -------- Initialize Firebase --------
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// ===============================
-// HELPER $ FUNCTION
-// ===============================
-export const $ = id => document.getElementById(id);
 
-// ===============================
-// EXPORTS (firebase + utils)
-// ===============================
+// ======================================================
+//    AUTH PERSISTENCE (MUHIM!  Login loopingni tuzatadi)
+// ======================================================
+await setPersistence(auth, browserLocalPersistence);
+
+
+// ======================================================
+//    RECAPTCHA YARATIB BERADIGAN FUNKSIYA
+// ======================================================
+function createRecaptcha(containerId = "recaptcha-container") {
+  return new RecaptchaVerifier(
+    auth,
+    containerId,
+    { size: "invisible" }
+  );
+}
+
+
+// ======================================================
+//   EKSPORT QILINADIGAN MODULLAR
+// ======================================================
 export {
   auth,
   db,
   ref,
-  set,
   get,
+  set,
   update,
-  push,
-  remove,
-  onValue,
-  signOut,
   onAuthStateChanged,
   RecaptchaVerifier,
-  signInWithPhoneNumber
+  signInWithPhoneNumber,
+  createRecaptcha
 };
