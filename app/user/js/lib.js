@@ -1,143 +1,90 @@
-// ================================
-//  Firebase Modular V9 Setup (CDN)
-// ================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+/***************************************
+ *  FIREBASE INITIALIZATION (v9 MODULAR)
+ ****************************************/
 
-import {
-    getAuth,
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { 
+    getAuth, 
     RecaptchaVerifier,
-    signInWithPhoneNumber
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    signInWithPhoneNumber,
+    signInWithCustomToken,
+    onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-import {
-    getDatabase,
-    ref,
-    set,
-    get,
-    update,
-    remove,
-    onValue,
-    query,
-    orderByChild,
-    equalTo
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-import {
-    getStorage,
-    uploadBytes,
-    getDownloadURL,
-    ref as sRef
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+import { 
+    getDatabase, 
+    ref, 
+    set, 
+    get, 
+    update 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
-// ================================
-//   FIREBASE PROJECT CONFIG
-// ================================
+/***************************************
+ *  YOUR FIREBASE CONFIG
+ ****************************************/
+
 const firebaseConfig = {
-    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+    apiKey: "AIzaSyApWU4G4YuC9aCsE9M0LXtLy67RiRNEWvc",
     authDomain: "shahartaxi-demo.firebaseapp.com",
     databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
     projectId: "shahartaxi-demo",
     storageBucket: "shahartaxi-demo.firebasestorage.app",
     messagingSenderId: "874241795701",
-    appId: "1:965674015103:web:7033aee93013f9f46197d4"
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
 
-// ================================
-//   INITIALIZE FIREBASE
-// ================================
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-const storage = getStorage(app);
+/***************************************
+ *  INITIALIZE SERVICES
+ ****************************************/
+
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getDatabase(app);
 
 
-// ================================
-//   EXPORT FIREBASE OBJECTS
-// ================================
-export {
-    app,
-    auth,
-    db,
-    storage,
+/***************************************
+ *  EXPORTABLE HELPERS
+ ****************************************/
 
-    RecaptchaVerifier,
-    signInWithPhoneNumber,
-
-    ref,
-    set,
-    get,
-    update,
-    remove,
-    onValue,
-    query,
-    orderByChild,
-    equalTo,
-
-    uploadBytes,
-    getDownloadURL,
-    sRef
-};
-
-
-// ================================
-//   UNIVERSAL HELPERS
-// ================================
-export function getUID() {
-    return localStorage.getItem("uid") ?? null;
+// ReCAPTCHA – LOGIN / REGISTER uchun
+export function initRecaptcha(containerId = "recaptcha-container") {
+    const verifier = new RecaptchaVerifier(auth, containerId, {
+        size: "invisible"
+    });
+    return verifier;
 }
 
-export function logout() {
-    localStorage.removeItem("uid");
-    window.location.href = "login.html";
+// SMS yuborish
+export async function sendLoginSMS(phone, verifier) {
+    return await signInWithPhoneNumber(auth, phone, verifier);
 }
 
-export function randomID(len = 20) {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let out = "";
-    for (let i = 0; i < len; i++) {
-        out += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return out;
+// SMS kodini tasdiqlash
+export async function verifyLoginCode(confirmation, code) {
+    return await confirmation.confirm(code);
+}
+
+// Userni olish
+export function subscribeAuth(callback) {
+    onAuthStateChanged(auth, callback);
 }
 
 
-// ================================
-//   USER FUNCTIONS
-// ================================
+// Realtime Database – user yaratish
+export async function createUser(uid, data) {
+    return await set(ref(db, "users/" + uid), data);
+}
+
+// Userni yangilash
 export async function updateUser(uid, data) {
-    await update(ref(db, "users/" + uid), data);
+    return await update(ref(db, "users/" + uid), data);
 }
 
+// User malumotini olish
 export async function getUser(uid) {
     const snap = await get(ref(db, "users/" + uid));
     return snap.exists() ? snap.val() : null;
 }
 
-
-// ================================
-//   ADS FUNCTIONS
-// ================================
-export async function createAd(id, data) {
-    await set(ref(db, "ads/" + id), data);
-}
-
-export async function getAd(id) {
-    const snap = await get(ref(db, "ads/" + id));
-    return snap.exists() ? snap.val() : null;
-}
-
-export async function deleteAd(id) {
-    await remove(ref(db, "ads/" + id));
-}
-
-
-// ================================
-//   IMAGE UPLOADER
-// ================================
-export async function uploadImage(file, path) {
-    const storageRef = sRef(storage, path);
-    await uploadBytes(storageRef, file);
-    return await getDownloadURL(storageRef);
-}
