@@ -577,17 +577,22 @@ async function createAdCard(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-// OWNER ROLE CHECK — faqat HAYDOVCHI e’lonlarida mashina ko‘rinadi
-let carModel = "";
-const ownerRole = (u.role || "").toLowerCase();
-
-// Agar e’lon egasi haydovchi bo‘lsa → mashinani chiqaramiz
-if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
-    carModel = u.carModel || ad.car || "";
-} else {
-    // yo‘lovchi joylagan elon => mashina ko‘rinmaydi
-    carModel = "";
+// Modal oynada faqat haydovchi e’loni bo‘lsa mashina chiqaramiz
+let showCar = false;
+try {
+    const ownerRole = (u.role || "").toLowerCase();
+    if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
+        showCar = true;
+    }
+} catch(e) {
+    showCar = false;
 }
+
+// To‘liq mashina ma’lumoti
+const carFull = showCar
+    ? `${u.carModel || ad.car || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`
+    : "";
+
   div.innerHTML = `
     <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
     <div class="ad-main">
