@@ -120,6 +120,11 @@ function slugify(s) {
     .replace(/[^\w\-]/g, "");
 }
 
+// escape selector helper
+function escapeSelector(s) {
+  return String(s || "").replace(/([ #;?%&,.+*~':\"!^$[\]()=>|\/@])/g,'\\$1');
+}
+
 // ===============================
 // GET USER INFO
 // ===============================
@@ -135,7 +140,7 @@ async function getUserInfo(uid) {
       phone: u.phone || u.telephone || "",
       avatar: u.avatar || "",
       fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
-      role: u.role || u.userRole || "",
+      role: (u.role || u.userRole || "").toString(),
       carModel: u.carModel || u.car || "",
       carColor: u.carColor || "",
       carNumber: u.carNumber || u.plate || "",
@@ -213,12 +218,17 @@ function loadRouteFilters() {
     fillFromDistricts();
     CURRENT_PAGE = 1;
     scheduleRenderAds();
+    // show box when picking region
+    const box = document.getElementById("fromDistrictBox");
+    if (box) box.style.display = "";
   };
 
   toRegion.onchange = () => {
     fillToDistricts();
     CURRENT_PAGE = 1;
     scheduleRenderAds();
+    const box = document.getElementById("toDistrictBox");
+    if (box) box.style.display = "";
   };
 
   fillFromDistricts();
@@ -231,7 +241,7 @@ function fillFromDistricts() {
 
   box.innerHTML = "";
   if (!region || !REGIONS[region]) {
-    box.style.display = "none";
+    if (box) box.style.display = "none";
     return;
   }
 
@@ -260,7 +270,7 @@ function fillToDistricts() {
 
   box.innerHTML = "";
   if (!region || !REGIONS[region]) {
-    box.style.display = "none";
+    if (box) box.style.display = "none";
     return;
   }
 
@@ -405,7 +415,7 @@ function attachInputsOnce() {
 }
 
 // ===============================
-// 3-BO'LIM: RENDER, CARD, MODAL, CONTACT, RESET, PAGINATION
+// RENDER, CARD, MODAL, CONTACT, RESET, PAGINATION
 // ===============================
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
@@ -440,6 +450,9 @@ async function renderAds(adsArr) {
   let filtered = (adsArr || []).filter(a => {
     if (!a) return false;
 
+    // role-visibility rule:
+    // if current user is driver -> show passenger ads (they need drivers)
+    // if current user is passenger -> show driver ads (they need passengers)
     if (currentRole === "driver") {
       if (!a.typeNormalized || !a.typeNormalized.toLowerCase().includes("yo")) return false;
     } else if (currentRole === "passenger") {
@@ -546,10 +559,10 @@ async function renderAds(adsArr) {
 }
 
 // ===============================
-// CREATE CARD
+// CREATE CARD (ROLE-BASED DISPLAY FOR CAR)
 // ===============================
 async function createAdCard(ad) {
-  const u = await getUserInfo(ad.userId);
+  const u = await getUserInfo(ad.userId || ad.userId);
 
   const div = document.createElement("div");
   div.className = "ad-card";
@@ -577,7 +590,21 @@ async function createAdCard(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  const carModel = u.carModel || ad.car || "";
+  // ROLE-BASED car text:
+  // Show car info only if the AD OWNER is a driver (so passengers don't see car info on passenger ads).
+  let carModelText = "";
+  try {
+    const ownerRole = (u.role || "").toString().toLowerCase();
+    if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
+      // owner is driver -> show car (prefer owner.carModel then ad.car)
+      carModelText = u.carModel || ad.car || "";
+    } else {
+      // owner is passenger -> hide car info (don't show ad.car)
+      carModelText = ""; 
+    }
+  } catch (e) {
+    carModelText = ad.car || "";
+  }
 
   div.innerHTML = `
     <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
@@ -586,7 +613,7 @@ async function createAdCard(ad) {
         ${escapeHtml(route)}
         ${isNew ? '<span class="ad-badge-new">Yangi</span>' : ''}
       </div>
-      <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModel)}</div>
+      <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModelText)}</div>
       <div class="ad-meta" style="margin-top:8px">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
         ${
@@ -607,6 +634,7 @@ async function createAdCard(ad) {
 
 // ===============================
 // OPEN / CLOSE MODAL, BADGE UPDATE, CONTACT
+// (Modal also respects owner role for car display)
 // ===============================
 async function openAdModal(ad) {
   let modal = document.getElementById("adFullModal");
@@ -616,7 +644,7 @@ async function openAdModal(ad) {
     document.body.appendChild(modal);
   }
 
-  const u = await getUserInfo(ad.userId);
+  const u = await getUserInfo(ad.userId || ad.userId);
 
   const route = `${ad.fromRegion || ""}${ad.fromDistrict ? ", " + ad.fromDistrict : ""} → ${ad.toRegion || ""}${ad.toDistrict ? ", " + ad.toDistrict : ""}`;
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
@@ -631,13 +659,22 @@ async function openAdModal(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
+  // decide whether to show car info in modal: only show if owner is driver
+  let showCar = false;
+  try {
+    const ownerRole = (u.role || "").toString().toLowerCase();
+    if (ownerRole.includes("haydov") || ownerRole.includes("driver")) showCar = true;
+  } catch (e) {
+    showCar = false;
+  }
+
   modal.innerHTML = `
     <div class="ad-modal-box" role="dialog" aria-modal="true">
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
         <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
           <div class="modal-name">${escapeHtml(fullname)}</div>
-          <div class="modal-car" style="color:#6b7280">${escapeHtml(carFull)}</div>
+          <div class="modal-car" style="color:#6b7280">${showCar ? escapeHtml(carFull) : ""}</div>
         </div>
       </div>
 
@@ -843,11 +880,6 @@ function renderPaginationControls(totalPages, currentPage, totalItems) {
   info.textContent = `Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
   info.style = "color:#6b7280;font-size:13px;margin-left:8px;margin-top:8px;";
   container.appendChild(info);
-}
-
-// helper escapeSelector
-function escapeSelector(s) {
-  return String(s || "").replace(/([ #;?%&,.+*~':\"!^$[\]()=>|\/@])/g,'\\$1');
 }
 
 console.log("ShaharTaxi index.js loaded successfully.");
