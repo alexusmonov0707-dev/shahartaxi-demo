@@ -1,3 +1,4 @@
+// app/user/js/index.js
 // ===============================
 //  FIREBASE INIT + IMPORTS
 // ===============================
@@ -33,9 +34,8 @@ const auth = getAuth(app);
 const db = getDatabase(app);
 
 // ===============================
-//  REGIONS — load from regions-helper.js & regions-taxi.js
+//  REGIONS — load from regions-taxi.js (assets) and regions-helper.js
 // ===============================
-
 let REGIONS = {};
 
 if (window.regionsData) {
@@ -44,7 +44,7 @@ if (window.regionsData) {
   REGIONS = window.regions;
 } else {
   REGIONS = {};
-  console.warn("REGIONS not found — check regions-helper.js or regions-taxi.js");
+  console.warn("REGIONS not found — check assets/regions-taxi.js and regions-helper.js");
 }
 
 // ===============================
@@ -132,14 +132,14 @@ async function getUserInfo(uid) {
     const u = snap.val();
     return {
       uid,
-      phone: u.phone || "",
+      phone: u.phone || u.telephone || "",
       avatar: u.avatar || "",
-      fullName: u.fullName || "",
-      role: u.role || "",
-      carModel: u.carModel || "",
+      fullName: u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || u.name || "",
+      role: u.role || u.userRole || "",
+      carModel: u.carModel || u.car || "",
       carColor: u.carColor || "",
-      carNumber: u.carNumber || "",
-      seatCount: Number(u.seatCount || 0)
+      carNumber: u.carNumber || u.plate || "",
+      seatCount: Number(u.seatCount || u.seats || 0)
     };
   } catch (e) {
     console.error("getUserInfo error", e);
@@ -161,7 +161,8 @@ const PAGE_SIZE = 10;
 // ===============================
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = "/app/user/login.html";
+    // relative login page (assumed in same folder)
+    window.location.href = "login.html";
     return;
   }
 
@@ -171,6 +172,7 @@ onAuthStateChanged(auth, async (user) => {
   await initialLoadAds();
   attachRealtimeHandlers();
 });
+
 // ===============================
 // LOAD FILTER (TOP REGION)
 // ===============================
@@ -383,11 +385,28 @@ function attachInputsOnce() {
   if (resetBtn) {
     resetBtn.onclick = () => resetFilters();
   }
+
+  // handle click outside for district boxes
+  document.addEventListener("click", function (e) {
+    const fromBox = document.getElementById("fromDistrictBox");
+    const toBox = document.getElementById("toDistrictBox");
+    const fromSelect = document.getElementById("fromRegion");
+    const toSelect = document.getElementById("toRegion");
+
+    if (!fromBox || !toBox) return;
+
+    const clickedInsideFrom = fromBox.contains(e.target) || (fromSelect && fromSelect.contains(e.target));
+    const clickedInsideTo = toBox.contains(e.target) || (toSelect && toSelect.contains(e.target));
+
+    if (!clickedInsideFrom) fromBox.style.display = "none";
+    if (!clickedInsideTo) toBox.style.display = "none";
+  }, { capture: true });
+
 }
+
 // ===============================
 // 3-BO'LIM: RENDER, CARD, MODAL, CONTACT, RESET, PAGINATION
 // ===============================
-
 async function renderAds(adsArr) {
   const list = document.getElementById("adsList");
   if (!list) return;
@@ -652,7 +671,6 @@ async function openAdModal(ad) {
         </div>
       </div>
 
-  // (next part continues...)
       <div style="margin-top:12px">
         <div class="label">Izoh</div>
         <div class="value">${escapeHtml(ad.comment || "-")}</div>
@@ -676,13 +694,15 @@ async function openAdModal(ad) {
 
   modal.style.display = "flex";
 
-  document.getElementById("modalCloseBtn").onclick = closeAdModal;
-  document.getElementById("modalCallBtn").onclick = () => onContact(u.phone);
+  const closeBtn = document.getElementById("modalCloseBtn");
+  const callBtn = document.getElementById("modalCallBtn");
+  if (closeBtn) closeBtn.onclick = closeAdModal;
+  if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
 
   try { markAsRead(ad.id); } catch(e){}
   updateBadgeForAd(ad.id);
 
-  modal.onclick = e => { if (e.target === modal) closeAdModal(); };
+  modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
 
 function closeAdModal() {
@@ -704,9 +724,6 @@ function onContact(phone) {
   window.location.href = `tel:${phone}`;
 }
 window.onContact = onContact;
-
-
-
 
 // ===============================
 // RESET FILTERS
@@ -733,9 +750,6 @@ function resetFilters() {
 }
 window.resetFilters = resetFilters;
 
-
-
-
 // ===============================
 // DEBOUNCE RENDER — TEZLIK OPTIM
 // ===============================
@@ -750,16 +764,10 @@ function scheduleRenderAds() {
   }, 140);
 }
 
-
-
-
 // ===============================
 // LOGOUT
 // ===============================
 window.logout = () => signOut(auth);
-
-
-
 
 // ===============================
 // PAGINATION
@@ -837,10 +845,9 @@ function renderPaginationControls(totalPages, currentPage, totalItems) {
   container.appendChild(info);
 }
 
+// helper escapeSelector
+function escapeSelector(s) {
+  return String(s || "").replace(/([ #;?%&,.+*~':\"!^$[\]()=>|\/@])/g,'\\$1');
+}
 
-
-
-// ===============================
-// THE END (index.js) — FULL READY
-// ===============================
 console.log("ShaharTaxi index.js loaded successfully.");
