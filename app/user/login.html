@@ -1,27 +1,36 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>Kirish</title>
-    <script type="module" src="./login.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kirish — ShaharTaxi</title>
+  <!-- optional: your CSS -->
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
+  <div class="container" style="max-width:700px; margin:40px auto;">
+    <h2>Kirish</h2>
 
-<h2>Kirish</h2>
+    <label>Telefon raqam (+998...)</label><br/>
+    <input id="phoneInput" type="text" value="+998" style="width:100%;padding:8px;margin:6px 0"><br/>
 
-<label>Telefon raqam</label><br>
-<input id="phone" type="text" placeholder="+998901234567"><br><br>
+    <button id="sendBtn">SMS kod yuborish</button>
 
-<button id="sendCodeBtn">SMS kod yuborish</button><br><br>
+    <p>
+      <label>Kod</label><br/>
+      <input id="codeInput" type="text" style="width:200px;padding:6px;margin:6px 0">
+    </p>
 
-<label>Kod</label><br>
-<input id="code" type="text" placeholder="123456"><br><br>
+    <button id="verifyBtn">Tasdiqlash va kirish</button>
 
-<button id="verifyBtn">Tasdiqlash va kirish</button><br><br>
+    <p><a href="register.html">Ro'yxatdan o'tish</a></p>
+  </div>
 
-<a href="register.html">Ro‘yxatdan o‘tish</a>
+  <!-- recaptcha container (hidden) -->
+  <div id="recaptcha-container" style="display:none"></div>
 
-<div id="recaptcha-container"></div>
-
+  <!-- load our lib and login logic -->
+  <script src="js/lib.js"></script>
+  <script src="js/login.js"></script>
 </body>
 </html>
