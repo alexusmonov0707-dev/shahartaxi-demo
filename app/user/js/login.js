@@ -1,57 +1,50 @@
 console.log("LOGIN JS loaded");
 
-// Firebase config
-const firebaseConfig = {
-    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-    authDomain: "shahartaxi-demo.firebaseapp.com",
-    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-    projectId: "shahartaxi-demo",
-    storageBucket: "shahartaxi-demo.appspot.com",
-    messagingSenderId: "874241795701",
-    appId: "1:499577358676:web:64ebf7f1a8f2e189cdaf4e"
-};
+// Firebase init (sizning lib.js dagi)
+import {
+  auth,
+  RecaptchaVerifier,
+  signInWithPhoneNumber
+} from "../js/lib.js";
 
-// Init Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+let confirmationResult = null;
 
-// recaptcha
-window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('send-btn', {
-    size: 'invisible'
+// Recaptcha
+window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+  size: "invisible",
 });
 
-let confirmation = null;
+// SMS yuborish
+window.sendCode = async function () {
+  let phone = document.getElementById("phone").value.trim();
 
-// SMS kod yuborish
-function sendCode() {
-    const phone = document.getElementById("phone").value.trim();
-
-    if (!phone) return alert("Telefon raqamni kiriting!");
-
-    auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
-        .then(result => {
-            confirmation = result;
-            alert("Kod yuborildi!");
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Xatolik: " + err.message);
-        });
-}
+  try {
+    confirmationResult = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+    alert("Kod yuborildi!");
+  } catch (err) {
+    console.error(err);
+    alert("Xatolik: " + err.message);
+  }
+};
 
 // Kodni tasdiqlash
-function verifyCode() {
-    if (!confirmation) return alert("Avval kod yuboring!");
+window.verifyCode = async function () {
+  let code = document.getElementById("code").value.trim();
 
-    const code = document.getElementById("code").value.trim();
+  try {
+    const result = await confirmationResult.confirm(code);
+    const user = result.user;
 
-    confirmation.confirm(code)
-        .then(res => {
-            alert("Muvaffaqiyatli kirdingiz!");
-            window.location.href = "index.html";
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Noto'g'ri kod!");
-        });
-}
+    alert("Muvaffaqiyatli kirdingiz!");
+
+    // 👉 MUHIM QISM (sizda yo‘q edi)
+    localStorage.setItem("uid", user.uid);
+
+    // 👉 To‘g‘ri sahifaga o‘tish
+    window.location.href = "index.html";
+
+  } catch (err) {
+    console.error(err);
+    alert("Xatolik: " + err.message);
+  }
+};
