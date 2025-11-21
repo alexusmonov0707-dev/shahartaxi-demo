@@ -400,7 +400,7 @@ function attachInputsOnce() {
 
     if (!clickedInsideFrom) fromBox.style.display = "none";
     if (!clickedInsideTo) toBox.style.display = "none";
-  }, { capture: true });
+  }, false);
 
 }
 
