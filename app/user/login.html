@@ -1,37 +1,71 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>ShaharTaxi — Tizimga kirish</title>
-    <style>
-        body { font-family: Arial; background:#eef2f7; }
-        .box { width:360px; margin:80px auto; padding:25px;
-               background:white; border-radius:10px; text-align:center; }
-        input, button {
-            width:100%; padding:12px; margin:8px 0;
-            border-radius:6px; border:1px solid #ccc; font-size:16px;
-        }
-        button { background:#007bff; color:white; border:none; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShaharTaxi — E’lonlar</title>
+
+  <link rel="stylesheet" href="./css/style.css" />
+  <script src="../data/regions.js"></script>
 </head>
 <body>
 
-<div class="box">
-    <h2>ShaharTaxi — Tizimga kirish</h2>
-
-    <input id="phone" type="text" placeholder="+998901234567">
-
-    <div id="recaptcha-container"></div>
-
-    <button id="sendBtn">SMS kod yuborish</button>
-
-    <input id="smsCode" type="text" placeholder="SMS kod">
-
-    <button id="verifyBtn">Kirish</button>
+<div class="topbar">
+  <div>ShaharTaxi — E’lonlar</div>
+  <button class="logout" onclick="logout()">Chiqish</button>
 </div>
 
-<!-- Ajratilgan JS -->
-<script type="module" src="./js/login.js"></script>
+<div class="container">
+  <div class="card">
+    <h2 style="text-align:center; color:var(--primary); margin:0 0 12px 0;">Barcha e’lonlar</h2>
 
+    <div class="filters">
+      <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
+
+      <select id="sortBy">
+        <option value="newest">Eng yangi</option>
+        <option value="oldest">Eng eski</option>
+      </select>
+
+      <select id="filterDate">
+        <option value="">Vaqt (hammasi)</option>
+        <option value="today">Bugun</option>
+        <option value="tomorrow">Ertaga</option>
+        <option value="3days">3 kun ichida</option>
+      </select>
+
+      <input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
+      <input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
+
+      <select id="filterRole">
+        <option value="">Hammasi</option>
+        <option value="Haydovchi">Haydovchi</option>
+        <option value="Yo‘lovchi">Yo‘lovchi</option>
+      </select>
+
+      <button id="resetFiltersBtn">Reset</button>
+    </div>
+
+    <div class="filter-block">
+      <label><b>Qayerdan:</b></label><br>
+      <select id="fromRegion"><option value="">Viloyat</option></select>
+      <div id="fromDistrictBox" class="district-box"></div>
+    </div>
+
+    <div class="filter-block">
+      <label><b>Qayerga:</b></label><br>
+      <select id="toRegion"><option value="">Viloyat</option></select>
+      <div id="toDistrictBox" class="district-box"></div>
+    </div>
+
+    <div id="adsList">Yuklanmoqda...</div>
+    <div id="pagination" style="margin-top:20px; text-align:center;"></div>
+
+  </div>
+</div>
+
+<div id="adFullModal"></div>
+
+<script type="module" src="./js/index.js?v=final"></script>
 </body>
 </html>
