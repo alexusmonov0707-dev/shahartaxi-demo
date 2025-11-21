@@ -1,8 +1,6 @@
-// =============================
-//   SHAHARTAXI — PROFILE PAGE
-// =============================
-
-// lib.js dan faqat mavjud narsalarni import qilamiz
+// ==========================
+//   IMPORTS
+// ==========================
 import {
   auth,
   db,
@@ -13,154 +11,160 @@ import {
   onAuthStateChanged
 } from "./lib.js";
 
-// ---- Mini query selector ($) ----
-const $ = id => document.getElementById(id);
 
-// ---- ImgBB API KEY ----
-const imgbbApiKey = "99ab532b24271b982285ecf24a805787";
+// ==========================
+//  ELEMENTS
+// ==========================
+const fullNameEl = document.getElementById("fullName");
+const phoneEl = document.getElementById("phone");
+const avatarEl = document.getElementById("avatar");
+const userDetailsEl = document.getElementById("userDetails");
+const balanceBox = document.getElementById("balanceBox");
+
+const editModal = document.getElementById("editModal");
+const editFullName = document.getElementById("editFullName");
+const editPhoneInput = document.getElementById("editPhoneInput");
+const editBirthdate = document.getElementById("editBirthdate");
+const editGender = document.getElementById("editGender");
+const editRegion = document.getElementById("editRegion");
+const editDistrict = document.getElementById("editDistrict");
+
+const carModel = document.getElementById("carModel");
+const carNumber = document.getElementById("carNumber");
+const carColor = document.getElementById("carColor");
+const seatCount = document.getElementById("seatCount");
+
+const balanceModal = document.getElementById("balanceModal");
+const balanceAmount = document.getElementById("balanceAmount");
 
 
-// =============================
-//    AUTH STATE LISTENER
-// =============================
-onAuthStateChanged(auth, async user => {
+// ==========================
+//   LOAD USER
+// ==========================
+onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    window.location.href = "../../login.html";
+    window.location.href = "login.html";
     return;
   }
 
-  await loadUserProfile(user.uid);
-});
+  const phone = user.phoneNumber;
+  phoneEl.textContent = phone;
 
-
-// =============================
-//    LOAD USER DATA
-// =============================
-async function loadUserProfile(uid) {
-  const snap = await get(ref(db, "users/" + uid));
-
-  // user database bo'lmasa — yaratamiz
+  const snap = await get(ref(db, "users/" + phone));
   if (!snap.exists()) {
-    await set(ref(db, "users/" + uid), {
-      fullName: "",
-      phone: auth.currentUser.phoneNumber,
-      avatar: "",
-      role: "passenger",
-      balance: 0
-    });
+    fullNameEl.textContent = "Ma’lumot topilmadi";
+    return;
   }
 
-  const data = (await get(ref(db, "users/" + uid))).val();
+  const data = snap.val();
 
-  // Avatar
-  $("avatar").src =
-    data.avatar ||
-    "https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png";
+  fullNameEl.textContent = data.fullName || "Foydalanuvchi";
+  avatarEl.src = data.avatar || avatarEl.src;
+  balanceBox.textContent = `Balans: ${data.balance || 0} so‘m`;
 
-  // Name
-  $("fullName").textContent = data.fullName || "Ism ko‘rsatilmagan";
-
-  // Balance
-  window.userBalance = Number(data.balance || 0);
-  $("balanceBox").textContent =
-    "Balans: " + window.userBalance.toLocaleString("uz-UZ") + " so‘m";
-
-  // Edit modal inputlar
-  $("editFullName").value = data.fullName || "";
-}
-
-
-// =============================
-//    SAVE PROFILE EDIT
-// =============================
-window.saveProfileEdit = async function () {
-  const user = auth.currentUser;
-  if (!user) return;
-
-  await update(ref(db, "users/" + user.uid), {
-    fullName: $("editFullName").value
-  });
-
-  closeEditProfile();
-  loadUserProfile(user.uid);
-  alert("Profil yangilandi!");
-};
-
-
-// =============================
-//    AVATAR UPLOAD
-// =============================
-window.chooseAvatar = () => $("avatarInput").click();
-
-$("avatarInput").addEventListener("change", async function () {
-  const file = this.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = async e => {
-    const base64 = e.target.result.split(",")[1];
-
-    const fd = new FormData();
-    fd.append("key", imgbbApiKey);
-    fd.append("image", base64);
-
-    const res = await fetch("https://api.imgbb.com/1/upload", {
-      method: "POST",
-      body: fd
-    });
-
-    const r = await res.json();
-    if (!r.success) return alert("Rasm yuklanmadi!");
-
-    await update(ref(db, "users/" + auth.currentUser.uid), {
-      avatar: r.data.url
-    });
-
-    $("avatar").src = r.data.url;
-    alert("Avatar yangilandi!");
-  };
-
-  reader.readAsDataURL(file);
+  // Qo‘shimcha ma’lumot
+  userDetailsEl.innerHTML = `
+      ${data.birthdate ? `Tug‘ilgan sana: ${data.birthdate}<br>` : ""}
+      ${data.gender ? `Jinsi: ${data.gender}<br>` : ""}
+      ${data.region ? `Viloyat: ${data.region}<br>` : ""}
+      ${data.district ? `Tuman: ${data.district}<br>` : ""}
+  `;
 });
 
 
-// =============================
-//     BALANCE ADD
-// =============================
-window.addBalance = async function () {
-  const amount = Number($("balanceAmount").value || 0);
-  if (amount <= 0) return alert("To‘g‘ri summa kiriting");
+// ==========================
+//   EDIT PROFILE
+// ==========================
+window.openEditProfile = async () => {
+  editModal.style.display = "flex";
 
-  const newBalance = window.userBalance + amount;
+  const user = auth.currentUser;
+  const phone = user.phoneNumber;
 
-  await update(ref(db, "users/" + auth.currentUser.uid), {
-    balance: newBalance
+  const snap = await get(ref(db, "users/" + phone));
+  const data = snap.val();
+
+  editFullName.value = data.fullName || "";
+  editPhoneInput.value = phone;
+  editBirthdate.value = data.birthdate || "";
+  editGender.value = data.gender || "";
+  editRegion.value = data.region || "";
+  editDistrict.value = data.district || "";
+
+  carModel.value = data.carModel || "";
+  carNumber.value = data.carNumber || "";
+  carColor.value = data.carColor || "";
+  seatCount.value = data.seatCount || "";
+};
+
+window.closeEditProfile = () => {
+  editModal.style.display = "none";
+};
+
+window.saveProfileEdit = async () => {
+  const user = auth.currentUser;
+  const phone = user.phoneNumber;
+
+  await update(ref(db, "users/" + phone), {
+    fullName: editFullName.value,
+    birthdate: editBirthdate.value,
+    gender: editGender.value,
+    region: editRegion.value,
+    district: editDistrict.value,
+
+    carModel: carModel.value,
+    carNumber: carNumber.value,
+    carColor: carColor.value,
+    seatCount: seatCount.value
   });
 
-  window.userBalance = newBalance;
-  $("balanceBox").textContent =
-    "Balans: " + newBalance.toLocaleString("uz-UZ") + " so‘m";
-
-  closeBalanceModal();
-  alert("Balans yangilandi!");
+  alert("Saqlash muvaffaqiyatli!");
+  closeEditProfile();
+  location.reload();
 };
 
 
-// =============================
-//       MODALS
-// =============================
-window.openEditProfile = () => $("editModal").style.display = "flex";
-window.closeEditProfile = () => $("editModal").style.display = "none";
+// ==========================
+//   BALANCE
+// ==========================
+window.openBalanceModal = () => {
+  balanceModal.style.display = "flex";
+};
 
-window.openBalanceModal = () => $("balanceModal").style.display = "flex";
-window.closeBalanceModal = () => $("balanceModal").style.display = "none";
+window.closeBalanceModal = () => {
+  balanceModal.style.display = "none";
+};
 
+window.addBalance = async () => {
+  const amount = Number(balanceAmount.value);
+  if (amount <= 0) return alert("Noto‘g‘ri summa!");
 
-// =============================
-//         LOGOUT
-// =============================
-window.logout = function () {
-  auth.signOut().then(() => {
-    window.location.href = "../../login.html";
+  const phone = auth.currentUser.phoneNumber;
+  const snap = await get(ref(db, "users/" + phone));
+  const balance = snap.val().balance || 0;
+
+  await update(ref(db, "users/" + phone), {
+    balance: balance + amount
   });
+
+  alert("Balans to‘ldirildi!");
+  closeBalanceModal();
+  location.reload();
+};
+
+
+// ==========================
+//   AVATAR TANLASH
+// ==========================
+window.chooseAvatar = () => {
+  document.getElementById("avatarInput").click();
+};
+
+
+// ==========================
+//   LOGOUT
+// ==========================
+window.logout = async () => {
+  await auth.signOut();
+  window.location.href = "login.html";
 };
