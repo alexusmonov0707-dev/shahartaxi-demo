@@ -577,8 +577,17 @@ async function createAdCard(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  const carModel = u.carModel || ad.car || "";
+// OWNER ROLE CHECK — faqat HAYDOVCHI e’lonlarida mashina ko‘rinadi
+let carModel = "";
+const ownerRole = (u.role || "").toLowerCase();
 
+// Agar e’lon egasi haydovchi bo‘lsa → mashinani chiqaramiz
+if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
+    carModel = u.carModel || ad.car || "";
+} else {
+    // yo‘lovchi joylagan elon => mashina ko‘rinmaydi
+    carModel = "";
+}
   div.innerHTML = `
     <img class="ad-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
     <div class="ad-main">
@@ -586,7 +595,9 @@ async function createAdCard(ad) {
         ${escapeHtml(route)}
         ${isNew ? '<span class="ad-badge-new">Yangi</span>' : ''}
       </div>
-      <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">${escapeHtml(carModel)}</div>
+     <div class="ad-car" style="color:#6b7280;font-size:13px;margin-top:6px">
+    ${escapeHtml(carModel)}
+</div>
       <div class="ad-meta" style="margin-top:8px">
         <div class="ad-chip">⏰ ${escapeHtml(depTime)}</div>
         ${
@@ -622,7 +633,13 @@ async function openAdModal(ad) {
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
   const fullname = u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "Foydalanuvchi";
-  const carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
+ let carFull = "";
+if (u.role?.toLowerCase().includes("haydov")) {
+  carFull =
+    `${u.carModel || ""}` +
+    `${u.carColor ? " • " + u.carColor : ""}` +
+    `${u.carNumber ? " • " + u.carNumber : ""}`;
+}
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
