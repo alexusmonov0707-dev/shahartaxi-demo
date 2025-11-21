@@ -5,7 +5,7 @@
 
 (function(window){
   // === YOUR FIREBASE CONFIG (100% senga mos) ===
- const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyApNUAG04yUC9aCSe9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
   databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
@@ -14,6 +14,7 @@
   messagingSenderId: "874241795701",
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
+
 
   // CDN urls (compat)
   const CDN = {
