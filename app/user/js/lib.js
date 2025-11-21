@@ -1,7 +1,8 @@
 // ================================
-//  Firebase Modular V9 Setup
+//  Firebase Modular V9 Setup (CDN)
 // ================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+
 import {
     getAuth,
     RecaptchaVerifier,
@@ -30,8 +31,7 @@ import {
 
 
 // ================================
-//  FIREBASE CONFIG
-//  (sening real project configing qoldi — o‘zgartirmadim)
+//   FIREBASE PROJECT CONFIG
 // ================================
 const firebaseConfig = {
     apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
@@ -45,7 +45,7 @@ const firebaseConfig = {
 
 
 // ================================
-//  INITIALIZE
+//   INITIALIZE FIREBASE
 // ================================
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -54,7 +54,7 @@ const storage = getStorage(app);
 
 
 // ================================
-//  EXPORTS — Login/Register tizimi uchun
+//   EXPORT FIREBASE OBJECTS
 // ================================
 export {
     app,
@@ -82,57 +82,60 @@ export {
 
 
 // ================================
-//  🔥 QO‘SHIMCHA YORDAMCHI FUNKSIYALAR
-//  (sening eski lib.js ichidagi funksiyalar asosida QAYTA YOZILDI)
+//   UNIVERSAL HELPERS
 // ================================
-
-// UID olish — universal
 export function getUID() {
     return localStorage.getItem("uid") ?? null;
 }
 
-// Logout
 export function logout() {
     localStorage.removeItem("uid");
     window.location.href = "login.html";
 }
 
-// Random ID (eski kodingdan olinib qayta yozildi)
 export function randomID(len = 20) {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let res = "";
-    for (let i = 0; i < len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
-    return res;
+    let out = "";
+    for (let i = 0; i < len; i++) {
+        out += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return out;
 }
 
-// Profil yangilash
+
+// ================================
+//   USER FUNCTIONS
+// ================================
 export async function updateUser(uid, data) {
     await update(ref(db, "users/" + uid), data);
 }
 
-// Bitta userni olish
 export async function getUser(uid) {
     const snap = await get(ref(db, "users/" + uid));
     return snap.exists() ? snap.val() : null;
 }
 
-// E’lon qo‘shish
-export async function createAd(adID, data) {
-    await set(ref(db, "ads/" + adID), data);
+
+// ================================
+//   ADS FUNCTIONS
+// ================================
+export async function createAd(id, data) {
+    await set(ref(db, "ads/" + id), data);
 }
 
-// Bitta e’lonni olish
-export async function getAd(adID) {
-    const snap = await get(ref(db, "ads/" + adID));
+export async function getAd(id) {
+    const snap = await get(ref(db, "ads/" + id));
     return snap.exists() ? snap.val() : null;
 }
 
-// E’lonni o‘chirish
-export async function deleteAd(adID) {
-    await remove(ref(db, "ads/" + adID));
+export async function deleteAd(id) {
+    await remove(ref(db, "ads/" + id));
 }
 
-// Rasm yuklash
+
+// ================================
+//   IMAGE UPLOADER
+// ================================
 export async function uploadImage(file, path) {
     const storageRef = sRef(storage, path);
     await uploadBytes(storageRef, file);
