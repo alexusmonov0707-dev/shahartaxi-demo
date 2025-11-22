@@ -25,7 +25,7 @@ document.getElementById("submitAdBtn").onclick = async () => {
         fromDistrict: $("fromDistrict").value,
         toRegion: $("toRegion").value,
         toDistrict: $("toDistrict").value,
-        price: $("price").value,
+    price: $("price").value,
         departureTime: $("departureTime").value,
         seats: $("seats").value,
         comment: $("adComment").value,
