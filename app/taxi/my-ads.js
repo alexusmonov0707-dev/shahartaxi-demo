@@ -7,11 +7,9 @@ import {
     get,
     update,
     remove,
-    onAuthStateChanged
-} from "./lib.js";
-
-// ===== $ FUNKSIYA (lib.js da yo‘qligi uchun qo‘shildi) =====
-const $ = id => document.getElementById(id);
+    onAuthStateChanged,
+    $
+} from "/shahartaxi-demo/libs/lib.js";
 
 // GLOBAL
 let editingAdId = null;
@@ -21,9 +19,11 @@ let editingAdId = null;
 // ==========================
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = "../../login.html";
+        window.location.href = "/shahartaxi-demo/login.html";
         return;
     }
+
+    window.currentUID = user.uid;
     loadMyAds(user.uid);
 });
 
@@ -43,13 +43,17 @@ async function loadMyAds(uid) {
 
     snap.forEach(child => {
         const ad = child.val();
+
         if (ad.userId !== uid) return;
 
-        const seatsText = ad.driverSeats
-            ? `<br><b>Bo‘sh joy:</b> ${ad.driverSeats}`
-            : ad.passengerCount
-            ? `<br><b>Yo‘lovchilar:</b> ${ad.passengerCount}`
-            : "";
+        // ⭐ MUHIM: eski ADSlarni ham moslashtirib to‘g‘ri ko‘rsatish
+        const isDriver =
+            ad.type === "Haydovchi" ||
+            ad.driverSeats !== undefined;
+
+        const seatsText = isDriver
+            ? `<br><b>Bo‘sh joy:</b> ${ad.driverSeats ?? "-"}`
+            : `<br><b>Yo‘lovchilar:</b> ${ad.passengerCount ?? "-"}`;
 
         const box = document.createElement("div");
         box.className = "ad-box";
@@ -79,7 +83,7 @@ window.deleteAd = async function (id) {
     await remove(ref(db, "ads/" + id));
 
     alert("E’lon o‘chirildi!");
-    loadMyAds(auth.currentUser.uid);
+    loadMyAds(currentUID);
 };
 
 // ==========================
@@ -89,6 +93,7 @@ window.openEditAd = function (id, ad) {
     editingAdId = id;
 
     initRegionsForm();
+
     $("editFromRegion").value = ad.fromRegion;
     updateEditDistricts("from");
     $("editFromDistrict").value = ad.fromDistrict;
@@ -100,14 +105,14 @@ window.openEditAd = function (id, ad) {
     $("editPrice").value = ad.price;
     $("editTime").value = ad.departureTime;
     $("editComment").value = ad.comment || "";
-    $("editSeats").value = ad.driverSeats || ad.passengerCount || "";
+
+    // ⭐ MUHIM: har ikki turga mos qo‘yish
+    $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
 
     $("editAdModal").style.display = "flex";
 };
 
-window.closeEditAd = function () {
-    $("editAdModal").style.display = "none";
-};
+window.closeEditAd = () => $("editAdModal").style.display = "none";
 
 // ==========================
 // SAVE EDITED AD
@@ -125,15 +130,17 @@ window.saveAdEdit = async function () {
         comment: $("editComment").value
     };
 
-    // ROLE GA QARA
+    // ⭐ ROLE BO‘YICHA TO‘G‘RI SAQLASH
+    const seats = $("editSeats").value;
+
     if (window.userRole === "driver")
-        updates.driverSeats = $("editSeats").value;
+        updates.driverSeats = seats;
     else
-        updates.passengerCount = $("editSeats").value;
+        updates.passengerCount = seats;
 
     await update(ref(db, "ads/" + editingAdId), updates);
 
     alert("Yangilandi!");
     closeEditAd();
-    loadMyAds(auth.currentUser.uid);
+    loadMyAds(currentUID);
 };
