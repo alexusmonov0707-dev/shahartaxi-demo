@@ -2,7 +2,6 @@
 //   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
 // ======================================================
 
-// -------- Imports --------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
 import {
@@ -11,8 +10,7 @@ import {
   signInWithPhoneNumber,
   onAuthStateChanged,
   setPersistence,
-  browserLocalPersistence,
-  signOut
+  browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
@@ -21,10 +19,9 @@ import {
   get,
   set,
   update,
-  remove,
-  push
+  push,
+  child
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
 
 // -------- Firebase config --------
 const firebaseConfig = {
@@ -36,38 +33,20 @@ const firebaseConfig = {
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-
 // -------- Initialize Firebase --------
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-
-// ======================================================
-//    AUTH PERSISTENCE (MUHIM!)
-// ======================================================
+// PERSISTENCE
 await setPersistence(auth, browserLocalPersistence);
 
-
-// ======================================================
-//    RECAPTCHA YARATIB BERADIGAN FUNKSIYA
-// ======================================================
+// -------- reCAPTCHA --------
 function createRecaptcha(containerId = "recaptcha-container") {
   return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
 }
 
-
-// ======================================================
-//   DOM SHORTCUT (oldingi $ funksiyasi)
-// ======================================================
-export function $(id) {
-  return document.getElementById(id);
-}
-
-
-// ======================================================
-//   EKSPORT QILINADIGAN MODULLAR
-// ======================================================
+// -------- EXPORT --------
 export {
   auth,
   db,
@@ -75,9 +54,8 @@ export {
   get,
   set,
   update,
-  remove,
   push,
-  signOut,
+  child,
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
