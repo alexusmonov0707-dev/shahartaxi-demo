@@ -20,9 +20,7 @@ import {
   get,
   set,
   update,
-  push,
-  remove,
-  child
+  push     // <-- MUHIM! Senda yo'q edi shuning uchun create-ad ishlamadi
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
@@ -44,23 +42,25 @@ const db = getDatabase(app);
 
 
 // ======================================================
-//    AUTH PERSISTENCE (Login loopingni tuzatadi)
+//    AUTH PERSISTENCE
 // ======================================================
 await setPersistence(auth, browserLocalPersistence);
 
 
 // ======================================================
-//    INVISIBLE RECAPTCHA YARATISH
+//    RECAPTCHA
 // ======================================================
 function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(auth, containerId, {
-    size: "invisible"
-  });
+  return new RecaptchaVerifier(
+    auth,
+    containerId,
+    { size: "invisible" }
+  );
 }
 
 
 // ======================================================
-//   UNIVERSAL $ SELECTOR
+//   DOM SHORTCUT
 // ======================================================
 function $(id) {
   return document.getElementById(id);
@@ -68,7 +68,7 @@ function $(id) {
 
 
 // ======================================================
-//   EXPORT QILINADIGAN MODULLAR
+//   EXPORTS
 // ======================================================
 export {
   auth,
@@ -77,12 +77,10 @@ export {
   get,
   set,
   update,
-  push,
-  remove,
-  child,
+  push,              // <-- BU CREATE-AD UCHUN SHART
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
   createRecaptcha,
-  $
+  $                  // <-- barcha projectlarda kerak
 };
