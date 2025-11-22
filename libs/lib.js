@@ -20,9 +20,8 @@ import {
   get,
   set,
   update,
-  push                // <-- MUHIM! SENDA YO‘Q EDI
+  push      // <<< MANASHU yetishmayotgan edi !!!
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
 
 // -------- Firebase config --------
 const firebaseConfig = {
@@ -34,42 +33,20 @@ const firebaseConfig = {
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-
 // -------- Initialize Firebase --------
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-
-// ======================================================
-//   AUTH PERSISTENCE (LOGIN LOOP BUG FIX)
-// ======================================================
+// -------- AUTH persistence --------
 await setPersistence(auth, browserLocalPersistence);
 
-
-// ======================================================
-//   HELPER — SELECTOR SHORTCUT
-// ======================================================
-export function $(id) {
-  return document.getElementById(id);
-}
-
-
-// ======================================================
-//   RECAPTCHA
-// ======================================================
+// -------- Recaptcha --------
 function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(
-    auth,
-    containerId,
-    { size: "invisible" }
-  );
+  return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
 }
 
-
-// ======================================================
-//   EXPORT QILINADIGAN MODULLAR
-// ======================================================
+// -------- Export --------
 export {
   auth,
   db,
@@ -77,7 +54,7 @@ export {
   get,
   set,
   update,
-  push,                     // <-- MUHIM! create-ad.js shuni kutyapti
+  push,                 // <<< EXPORT ham qo‘shildi
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
