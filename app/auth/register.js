@@ -1,94 +1,83 @@
-// ===========================
-// Modular register.js
-// ===========================
+// app/user/js/register.js
+// Modullar: lib.js dan eksport qilinganlar bilan ishlaydi
 
-import {
-  auth,
-  db,
-  ref,
-  get,
-  update,
-  onAuthStateChanged
-} from "./lib.js";
+import { auth, db, ref, get, update, onAuthStateChanged } from "../../libs/lib.js";
 
-let GLOBAL_ROLE = null;
+let SELECTED_ROLE = null;
 let CURRENT_UID = null;
 let CURRENT_PHONE = null;
 
+// DOM helpers
+const $ = id => document.getElementById(id);
 
-// ===========================
-// Userni aniqlash
-// ===========================
+// Auth holatini kuzatish — agar user login qilmagan bo'lsa qaytaradi
 onAuthStateChanged(auth, (user) => {
   if (!user) {
-    // agar login qilmasdan kirsa — qaytarib yuboramiz
+    // Agar login qilmagan bo'lsa, kirish sahifasiga o'tkazish
     window.location.href = "login.html";
     return;
   }
 
+  // Agar login bo'lsa — telefon va uid saqlaymiz va inputni to'ldiramiz
   CURRENT_UID = user.uid;
-  CURRENT_PHONE = user.phoneNumber;
-
-  document.getElementById("phone").value = CURRENT_PHONE;
+  CURRENT_PHONE = user.phoneNumber || "";
+  if ($("phone")) $("phone").value = CURRENT_PHONE;
 });
 
+// Role tanlash funksiyasi — sahifadagi maydonlarni ko'rsatadi
+window.selectRole = function(role) {
+  SELECTED_ROLE = role;
+  $("selectedRole").textContent = role === "driver"
+    ? "Haydovchi sifatida ro‘yxatdan o‘tish"
+    : "Yo‘lovchi sifatida ro‘yxatdan o‘tish";
 
-// ===========================
-// Role tanlash
-// ===========================
-window.selectRole = (role) => {
-  GLOBAL_ROLE = role;
-
-  document.getElementById("selectedRole").innerText =
-    role === "driver"
-      ? "Haydovchi sifatida ro‘yxatdan o‘tish"
-      : "Yo‘lovchi sifatida ro‘yxatdan o‘tish";
-
-  document.getElementById("extraFields").style.display = "block";
+  $("extraFields").style.display = "block";
 
   if (role === "driver") {
-    document.getElementById("carModel").style.display = "block";
-    document.getElementById("license").style.display = "block";
+    $("driverFields").style.display = "block";
   } else {
-    document.getElementById("carModel").style.display = "none";
-    document.getElementById("license").style.display = "none";
+    $("driverFields").style.display = "none";
   }
 };
 
+// DB ga role va boshqa ma'lumotlarni yozish
+window.saveRole = async function() {
+  if (!SELECTED_ROLE) return alert("Iltimos, rolni tanlang.");
 
-// ===========================
-// Role + ma'lumotlarni DB ga yozish
-// ===========================
-window.saveRole = async () => {
+  // Foydalanuvchi hozir autentifikatsiyadan o'tgan bo'lishi kerak
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Tizimdan chiqib ketilgan. Iltimos, qayta kirish qiling.");
+    window.location.href = "login.html";
+    return;
+  }
 
-  if (!GLOBAL_ROLE) return alert("Role tanlang!");
+  const fullName = ($("fullName").value || "").trim();
+  if (!fullName) return alert("Ism va familiyangizni kiriting.");
 
-  const fullName = document.getElementById("fullName").value.trim();
-
-  if (!fullName) return alert("Ismingizni kiriting!");
-
-  let data = {
+  // Tayyorlanayotgan data obyekti
+  const data = {
     fullName,
     phone: CURRENT_PHONE,
-    role: GLOBAL_ROLE,
-    createdAt: Date.now()
+    role: SELECTED_ROLE,
+    updatedAt: Date.now()
   };
 
-  if (GLOBAL_ROLE === "driver") {
-    data.carModel = document.getElementById("carModel").value.trim();
-    data.license = document.getElementById("license").value.trim();
+  if (SELECTED_ROLE === "driver") {
+    data.carModel = ($("carModel").value || "").trim();
+    data.license  = ($("license").value || "").trim();
   }
 
   try {
-    await update(ref(db, "users/" + CURRENT_UID), data);
+    // update — mavjud maydonlarni yangilaydi, yangi user uchun ham yaxshi ishlaydi
+    await update(ref(db, "users/" + user.uid), data);
 
-    alert("Muvaffaqiyatli saqlandi!");
+    alert("Ro'yxatdan o'tish muvaffaqiyatli!");
 
-    // /app/user/index.html ga qaytamiz
+    // Index sahifasiga o'tish (app/user/index.html)
     window.location.href = "index.html";
-
-  } catch (e) {
-    console.error(e);
-    alert("Xatolik: " + e.message);
+  } catch (err) {
+    console.error("Register error:", err);
+    alert("Xatolik yuz berdi: " + (err.message || err));
   }
 };
