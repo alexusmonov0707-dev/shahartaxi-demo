@@ -1,45 +1,42 @@
-import {
-    auth,
-    db,
-    ref,
-    push,
-    set,
-    onAuthStateChanged,
-    $
-} from "/shahartaxi-demo/assets/js/libs.js";
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8" />
+    <title>Yangi e’lon qo‘shish</title>
 
-console.log("CREATE-AD.JS LOADED OK");
+    <style>
+        body { font-family: Arial; background:#f3f3f3; margin:0; }
+        .card { max-width:600px; margin:20px auto; background:white;
+                padding:20px; border-radius:12px; }
+        input, select, textarea { width:100%; padding:12px; margin-top:10px; }
+        button { width:100%; padding:12px; margin-top:15px; border:none; cursor:pointer; }
+        .blue { background:#007bff; color:white; }
+    </style>
+</head>
+<body>
 
-onAuthStateChanged(auth, user => {
-    if (!user) {
-        window.location.href = "/shahartaxi-demo/app/auth/login.html";
-        return;
-    }
-});
+<div class="card">
 
-// SUBMIT BUTTON
-$("submitAdBtn").onclick = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+    <select id="fromRegion"><option value="">Viloyat</option></select>
+    <select id="fromDistrict"><option value="">Tuman</option></select>
 
-    const adData = {
-        userId: user.uid,
-        fromRegion: $("fromRegion").value,
-        fromDistrict: $("fromDistrict").value,
-        toRegion: $("toRegion").value,
-        toDistrict: $("toDistrict").value,
-        price: $("price").value,
-        departureTime: $("departureTime").value,
-        seats: $("seats").value,
-        comment: $("adComment").value,
-        createdAt: Date.now()
-    };
+    <select id="toRegion"><option value="">Viloyat</option></select>
+    <select id="toDistrict"><option value="">Tuman</option></select>
 
-    const adsRef = ref(db, "ads");
-    const newAd = push(adsRef);
+    <input id="price" type="number" placeholder="Narx (so‘m)" />
+    <input id="departureTime" type="datetime-local" />
+    <input id="seats" type="number" placeholder="Joylar soni" />
+    <textarea id="adComment" rows="3" placeholder="Izoh"></textarea>
 
-    await set(newAd, adData);
+    <button id="submitAdBtn" class="blue">E’lonni joylash</button>
+</div>
 
-    alert("E’lon joylandi!");
-    location.href = "/shahartaxi-demo/app/taxi/my-ads.html";
-};
+<!-- REGIONS -->
+<script src="/shahartaxi-demo/assets/regions-taxi.js"></script>
+<script src="/shahartaxi-demo/assets/regions-helper.js"></script>
+
+<!-- OUR JS -->
+<script type="module" src="/shahartaxi-demo/app/taxi/create-ad.js"></script>
+
+</body>
+</html>
