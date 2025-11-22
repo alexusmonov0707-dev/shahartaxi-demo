@@ -1,10 +1,12 @@
-// ======================================================
-//   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
-// ======================================================
+// =========================================================
+//   SHAHARTAXI — UNIVERSAL SUPER-APP FIREBASE BACKEND
+//   (bu lib.js endi o‘zgarmaydi – barcha modullar tayyor)
+// =========================================================
 
-// -------- Imports --------
+// ------------ Firebase Core ------------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
+// ------------ Firebase Auth ------------
 import {
   getAuth,
   RecaptchaVerifier,
@@ -15,6 +17,7 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+// ------------ Firebase Realtime Database ------------
 import {
   getDatabase,
   ref,
@@ -25,8 +28,9 @@ import {
   push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-
-// -------- Firebase config --------
+// =========================================================
+//               FIREBASE CONFIG
+// =========================================================
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
   authDomain: "shahartaxi-demo.firebaseapp.com",
@@ -36,38 +40,31 @@ const firebaseConfig = {
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-
-// -------- Initialize Firebase --------
+// =========================================================
+//               INITIALIZATION
+// =========================================================
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-
-// ======================================================
-//   GLOBAL HELPER: document.getElementById
-// ======================================================
-function $(id) {
-  return document.getElementById(id);
-}
-
-
-// ======================================================
-//    AUTH PERSISTENCE (MUHIM! login loopingni tuzatadi)
-// ======================================================
+// Auth local storage (token yo‘qolmasligi uchun)
 await setPersistence(auth, browserLocalPersistence);
 
+// =========================================================
+//        UNIVERSAL DOM SHORTCUT ($)
+// =========================================================
+export const $ = id => document.getElementById(id);
 
-// ======================================================
-//    RECAPTCHA YARATISH
-// ======================================================
+// =========================================================
+//        RECAPTCHA (telefon login uchun)
+// =========================================================
 function createRecaptcha(containerId = "recaptcha-container") {
   return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
 }
 
-
-// ======================================================
-//   EKSPORT QILINADIGAN MODULLAR
-// ======================================================
+// =========================================================
+//        EXPORT QILINADIGAN HAMMA MODULLAR
+// =========================================================
 export {
   auth,
   db,
@@ -77,10 +74,9 @@ export {
   update,
   remove,
   push,
+  signOut,
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  signOut,
-  createRecaptcha,
-  $
+  createRecaptcha
 };
