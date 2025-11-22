@@ -2,7 +2,6 @@
 //   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
 // ======================================================
 
-// -------- Imports --------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
 import {
@@ -20,7 +19,7 @@ import {
   get,
   set,
   update,
-  push     // <-- MUHIM! Senda yo'q edi shuning uchun create-ad ishlamadi
+  push     // <<< MUAMMO SHU YERDA EDI – QO‘SHILDI !!!
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
@@ -34,42 +33,21 @@ const firebaseConfig = {
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-
-// -------- Initialize Firebase --------
+// Initialize
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-
-// ======================================================
-//    AUTH PERSISTENCE
-// ======================================================
+// Login persistence
 await setPersistence(auth, browserLocalPersistence);
 
-
-// ======================================================
-//    RECAPTCHA
-// ======================================================
+// Recaptcha
 function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(
-    auth,
-    containerId,
-    { size: "invisible" }
-  );
+  return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
 }
 
 
-// ======================================================
-//   DOM SHORTCUT
-// ======================================================
-function $(id) {
-  return document.getElementById(id);
-}
-
-
-// ======================================================
-//   EXPORTS
-// ======================================================
+// EXPORTS
 export {
   auth,
   db,
@@ -77,10 +55,9 @@ export {
   get,
   set,
   update,
-  push,              // <-- BU CREATE-AD UCHUN SHART
+  push,                  // <<<< MUHIM
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  createRecaptcha,
-  $                  // <-- barcha projectlarda kerak
+  createRecaptcha
 };
