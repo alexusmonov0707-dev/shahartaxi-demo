@@ -1,57 +1,60 @@
-// =============================
-// FIREBASE UNIVERSAL BACKEND
-// =============================
+// ======================================================
+//   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
+// ======================================================
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import {
-  getAuth,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence
+// -------- Firebase imports --------
+import { initializeApp } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import { 
+    getAuth,
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+    onAuthStateChanged,
+    setPersistence,
+    browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  getDatabase,
-  ref,
-  push,
-  set,
-  get,
-  update
+    getDatabase,
+    ref,
+    get,
+    set,
+    update,
+    push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-
-// Firebase config
+// FIREBASE CONFIG
 const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+    apiKey: "AIzaSyApWU...VVc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-// Init
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getDatabase(app);
+const db   = getDatabase(app);
 
+// Persistence
 await setPersistence(auth, browserLocalPersistence);
 
-function $(id) {
-    return document.getElementById(id);
-}
+// Helper $
+export const $ = id => document.getElementById(id);
 
+// EXPORT METHODS
 export {
-  auth,
-  db,
-  ref,
-  push,
-  set,
-  get,
-  update,
-  onAuthStateChanged,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  $
+    auth,
+    db,
+    ref,
+    get,
+    set,
+    update,
+    push,
+    onAuthStateChanged,
+    RecaptchaVerifier,
+    signInWithPhoneNumber
 };
