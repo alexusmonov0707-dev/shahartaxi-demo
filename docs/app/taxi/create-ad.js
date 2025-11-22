@@ -1,42 +1,57 @@
-<!DOCTYPE html>
-<html lang="uz">
-<head>
-    <meta charset="UTF-8" />
-    <title>Yangi e’lon qo‘shish</title>
+import {
+  db,
+  ref,
+  push,
+  set
+} from "../../../libs/lib.js";
 
-    <style>
-        body { font-family: Arial; background:#f3f3f3; margin:0; }
-        .card { max-width:600px; margin:20px auto; background:white;
-                padding:20px; border-radius:12px; }
-        input, select, textarea { width:100%; padding:12px; margin-top:10px; }
-        button { width:100%; padding:12px; margin-top:15px; border:none; cursor:pointer; }
-        .blue { background:#007bff; color:white; }
-    </style>
-</head>
-<body>
+// REGIONS LOADING
+import "../../regions-taxi.js";
 
-<div class="card">
+document.addEventListener("DOMContentLoaded", () => {
 
-    <select id="fromRegion"><option value="">Viloyat</option></select>
-    <select id="fromDistrict"><option value="">Tuman</option></select>
+  const fromRegion = document.getElementById("fromRegion");
+  const fromDistrict = document.getElementById("fromDistrict");
+  const toRegion = document.getElementById("toRegion");
+  const toDistrict = document.getElementById("toDistrict");
 
-    <select id="toRegion"><option value="">Viloyat</option></select>
-    <select id="toDistrict"><option value="">Tuman</option></select>
+  const price = document.getElementById("price");
+  const departureTime = document.getElementById("departureTime");
+  const seats = document.getElementById("seats");
+  const adComment = document.getElementById("adComment");
 
-    <input id="price" type="number" placeholder="Narx (so‘m)" />
-    <input id="departureTime" type="datetime-local" />
-    <input id="seats" type="number" placeholder="Joylar soni" />
-    <textarea id="adComment" rows="3" placeholder="Izoh"></textarea>
+  const submitBtn = document.getElementById("submitAdBtn");
+  const clearBtn = document.getElementById("clearFormBtn");
 
-    <button id="submitAdBtn" class="blue">E’lonni joylash</button>
-</div>
+  submitBtn.onclick = async () => {
 
-<!-- REGIONS -->
-<script src="/shahartaxi-demo/assets/regions-taxi.js"></script>
-<script src="/shahartaxi-demo/assets/regions-helper.js"></script>
+    if (!fromRegion.value || !toRegion.value || !price.value || !departureTime.value) {
+      alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
+      return;
+    }
 
-<!-- OUR JS -->
-<script type="module" src="/shahartaxi-demo/app/taxi/create-ad.js"></script>
+    const adRef = ref(db, "ads/");
+    const newAd = push(adRef);
 
-</body>
-</html>
+    await set(newAd, {
+      fromRegion: fromRegion.value,
+      fromDistrict: fromDistrict.value,
+      toRegion: toRegion.value,
+      toDistrict: toDistrict.value,
+      price: price.value,
+      time: departureTime.value,
+      seats: seats.value,
+      comment: adComment.value || "",
+      createdAt: new Date().toISOString()
+    });
+
+    alert("E’lon muvaffaqiyatli joylandi!");
+  };
+
+  clearBtn.onclick = () => {
+    price.value = "";
+    seats.value = "";
+    adComment.value = "";
+  };
+
+});
