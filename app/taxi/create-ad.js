@@ -1,94 +1,42 @@
-// app/user/js/create-ad.js
-
 import {
     auth,
     db,
     ref,
     push,
-    get,
+    set,
     onAuthStateChanged,
     $
 } from "/shahartaxi-demo/libs/lib.js";
 
-// -- Sahifa yuklanganda regionlar --
-document.addEventListener("DOMContentLoaded", () => {
-    initRegionsForm();
-});
-
-// Foydalanuvchi login holati
-onAuthStateChanged(auth, async user => {
+onAuthStateChanged(auth, user => {
     if (!user) {
         window.location.href = "/shahartaxi-demo/app/auth/login.html";
         return;
     }
-
-    // ⭐ PROFILDAN ROLE OLIB KELAMIZ
-    const s = await get(ref(db, "users/" + user.uid));
-    window.userRole = s.exists() ? s.val().role : "passenger";
-
-    $("submitAdBtn").onclick = () => addAd(user.uid);
-    $("clearFormBtn").onclick = clearForm;
 });
 
-// ============================
-//      E’lon qo‘shish
-// ============================
-async function addAd(uid) {
+// FORM SUBMIT
+document.getElementById("submitAdBtn").onclick = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
 
-    const fromRegion = $("fromRegion").value;
-    const fromDistrict = $("fromDistrict").value;
-    const toRegion = $("toRegion").value;
-    const toDistrict = $("toDistrict").value;
-    const price = $("price").value;
-    const departureTime = $("departureTime").value;
-    const seats = $("seats").value.trim();
-    const comment = $("adComment").value;
-
-    if (!fromRegion || !toRegion || !price || !departureTime) {
-        alert("Iltimos barcha maydonlarni to‘ldiring.");
-        return;
-    }
-
-    const role = window.userRole || "passenger";
-
-    const extra =
-        role === "driver"
-            ? { driverSeats: seats }
-            : { passengerCount: seats };
-
-    const newAd = {
-        userId: uid,
-        type: role === "driver" ? "Haydovchi" : "Yo‘lovchi",
-        fromRegion,
-        fromDistrict,
-        toRegion,
-        toDistrict,
-        price,
-        departureTime,
-        comment,
-        createdAt: Date.now(),
-        approved: false,
-        ...extra
+    const adData = {
+        userId: user.uid,
+        fromRegion: $("fromRegion").value,
+        fromDistrict: $("fromDistrict").value,
+        toRegion: $("toRegion").value,
+        toDistrict: $("toDistrict").value,
+        price: $("price").value,
+        departureTime: $("departureTime").value,
+        seats: $("seats").value,
+        comment: $("adComment").value,
+        createdAt: Date.now()
     };
 
-    await push(ref(db, "ads"), newAd);
+    const adsRef = ref(db, "ads");
+    const newAdRef = push(adsRef);
+    await set(newAdRef, adData);
 
-    alert("E’lon joylandi!");
-    window.location.href = "/shahartaxi-demo/app/user/my-ads.html";
-}
-
-// ============================
-//      Formularni tozalash
-// ============================
-function clearForm() {
-    $("fromRegion").value = "";
-    $("fromDistrict").innerHTML = '<option value="">Tuman</option>';
-
-    $("toRegion").value = "";
-    $("toDistrict").innerHTML = '<option value="">Tuman</option>';
-
-    $("price").value = "";
-    $("departureTime").value = "";
-    $("seats").value = "";
-    $("adComment").value = "";
-}
+    alert("E’lon muvaffaqiyatli joylandi!");
+    location.href = "/shahartaxi-demo/app/taxi/my-ads.html";
+};
