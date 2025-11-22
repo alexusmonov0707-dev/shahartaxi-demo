@@ -5,22 +5,20 @@ import {
     push,
     set,
     onAuthStateChanged
-} from "/shahartaxi-demo/libs/lib.js";
+} from "/libs/lib.js";
 
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = "/shahartaxi-demo/app/auth/login.html";
-        return;
+        alert("Avval tizimga kiring!");
+        location.href = "/login.html";
     }
 });
 
-// SUBMIT
+// FORM SUBMIT
 document.getElementById("submitAdBtn").onclick = async () => {
-    const u = auth.currentUser;
-    if (!u) return;
 
-    const data = {
-        userId: u.uid,
+    const adData = {
+        userId: auth.currentUser.uid,
         fromRegion: fromRegion.value,
         fromDistrict: fromDistrict.value,
         toRegion: toRegion.value,
@@ -33,9 +31,8 @@ document.getElementById("submitAdBtn").onclick = async () => {
     };
 
     const adsRef = ref(db, "ads");
-    const newRef = push(adsRef);
-    await set(newRef, data);
+    const newAdRef = push(adsRef);
+    await set(newAdRef, adData);
 
-    alert("E’lon joylandi!");
-    location.href = "/shahartaxi-demo/app/taxi/my-ads.html";
+    alert("E’lon qo‘shildi!");
 };
