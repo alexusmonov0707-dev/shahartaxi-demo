@@ -41,7 +41,6 @@ function createRecaptcha(containerId = "recaptcha-container") {
   return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
 }
 
-// <<< SHU FUNKSIYA yetishmayotgan edi !!!
 export function $(id) {
   return document.getElementById(id);
 }
