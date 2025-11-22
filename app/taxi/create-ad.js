@@ -1,19 +1,28 @@
 import {
-  auth, db, ref, push, set, onAuthStateChanged, $
-} from "/shahartaxi-demo/libs/lib.js";
+    auth,
+    db,
+    ref,
+    push,
+    set,
+    onAuthStateChanged,
+    $
+} from "/shahartaxi-demo/assets/js/libs.js";
+
+console.log("CREATE-AD.JS LOADED OK");
 
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = "../auth/login.html";
+        window.location.href = "/shahartaxi-demo/app/auth/login.html";
         return;
     }
 });
 
-document.getElementById("submitAdBtn").onclick = async () => {
+// SUBMIT BUTTON
+$("submitAdBtn").onclick = async () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const ad = {
+    const adData = {
         userId: user.uid,
         fromRegion: $("fromRegion").value,
         fromDistrict: $("fromDistrict").value,
@@ -28,8 +37,9 @@ document.getElementById("submitAdBtn").onclick = async () => {
 
     const adsRef = ref(db, "ads");
     const newAd = push(adsRef);
-    await set(newAd, ad);
+
+    await set(newAd, adData);
 
     alert("E’lon joylandi!");
-    window.location.href = "my-ads.html";
+    location.href = "/shahartaxi-demo/app/taxi/my-ads.html";
 };
