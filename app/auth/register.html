@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ShaharTaxi — Ro‘yxatdan o‘tish</title>
 
   <style>
@@ -16,20 +15,20 @@
 
     .card{
       background:#fff;
-      width:350px;
-      padding:25px;
+      width:360px;
+      padding:22px;
       border-radius:12px;
-      box-shadow:0 4px 12px rgba(0,0,0,.1);
+      box-shadow:0 6px 22px rgba(0,0,0,.08);
       text-align:center;
     }
 
     .role-btn{
       width:100%;
-      padding:15px;
+      padding:12px;
       margin-top:10px;
-      font-size:18px;
+      font-size:16px;
       border:none;
-      background:#007bff;
+      background:#0069d9;
       color:white;
       border-radius:8px;
       cursor:pointer;
@@ -37,51 +36,60 @@
 
     input{
       width:100%;
-      padding:12px;
+      padding:10px;
       margin-top:10px;
       border-radius:8px;
       border:1px solid #ccc;
       font-size:15px;
+      box-sizing:border-box;
     }
 
-    #extraFields{ display:none; margin-top:15px; }
+    #extraFields{ display:none; margin-top:12px; text-align:left; }
 
-    button.saveBtn{
+    .saveBtn{
       width:100%;
       padding:12px;
-      background:#007bff;
+      background:#28a745;
       border:none;
       margin-top:12px;
       color:white;
-      font-size:18px;
+      font-size:16px;
       border-radius:8px;
       cursor:pointer;
     }
+
+    .muted { color:#666; font-size:13px; margin-top:6px; }
   </style>
 </head>
-
 <body>
 
-<div class="card">
+  <div class="card">
+    <h2>Ro‘yxatdan o‘tish</h2>
+    <p id="selectedRole" style="font-weight:600;"></p>
 
-  <h2>Ro‘yxatdan o‘tish</h2>
-  <p id="selectedRole" style="font-weight:bold;"></p>
+    <button class="role-btn" onclick="selectRole('driver')">🚕 Men — Haydovchi</button>
+    <button class="role-btn" onclick="selectRole('passenger')">🚶‍♂️ Men — Yo‘lovchi</button>
 
-  <button class="role-btn" onclick="selectRole('driver')">🚕 Men Haydovchiman</button>
-  <button class="role-btn" onclick="selectRole('passenger')">🚶‍♂️ Men Yo‘lovchiman</button>
+    <div id="extraFields">
+      <label class="muted">Telefon</label>
+      <input id="phone" placeholder="+998901234567" disabled>
 
-  <div id="extraFields">
+      <label class="muted">To‘liq ism</label>
       <input id="fullName" placeholder="Ism Familiya">
-      <input id="phone" placeholder="Telefon raqam" disabled>
-      <input id="carModel" placeholder="Mashina modeli" style="display:none">
-      <input id="license" placeholder="Prava raqami" style="display:none">
 
-      <button class="saveBtn" onclick="saveRole()">Saqlash</button>
+      <div id="driverFields" style="display:none;">
+        <label class="muted">Mashina modeli</label>
+        <input id="carModel" placeholder="Nexia 3, Gentra...">
+
+        <label class="muted">Davlat raqami</label>
+        <input id="license" placeholder="01A123BC">
+      </div>
+
+      <button class="saveBtn" onclick="saveRole()">Saqlash va davom etish</button>
+    </div>
   </div>
 
-</div>
-
-<script type="module" src="./js/register.js?v=1002"></script>
-
+  <!-- script: register.js (module) -->
+  <script type="module" src="./js/register.js"></script>
 </body>
 </html>
