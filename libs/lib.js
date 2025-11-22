@@ -1,6 +1,6 @@
-// ======================================================
-//   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
-// ======================================================
+// ===========================
+//  FIREBASE CONFIG
+// ===========================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
@@ -37,14 +37,6 @@ const db = getDatabase(app);
 
 await setPersistence(auth, browserLocalPersistence);
 
-function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
-}
-
-export function $(id) {
-  return document.getElementById(id);
-}
-
 export {
   auth,
   db,
@@ -55,6 +47,5 @@ export {
   push,
   onAuthStateChanged,
   RecaptchaVerifier,
-  signInWithPhoneNumber,
-  createRecaptcha
+  signInWithPhoneNumber
 };
