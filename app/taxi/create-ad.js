@@ -1,4 +1,4 @@
-import {
+import { 
     auth,
     db,
     ref,
@@ -11,7 +11,6 @@ import {
 onAuthStateChanged(auth, user => {
     if (!user) {
         window.location.href = "/shahartaxi-demo/app/auth/login.html";
-        return;
     }
 });
 
@@ -35,6 +34,7 @@ document.getElementById("submitAdBtn").onclick = async () => {
 
     const adsRef = ref(db, "ads");
     const newAdRef = push(adsRef);
+
     await set(newAdRef, adData);
 
     alert("E’lon muvaffaqiyatli joylandi!");
