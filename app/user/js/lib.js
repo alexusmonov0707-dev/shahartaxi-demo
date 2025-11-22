@@ -19,7 +19,8 @@ import {
   ref,
   get,
   set,
-  update
+  update,
+  remove   // ← ★★★ Faqat shu qo‘shildi!
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
@@ -41,13 +42,13 @@ const db = getDatabase(app);
 
 
 // ======================================================
-//    AUTH PERSISTENCE (MUHIM!  Login loopingni tuzatadi)
+//    AUTH PERSISTENCE (MUHIM! Login loopingni tuzatadi)
 // ======================================================
 await setPersistence(auth, browserLocalPersistence);
 
 
 // ======================================================
-//    RECAPTCHA YARATIB BERADIGAN FUNKSIYA
+//    RECAPTCHA
 // ======================================================
 function createRecaptcha(containerId = "recaptcha-container") {
   return new RecaptchaVerifier(
@@ -59,7 +60,7 @@ function createRecaptcha(containerId = "recaptcha-container") {
 
 
 // ======================================================
-//   EKSPORT QILINADIGAN MODULLAR
+//   EKSPORT QILINAYOTGAN MODULLAR
 // ======================================================
 export {
   auth,
@@ -68,6 +69,7 @@ export {
   get,
   set,
   update,
+  remove,  // ← ★★★ BU HAM MAJBURIY!
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
