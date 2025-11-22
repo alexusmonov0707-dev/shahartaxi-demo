@@ -1,28 +1,26 @@
-console.log("CREATE-AD.JS LOADED:", import.meta.url);
-
-import { 
+import {
     auth,
     db,
     ref,
     push,
     set,
-    onAuthStateChanged,
-    $
-} from "../../libs/lib.js";   // ✔ TO‘G‘RI YO‘L
+    onAuthStateChanged
+} from "../../libs/lib.js";
 
-// AUTH CHECK
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = "../../auth/login.html";  // ✔ to‘g‘ri yo‘l
+        window.location.href = "../../auth/login.html";
+        return;
     }
 });
 
-// SUBMIT FORM
-document.getElementById("submitAdBtn").onclick = async () => {
+function $(id) { return document.getElementById(id); }
+
+$("submitAdBtn").onclick = async () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const adData = {
+    const ad = {
         userId: user.uid,
         fromRegion: $("fromRegion").value,
         fromDistrict: $("fromDistrict").value,
@@ -32,15 +30,12 @@ document.getElementById("submitAdBtn").onclick = async () => {
         departureTime: $("departureTime").value,
         seats: $("seats").value,
         comment: $("adComment").value,
-        createdAt: Date.now(),
-        approved: false,      // admin tasdiqlashi uchun
-        type: "Haydovchi"     // supper app talabiga mos
+        createdAt: Date.now()
     };
 
-    const adsRef = ref(db, "ads");
-    const newAdRef = push(adsRef);
-    await set(newAdRef, adData);
+    const newRef = push(ref(db, "ads"));
+    await set(newRef, ad);
 
-    alert("E’lon muvaffaqiyatli joylandi!");
-    location.href = "./my-ads.html";    // ✔ RELATIVE LINK
+    alert("E’lon joylandi!");
+    location.href = "my-ads.html";
 };
