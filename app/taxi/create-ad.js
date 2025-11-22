@@ -1,3 +1,5 @@
+console.log("CREATE-AD.JS LOADED FROM:", import.meta.url);
+
 import { 
     auth,
     db,
