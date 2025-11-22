@@ -1,4 +1,4 @@
-console.log("CREATE-AD.JS LOADED FROM:", import.meta.url);
+console.log("CREATE-AD.JS LOADED:", import.meta.url);
 
 import { 
     auth,
@@ -8,15 +8,16 @@ import {
     set,
     onAuthStateChanged,
     $
-} from "/shahartaxi-demo/libs/lib.js";
+} from "../../libs/lib.js";   // ✔ TO‘G‘RI YO‘L
 
+// AUTH CHECK
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = "/shahartaxi-demo/app/auth/login.html";
+        window.location.href = "../../auth/login.html";  // ✔ to‘g‘ri yo‘l
     }
 });
 
-// FORM SUBMIT
+// SUBMIT FORM
 document.getElementById("submitAdBtn").onclick = async () => {
     const user = auth.currentUser;
     if (!user) return;
@@ -27,18 +28,19 @@ document.getElementById("submitAdBtn").onclick = async () => {
         fromDistrict: $("fromDistrict").value,
         toRegion: $("toRegion").value,
         toDistrict: $("toDistrict").value,
-    price: $("price").value,
+        price: $("price").value,
         departureTime: $("departureTime").value,
         seats: $("seats").value,
         comment: $("adComment").value,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        approved: false,      // admin tasdiqlashi uchun
+        type: "Haydovchi"     // supper app talabiga mos
     };
 
     const adsRef = ref(db, "ads");
     const newAdRef = push(adsRef);
-
     await set(newAdRef, adData);
 
     alert("E’lon muvaffaqiyatli joylandi!");
-    location.href = "/shahartaxi-demo/app/taxi/my-ads.html";
+    location.href = "./my-ads.html";    // ✔ RELATIVE LINK
 };
