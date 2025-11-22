@@ -1,5 +1,3 @@
-
-
 // ======================================================
 //   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
 // ======================================================
@@ -13,7 +11,8 @@ import {
   signInWithPhoneNumber,
   onAuthStateChanged,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
@@ -22,7 +21,8 @@ import {
   get,
   set,
   update,
-  remove
+  remove,
+  push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
@@ -44,24 +44,25 @@ const db = getDatabase(app);
 
 
 // ======================================================
-//    AUTH PERSISTENCE (MUHIM!  Login loopingni tuzatadi)
+//   GLOBAL HELPER: document.getElementById
+// ======================================================
+function $(id) {
+  return document.getElementById(id);
+}
+
+
+// ======================================================
+//    AUTH PERSISTENCE (MUHIM! login loopingni tuzatadi)
 // ======================================================
 await setPersistence(auth, browserLocalPersistence);
 
 
 // ======================================================
-//    RECAPTCHA YARATIB BERADIGAN FUNKSIYA
+//    RECAPTCHA YARATISH
 // ======================================================
 function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(
-    auth,
-    containerId,
-    { size: "invisible" }
-  );
+  return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
 }
-
-// Small DOM helper so old code using $('id') keeps working
-function $(id) { return document.getElementById(id); }
 
 
 // ======================================================
@@ -75,9 +76,11 @@ export {
   set,
   update,
   remove,
+  push,
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
+  signOut,
   createRecaptcha,
   $
 };
