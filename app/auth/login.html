@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="uz">
 <head>
@@ -8,36 +7,18 @@
     <link rel="stylesheet" href="../../style.css?v=3">
 
     <style>
-        body {
-            background:#eef2f7;
-            font-family:Arial;
-        }
+        body { background:#eef2f7; font-family:Arial; }
         .login-box {
-            width:360px;
-            margin:70px auto;
-            background:white;
-            padding:25px;
-            border-radius:12px;
-            box-shadow:0 6px 20px rgba(0,0,0,.08);
-            text-align:center;
+            width:360px; margin:70px auto; background:white; padding:25px;
+            border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,.08); text-align:center;
         }
         input {
-            width:100%;
-            padding:12px;
-            margin-top:10px;
-            border-radius:8px;
-            border:1px solid #ccc;
-            font-size:16px;
+            width:100%; padding:12px; margin-top:10px; border-radius:8px;
+            border:1px solid #ccc; font-size:16px;
         }
         button {
-            width:100%;
-            padding:12px;
-            background:#0069d9;
-            border:none;
-            margin-top:12px;
-            color:white;
-            font-size:18px;
-            border-radius:8px;
+            width:100%; padding:12px; background:#0069d9; border:none;
+            margin-top:12px; color:white; font-size:18px; border-radius:8px;
             cursor:pointer;
         }
     </style>
@@ -52,96 +33,19 @@
 
     <div id="recaptcha-container"></div>
 
-    <button onclick="sendCode()">SMS yuborish</button>
+    <button id="sendBtn">SMS yuborish</button>
 
     <input id="smsCode" type="text" placeholder="SMS kod">
 
-    <button onclick="verifyCode()">Kirish</button>
+    <button id="verifyBtn">Kirish</button>
 
     <p style="margin-top:15px">
         <a href="register.html">Ro‘yxatdan o‘tish</a>
     </p>
 </div>
 
-
-<!-- ================= SCRIPT ================= -->
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { 
-        getAuth, 
-        RecaptchaVerifier, 
-        signInWithPhoneNumber 
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-    import { 
-        getDatabase, 
-        ref, 
-        get 
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-    const firebaseConfig = {
-        apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-        authDomain: "shahartaxi-demo.firebaseapp.com",
-        databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-        projectId: "shahartaxi-demo",
-        storageBucket: "shahartaxi-demo.firebasestorage.app",
-        messagingSenderId: "874241795701",
-        appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db   = getDatabase(app);
-
-    // INVISIBLE RECAPTCHA
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-        size: "invisible"
-    });
-
-    // 📌 SMS yuborish
-    window.sendCode = async function () {
-        const phone = document.getElementById("phone").value.trim();
-
-        if (!phone.startsWith("+998")) {
-            alert("Telefonni +998 bilan kiriting");
-            return;
-        }
-
-        try {
-            const confirmation = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
-            window.confirmationResult = confirmation;
-            alert("SMS yuborildi!");
-        } catch (e) {
-            console.error(e);
-            alert("SMS yuborishda xatolik: " + e.message);
-        }
-    };
-
-    // 📌 Kod tasdiqlash
-    window.verifyCode = async function () {
-        const code = document.getElementById("smsCode").value.trim();
-
-        try {
-            const result = await window.confirmationResult.confirm(code);
-            const user = result.user;
-
-            // DB da bormi?
-            const snap = await get(ref(db, "users/" + user.uid));
-
-            if (snap.exists()) {
-                // foydalanuvchi mavjud → INDEXGA
-                window.location.href = "index.html";
-            } else {
-                // yangi user → REGISTERGA
-                window.location.href = "register.html";
-            }
-
-        } catch (e) {
-            alert("Kod xato yoki muddati o‘tgan!");
-        }
-    };
-
-</script>
+<!-- 🇺🇿 faqat shu JS kerak -->
+<script type="module" src="/shahartaxi-demo/app/user/js/login.js"></script>
 
 </body>
 </html>
