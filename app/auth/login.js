@@ -5,12 +5,12 @@ import {
   ref,
   get,
   RecaptchaVerifier,
-  signInWithPhoneNumber
-} from "./lib.js";
-
+  signInWithPhoneNumber,
+  $
+} from "../../libs/lib.js";
 
 // ==========================
-// Invisible Recaptcha
+// INVISIBLE RECAPTCHA
 // ==========================
 window.recaptchaVerifier = new RecaptchaVerifier(
   auth,
@@ -18,12 +18,16 @@ window.recaptchaVerifier = new RecaptchaVerifier(
   { size: "invisible" }
 );
 
-
 // ==========================
 // SEND SMS
 // ==========================
-document.getElementById("sendBtn").onclick = async () => {
-  const phone = document.getElementById("phone").value;
+$("sendBtn").onclick = async () => {
+  const phone = $("phone").value.trim();
+
+  if (!phone.startsWith("+998")) {
+    alert("Telefonni +998 bilan kiriting");
+    return;
+  }
 
   try {
     const confirmation = await signInWithPhoneNumber(
@@ -37,16 +41,15 @@ document.getElementById("sendBtn").onclick = async () => {
 
   } catch (e) {
     console.error(e);
-    alert("SMS yuborishda xato: " + e.message);
+    alert("SMS yuborishda xatolik: " + e.message);
   }
 };
-
 
 // ==========================
 // VERIFY CODE
 // ==========================
-document.getElementById("verifyBtn").onclick = async () => {
-  const code = document.getElementById("smsCode").value;
+$("verifyBtn").onclick = async () => {
+  const code = $("smsCode").value.trim();
 
   try {
     const result = await window.confirmationResult.confirm(code);
@@ -54,13 +57,13 @@ document.getElementById("verifyBtn").onclick = async () => {
 
     const snap = await get(ref(db, "users/" + user.uid));
 
-    if (!snap.exists()) {
-      window.location.href = "register.html";
+    if (snap.exists()) {
+      window.location.href = "/shahartaxi-demo/app/user/index.html";
     } else {
-      window.location.href = "index.html";
+      window.location.href = "/shahartaxi-demo/app/user/register.html";
     }
 
   } catch (e) {
-    alert("Kod xato!");
+    alert("Kod xato yoki muddati tugagan!");
   }
 };
