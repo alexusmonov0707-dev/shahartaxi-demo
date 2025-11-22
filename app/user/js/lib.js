@@ -20,7 +20,7 @@ import {
   get,
   set,
   update,
-  remove   // ← ★★★ Faqat shu qo‘shildi!
+  remove
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
@@ -42,13 +42,13 @@ const db = getDatabase(app);
 
 
 // ======================================================
-//    AUTH PERSISTENCE (MUHIM! Login loopingni tuzatadi)
+//    AUTH PERSISTENCE (MUHIM!  Login loopingni tuzatadi)
 // ======================================================
 await setPersistence(auth, browserLocalPersistence);
 
 
 // ======================================================
-//    RECAPTCHA
+//    RECAPTCHA YARATIB BERADIGAN FUNKSIYA
 // ======================================================
 function createRecaptcha(containerId = "recaptcha-container") {
   return new RecaptchaVerifier(
@@ -58,9 +58,12 @@ function createRecaptcha(containerId = "recaptcha-container") {
   );
 }
 
+// Small DOM helper so old code using $('id') keeps working
+function $(id) { return document.getElementById(id); }
+
 
 // ======================================================
-//   EKSPORT QILINAYOTGAN MODULLAR
+//   EKSPORT QILINADIGAN MODULLAR
 // ======================================================
 export {
   auth,
@@ -69,9 +72,10 @@ export {
   get,
   set,
   update,
-  remove,  // ← ★★★ BU HAM MAJBURIY!
+  remove,
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  createRecaptcha
+  createRecaptcha,
+  $
 };
