@@ -1,1 +1,96 @@
 
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShaharTaxi — E’lonlar</title>
+
+  <!-- style.css joylashuvi: root (shahartaxi-demo/style.css) -->
+  <link rel="stylesheet" href="../../style.css" />
+</head>
+
+<body>
+
+<div class="topbar">
+  <div>ShaharTaxi — E’lonlar</div>
+  <button class="logout" onclick="logout()">Chiqish</button>
+</div>
+
+<div class="container">
+  <div class="card">
+    <h2 style="text-align:center; color:var(--primary); margin:0 0 12px 0;">Barcha e’lonlar</h2>
+
+    <div class="filters">
+
+      <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
+
+      <select id="sortBy">
+        <option value="newest">Eng yangi</option>
+        <option value="oldest">Eng eski</option>
+      </select>
+
+      <select id="filterDate">
+        <option value="">Vaqt (hammasi)</option>
+        <option value="today">Bugun</option>
+        <option value="tomorrow">Ertaga</option>
+        <option value="3days">3 kun ichida</option>
+      </select>
+
+      <input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
+      <input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
+
+      <select id="filterRole">
+        <option value="">Hammasi</option>
+        <option value="Haydovchi">Haydovchi</option>
+        <option value="Yo‘lovchi">Yo‘lovchi</option>
+      </select>
+
+      <button id="resetFiltersBtn"
+        style="
+          padding:10px 16px;
+          border:none;
+          background:#ff4444;
+          color:white;
+          border-radius:8px;
+          font-size:14px;
+          cursor:pointer;
+          min-width:120px;">
+        Reset
+      </button>
+
+    </div>
+
+    <div class="filter-block">
+      <label><b>Qayerdan:</b></label><br>
+      <select id="fromRegion"><option value="">Viloyat</option></select>
+      <div id="fromDistrictBox" class="district-box"></div>
+    </div>
+
+    <div class="filter-block">
+      <label><b>Qayerga:</b></label><br>
+      <select id="toRegion"><option value="">Viloyat</option></select>
+      <div id="toDistrictBox" class="district-box"></div>
+    </div>
+
+    <div id="adsList">Yuklanmoqda...</div>
+
+    <div id="pagination" style="margin-top:20px; text-align:center"></div>
+
+  </div>
+</div>
+
+<div id="adFullModal"></div>
+
+<!-- REGIONS: assetsdagi fayl -->
+<script src="../../assets/regions-taxi.js"></script>
+
+<!-- helper (shu papkada joylashgan bo'lsin) -->
+<script src="js/regions-helper.js"></script>
+
+<!-- MAIN INDEX JS (module) -->
+<script type="module" src="js/index.js?v=1"></script>
+
+</body>
+</html>
+
