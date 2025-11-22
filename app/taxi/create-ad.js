@@ -6,7 +6,7 @@ import {
     set,
     onAuthStateChanged,
     $
-} from "../../libs/lib.js";
+} from "/shahartaxi-demo/libs/lib.js";
 
 onAuthStateChanged(auth, user => {
     if (!user) {
