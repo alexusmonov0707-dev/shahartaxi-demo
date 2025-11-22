@@ -8,7 +8,7 @@ import {
     set,
     onAuthStateChanged,
     $
-} from "/shahartaxi-demo/lib/lib.js";
+} from "/shahartaxi-demo/libs/lib.js";
 
 onAuthStateChanged(auth, user => {
     if (!user) {
