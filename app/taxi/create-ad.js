@@ -1,38 +1,41 @@
-import {
-    auth,
-    db,
-    ref,
-    push,
-    set,
-    onAuthStateChanged
-} from "/libs/lib.js";
+import { 
+    auth, 
+    db, 
+    ref, 
+    push, 
+    set, 
+    onAuthStateChanged, 
+    $ 
+} from "../../libs/lib.js";
 
 onAuthStateChanged(auth, user => {
     if (!user) {
-        alert("Avval tizimga kiring!");
-        location.href = "/login.html";
+        window.location.href = "../auth/login.html";
+        return;
     }
 });
 
-// FORM SUBMIT
 document.getElementById("submitAdBtn").onclick = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
 
-    const adData = {
-        userId: auth.currentUser.uid,
-        fromRegion: fromRegion.value,
-        fromDistrict: fromDistrict.value,
-        toRegion: toRegion.value,
-        toDistrict: toDistrict.value,
-        price: price.value,
-        departureTime: departureTime.value,
-        seats: seats.value,
-        comment: adComment.value,
+    const ad = {
+        userId: user.uid,
+        fromRegion: $("fromRegion").value,
+        fromDistrict: $("fromDistrict").value,
+        toRegion: $("toRegion").value,
+        toDistrict: $("toDistrict").value,
+        price: $("price").value,
+        departureTime: $("departureTime").value,
+        seats: $("seats").value,
+        comment: $("adComment").value,
         createdAt: Date.now()
     };
 
     const adsRef = ref(db, "ads");
-    const newAdRef = push(adsRef);
-    await set(newAdRef, adData);
+    const newAd = push(adsRef);
+    await set(newAd, ad);
 
-    alert("E’lon qo‘shildi!");
+    alert("E’lon joylandi!");
+    window.location.href = "my-ads.html";
 };
