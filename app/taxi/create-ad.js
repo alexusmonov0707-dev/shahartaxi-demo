@@ -1,4 +1,3 @@
-
 // app/user/js/create-ad.js
 
 import {
@@ -6,29 +5,34 @@ import {
     db,
     ref,
     push,
+    get,
     onAuthStateChanged,
-    $            // lib.js dagi qisqartma
-} from "./lib.js";
+    $
+} from "/shahartaxi-demo/libs/lib.js";
 
-// Sahifa yuklanganda regionlarni to‘ldiramiz
+// -- Sahifa yuklanganda regionlar --
 document.addEventListener("DOMContentLoaded", () => {
     initRegionsForm();
 });
 
-// Foydalanuvchi login bo‘lganini tekshirish
-onAuthStateChanged(auth, user => {
+// Foydalanuvchi login holati
+onAuthStateChanged(auth, async user => {
     if (!user) {
-        window.location.href = "../../login.html";
+        window.location.href = "/shahartaxi-demo/app/auth/login.html";
         return;
     }
+
+    // ⭐ PROFILDAN ROLE OLIB KELAMIZ
+    const s = await get(ref(db, "users/" + user.uid));
+    window.userRole = s.exists() ? s.val().role : "passenger";
 
     $("submitAdBtn").onclick = () => addAd(user.uid);
     $("clearFormBtn").onclick = clearForm;
 });
 
-// ==========================
-//    E’lon qo‘shish
-// ==========================
+// ============================
+//      E’lon qo‘shish
+// ============================
 async function addAd(uid) {
 
     const fromRegion = $("fromRegion").value;
@@ -45,7 +49,6 @@ async function addAd(uid) {
         return;
     }
 
-    // rolni oldindan profile.js ichida saqlab qo‘yganmiz
     const role = window.userRole || "passenger";
 
     const extra =
@@ -71,12 +74,12 @@ async function addAd(uid) {
     await push(ref(db, "ads"), newAd);
 
     alert("E’lon joylandi!");
-    window.location.href = "my-ads.html";
+    window.location.href = "/shahartaxi-demo/app/user/my-ads.html";
 }
 
-// ==========================
-//    FORMANI TOZALASH
-// ==========================
+// ============================
+//      Formularni tozalash
+// ============================
 function clearForm() {
     $("fromRegion").value = "";
     $("fromDistrict").innerHTML = '<option value="">Tuman</option>';
