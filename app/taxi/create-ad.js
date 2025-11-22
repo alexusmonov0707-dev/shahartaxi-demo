@@ -1,12 +1,6 @@
-import { 
-    auth, 
-    db, 
-    ref, 
-    push, 
-    set, 
-    onAuthStateChanged, 
-    $ 
-} from "../../libs/lib.js";
+import {
+  auth, db, ref, push, set, onAuthStateChanged, $
+} from "/shahartaxi-demo/libs/lib.js";
 
 onAuthStateChanged(auth, user => {
     if (!user) {
