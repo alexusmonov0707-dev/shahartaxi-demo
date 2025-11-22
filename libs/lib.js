@@ -20,8 +20,9 @@ import {
   get,
   set,
   update,
+  push,
   remove,
-  push     // ⭐⭐ ENG MUHIM — SENDA YO‘Q EDI
+  child
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
@@ -43,20 +44,26 @@ const db = getDatabase(app);
 
 
 // ======================================================
-//    AUTH PERSISTENCE (login looping muammosini to‘g‘rilaydi)
+//    AUTH PERSISTENCE (Login loopingni tuzatadi)
 // ======================================================
 await setPersistence(auth, browserLocalPersistence);
 
 
 // ======================================================
-//    RECAPTCHA GENERATOR
+//    INVISIBLE RECAPTCHA YARATISH
 // ======================================================
 function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(
-    auth,
-    containerId,
-    { size: "invisible" }
-  );
+  return new RecaptchaVerifier(auth, containerId, {
+    size: "invisible"
+  });
+}
+
+
+// ======================================================
+//   UNIVERSAL $ SELECTOR
+// ======================================================
+function $(id) {
+  return document.getElementById(id);
 }
 
 
@@ -70,10 +77,12 @@ export {
   get,
   set,
   update,
+  push,
   remove,
-  push,                 // ⭐⭐ ENG MUHIM
+  child,
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  createRecaptcha
+  createRecaptcha,
+  $
 };
