@@ -6,15 +6,12 @@ import {
     ref,
     get,
     update,
-    // remove → lib.js eksport qilmaydigani uchun boshqa yo‘l bilan o‘chiramiz
-    onAuthStateChanged,
-    $
+    remove,
+    onAuthStateChanged
 } from "./lib.js";
 
-// remove funksiyasi yo‘qligi sababli shu yerda custom remove yozamiz:
-async function removeData(path) {
-    return update(ref(db, path), null);
-}
+// ===== $ FUNKSIYA (lib.js da yo‘qligi uchun qo‘shildi) =====
+const $ = id => document.getElementById(id);
 
 // GLOBAL
 let editingAdId = null;
@@ -79,7 +76,7 @@ async function loadMyAds(uid) {
 window.deleteAd = async function (id) {
     if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
 
-    await removeData("ads/" + id);
+    await remove(ref(db, "ads/" + id));
 
     alert("E’lon o‘chirildi!");
     loadMyAds(auth.currentUser.uid);
@@ -92,7 +89,6 @@ window.openEditAd = function (id, ad) {
     editingAdId = id;
 
     initRegionsForm();
-
     $("editFromRegion").value = ad.fromRegion;
     updateEditDistricts("from");
     $("editFromDistrict").value = ad.fromDistrict;
@@ -129,7 +125,7 @@ window.saveAdEdit = async function () {
         comment: $("editComment").value
     };
 
-    // DRIVER yoki PASSENGER uchun joylar
+    // ROLE GA QARA
     if (window.userRole === "driver")
         updates.driverSeats = $("editSeats").value;
     else
