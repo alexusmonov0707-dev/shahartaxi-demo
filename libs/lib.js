@@ -2,6 +2,7 @@
 //   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
 // ======================================================
 
+// -------- Imports --------
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
 import {
@@ -19,7 +20,7 @@ import {
   get,
   set,
   update,
-  push     // <<< MUAMMO SHU YERDA EDI – QO‘SHILDI !!!
+  push                // <-- MUHIM! SENDA YO‘Q EDI
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 
@@ -33,21 +34,42 @@ const firebaseConfig = {
   appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-// Initialize
+
+// -------- Initialize Firebase --------
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
-// Login persistence
+
+// ======================================================
+//   AUTH PERSISTENCE (LOGIN LOOP BUG FIX)
+// ======================================================
 await setPersistence(auth, browserLocalPersistence);
 
-// Recaptcha
-function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
+
+// ======================================================
+//   HELPER — SELECTOR SHORTCUT
+// ======================================================
+export function $(id) {
+  return document.getElementById(id);
 }
 
 
-// EXPORTS
+// ======================================================
+//   RECAPTCHA
+// ======================================================
+function createRecaptcha(containerId = "recaptcha-container") {
+  return new RecaptchaVerifier(
+    auth,
+    containerId,
+    { size: "invisible" }
+  );
+}
+
+
+// ======================================================
+//   EXPORT QILINADIGAN MODULLAR
+// ======================================================
 export {
   auth,
   db,
@@ -55,7 +77,7 @@ export {
   get,
   set,
   update,
-  push,                  // <<<< MUHIM
+  push,                     // <-- MUHIM! create-ad.js shuni kutyapti
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
