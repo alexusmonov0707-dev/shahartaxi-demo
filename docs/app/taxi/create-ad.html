@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="uz">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yangi e’lon qo‘shish</title>
 
     <style>
-        body { font-family: Arial; margin: 0; background:#f5f7fa; }
+        body { font-family: Arial; margin:0; background:#f5f7fa; }
         .topbar {
             background:#0069d9; padding:14px; color:white;
             font-size:20px; text-align:center;
@@ -18,15 +17,15 @@
             box-shadow:0 4px 12px rgba(0,0,0,0.08);
         }
         select, input, textarea {
-            width:100%; padding:12px; font-size:15px;
-            border-radius:6px; border:1px solid #ccc; margin-top:10px;
+            width:100%; padding:12px; border-radius:6px;
+            border:1px solid #ccc; margin-top:10px;
         }
         button {
-            padding:12px; border:none; font-size:16px;
-            border-radius:8px; cursor:pointer; width:100%;
+            padding:12px; width:100%; border:none;
+            border-radius:8px; cursor:pointer; font-size:16px;
         }
-        .blue-btn { background:#0069d9; color:white; margin-top:15px; }
-        .gray-btn { background:#aaa; color:white; margin-top:10px; }
+        .blue-btn{ background:#0069d9; color:white; margin-top:15px; }
+        .gray-btn{ background:#888; color:white; margin-top:10px; }
     </style>
 </head>
 
@@ -38,6 +37,7 @@
 
     <select id="fromRegion"></select>
     <select id="fromDistrict"></select>
+
     <select id="toRegion"></select>
     <select id="toDistrict"></select>
 
@@ -45,15 +45,18 @@
     <input id="departureTime" type="datetime-local">
     <input id="seats" type="number" placeholder="Joylar soni">
 
-    <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
+    <textarea id="comment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
-    <button id="submitAdBtn" class="blue-btn">E’lonni joylash</button>
-    <button id="clearFormBtn" class="gray-btn">Tozalash</button>
-
+    <button class="blue-btn" id="submitAdBtn">E’lonni joylash</button>
+    <button class="gray-btn" id="clearFormBtn">Tozalash</button>
 </div>
 
-<script src="../../regions-helper.js"></script>
-<script type="module" src="./create-ad.js"></script>
+<!-- Regions -->
+<script src="/shahartaxi-demo/docs/assets/regions/regions-taxi.js"></script>
+<script src="/shahartaxi-demo/docs/assets/regions/regions-helper.js"></script>
+
+<!-- Main JS -->
+<script type="module" src="/shahartaxi-demo/docs/app/taxi/create-ad.js"></script>
 
 </body>
 </html>
