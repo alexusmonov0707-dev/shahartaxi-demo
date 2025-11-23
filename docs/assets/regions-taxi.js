@@ -1,6 +1,7 @@
-// docs/assets/js/regions-taxi.js
+// docs/assets/regions-taxi.js
 
-window.TAXI_REGIONS = {
+// GLOBAL obyekt (regions-helper.js shu nomni kutadi!)
+window.regions = {
     "Andijon": [
         "Andijon shahri", "Asaka", "Baliqchi", "Bo'ston", "Buloqboshi",
         "Izboskan", "Jalaquduq", "Marhamat", "Oltinko'l", "Paxtaobod",
