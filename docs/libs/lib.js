@@ -19,7 +19,8 @@ import {
   get,
   set,
   update,
-  push
+  push,
+  remove   // ⭐⭐⭐ QO‘SHILDI!
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -53,6 +54,7 @@ export {
   set,
   update,
   push,
+  remove,            // ⭐⭐⭐ EXPORT QO‘SHILDI
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
