@@ -4,29 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yangi e’lon qo‘shish</title>
-
-    <style>
-        body { font-family: Arial; margin:0; background:#f5f7fa; }
-        .topbar {
-            background:#0069d9; padding:14px; color:white;
-            font-size:20px; text-align:center;
-        }
-        .card {
-            max-width:600px; margin:20px auto; background:white;
-            padding:20px; border-radius:12px;
-            box-shadow:0 4px 12px rgba(0,0,0,0.08);
-        }
-        select, input, textarea {
-            width:100%; padding:12px; border-radius:6px;
-            border:1px solid #ccc; margin-top:10px;
-        }
-        button {
-            padding:12px; width:100%; border:none;
-            border-radius:8px; cursor:pointer; font-size:16px;
-        }
-        .blue-btn{ background:#0069d9; color:white; margin-top:15px; }
-        .gray-btn{ background:#888; color:white; margin-top:10px; }
-    </style>
+    <link rel="stylesheet" href="../../style.css">
 </head>
 
 <body>
@@ -45,18 +23,20 @@
     <input id="departureTime" type="datetime-local">
     <input id="seats" type="number" placeholder="Joylar soni">
 
-    <textarea id="comment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
+    <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
-    <button class="blue-btn" id="submitAdBtn">E’lonni joylash</button>
-    <button class="gray-btn" id="clearFormBtn">Tozalash</button>
+    <button id="submitAdBtn" class="blue-btn">E’lonni joylash</button>
+    <button id="clearFormBtn" class="gray-btn">Tozalash</button>
+
 </div>
 
-<!-- Regions -->
-<script src="/shahartaxi-demo/docs/assets/regions/regions-taxi.js"></script>
-<script src="/shahartaxi-demo/docs/assets/regions/regions-helper.js"></script>
+<!-- TO‘G‘RI YO‘LLAR -->
+<script type="module" src="../../assets/js/regions-helper.js"></script>
+<script type="module" src="../../assets/js/regions-taxi.js"></script>
+<script type="module" src="../../libs/lib.js"></script>
 
-<!-- Main JS -->
-<script type="module" src="/shahartaxi-demo/docs/app/taxi/create-ad.js"></script>
+<!-- Sen yozgan create-ad.js -->
+<script type="module" src="../../app/taxi/create-ad.js"></script>
 
 </body>
 </html>
