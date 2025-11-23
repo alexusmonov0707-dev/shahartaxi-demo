@@ -1,26 +1,8 @@
-// ======================================================
-//   SHAHARTAXI — UNIVERSAL FIREBASE BACKEND (MODULAR)
-// ======================================================
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
-import {
-  getAuth,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  getDatabase,
-  ref,
-  get,
-  set,
-  update,
-  push
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, RecaptchaVerifier, signInWithPhoneNumber, onAuthStateChanged, setPersistence, browserLocalPersistence } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, get, set, update, push } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
@@ -37,24 +19,8 @@ const db = getDatabase(app);
 
 await setPersistence(auth, browserLocalPersistence);
 
-function createRecaptcha(containerId = "recaptcha-container") {
-  return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
-}
-
 export function $(id) {
   return document.getElementById(id);
 }
 
-export {
-  auth,
-  db,
-  ref,
-  get,
-  set,
-  update,
-  push,
-  onAuthStateChanged,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  createRecaptcha
-};
+export { auth, db, ref, get, set, update, push, onAuthStateChanged, RecaptchaVerifier, signInWithPhoneNumber };
