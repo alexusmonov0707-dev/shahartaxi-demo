@@ -113,20 +113,59 @@ function setupHandlers() {
   // -----------------------------
   // 🔥 REAL FIREBASE SUBMIT HERE
   // -----------------------------
-  submitBtn.addEventListener("click", async (ev)=>{
+submitBtn.addEventListener("click", async (ev)=>{
     ev.preventDefault();
 
-    const payload = {
-      fromRegion: fromRegion.value,
-      fromDistrict: fromDistrict.value,
-      toRegion: toRegion.value,
-      toDistrict: toDistrict.value,
-      price: document.getElementById("price").value,
-      departureTime: document.getElementById("departureTime").value,
-      seats: document.getElementById("seats").value,
-      comment: document.getElementById("adComment").value,
-      createdAt: Date.now()
-    };
+    try {
+        const fromRegionValue = fromRegion.value;
+        const fromDistrictValue = fromDistrict.value;
+        const toRegionValue = toRegion.value;
+        const toDistrictValue = toDistrict.value;
+        const price = document.getElementById("price").value;
+        const departureTime = document.getElementById("departureTime").value;
+        const seats = document.getElementById("seats").value;
+        const comment = document.getElementById("adComment").value;
+
+        // ❗ Firebase lib.js ni yuklaymiz
+        const lib = await import("/shahartaxi-demo/docs/libs/lib.js");
+
+        const { db, ref, push, set, auth } = lib;
+
+        if (!auth.currentUser) {
+            alert("Avval profilga kirishingiz kerak!");
+            return;
+        }
+
+        const userId = auth.currentUser.uid;
+
+        const payload = {
+            userId,
+            fromRegion: fromRegionValue,
+            fromDistrict: fromDistrictValue,
+            toRegion: toRegionValue,
+            toDistrict: toDistrictValue,
+            price,
+            departureTime,
+            seats,
+            comment,
+            createdAt: Date.now()
+        };
+
+        const adsRef = ref(db, "taxi_ads");
+        const newAdRef = push(adsRef);
+
+        await set(newAdRef, payload);
+
+        alert("E’lon muvaffaqiyatli joylandi!");
+
+        window.location.href = "/shahartaxi-demo/docs/app/profile/profile.html";
+
+    } catch (err) {
+        console.error(err);
+        alert("E’lon joylashda xatolik yuz berdi!");
+    }
+});
+
 
     // ✔ FIREBASE IMPORT
     const lib = await import("/shahartaxi-demo/libs/lib.js");
