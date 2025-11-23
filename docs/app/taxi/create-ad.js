@@ -1,151 +1,151 @@
 // docs/app/taxi/create-ad.js
 // Type: module
+// Works with: ../../assets/regions-helper.js and ../../libs/lib.js
+/* eslint-disable no-console */
 
-const REGION_JS_PATH = "/shahartaxi-demo/docs/assets/regions-taxi.js"; 
-const HELPER_JS_PATH = "/shahartaxi-demo/docs/assets/regions-helper.js";
+import { initRegionsForm, updateDistricts, loadRegionsToSelect } from '../../assets/regions-helper.js';
+import { auth, db, ref, push, set, onAuthStateChanged, $ } from '../../libs/lib.js';
 
-// DOM elementlar
-const fromRegion = document.getElementById("fromRegion");
-const fromDistrict = document.getElementById("fromDistrict");
-const toRegion = document.getElementById("toRegion");
-const toDistrict = document.getElementById("toDistrict");
-const submitBtn = document.getElementById("submitAdBtn");
-const clearBtn = document.getElementById("clearFormBtn");
+// safe $ fallback if lib.$ not provided
+const $id = id => (typeof $ === 'function' ? $(id) : document.getElementById(id));
 
-// fallback regions data container
-let TAXI_REGIONS = window.TAXI_REGIONS || null;
+const fromRegion = $id('fromRegion');
+const fromDistrict = $id('fromDistrict');
+const toRegion = $id('toRegion');
+const toDistrict = $id('toDistrict');
 
-async function ensureRegionsLoaded() {
-  if (TAXI_REGIONS && typeof TAXI_REGIONS === "object") return;
+const submitBtn = $id('submitAdBtn');
+const clearBtn = $id('clearFormBtn');
 
+// ensure regions are loaded into selects
+document.addEventListener('DOMContentLoaded', async () => {
+  // If helper exposes initRegionsForm — use it, otherwise try fallback
   try {
-    const mod = await import(REGION_JS_PATH);
-    if (mod && (mod.default || mod.TAXI_REGIONS || mod.regions)) {
-      TAXI_REGIONS = mod.default || mod.TAXI_REGIONS || mod.regions;
-      window.TAXI_REGIONS = TAXI_REGIONS;
-      return;
+    if (typeof initRegionsForm === 'function') {
+      initRegionsForm(); // should fill fromRegion/toRegion and edit selects if any
+    } else if (typeof loadRegionsToSelect === 'function') {
+      loadRegionsToSelect('fromRegion', 'fromDistrict');
+      loadRegionsToSelect('toRegion', 'toDistrict');
+    } else {
+      console.warn('regions-helper: initRegionsForm / loadRegionsToSelect not found');
     }
-  } catch(e){}
+  } catch (e) {
+    console.error('Regions init error:', e);
+  }
+});
 
+// wire region -> districts (some helper files expect global functions; also wire here)
+fromRegion && fromRegion.addEventListener('change', () => {
   try {
-    const r = await fetch(REGION_JS_PATH);
-    if (!r.ok) throw new Error("Fetch regions failed");
-    const txt = await r.text();
+    if (typeof updateDistricts === 'function') updateDistricts('from');
+    else fillDistrictsFromHelper('from');
+  } catch (e) {
+    console.error(e);
+  }
+});
+toRegion && toRegion.addEventListener('change', () => {
+  try {
+    if (typeof updateDistricts === 'function') updateDistricts('to');
+    else fillDistrictsFromHelper('to');
+  } catch (e) {
+    console.error(e);
+  }
+});
 
-    try { (0, eval)(txt); } 
-    catch (e) {
-      const m = txt.match(/export\s+const\s+TAXI_REGIONS\s*=\s*(\{[\s\S]*\});?/m);
-      if (m && m[1]) {
-        TAXI_REGIONS = eval("(" + m[1] + ")");
-        window.TAXI_REGIONS = TAXI_REGIONS;
-        return;
-      }
-    }
+// fallback: attempt to use global TAXI_REGIONS if helper not available
+function fillDistrictsFromHelper(type) {
+  const regionId = type === 'from' ? 'fromRegion' : 'toRegion';
+  const districtId = type === 'from' ? 'fromDistrict' : 'toDistrict';
+  const region = document.getElementById(regionId).value;
+  const distEl = document.getElementById(districtId);
+  distEl.innerHTML = '<option value="">Tuman</option>';
+  const map = window.TAXI_REGIONS || window.regions || null;
+  if (!map || !region) return;
+  const list = map[region] || [];
+  list.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = d;
+    distEl.appendChild(opt);
+  });
+}
 
-    if (window.TAXI_REGIONS) {
-      TAXI_REGIONS = window.TAXI_REGIONS;
-      return;
-    }
+// AUTH check (redirect to login if no user)
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    // adjust path to your login — this assumes docs/app/auth/login.html
+    window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
+  }
+});
 
-    const jsonMatch = txt.match(/(\{[\s\S]*\})/m);
-    if (jsonMatch && jsonMatch[1]) {
-      try {
-        TAXI_REGIONS = JSON.parse(jsonMatch[1]);
-        window.TAXI_REGIONS = TAXI_REGIONS;
-        return;
-      } catch {}
-    }
-  } catch(err) {
-    console.error("Regions fetch/eval failed:", err);
+// submit handler: validate -> push to firebase -> alert + redirect to profile
+submitBtn && submitBtn.addEventListener('click', async (ev) => {
+  ev.preventDefault();
+
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Iltimos, tizimga kiring!");
+    return;
   }
 
-  TAXI_REGIONS = {};
-  window.TAXI_REGIONS = TAXI_REGIONS;
-}
+  const fromRegionVal = (fromRegion && fromRegion.value) || '';
+  const fromDistrictVal = (fromDistrict && fromDistrict.value) || '';
+  const toRegionVal = (toRegion && toRegion.value) || '';
+  const toDistrictVal = (toDistrict && toDistrict.value) || '';
+  const priceVal = ($id('price') && $id('price').value) || '';
+  const departureTimeVal = ($id('departureTime') && $id('departureTime').value) || '';
+  const seatsVal = ($id('seats') && $id('seats').value) || '';
+  const commentVal = ($id('adComment') && $id('adComment').value) || '';
+  const phoneOptional = ($id('phoneOptional') && $id('phoneOptional').value) || '';
 
-function fillRegionSelects() {
-  const keys = Object.keys(TAXI_REGIONS || {});
-  fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
-  toRegion.innerHTML = `<option value="">Qayerga (Viloyat)</option>`;
+  // validation
+  if (!fromRegionVal || !fromDistrictVal || !toRegionVal || !toDistrictVal || !priceVal || !departureTimeVal) {
+    alert("Iltimos, barcha majburiy maydonlarni to'ldiring (viloyat, tuman, narx, vaqt).");
+    return;
+  }
 
-  keys.forEach(k=>{
-    let o1 = document.createElement("option");
-    o1.value = k; o1.textContent = k;
-    fromRegion.appendChild(o1);
+  // build ad object (keep existing fields used elsewhere)
+  const ad = {
+    userId: user.uid,
+    userPhone: user.phoneNumber || phoneOptional || '',
+    type: window.userRole === 'driver' ? 'Haydovchi' : 'Yo‘lovchi',
+    fromRegion: fromRegionVal,
+    fromDistrict: fromDistrictVal,
+    toRegion: toRegionVal,
+    toDistrict: toDistrictVal,
+    price: Number(priceVal) || priceVal,
+    departureTime: departureTimeVal,
+    comment: commentVal,
+    approved: false,
+    createdAt: Date.now(),
+    // role-specific seat field to keep compatibility
+    ...(window.userRole === 'driver' ? { driverSeats: seatsVal } : { passengerCount: seatsVal })
+  };
 
-    let o2 = document.createElement("option");
-    o2.value = k; o2.textContent = k;
-    toRegion.appendChild(o2);
-  });
+  try {
+    const adsRef = ref(db, 'ads');
+    const newRef = push(adsRef);
+    await set(newRef, ad);
 
-  fromDistrict.innerHTML = `<option value="">Tuman</option>`;
-  toDistrict.innerHTML = `<option value="">Tuman</option>`;
-}
-
-function fillDistricts(regionName, targetSelect) {
-  targetSelect.innerHTML = `<option value="">Tuman</option>`;
-  if (!regionName) return;
-  const list = TAXI_REGIONS[regionName] || [];
-  list.forEach(d=>{
-    const opt = document.createElement("option");
-    opt.value = d; opt.textContent = d;
-    targetSelect.appendChild(opt);
-  });
-}
-
-function setupHandlers() {
-  fromRegion.addEventListener("change", ()=> fillDistricts(fromRegion.value, fromDistrict));
-  toRegion.addEventListener("change", ()=> fillDistricts(toRegion.value, toDistrict));
-
-  clearBtn.addEventListener("click", e=>{
-    e.preventDefault();
-    fromRegion.selectedIndex = 0; 
-    fromDistrict.innerHTML = `<option value="">Tuman</option>`;
-    toRegion.selectedIndex = 0; 
-    toDistrict.innerHTML = `<option value="">Tuman</option>`;
-    document.getElementById("price").value = "";
-    document.getElementById("departureTime").value = "";
-    document.getElementById("seats").value = "";
-    document.getElementById("adComment").value = "";
-  });
-
-  // ✔ SHU BO‘LIM YANGILANDI — test alert o‘chirildi
-  submitBtn.addEventListener("click", async (ev)=>{
-    ev.preventDefault();
-
-    const payload = {
-      fromRegion: fromRegion.value,
-      fromDistrict: fromDistrict.value,
-      toRegion: toRegion.value,
-      toDistrict: toDistrict.value,
-      price: document.getElementById("price").value,
-      departureTime: document.getElementById("departureTime").value,
-      seats: document.getElementById("seats").value,
-      comment: document.getElementById("adComment").value,
-      createdAt: Date.now()
-    };
-
-    console.log("New ad payload:", payload);
-
-    // 🔥 Yangi qo‘shilgan qism:
     alert("E’lon muvaffaqiyatli joylandi!");
-
-    // 1.5 soniya kutib profile sahifasiga o‘tish
-    setTimeout(()=>{
-        window.location.href = "/shahartaxi-demo/docs/app/profile/profile.html";
-    }, 1500);
-  });
-}
-
-(async function init(){
-  try {
-    await ensureRegionsLoaded();
-    console.log("CREATE-AD LOADED", location.href);
-    console.log("REGIONS:", Object.keys(TAXI_REGIONS).length);
-
-    fillRegionSelects();
-    setupHandlers();
-  } catch(err) {
-    console.error("Init error:", err);
+    // redirect to profile or my-ads — profile as you asked
+    window.location.href = "/shahartaxi-demo/docs/app/user/profile.html";
+  } catch (err) {
+    console.error("E'lon yuborishda xato:", err);
+    alert("Xatolik yuz berdi. Konsolni tekshiring.");
   }
-})();
+});
+
+// clear form
+clearBtn && clearBtn.addEventListener('click', (ev) => {
+  ev.preventDefault();
+  if (fromRegion) fromRegion.selectedIndex = 0;
+  if (fromDistrict) fromDistrict.innerHTML = '<option value="">Tuman</option>';
+  if (toRegion) toRegion.selectedIndex = 0;
+  if (toDistrict) toDistrict.innerHTML = '<option value="">Tuman</option>';
+  if ($id('price')) $id('price').value = '';
+  if ($id('departureTime')) $id('departureTime').value = '';
+  if ($id('seats')) $id('seats').value = '';
+  if ($id('adComment')) $id('adComment').value = '';
+  if ($id('phoneOptional')) $id('phoneOptional').value = '';
+});
