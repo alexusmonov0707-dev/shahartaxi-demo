@@ -1,47 +1,27 @@
-// UNIVERSAL FIREBASE BACKEND
+// Firebase initialization
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  getDatabase,
-  ref,
-  get,
-  set,
-  update,
-  push
+    getDatabase,
+    ref,
+    push,
+    set
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyApU...YOUR_KEY...",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.appspot.com",
-  messagingSenderId: "874247109561",
-  appId: "1:874247109561:web:b2f12a9bfaa97f..."
+    apiKey: "AIzaSyAhpU...YOUR_KEY",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abc123"
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
+export const db = getDatabase(app);
 
-// EXPORT
-export {
-  auth,
-  db,
-  ref,
-  set,
-  get,
-  push,
-  update,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  onAuthStateChanged
-};
+// Export qilinadigan funksiya
+export function pushData(path, data) {
+    const newRef = push(ref(db, path));
+    return set(newRef, data);
+}
