@@ -1,129 +1,47 @@
-// ======================================================
-//   REGIONS HELPER — ShaharTaxi
-// ======================================================
+// ===============================
+//   REGIONS HELPER (WORKING VERSION)
+// ===============================
 
-// taxi regions globaldan olinadi
-const regions = window.TAXI_REGIONS;
+import { regionsTaxi } from "./regions-taxi.js";
 
-// Element olish helperi
-export function $(id) {
-    return document.getElementById(id);
-}
-
-// ======================================================
-//     CREATE-AD SAHIFASI
-// ======================================================
+// Sahifa yuklanganda viloyatlarni to'ldirish
 export function initRegionsForm() {
-    const fromRegion = $("fromRegion");
-    const toRegion = $("toRegion");
+    fillRegions("fromRegion");
+    fillRegions("toRegion");
+}
 
-    if (!fromRegion || !toRegion) return;
+// Viloyatlar ro'yxatini selectga yuklash
+function fillRegions(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
 
-    fromRegion.innerHTML = '<option value="">Qayerdan (Viloyat)</option>';
-    toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
+    sel.innerHTML = `<option value="">Viloyat</option>`;
 
-    Object.keys(regions).forEach(r => {
-        let o1 = document.createElement("option");
-        o1.value = r; o1.textContent = r;
-        fromRegion.appendChild(o1);
-
-        let o2 = document.createElement("option");
-        o2.value = r; o2.textContent = r;
-        toRegion.appendChild(o2);
+    Object.keys(regionsTaxi).forEach(region => {
+        const op = document.createElement("option");
+        op.value = region;
+        op.textContent = region;
+        sel.appendChild(op);
     });
 }
 
-// --- districts ---
+// Tumanni viloyatga qarab to'ldirish
 export function updateDistricts(type) {
-    const regionId = type === "from" ? "fromRegion" : "toRegion";
-    const districtId = type === "from" ? "fromDistrict" : "toDistrict";
 
-    const region = $(regionId).value;
-    const districtSelect = $(districtId);
+    const regionId = type + "Region";
+    const districtId = type + "District";
 
-    districtSelect.innerHTML = '<option value="">Tuman</option>';
+    const region = document.getElementById(regionId).value;
+    const districtSel = document.getElementById(districtId);
 
-    if (!region || !regions[region]) return;
+    districtSel.innerHTML = `<option value="">Tuman</option>`;
 
-    regions[region].forEach(t => {
-        let opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        districtSelect.appendChild(opt);
-    });
-}
+    if (!regionsTaxi[region]) return;
 
-// ======================================================
-//     MY ADS — EDIT
-// ======================================================
-export function initEditRegions() {
-    const fr = $("editFromRegion");
-    const tr = $("editToRegion");
-
-    if (!fr || !tr) return;
-
-    fr.innerHTML = '<option value="">Viloyat</option>';
-    tr.innerHTML = '<option value="">Viloyat</option>';
-
-    Object.keys(regions).forEach(r => {
-        let o1 = document.createElement("option");
-        o1.value = r; o1.textContent = r;
-        fr.appendChild(o1);
-
-        let o2 = document.createElement("option");
-        o2.value = r; o2.textContent = r;
-        tr.appendChild(o2);
-    });
-}
-
-export function updateEditDistricts(type) {
-    const regionId = type === "from" ? "editFromRegion" : "editToRegion";
-    const distId   = type === "from" ? "editFromDistrict" : "editToDistrict";
-
-    const region = $(regionId).value;
-    const distSelect = $(distId);
-
-    distSelect.innerHTML = '<option value="">Tuman</option>';
-
-    if (!region || !regions[region]) return;
-
-    regions[region].forEach(t => {
-        let opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        distSelect.appendChild(opt);
-    });
-}
-
-// ======================================================
-//      PROFILE
-// ======================================================
-export function fillRegionSelect_forProfile() {
-    const reg = $("editRegion");
-    if (!reg) return;
-
-    reg.innerHTML = '<option value="">Viloyat</option>';
-
-    Object.keys(regions).forEach(r => {
-        let opt = document.createElement("option");
-        opt.value = r; 
-        opt.textContent = r;
-        reg.appendChild(opt);
-    });
-}
-
-export function fillEditDistricts() {
-    const region = $("editRegion").value;
-    const dist   = $("editDistrict");
-
-    dist.innerHTML = '<option value="">Tuman</option>';
-
-    if (!region || !regions[region]) return;
-
-    regions[region].forEach(t => {
-        let opt = document.createElement("option");
-        opt.value = t;
-        opt.textContent = t;
-        dist.appendChild(opt);
+    regionsTaxi[region].forEach(d => {
+        const op = document.createElement("option");
+        op.value = d;
+        op.textContent = d;
+        districtSel.appendChild(op);
     });
 }
