@@ -1,144 +1,112 @@
-import {
-    auth,
-    db,
-    ref,
-    get,
-    update,
-    remove,
-    onAuthStateChanged,
-    $
+// ============================
+//  MY ADS — USER'S OWN ADS
+// ============================
+
+import { 
+  auth, 
+  db, 
+  ref, 
+  get, 
+  update, 
+  set, 
+  onAuthStateChanged 
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-// Regions helper (GLOBAL funksiyalar)
-import "/shahartaxi-demo/docs/assets/regions-helper.js";
+const adsList = document.getElementById("adsList");
 
-// =====================
-// GLOBAL
-// =====================
-let editingAdId = null;
-
-// =====================
-// AUTH CHECK
-// =====================
-onAuthStateChanged(auth, user => {
+// -------------------------------
+// WAIT FOR USER LOGIN
+// -------------------------------
+onAuthStateChanged(auth, async (user) => {
     if (!user) {
-        window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
+        adsList.innerHTML = `<div class="loading">Avval tizimga kiring...</div>`;
         return;
     }
 
-    window.currentUID = user.uid;
     loadMyAds(user.uid);
 });
 
-// =====================
-// LOAD MY ADS
-// =====================
-async function loadMyAds(uid) {
-    const snap = await get(ref(db, "ads"));
-    const list = $("myAdsList");
+// -------------------------------
+// LOAD USER ADS
+// -------------------------------
+async function loadMyAds(userId) {
+    adsList.innerHTML = `<div class="loading">Yuklanmoqda...</div>`;
 
-    list.innerHTML = "";
+    try {
+        const userAdsRef = ref(db, `ads/${userId}`);
+        const snapshot = await get(userAdsRef);
 
-    if (!snap.exists()) {
-        list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-        return;
+        // No ads
+        if (!snapshot.exists()) {
+            adsList.innerHTML = `
+                <div class="empty">Siz hali e’lon joylamagansiz.</div>
+            `;
+            return;
+        }
+
+        const ads = snapshot.val();
+        adsList.innerHTML = ""; // Clear old output
+
+        Object.keys(ads).forEach((adId) => {
+            const ad = ads[adId];
+
+            adsList.innerHTML += generateAdHTML(adId, ad);
+        });
+
+    } catch (err) {
+        console.error(err);
+        adsList.innerHTML = `<div class="error">Xatolik yuz berdi!</div>`;
     }
-
-    snap.forEach(child => {
-        const ad = child.val();
-        if (ad.userId !== uid) return;
-
-        const seatsText = ad.driverSeats
-            ? `<b>Bo'sh joy:</b> ${ad.driverSeats}`
-            : `<b>Yo'lovchilar:</b> ${ad.passengerCount ?? "-"}`;
-
-        const box = document.createElement("div");
-        box.className = "ad-box";
-        box.innerHTML = `
-            <b style="color:#0069d9;">${ad.type}</b><br>
-            ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
-            Narx: <b style="color:#28a745">${ad.price}</b><br>
-            Vaqt: ${ad.departureTime}<br>
-            ${seatsText}
-            <div style="margin-top:10px; display:flex; gap:10px;">
-                <button class="blue-btn" onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
-                    Tahrirlash
-                </button>
-                <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
-            </div>
-        `;
-        list.appendChild(box);
-    });
 }
 
-// =====================
-// DELETE AD
-// =====================
-window.deleteAd = async function (id) {
-    if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
+// -------------------------------
+// GENERATE EACH AD BLOCK
+// -------------------------------
+function generateAdHTML(id, ad) {
+    return `
+        <div class="ad-card">
 
-    await remove(ref(db, "ads/" + id));
+            <div class="ad-main">
+                <div class="ad-route">
+                    ${ad.fromRegion} → ${ad.toRegion}
+                </div>
 
-    alert("O‘chirildi!");
-    loadMyAds(currentUID);
-};
+                <div class="ad-meta">
+                    <span>${ad.price} so‘m</span>
+                    <span>${ad.seats} ta joy</span>
+                    <span>${ad.date}</span>
+                </div>
 
-// =====================
-// OPEN EDIT MODAL
-// =====================
-window.openEditAd = function (id, ad) {
-    editingAdId = id;
+                <div class="ad-comment">${ad.comment ?? ""}</div>
+            </div>
 
-    // Regions
-    fillRegions("editFromRegion");
-    fillRegions("editToRegion");
+            <div class="ad-actions">
+                <button class="delete-btn" onclick="deleteAd('${ad.userId}','${id}')">
+                    O‘chirish
+                </button>
+            </div>
+        </div>
+    `;
+}
 
-    $("editFromRegion").value = ad.fromRegion;
-    updateDistricts("editFrom".replace("edit", "").toLowerCase());
-    $("editFromDistrict").value = ad.fromDistrict;
+// -------------------------------
+// DELETE AD — RTDB VERSION
+// -------------------------------
+window.deleteAd = async function(userId, adId) {
+    if (!confirm("Rostdan ham o‘chirmoqchimisiz?")) return;
 
-    $("editToRegion").value = ad.toRegion;
-    updateDistricts("editTo".replace("edit", "").toLowerCase());
-    $("editToDistrict").value = ad.toDistrict;
+    try {
+        // RTDB DELETE = set(ref, null)
+        await set(ref(db, `ads/${userId}/${adId}`), null);
 
-    // Other fields
-    $("editPrice").value = ad.price;
-    $("editTime").value = ad.departureTime;
-    $("editComment").value = ad.comment ?? "";
-    $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
+        // Remove from global ads list
+        await set(ref(db, `allAds/${adId}`), null);
 
-    $("editAdModal").style.display = "flex";
-};
+        alert("E’lon o‘chirildi!");
+        location.reload();
 
-window.closeEditAd = () =>
-    $("editAdModal").style.display = "none";
-
-// =====================
-// SAVE EDIT
-// =====================
-window.saveAdEdit = async function () {
-    if (!editingAdId) return;
-
-    const updates = {
-        fromRegion: $("editFromRegion").value,
-        fromDistrict: $("editFromDistrict").value,
-        toRegion: $("editToRegion").value,
-        toDistrict: $("editToDistrict").value,
-        price: $("editPrice").value,
-        departureTime: $("editTime").value,
-        comment: $("editComment").value
-    };
-
-    const seats = $("editSeats").value;
-
-    if (window.userRole === "driver")
-        updates.driverSeats = seats;
-    else
-        updates.passengerCount = seats;
-
-    await update(ref(db, "ads/" + editingAdId), updates);
-
-    alert("Tahrirlandi!");
-    closeEditAd();
-    loadMyAds(currentUID);
+    } catch (err) {
+        console.error(err);
+        alert("Xatolik yuz berdi!");
+    }
 };
