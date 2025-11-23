@@ -34,41 +34,71 @@
     </div>
   </div>
 
-  <!-- EDIT MODAL -->
-  <div id="editAdModal" class="modal" role="dialog" aria-modal="true">
-    <div class="modal-box">
-      <h3>Tahrirlash</h3>
+ <!-- EDIT MODAL -->
+<div id="editAdModal" class="modal" style="
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;">
+    
+    <div class="modal-content" style="
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;">
+        
+        <h3 style="margin-bottom: 15px;">Tahrirlash</h3>
 
-      <label for="editFromRegion">Qayerdan (viloyat)</label>
-      <select id="editFromRegion"></select>
+        <!-- FROM REGION -->
+        <label>Qayerdan (viloyat)</label>
+        <select id="editFromRegion" onchange="updateEditDistricts('from')">
+            <option value="">Viloyat</option>
+        </select>
 
-      <label for="editFromDistrict">Tuman</label>
-      <select id="editFromDistrict"></select>
+        <label>Tuman</label>
+        <select id="editFromDistrict">
+            <option value="">Tuman</option>
+        </select>
 
-      <label for="editToRegion">Qayerga (viloyat)</label>
-      <select id="editToRegion"></select>
+        <!-- TO REGION -->
+        <label>Qayerga (viloyat)</label>
+        <select id="editToRegion" onchange="updateEditDistricts('to')">
+            <option value="">Viloyat</option>
+        </select>
 
-      <label for="editToDistrict">Tuman</label>
-      <select id="editToDistrict"></select>
+        <label>Tuman</label>
+        <select id="editToDistrict">
+            <option value="">Tuman</option>
+        </select>
 
-      <label for="editPrice">Narx</label>
-      <input id="editPrice" type="number">
+        <!-- PRICE -->
+        <label>Narx</label>
+        <input type="number" id="editPrice" placeholder="Narx">
 
-      <label for="editTime">Jo'nash vaqti</label>
-      <input id="editTime" type="datetime-local">
+        <!-- TIME -->
+        <label>Jo'nash vaqti</label>
+        <input type="datetime-local" id="editTime">
 
-      <label for="editSeats">Joylar / Yo'lovchilar</label>
-      <input id="editSeats" type="number">
+        <!-- SEATS -->
+        <label>Joylar / Yo'lovchilar</label>
+        <input type="number" id="editSeats" placeholder="Joylar soni">
 
-      <label for="editComment">Izoh</label>
-      <textarea id="editComment" rows="3"></textarea>
+        <!-- COMMENT -->
+        <label>Izoh</label>
+        <textarea id="editComment" rows="3"></textarea>
 
-      <div style="display:flex;gap:10px;margin-top:12px;">
-        <button id="saveEditBtn" class="blue-btn">Saqlash</button>
-        <button id="closeEditBtn" class="red-btn">Bekor qilish</button>
-      </div>
+        <!-- BUTTONS -->
+        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+            <button id="saveEditBtn" class="blue-btn">Saqlash</button>
+            <button id="closeEditBtn" class="red-btn">Bekor qilish</button>
+        </div>
     </div>
-  </div>
+</div>
+
 
   <!-- Regions data (global `regions` array expected) -->
   <script type="module" src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
