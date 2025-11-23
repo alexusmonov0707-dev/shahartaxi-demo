@@ -1,179 +1,173 @@
 import {
-  auth,
-  db,
-  ref,
-  get,
-  update,
-  remove,
-  onAuthStateChanged,
-  $
+    auth,
+    db,
+    ref,
+    get,
+    update,
+    remove,
+    onAuthStateChanged,
+    $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-import { regionsTaxi } from "/shahartaxi-demo/docs/assets/regions-taxi.js";
+// =====================
+// FILL REGIONS (IDENTIK create-ad.js bilan)
+// =====================
+window.initRegionsForm = function () {
+    const fromRegion = $("editFromRegion");
+    const toRegion = $("editToRegion");
+
+    fromRegion.innerHTML = '<option value="">Viloyat</option>';
+    toRegion.innerHTML = '<option value="">Viloyat</option>';
+
+    regions.forEach(r => {
+        fromRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+        toRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+    });
+};
+
+window.updateEditDistricts = function (type) {
+    const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
+    const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
+
+    const regionName = regionSelect.value;
+
+    districtSelect.innerHTML = '<option value="">Tuman</option>';
+
+    if (!regionName) return;
+
+    const region = regions.find(r => r.name === regionName);
+    if (!region) return;
+
+    region.districts.forEach(dis => {
+        districtSelect.innerHTML += `<option value="${dis}">${dis}</option>`;
+    });
+};
 
 // =====================
 // GLOBAL
 // =====================
 let editingAdId = null;
-let currentUID = null;
 
 // =====================
 // USER CHECK
 // =====================
 onAuthStateChanged(auth, user => {
-  if (!user) {
-    window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
-    return;
-  }
+    if (!user) {
+        window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
+        return;
+    }
 
-  currentUID = user.uid;
-  loadMyAds(user.uid);
+    window.currentUID = user.uid;
+    loadMyAds(user.uid);
 });
 
 // =====================
 // LOAD USER ADS
 // =====================
 async function loadMyAds(uid) {
-  const snap = await get(ref(db, "ads"));
-  const list = $("myAdsList");
+    const snap = await get(ref(db, "ads"));
+    const list = $("myAdsList");
 
-  list.innerHTML = "";
+    list.innerHTML = "";
 
-  if (!snap.exists()) {
-    list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-    return;
-  }
+    if (!snap.exists()) {
+        list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+        return;
+    }
 
-  snap.forEach(child => {
-    const ad = child.val();
-    if (ad.userId !== uid) return;
+    snap.forEach(child => {
+        const ad = child.val();
+        if (ad.userId !== uid) return;
 
-    const seatsText = ad.driverSeats
-      ? `<b>Bo'sh joy:</b> ${ad.driverSeats}`
-      : `<b>Yo'lovchilar:</b> ${ad.passengerCount ?? "-"}`;
+        const seatsText = ad.driverSeats
+            ? `<b>Bo'sh joy:</b> ${ad.driverSeats}`
+            : `<b>Yo'lovchilar:</b> ${ad.passengerCount ?? "-"}`;
 
-    const box = document.createElement("div");
-    box.className = "ad-box";
-
-    box.innerHTML = `
-      <b style="color:#0069d9;">${ad.type}</b> <br>
-      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict} <br>
-      Narx: <b style="color:#28a745">${ad.price}</b><br>
-      Vaqt: ${ad.departureTime}<br>
-      ${seatsText}
-      <div style="margin-top:10px; display:flex; gap:10px;">
-        <button class="blue-btn" onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
-          Tahrirlash
-        </button>
-        <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
-      </div>
-    `;
-
-    list.appendChild(box);
-  });
+        const box = document.createElement("div");
+        box.className = "ad-box";
+        box.innerHTML = `
+            <b style="color:#0069d9;">${ad.type}</b><br>
+            ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
+            Narx: <b style="color:#28a745">${ad.price}</b><br>
+            Vaqt: ${ad.departureTime}<br>
+            ${seatsText}
+            <div style="margin-top:10px; display:flex; gap:10px;">
+                <button class="blue-btn" onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
+                    Tahrirlash
+                </button>
+                <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
+            </div>
+        `;
+        list.appendChild(box);
+    });
 }
 
 // =====================
-// DELETE
+// DELETE AD
 // =====================
 window.deleteAd = async function (id) {
-  if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
+    if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
 
-  await remove(ref(db, "ads/" + id));
+    await remove(ref(db, "ads/" + id));
 
-  alert("O‘chirildi!");
-  loadMyAds(currentUID);
+    alert("O‘chirildi!");
+    loadMyAds(currentUID);
 };
 
 // =====================
-// OPEN EDIT MODAL
+// OPEN MODAL
 // =====================
 window.openEditAd = function (id, ad) {
-  editingAdId = id;
+    editingAdId = id;
 
-  fillRegionSelect("editFromRegion");
-  fillRegionSelect("editToRegion");
+    initRegionsForm();
 
-  $("editFromRegion").value = ad.fromRegion;
-  updateDistrictSelect("editFromRegion", "editFromDistrict");
-  $("editFromDistrict").value = ad.fromDistrict;
+    $("editFromRegion").value = ad.fromRegion;
+    updateEditDistricts("from");
+    $("editFromDistrict").value = ad.fromDistrict;
 
-  $("editToRegion").value = ad.toRegion;
-  updateDistrictSelect("editToRegion", "editToDistrict");
-  $("editToDistrict").value = ad.toDistrict;
+    $("editToRegion").value = ad.toRegion;
+    updateEditDistricts("to");
+    $("editToDistrict").value = ad.toDistrict;
 
-  $("editPrice").value = ad.price;
-  $("editTime").value = ad.departureTime;
-  $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
-  $("editComment").value = ad.comment ?? "";
+    $("editPrice").value = ad.price;
+    $("editTime").value = ad.departureTime;
+    $("editComment").value = ad.comment ?? "";
 
-  $("editAdModal").style.display = "flex";
+    $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
+
+    $("editAdModal").style.display = "flex";
 };
 
-// =====================
-// CLOSE MODAL
-// =====================
-window.closeEditAd = () => {
-  $("editAdModal").style.display = "none";
-};
+window.closeEditAd = () =>
+    $("editAdModal").style.display = "none";
 
 // =====================
 // SAVE EDIT
 // =====================
 window.saveAdEdit = async function () {
-  if (!editingAdId) return;
+    if (!editingAdId) return;
 
-  const updates = {
-    fromRegion: $("editFromRegion").value,
-    fromDistrict: $("editFromDistrict").value,
-    toRegion: $("editToRegion").value,
-    toDistrict: $("editToDistrict").value,
-    price: $("editPrice").value,
-    departureTime: $("editTime").value,
-    comment: $("editComment").value,
-  };
+    const updates = {
+        fromRegion: $("editFromRegion").value,
+        fromDistrict: $("editFromDistrict").value,
+        toRegion: $("editToRegion").value,
+        toDistrict: $("editToDistrict").value,
+        price: $("editPrice").value,
+        departureTime: $("editTime").value,
+        comment: $("editComment").value
+    };
 
-  const seats = $("editSeats").value;
+    const seats = $("editSeats").value;
 
-  if (window.userRole === "driver")
-    updates.driverSeats = seats;
-  else
-    updates.passengerCount = seats;
+    if (window.userRole === "driver")
+        updates.driverSeats = seats;
+    else
+        updates.passengerCount = seats;
 
-  await update(ref(db, "ads/" + editingAdId), updates);
+    await update(ref(db, "ads/" + editingAdId), updates);
 
-  alert("Tahrirlandi!");
-  closeEditAd();
-  loadMyAds(currentUID);
-};
-
-// =====================
-// REGIONS + DISTRICTS
-// =====================
-
-// Selectga viloyatlarni joylash
-function fillRegionSelect(selectId) {
-  const el = $(selectId);
-  el.innerHTML = `<option value="">Viloyat</option>`;
-
-  regionsTaxi.forEach(r => {
-    el.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-  });
-}
-
-// Tumanni yangilash
-window.updateDistrictSelect = function (regionSelectId, districtSelectId) {
-  const regionName = $(regionSelectId).value;
-  const districtEl = $(districtSelectId);
-
-  districtEl.innerHTML = `<option value="">Tuman</option>`;
-
-  if (!regionName) return;
-
-  const region = regionsTaxi.find(r => r.name === regionName);
-  if (!region) return;
-
-  region.districts.forEach(d => {
-    districtEl.innerHTML += `<option value="${d}">${d}</option>`;
-  });
+    alert("Tahrirlandi!");
+    closeEditAd();
+    loadMyAds(currentUID);
 };
