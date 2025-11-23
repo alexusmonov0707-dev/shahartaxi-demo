@@ -1,47 +1,52 @@
 // ===============================
-//   REGIONS HELPER (WORKING VERSION)
+//   REGIONS HELPER — FULL VERSION
+//   moslashgan: my-ads.js + create-ad.js
 // ===============================
 
 import { regionsTaxi } from "./regions-taxi.js";
 
-// Sahifa yuklanganda viloyatlarni to'ldirish
-export function initRegionsForm() {
-    fillRegions("fromRegion");
-    fillRegions("toRegion");
-}
+// GLOBAL O'ZGARUVCHI — my-ads.js shu nomni kutadi
+window.regions = Object.keys(regionsTaxi).map(name => ({
+    name,
+    districts: regionsTaxi[name]
+}));
 
-// Viloyatlar ro'yxatini selectga yuklash
-function fillRegions(selectId) {
-    const sel = document.getElementById(selectId);
-    if (!sel) return;
+// ==========================
+//   SELECTGA VILOYATLARNI YOZISH
+// ==========================
+window.fillRegions = function(selectId) {
+    const el = document.getElementById(selectId);
+    if (!el) return;
 
-    sel.innerHTML = `<option value="">Viloyat</option>`;
+    el.innerHTML = `<option value="">Viloyat</option>`;
 
-    Object.keys(regionsTaxi).forEach(region => {
+    window.regions.forEach(r => {
         const op = document.createElement("option");
-        op.value = region;
-        op.textContent = region;
-        sel.appendChild(op);
+        op.value = r.name;
+        op.textContent = r.name;
+        el.appendChild(op);
     });
-}
+};
 
-// Tumanni viloyatga qarab to'ldirish
-export function updateDistricts(type) {
+// ==========================
+//   TUMANLARNI TO‘LDIRISH
+// ==========================
+window.updateDistricts = function(type) {
+    const regionSelect = document.getElementById(type + "Region");
+    const districtSelect = document.getElementById(type + "District");
 
-    const regionId = type + "Region";
-    const districtId = type + "District";
+    districtSelect.innerHTML = `<option value="">Tuman</option>`;
 
-    const region = document.getElementById(regionId).value;
-    const districtSel = document.getElementById(districtId);
+    const selectedRegion = regionSelect.value;
+    if (!selectedRegion) return;
 
-    districtSel.innerHTML = `<option value="">Tuman</option>`;
+    const regionData = window.regions.find(r => r.name === selectedRegion);
+    if (!regionData) return;
 
-    if (!regionsTaxi[region]) return;
-
-    regionsTaxi[region].forEach(d => {
+    regionData.districts.forEach(d => {
         const op = document.createElement("option");
         op.value = d;
         op.textContent = d;
-        districtSel.appendChild(op);
+        districtSelect.appendChild(op);
     });
-}
+};
