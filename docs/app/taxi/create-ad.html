@@ -3,8 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yangi e’lon qo‘shish</title>
-    <link rel="stylesheet" href="../../style.css">
+    <title>E’lon qo‘shish — ShaharTaxi</title>
+
+    <style>
+        body { font-family: Arial; margin: 0; background:#f5f7fa; }
+        .topbar {
+            background:#0069d9; padding:14px; color:white;
+            font-size:20px; text-align:center;
+        }
+        .card {
+            max-width:600px; margin:20px auto; background:white;
+            padding:20px; border-radius:12px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.08);
+        }
+        select, input, textarea {
+            width:100%; padding:12px; font-size:15px;
+            border-radius:6px; border:1px solid #ccc; margin-top:10px;
+        }
+        button {
+            padding:12px; border:none; font-size:16px;
+            border-radius:8px; cursor:pointer; width:100%;
+        }
+        .blue-btn { background:#0069d9; color:white; margin-top:15px; }
+        .gray-btn { background:#aaa; color:white; margin-top:10px; }
+    </style>
 </head>
 
 <body>
@@ -13,15 +35,25 @@
 
 <div class="card">
 
-    <select id="fromRegion"></select>
-    <select id="fromDistrict"></select>
+    <select id="fromRegion" onchange="updateDistricts('from')">
+        <option value="">Qayerdan (Viloyat)</option>
+    </select>
 
-    <select id="toRegion"></select>
-    <select id="toDistrict"></select>
+    <select id="fromDistrict">
+        <option value="">Tuman</option>
+    </select>
+
+    <select id="toRegion" onchange="updateDistricts('to')">
+        <option value="">Qayerga (Viloyat)</option>
+    </select>
+
+    <select id="toDistrict">
+        <option value="">Tuman</option>
+    </select>
 
     <input id="price" type="number" placeholder="Narx (so‘m)">
     <input id="departureTime" type="datetime-local">
-    <input id="seats" type="number" placeholder="Joylar soni">
+    <input id="seats" type="number" placeholder="Joylar soni / Yo‘lovchilar soni">
 
     <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
@@ -30,13 +62,12 @@
 
 </div>
 
-<!-- TO‘G‘RI YO‘LLAR -->
-<script type="module" src="../../assets/js/regions-helper.js"></script>
-<script type="module" src="../../assets/js/regions-taxi.js"></script>
-<script type="module" src="../../libs/lib.js"></script>
+<!-- Regions -->
+<script src="/shahartaxi-demo/assets/regions-taxi.js"></script>
+<script src="/shahartaxi-demo/assets/regions-helper.js"></script>
 
-<!-- Sen yozgan create-ad.js -->
-<script type="module" src="../../app/taxi/create-ad.js"></script>
+<!-- Create AD JS -->
+<script type="module" src="/shahartaxi-demo/app/taxi/create-ad.js"></script>
 
 </body>
 </html>
