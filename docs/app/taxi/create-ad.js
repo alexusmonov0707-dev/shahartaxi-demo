@@ -1,57 +1,57 @@
-import {
-  db,
-  ref,
-  push,
-  set
-} from "../../../libs/lib.js";
+import { db, pushData } from "/shahartaxi-demo/docs/assets/js/libs.js";
 
-// REGIONS LOADING
-import "../../regions-taxi.js";
+import { 
+    loadRegions, 
+    loadDistricts 
+} from "/shahartaxi-demo/docs/assets/regions/regions-helper.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+console.log("CREATE-AD JS LOADED");
 
-  const fromRegion = document.getElementById("fromRegion");
-  const fromDistrict = document.getElementById("fromDistrict");
-  const toRegion = document.getElementById("toRegion");
-  const toDistrict = document.getElementById("toDistrict");
+// HTML elementlar
+const fromRegion = document.getElementById("fromRegion");
+const fromDistrict = document.getElementById("fromDistrict");
 
-  const price = document.getElementById("price");
-  const departureTime = document.getElementById("departureTime");
-  const seats = document.getElementById("seats");
-  const adComment = document.getElementById("adComment");
+const toRegion = document.getElementById("toRegion");
+const toDistrict = document.getElementById("toDistrict");
 
-  const submitBtn = document.getElementById("submitAdBtn");
-  const clearBtn = document.getElementById("clearFormBtn");
+const price = document.getElementById("price");
+const time = document.getElementById("departureTime");
+const seats = document.getElementById("seats");
+const comment = document.getElementById("comment");
 
-  submitBtn.onclick = async () => {
+const submitBtn = document.getElementById("submitAdBtn");
+const clearBtn = document.getElementById("clearFormBtn");
 
-    if (!fromRegion.value || !toRegion.value || !price.value || !departureTime.value) {
-      alert("Iltimos, barcha majburiy maydonlarni to‘ldiring!");
-      return;
-    }
+// Viloyat va tumanlarni yuklash
+loadRegions(fromRegion);
+loadRegions(toRegion);
 
-    const adRef = ref(db, "ads/");
-    const newAd = push(adRef);
+fromRegion.onchange = () => loadDistricts(fromRegion, fromDistrict);
+toRegion.onchange = () => loadDistricts(toRegion, toDistrict);
 
-    await set(newAd, {
-      fromRegion: fromRegion.value,
-      fromDistrict: fromDistrict.value,
-      toRegion: toRegion.value,
-      toDistrict: toDistrict.value,
-      price: price.value,
-      time: departureTime.value,
-      seats: seats.value,
-      comment: adComment.value || "",
-      createdAt: new Date().toISOString()
-    });
+// E’lonni bazaga yuborish
+submitBtn.onclick = async () => {
+    let ad = {
+        fromRegion: fromRegion.value,
+        fromDistrict: fromDistrict.value,
+        toRegion: toRegion.value,
+        toDistrict: toDistrict.value,
+        price: price.value,
+        time: time.value,
+        seats: seats.value,
+        comment: comment.value,
+        createdAt: Date.now()
+    };
+
+    await pushData("taxiAds", ad);
 
     alert("E’lon muvaffaqiyatli joylandi!");
-  };
+};
 
-  clearBtn.onclick = () => {
+// Tozalash tugmasi
+clearBtn.onclick = () => {
     price.value = "";
     seats.value = "";
-    adComment.value = "";
-  };
-
-});
+    comment.value = "";
+    time.value = "";
+};
