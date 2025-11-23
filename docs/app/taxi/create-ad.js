@@ -1,6 +1,5 @@
 console.log("CREATE-AD.JS LOADED:", import.meta.url);
 
-// Firebase universal backend — DOCS ichidan yuklanadi
 import {
     auth,
     db,
@@ -9,24 +8,19 @@ import {
     set,
     onAuthStateChanged,
     $
-} from "/shahartaxi-demo/docs/libs/lib.js";
+} from "../../libs/lib.js";
 
-// AUTH CHECK
+// USER TEKSHIRISH
 onAuthStateChanged(auth, user => {
     if (!user) {
-        console.warn("User not logged in, redirecting...");
         window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
     }
 });
 
-// SUBMIT HANDLER
+// FORM SUBMIT
 document.getElementById("submitAdBtn").onclick = async () => {
-
     const user = auth.currentUser;
-    if (!user) {
-        alert("Avval tizimga kiring!");
-        return;
-    }
+    if (!user) return alert("Avval tizimga kiring!");
 
     const adData = {
         userId: user.uid,
@@ -41,32 +35,21 @@ document.getElementById("submitAdBtn").onclick = async () => {
         createdAt: Date.now()
     };
 
-    if (!adData.fromRegion || !adData.toRegion) {
-        alert("Qayerdan va Qayerga tanlanishi shart!");
-        return;
-    }
+    const adsRef = ref(db, "ads");
+    const newAd = push(adsRef);
 
-    try {
-        const adsRef = ref(db, "ads");
-        const newAd = push(adsRef);
-        await set(newAd, adData);
+    await set(newAd, adData);
 
-        alert("E’lon muvaffaqiyatli joylandi!");
-        window.location.href = "/shahartaxi-demo/docs/app/taxi/my-ads.html";
-
-    } catch (err) {
-        console.error("E’lon qo‘shishda xatolik:", err);
-        alert("Xatolik: " + err.message);
-    }
+    alert("E’lon muvaffaqiyatli joylandi!");
+    location.href = "/shahartaxi-demo/docs/app/taxi/my-ads.html";
 };
 
-
-// CLEAR BUTTON
+// FORM TOZALASH
 document.getElementById("clearFormBtn").onclick = () => {
     $("fromRegion").value = "";
-    $("fromDistrict").value = "";
+    $("fromDistrict").innerHTML = "<option value=''>Tuman</option>";
     $("toRegion").value = "";
-    $("toDistrict").value = "";
+    $("toDistrict").innerHTML = "<option value=''>Tuman</option>";
     $("price").value = "";
     $("departureTime").value = "";
     $("seats").value = "";
