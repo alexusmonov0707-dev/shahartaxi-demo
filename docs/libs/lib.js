@@ -22,22 +22,39 @@ import {
   push
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-
-// 🔥 Sening Firebase config (SEN YOZGANING)
 const firebaseConfig = {
-    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLxwLcYgRihREWvc",
-    authDomain: "shahartaxi-demo.firebaseapp.com",
-    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-    projectId: "shahartaxi-demo",
-    storageBucket: "shahartaxi-demo.firebasestorage.app",
-    messagingSenderId: "874241795701",
-    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
-// Initialize
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
 
-// Export DB helpers
-export { ref, get, set, update, push };
+await setPersistence(auth, browserLocalPersistence);
+
+function createRecaptcha(containerId = "recaptcha-container") {
+  return new RecaptchaVerifier(auth, containerId, { size: "invisible" });
+}
+
+export function $(id) {
+  return document.getElementById(id);
+}
+
+export {
+  auth,
+  db,
+  ref,
+  get,
+  set,
+  update,
+  push,
+  onAuthStateChanged,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  createRecaptcha
+};
