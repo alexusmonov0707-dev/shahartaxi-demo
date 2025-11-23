@@ -1,54 +1,61 @@
-// app/user/js/regions-taxi.js
+// docs/assets/js/regions-taxi.js
 
-window.regionsData = {
-  "Toshkent shahri": [
-    "Chilonzor", "Bektemir", "Sergeli", "Yunusobod", "Yakkasaroy",
-    "Shayxontohur", "Olmazor", "Uchtepa", "Mirzo Ulug‘bek", "Mirobod"
-  ],
-  "Toshkent viloyati": [
-    "Bekobod", "Bo‘ka", "Chinoz", "Qibray", "Ohangaron",
-    "Olmaliq", "Parkent", "Piskent", "Quyi Chirchiq",
-    "O‘rta Chirchiq", "Yuqori Chirchiq", "Zangiota"
-  ],
-  "Farg‘ona viloyati": [
-    "Farg‘ona", "Marg‘ilon", "Quva", "Oltiariq",
-    "Beshariq", "Rishton", "O‘zbekiston", "Toshloq"
-  ],
-  "Andijon viloyati": [
-    "Andijon", "Asaka", "Xo‘jaobod", "Buloqboshi",
-    "Shahrixon", "Paxtaobod", "Marhamat", "Jalaquduq"
-  ],
-  "Namangan viloyati": [
-    "Namangan", "Chortoq", "Uychi", "Pop",
-    "Kosonsoy", "To‘raqo‘rg‘on"
-  ],
-  "Samarqand viloyati": [
-    "Samarqand", "Urgut", "Narpay", "Ishtixon"
-  ],
-  "Buxoro viloyati": [
-    "Buxoro", "G‘ijduvon", "Kogon", "Shofirkon"
-  ],
-  "Qashqadaryo viloyati": [
-    "Qarshi", "Shahrisabz", "Kasbi", "Dehqonobod"
-  ],
-  "Surxondaryo viloyati": [
-    "Termiz", "Denov", "Sherobod", "Boysun"
-  ],
-  "Xorazm viloyati": [
-    "Urganch", "Xiva", "Shavot", "Yangibozor"
-  ],
-  "Navoiy viloyati": [
-    "Navoiy", "Zarafshon", "Konimex", "Qiziltepa"
-  ],
-  "Jizzax viloyati": [
-    "Jizzax", "G‘allaorol", "Zomin", "Baxmal"
-  ],
-  "Sirdaryo viloyati": [
-    "Guliston", "Sirdaryo", "Boyovut", "Sayxunobod"
-  ],
-  "Qoraqalpog‘iston": [
-    "Nukus", "Xo‘jayli", "Taxiatosh", "Taxtako‘pir"
-  ]
+window.TAXI_REGIONS = {
+    "Andijon": [
+        "Andijon shahri", "Asaka", "Baliqchi", "Bo'ston", "Buloqboshi",
+        "Izboskan", "Jalaquduq", "Marhamat", "Oltinko'l", "Paxtaobod",
+        "Qo'rg'ontepa", "Shahrixon", "Ulug'nor", "Xo'jaobod"
+    ],
+    "Buxoro": [
+        "Buxoro shahri", "G'ijduvon", "Jondor", "Kogon", "Olot",
+        "Peshku", "Qorako'l", "Qorovulbozor", "Romitan", "Shofirkon",
+        "Vobkent"
+    ],
+    "Farg'ona": [
+        "Farg'ona shahri", "Beshariq", "Bog'dod", "Buvaida", "Dang'ara",
+        "Furqat", "Oltiariq", "Qo'shtepa", "Quva", "Rishton", "So'x",
+        "Toshloq", "Uchko'prik", "Yozyovon"
+    ],
+    "Namangan": [
+        "Namangan shahri", "Chortoq", "Chust", "Kosonsoy", "Mingbuloq",
+        "Norin", "Pop", "To'raqo'rg'on", "Uchqo'rg'on", "Uychi",
+        "Yangiqo'rg'on"
+    ],
+    "Navoiy": [
+        "Navoiy shahri", "Konimex", "Karmana", "Qiziltepa", "Navbahor",
+        "Nurota", "Tomdi", "Uchquduq", "Xatirchi"
+    ],
+    "Qashqadaryo": [
+        "Qarshi shahri", "Chiroqchi", "Dehqonobod", "G'uzor", "Kasbi",
+        "Kitob", "Koson", "Mirishkor", "Muborak", "Nishon",
+        "Qamashi", "Shahrisabz", "Yakkabog'"
+    ],
+    "Samarqand": [
+        "Samarqand shahri", "Bulung'ur", "Ishtixon", "Jomboy", "Kattaqo'rg'on",
+        "Narpay", "Nurobod", "Oqdaryo", "Paxtachi", "Pastdarg'om",
+        "Payariq", "Qo'shrabot", "Urgut"
+    ],
+    "Sirdaryo": [
+        "Guliston", "Boyovut", "Oqoltin", "Sardoba", "Sayxunobod",
+        "Xovos", "Sharof Rashidov"
+    ],
+    "Surxondaryo": [
+        "Termiz", "Angor", "Boysun", "Denov", "Jarqo'rg'on", "Muzrabot",
+        "Oltinsoy", "Qiziriq", "Qumqo'rg'on", "Sariosiyo",
+        "Sherobod", "Sho'rchi"
+    ],
+    "Toshkent viloyati": [
+        "Oqqo'rg'on", "Bekobod", "Bo'stonliq", "Chinoz", "Qibray",
+        "Ohangaron", "O'rta Chirchiq", "Parkent", "Piskent",
+        "Quyi Chirchiq", "Yuqori Chirchiq", "Yangiyo'l", "Zangiota"
+    ],
+    "Toshkent shahri": [
+        "Chilonzor", "Mirzo Ulug'bek", "Shayxontohur", "Olmazor",
+        "Uchtepa", "Yakkasaroy", "Yashnobod", "Bektemir",
+        "Mirobod", "Sergeli", "Yunusobod"
+    ],
+    "Xorazm": [
+        "Urganch", "Bog'ot", "Gurlan", "Hazorasp", "Khiva",
+        "Qoshko'pir", "Shovot", "Yangiariq", "Yangibozor"
+    ]
 };
-
-console.log("TAXI REGIONS loaded");
