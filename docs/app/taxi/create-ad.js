@@ -1,6 +1,6 @@
 console.log("CREATE-AD.JS LOADED:", import.meta.url);
 
-// Firebase universal backend
+// Firebase universal backend — DOCS ichidan yuklanadi
 import {
     auth,
     db,
@@ -9,27 +9,25 @@ import {
     set,
     onAuthStateChanged,
     $
-} from "/shahartaxi-demo/libs/lib.js";
+} from "/shahartaxi-demo/docs/libs/lib.js";
 
-// --- AUTH CHECK ---
+// AUTH CHECK
 onAuthStateChanged(auth, user => {
     if (!user) {
-        console.warn("User not logged in — redirecting...");
-        window.location.href = "/shahartaxi-demo/app/auth/login.html";
+        console.warn("User not logged in, redirecting...");
+        window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
     }
 });
 
-
-// --- FORM SUBMIT HANDLER ---
+// SUBMIT HANDLER
 document.getElementById("submitAdBtn").onclick = async () => {
-    const user = auth.currentUser;
 
+    const user = auth.currentUser;
     if (!user) {
-        alert("Avval tizimga kiring.");
+        alert("Avval tizimga kiring!");
         return;
     }
 
-    // Gather form data
     const adData = {
         userId: user.uid,
         fromRegion: $("fromRegion").value,
@@ -43,29 +41,27 @@ document.getElementById("submitAdBtn").onclick = async () => {
         createdAt: Date.now()
     };
 
-    // Simple validation
     if (!adData.fromRegion || !adData.toRegion) {
-        alert("Qayerdan va Qayerga maydonlari to‘ldirilishi shart!");
+        alert("Qayerdan va Qayerga tanlanishi shart!");
         return;
     }
 
-    // Firebase push
     try {
         const adsRef = ref(db, "ads");
         const newAd = push(adsRef);
         await set(newAd, adData);
 
         alert("E’lon muvaffaqiyatli joylandi!");
-        window.location.href = "/shahartaxi-demo/app/taxi/my-ads.html";
+        window.location.href = "/shahartaxi-demo/docs/app/taxi/my-ads.html";
+
     } catch (err) {
         console.error("E’lon qo‘shishda xatolik:", err);
-        alert("Xatolik yuz berdi: " + err.message);
+        alert("Xatolik: " + err.message);
     }
 };
 
 
-
-// OPTIONAL: CLEAR FORM BUTTON
+// CLEAR BUTTON
 document.getElementById("clearFormBtn").onclick = () => {
     $("fromRegion").value = "";
     $("fromDistrict").value = "";
