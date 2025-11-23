@@ -9,47 +9,16 @@ import {
     $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-// =====================
-// FILL REGIONS (IDENTIK create-ad.js bilan)
-// =====================
-window.initRegionsForm = function () {
-    const fromRegion = $("editFromRegion");
-    const toRegion = $("editToRegion");
-
-    fromRegion.innerHTML = '<option value="">Viloyat</option>';
-    toRegion.innerHTML = '<option value="">Viloyat</option>';
-
-    regions.forEach(r => {
-        fromRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-        toRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-    });
-};
-
-window.updateEditDistricts = function (type) {
-    const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
-    const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
-
-    const regionName = regionSelect.value;
-
-    districtSelect.innerHTML = '<option value="">Tuman</option>';
-
-    if (!regionName) return;
-
-    const region = regions.find(r => r.name === regionName);
-    if (!region) return;
-
-    region.districts.forEach(dis => {
-        districtSelect.innerHTML += `<option value="${dis}">${dis}</option>`;
-    });
-};
+import { regions } from "/shahartaxi-demo/docs/assets/regions-taxi.js";
 
 // =====================
-// GLOBAL
+// GLOBAL VARIABLES
 // =====================
 let editingAdId = null;
+let currentAd = null;
 
 // =====================
-// USER CHECK
+// AUTH CHECK
 // =====================
 onAuthStateChanged(auth, user => {
     if (!user) {
@@ -68,82 +37,118 @@ async function loadMyAds(uid) {
     const snap = await get(ref(db, "ads"));
     const list = $("myAdsList");
 
-    list.innerHTML = "";
+    list.innerHTML = "Yuklanmoqda...";
 
     if (!snap.exists()) {
         list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
         return;
     }
 
+    list.innerHTML = "";
+
     snap.forEach(child => {
         const ad = child.val();
         if (ad.userId !== uid) return;
 
         const seatsText = ad.driverSeats
-            ? `<b>Bo'sh joy:</b> ${ad.driverSeats}`
-            : `<b>Yo'lovchilar:</b> ${ad.passengerCount ?? "-"}`;
+            ? `Bo'sh joy: <b>${ad.driverSeats}</b>`
+            : `Yo'lovchilar: <b>${ad.passengerCount ?? "-"}</b>`;
 
-        const box = document.createElement("div");
-        box.className = "ad-box";
-        box.innerHTML = `
-            <b style="color:#0069d9;">${ad.type}</b><br>
+        const div = document.createElement("div");
+        div.className = "ad-box";
+
+        div.innerHTML = `
+            <b style="color:#0069d9;">${ad.type ?? "E'lon"}</b><br>
             ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
             Narx: <b style="color:#28a745">${ad.price}</b><br>
             Vaqt: ${ad.departureTime}<br>
             ${seatsText}
             <div style="margin-top:10px; display:flex; gap:10px;">
-                <button class="blue-btn" onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
+                <button class="blue-btn" data-id="${child.key}" data-ad='${encodeURIComponent(JSON.stringify(ad))}' onclick="openEditFromBtn(this)">
                     Tahrirlash
                 </button>
-                <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
+                <button class="red-btn" onclick="deleteAd('${child.key}')">O‘chirish</button>
             </div>
         `;
-        list.appendChild(box);
+
+        list.appendChild(div);
     });
 }
 
 // =====================
-// DELETE AD
+// FIX: SAFE BUTTON PARSER
 // =====================
-window.deleteAd = async function (id) {
-    if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
+window.openEditFromBtn = function (btn) {
+    const id = btn.getAttribute("data-id");
+    const ad = JSON.parse(decodeURIComponent(btn.getAttribute("data-ad")));
 
-    await remove(ref(db, "ads/" + id));
-
-    alert("O‘chirildi!");
-    loadMyAds(currentUID);
+    openEditAd(id, ad);
 };
 
 // =====================
-// OPEN MODAL
+// INIT REGIONS
+// =====================
+function fillRegions() {
+    const fromR = $("editFromRegion");
+    const toR = $("editToRegion");
+
+    fromR.innerHTML = `<option value="">Viloyat</option>`;
+    toR.innerHTML = `<option value="">Viloyat</option>`;
+
+    regions.forEach(r => {
+        fromR.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+        toR.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+    });
+}
+
+window.updateDistricts = function (type) {
+    const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
+    const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
+
+    districtSelect.innerHTML = `<option value="">Tuman</option>`;
+
+    const region = regions.find(r => r.name === regionSelect.value);
+    if (!region) return;
+
+    region.districts.forEach(d => {
+        districtSelect.innerHTML += `<option value="${d}">${d}</option>`;
+    });
+};
+
+// =====================
+// OPEN EDIT MODAL
 // =====================
 window.openEditAd = function (id, ad) {
     editingAdId = id;
+    currentAd = ad;
 
-    initRegionsForm();
+    fillRegions();
 
     $("editFromRegion").value = ad.fromRegion;
-    updateEditDistricts("from");
+    updateDistricts("from");
     $("editFromDistrict").value = ad.fromDistrict;
 
     $("editToRegion").value = ad.toRegion;
-    updateEditDistricts("to");
+    updateDistricts("to");
     $("editToDistrict").value = ad.toDistrict;
 
     $("editPrice").value = ad.price;
     $("editTime").value = ad.departureTime;
+    $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
     $("editComment").value = ad.comment ?? "";
 
-    $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
-
-    $("editAdModal").style.display = "flex";
+    $("editModal").style.display = "flex";
 };
 
-window.closeEditAd = () =>
-    $("editAdModal").style.display = "none";
+// =====================
+// CLOSE MODAL
+// =====================
+window.closeEditAd = function () {
+    $("editModal").style.display = "none";
+};
 
 // =====================
-// SAVE EDIT
+// SAVE CHANGES
 // =====================
 window.saveAdEdit = async function () {
     if (!editingAdId) return;
@@ -159,8 +164,7 @@ window.saveAdEdit = async function () {
     };
 
     const seats = $("editSeats").value;
-
-    if (window.userRole === "driver")
+    if (currentAd.type === "Haydovchi")
         updates.driverSeats = seats;
     else
         updates.passengerCount = seats;
@@ -169,5 +173,14 @@ window.saveAdEdit = async function () {
 
     alert("Tahrirlandi!");
     closeEditAd();
+    loadMyAds(currentUID);
+};
+
+// =====================
+// DELETE AD
+// =====================
+window.deleteAd = async function (id) {
+    if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
+    await remove(ref(db, "ads/" + id));
     loadMyAds(currentUID);
 };
