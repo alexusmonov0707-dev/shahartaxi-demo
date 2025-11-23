@@ -1,243 +1,188 @@
-// /docs/app/taxi/my-ads.js
-console.log("MY-ADS.JS LOADED");
-
 import {
-  auth,
-  db,
-  ref,
-  get,
-  update,
-  remove,
-  onAuthStateChanged,
-  $
+    auth,
+    db,
+    ref,
+    get,
+    update,
+    remove,
+    onAuthStateChanged,
+    $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-/*
- Expected HTML ids (my-ads.html):
-  - myAdsList
-  - editAdModal
-  - editFromRegion, editFromDistrict, editToRegion, editToDistrict
-  - editPrice, editTime, editSeats, editComment
-  - saveEditBtn, closeEditBtn
-*/
+/* ===========================
+     REGIONS LOAD SYSTEM
+=========================== */
 
-// Utility: safe $
-function getEl(id) { return document.getElementById(id); }
+// GLOBAL REGIONS (regions-taxi.js dan keladi)
+console.log("REGIONS:", window.regions);
 
-// Regions helper: fill selects if global `regions` exists
-function fillRegionSelects() {
-  // check global
-  if (!window.regions || !Array.isArray(window.regions)) {
-    console.warn("Warning: global 'regions' not found. region selects will be empty.");
-    // still set default option
-    ["editFromRegion", "editToRegion"].forEach(id => {
-      const el = getEl(id);
-      if (!el) return;
-      el.innerHTML = '<option value="">Viloyat</option>';
+// FORMGA VILOYATlarni YUKLASH
+window.initRegionsForm = function () {
+    const fromRegion = $("editFromRegion");
+    const toRegion = $("editToRegion");
+
+    fromRegion.innerHTML = '<option value="">Viloyat</option>';
+    toRegion.innerHTML = '<option value="">Viloyat</option>';
+
+    regions.forEach(r => {
+        fromRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+        toRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
     });
-    return;
-  }
+};
 
-  const from = getEl("editFromRegion");
-  const to = getEl("editToRegion");
-  if (!from || !to) return;
+// TUMANLARNI YUKLASH
+window.updateEditDistricts = function (type) {
+    const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
+    const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
 
-  from.innerHTML = '<option value="">Viloyat</option>';
-  to.innerHTML = '<option value="">Viloyat</option>';
+    const regionName = regionSelect.value;
+    districtSelect.innerHTML = '<option value="">Tuman</option>';
 
-  window.regions.forEach(r => {
-    const o = `<option value="${r.name}">${r.name}</option>`;
-    from.insertAdjacentHTML("beforeend", o);
-    to.insertAdjacentHTML("beforeend", o);
-  });
-}
+    if (!regionName) return;
 
-// update districts when a region selected
-function updateDistrictsFor(type) {
-  // type: "from" or "to"
-  const regionSelect = getEl(type === "from" ? "editFromRegion" : "editToRegion");
-  const districtSelect = getEl(type === "from" ? "editFromDistrict" : "editToDistrict");
-  if (!regionSelect || !districtSelect) return;
+    const region = regions.find(r => r.name === regionName);
+    if (!region) return;
 
-  const name = regionSelect.value;
-  districtSelect.innerHTML = '<option value="">Tuman</option>';
-  if (!name || !window.regions) return;
+    region.districts.forEach(dis => {
+        districtSelect.innerHTML += `<option value="${dis}">${dis}</option>`;
+    });
+};
 
-  const region = window.regions.find(r => r.name === name);
-  if (!region || !Array.isArray(region.districts)) return;
 
-  region.districts.forEach(d => {
-    districtSelect.insertAdjacentHTML("beforeend", `<option value="${d}">${d}</option>`);
-  });
-}
-
-// Exported to window so on-change in HTML works
-window.updateEditDistricts = updateDistrictsFor;
-
-// GLOBAL state
-let currentUID = null;
+/* ===========================
+       GLOBAL VARIABLES
+=========================== */
 let editingAdId = null;
 
-// auth check + load ads
+
+/* ===========================
+      AUTH CHECK
+=========================== */
 onAuthStateChanged(auth, user => {
-  if (!user) {
-    // redirect to login page under docs
-    window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
-    return;
-  }
-  currentUID = user.uid;
-  // prepare region selects
-  fillRegionSelects();
-  // load user's ads
-  loadMyAds(currentUID);
+    if (!user) {
+        window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
+        return;
+    }
+
+    window.currentUID = user.uid;
+    loadMyAds(user.uid);
 });
 
-// Load ads and render
+
+/* ===========================
+      LOAD USER ADS
+=========================== */
 async function loadMyAds(uid) {
-  const snapshot = await get(ref(db, "ads"));
-  const list = getEl("myAdsList");
-  list.innerHTML = ""; // clear
+    const snap = await get(ref(db, "ads"));
+    const list = $("myAdsList");
 
-  if (!snapshot || !snapshot.exists()) {
-    list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-    return;
-  }
+    list.innerHTML = "";
 
-  snapshot.forEach(childSnap => {
-    const ad = childSnap.val();
-    const key = childSnap.key;
+    if (!snap.exists()) {
+        list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+        return;
+    }
 
-    // Only user's ads
-    if (!ad || ad.userId !== uid) return;
+    snap.forEach(child => {
+        const ad = child.val();
+        if (ad.userId !== uid) return;
 
-    const title = ad.type || "E'lon";
-    const route = `${ad.fromRegion || "-"}, ${ad.fromDistrict || "-"} → ${ad.toRegion || "-"}, ${ad.toDistrict || "-"}`;
-    const price = ad.price ? `<span style="color:#16a34a;font-weight:700">${ad.price}</span>` : "-";
-    const time = ad.departureTime || "-";
-    const seats = ad.driverSeats ?? ad.passengerCount ?? "-";
+        const seatsText = ad.driverSeats
+            ? `<b>Bo'sh joy:</b> ${ad.driverSeats}`
+            : `<b>Yo'lovchilar:</b> ${ad.passengerCount ?? "-"}`;
 
-    const box = document.createElement("div");
-    box.className = "ad-box";
-    box.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div>
-          <b style="color:#0b5ed7">${escapeHtml(title)}</b><br>
-          <div style="margin-top:6px">${escapeHtml(route)}</div>
-          <div style="margin-top:6px">Vaqt: ${escapeHtml(time)}</div>
-          <div>Yo'lovchilar: ${escapeHtml(String(seats))}</div>
-        </div>
-        <div style="text-align:right;">
-          ${price}
-        </div>
-      </div>
-      <div style="margin-top:10px; display:flex; gap:8px;">
-        <button class="blue-btn" onclick='window.openEditAd("${key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>Tahrirlash</button>
-        <button class="red-btn" onclick='window.deleteAd("${key}")'>O\'chirish</button>
-      </div>
-    `;
-    list.appendChild(box);
-  });
+        const box = document.createElement("div");
+        box.className = "ad-box";
+        box.innerHTML = `
+            <b style="color:#0069d9;">${ad.type || ""}</b><br>
+            ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
+            Narx: <b style="color:#28a745">${ad.price}</b><br>
+            Vaqt: ${ad.departureTime}<br>
+            ${seatsText}
+            <div style="margin-top:10px; display:flex; gap:10px;">
+                <button class="blue-btn"
+                    onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g, "\\u003c")})'>
+                    Tahrirlash
+                </button>
+                <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
+            </div>
+        `;
+        list.appendChild(box);
+    });
 }
 
-// simple escaper to avoid injecting tags into innerHTML from data
-function escapeHtml(str) {
-  if (str === null || str === undefined) return "";
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
 
-// delete ad
+/* ===========================
+      DELETE AD
+=========================== */
 window.deleteAd = async function (id) {
-  if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
-  await remove(ref(db, "ads/" + id));
-  alert("O‘chirildi!");
-  loadMyAds(currentUID);
+    if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
+
+    await remove(ref(db, "ads/" + id));
+
+    alert("O‘chirildi!");
+    loadMyAds(currentUID);
 };
 
-// open edit modal
+
+/* ===========================
+      OPEN EDIT MODAL
+=========================== */
 window.openEditAd = function (id, ad) {
-  editingAdId = id;
+    editingAdId = id;
 
-  // refill regions (in case not filled)
-  fillRegionSelects();
+    initRegionsForm(); // **viloyatlarni qayta yuklash**
 
-  // set selects and inputs
-  const fromR = getEl("editFromRegion"), fromD = getEl("editFromDistrict");
-  const toR = getEl("editToRegion"), toD = getEl("editToDistrict");
-  const price = getEl("editPrice"), time = getEl("editTime"), seats = getEl("editSeats"), comment = getEl("editComment");
+    // FROM
+    $("editFromRegion").value = ad.fromRegion;
+    updateEditDistricts("from");
+    $("editFromDistrict").value = ad.fromDistrict;
 
-  if (fromR) { fromR.value = ad.fromRegion || ""; updateDistrictsFor("from"); if (fromD) fromD.value = ad.fromDistrict || ""; }
-  if (toR) { toR.value = ad.toRegion || ""; updateDistrictsFor("to"); if (toD) toD.value = ad.toDistrict || ""; }
+    // TO
+    $("editToRegion").value = ad.toRegion;
+    updateEditDistricts("to");
+    $("editToDistrict").value = ad.toDistrict;
 
-  if (price) price.value = ad.price || "";
-  if (time) {
-    // try to normalize to datetime-local value (YYYY-MM-DDTHH:MM)
-    if (ad.departureTime) {
-      // if stored as ISO string or date string, try Date parsing
-      const d = new Date(ad.departureTime);
-      if (!isNaN(d)) {
-        // format to YYYY-MM-DDTHH:MM
-        const pad = n => String(n).padStart(2, "0");
-        const v = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-        time.value = v;
-      } else {
-        time.value = ad.departureTime;
-      }
-    } else time.value = "";
-  }
-  if (seats) seats.value = ad.driverSeats ?? ad.passengerCount ?? "";
-  if (comment) comment.value = ad.comment || "";
+    $("editPrice").value = ad.price;
+    $("editTime").value = ad.departureTime;
+    $("editComment").value = ad.comment ?? "";
 
-  // show modal
-  const modal = getEl("editAdModal");
-  if (modal) modal.style.display = "flex";
+    $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
+
+    $("editAdModal").style.display = "flex";
 };
 
-// close modal
-getEl("closeEditBtn")?.addEventListener("click", () => {
-  const modal = getEl("editAdModal"); if (modal) modal.style.display = "none";
-});
+window.closeEditAd = () => {
+    $("editAdModal").style.display = "none";
+};
 
-// save edit
-getEl("saveEditBtn")?.addEventListener("click", async () => {
-  if (!editingAdId) return alert("Hech narsa tahrirlanmayapti.");
 
-  const updates = {};
-  const fromR = getEl("editFromRegion")?.value || "";
-  const fromD = getEl("editFromDistrict")?.value || "";
-  const toR = getEl("editToRegion")?.value || "";
-  const toD = getEl("editToDistrict")?.value || "";
-  const price = getEl("editPrice")?.value || "";
-  const time = getEl("editTime")?.value || "";
-  const seats = getEl("editSeats")?.value || "";
-  const comment = getEl("editComment")?.value || "";
+/* ===========================
+      SAVE AD EDIT
+=========================== */
+window.saveAdEdit = async function () {
+    if (!editingAdId) return;
 
-  updates.fromRegion = fromR;
-  updates.fromDistrict = fromD;
-  updates.toRegion = toR;
-  updates.toDistrict = toD;
-  updates.price = price;
-  updates.departureTime = time;
-  updates.comment = comment;
+    const updates = {
+        fromRegion: $("editFromRegion").value,
+        fromDistrict: $("editFromDistrict").value,
+        toRegion: $("editToRegion").value,
+        toDistrict: $("editToDistrict").value,
+        price: $("editPrice").value,
+        departureTime: $("editTime").value,
+        comment: $("editComment").value
+    };
 
-  // preserve whether driver or passenger seat style based on previously stored ad? We'll write passengerCount if not driver
-  // Simple approach: update both fields based on content — this keeps compatibility.
-  if (seats !== "") {
-    updates.driverSeats = seats;
-    updates.passengerCount = seats;
-  } else {
-    updates.driverSeats = "";
-    updates.passengerCount = "";
-  }
+    const seats = $("editSeats").value;
 
-  await update(ref(db, "ads/" + editingAdId), updates);
+    if (window.userRole === "driver")
+        updates.driverSeats = seats;
+    else
+        updates.passengerCount = seats;
 
-  alert("Tahrirlandi!");
-  getEl("editAdModal").style.display = "none";
-  loadMyAds(currentUID);
-});
+    await update(ref(db, "ads/" + editingAdId), updates);
 
+    alert("Tahrirlandi!");
+    closeEditAd();
+    loadMyAds(currentUID);
+};
