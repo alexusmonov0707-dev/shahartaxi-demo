@@ -1,171 +1,160 @@
-// =======================================
-//  CREATE-AD.JS (FULL VERSION, FIXED)
-// =======================================
+// docs/app/taxi/create-ad.js
+// Type: module
 
-// Fayl manzillari (docs/ ichida)
 const REGION_JS_PATH = "/shahartaxi-demo/docs/assets/regions-taxi.js";
 const HELPER_JS_PATH = "/shahartaxi-demo/docs/assets/regions-helper.js";
-const LIB_JS_PATH    = "/shahartaxi-demo/docs/libs/lib.js";
 
-// ==============================
-// DOM ELEMENTLAR
-// ==============================
+// DOM elementlar
 const fromRegion = document.getElementById("fromRegion");
 const fromDistrict = document.getElementById("fromDistrict");
 const toRegion = document.getElementById("toRegion");
 const toDistrict = document.getElementById("toDistrict");
-
-const priceInput = document.getElementById("price");
-const dateInput = document.getElementById("departureTime");
-const seatsInput = document.getElementById("seats");
-const commentInput = document.getElementById("adComment");
-
 const submitBtn = document.getElementById("submitAdBtn");
 const clearBtn = document.getElementById("clearFormBtn");
 
-// ==============================
-// GLOBAL REGIONS HOLDER
-// ==============================
+// fallback container
 let TAXI_REGIONS = window.TAXI_REGIONS || null;
 
-// ==============================
-//  REGIONS YUKLASH BLOKI
-// ==============================
+// ===============================
+//   REGIONS LOADER (o‘zgarmagan)
+// ===============================
 async function ensureRegionsLoaded() {
-  if (TAXI_REGIONS) return;
+  if (TAXI_REGIONS && typeof TAXI_REGIONS === "object") {
+    return;
+  }
 
   try {
     const mod = await import(REGION_JS_PATH);
-
-    if (mod.default) TAXI_REGIONS = mod.default;
-    if (mod.TAXI_REGIONS) TAXI_REGIONS = mod.TAXI_REGIONS;
-    if (mod.regions) TAXI_REGIONS = mod.regions;
-
-    window.TAXI_REGIONS = TAXI_REGIONS;
-    return;
-
-  } catch (e) {}
+    if (mod && (mod.default || mod.TAXI_REGIONS || mod.regions)) {
+      TAXI_REGIONS = mod.default || mod.TAXI_REGIONS || mod.regions;
+      window.TAXI_REGIONS = TAXI_REGIONS;
+      return;
+    }
+  } catch {}
 
   try {
-    const res = await fetch(REGION_JS_PATH);
-    const txt = await res.text();
+    const r = await fetch(REGION_JS_PATH);
+    if (!r.ok) throw new Error();
 
-    try { (0, eval)(txt); } catch (e) {}
+    const txt = await r.text();
+
+    try { (0, eval)(txt); } catch (e2) {
+      const m = txt.match(/export\s+const\s+TAXI_REGIONS\s*=\s*(\{[\s\S]*\});?/m);
+      if (m && m[1]) {
+        TAXI_REGIONS = eval("(" + m[1] + ")");
+        window.TAXI_REGIONS = TAXI_REGIONS;
+        return;
+      }
+    }
 
     if (window.TAXI_REGIONS) {
       TAXI_REGIONS = window.TAXI_REGIONS;
       return;
     }
 
-  } catch (e) {
-    console.error("Failed to load regions:", e);
+    const jsonMatch = txt.match(/(\{[\s\S]*\})/m);
+    if (jsonMatch && jsonMatch[1]) {
+      TAXI_REGIONS = JSON.parse(jsonMatch[1]);
+      window.TAXI_REGIONS = TAXI_REGIONS;
+      return;
+    }
+  } catch (err) {
+    console.error("Regions load failed:", err);
   }
 
   TAXI_REGIONS = {};
-  window.TAXI_REGIONS = {};
+  window.TAXI_REGIONS = TAXI_REGIONS;
 }
 
-// ==============================
-// SELECTLARNI TO‘LDIRISH
-// ==============================
+// ===============================
+//   SELECT FILL
+// ===============================
 function fillRegionSelects() {
-  const keys = Object.keys(TAXI_REGIONS);
-
+  const keys = Object.keys(TAXI_REGIONS || {});
   fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
-  toRegion.innerHTML   = `<option value="">Qayerga (Viloyat)</option>`;
+  toRegion.innerHTML = `<option value="">Qayerga (Viloyat)</option>`;
 
-  keys.forEach(v => {
-    fromRegion.innerHTML += `<option value="${v}">${v}</option>`;
-    toRegion.innerHTML   += `<option value="${v}">${v}</option>`;
+  keys.forEach(k => {
+    const a = document.createElement("option");
+    a.value = k; a.textContent = k;
+    fromRegion.appendChild(a);
+
+    const b = document.createElement("option");
+    b.value = k; b.textContent = k;
+    toRegion.appendChild(b);
   });
 
   fromDistrict.innerHTML = `<option value="">Tuman</option>`;
-  toDistrict.innerHTML   = `<option value="">Tuman</option>`;
+  toDistrict.innerHTML = `<option value="">Tuman</option>`;
 }
 
-function fillDistricts(region, target) {
-  target.innerHTML = `<option value="">Tuman</option>`;
-  if (!region) return;
+function fillDistricts(regionName, targetSelect) {
+  targetSelect.innerHTML = `<option value="">Tuman</option>`;
+  if (!regionName) return;
 
-  TAXI_REGIONS[region]?.forEach(d => {
-    target.innerHTML += `<option value="${d}">${d}</option>`;
+  const list = TAXI_REGIONS[regionName] || [];
+  list.forEach(d => {
+    const o = document.createElement("option");
+    o.value = d; o.textContent = d;
+    targetSelect.appendChild(o);
   });
 }
 
-// ==============================
-//  HANDLERLAR
-// ==============================
+// ===============================
+//   HANDLERS
+// ===============================
 function setupHandlers() {
-  fromRegion.addEventListener("change", () => {
-    fillDistricts(fromRegion.value, fromDistrict);
-  });
-
-  toRegion.addEventListener("change", () => {
-    fillDistricts(toRegion.value, toDistrict);
-  });
+  fromRegion.addEventListener("change", () =>
+    fillDistricts(fromRegion.value, fromDistrict)
+  );
+  toRegion.addEventListener("change", () =>
+    fillDistricts(toRegion.value, toDistrict)
+  );
 
   clearBtn.addEventListener("click", e => {
     e.preventDefault();
     fromRegion.selectedIndex = 0;
-    toRegion.selectedIndex = 0;
-
     fromDistrict.innerHTML = `<option value="">Tuman</option>`;
-    toDistrict.innerHTML   = `<option value="">Tuman</option>`;
-
-    priceInput.value = "";
-    dateInput.value = "";
-    seatsInput.value = "";
-    commentInput.value = "";
+    toRegion.selectedIndex = 0;
+    toDistrict.innerHTML = `<option value="">Tuman</option>`;
+    document.getElementById("price").value = "";
+    document.getElementById("departureTime").value = "";
+    document.getElementById("seats").value = "";
+    document.getElementById("adComment").value = "";
   });
 
-  // ============================
-  //  E'LON YUBORISH
-  // ============================
-  submitBtn.addEventListener("click", async e => {
-    e.preventDefault();
+  submitBtn.addEventListener("click", async ev => {
+    ev.preventDefault();
 
     const payload = {
       fromRegion: fromRegion.value,
       fromDistrict: fromDistrict.value,
       toRegion: toRegion.value,
       toDistrict: toDistrict.value,
-      price: priceInput.value,
-      departureTime: dateInput.value,
-      seats: seatsInput.value,
-      comment: commentInput.value,
-      createdAt: Date.now()
+      price: document.getElementById("price").value,
+      departureTime: document.getElementById("departureTime").value,
+      seats: document.getElementById("seats").value,
+      comment: document.getElementById("adComment").value,
+      createdAt: Date.now(),
     };
 
-    // Firebase yuklash
-    const lib = await import(LIB_JS_PATH);
-    const { db, ref, push, set, auth } = lib;
+    console.log("New ad payload:", payload);
 
-    const user = auth.currentUser;
-    if (!user) {
-      alert("Kirish kerak. Login qiling.");
-      return;
-    }
+    // 🔥 Keyin Firebase push shu yerga qo‘shiladi
+    // const lib = await import('/shahartaxi-demo/docs/libs/lib.js');
+    // await push(...)
 
-    const newRef = push(ref(db, "taxi_ads"));
-    await set(newRef, {
-      ...payload,
-      userId: user.uid
-    });
-
-    alert("E’lon muvaffaqiyatli joylandi!");
-
-    // PROFILGA O‘TISH:
-    window.location.href = "/shahartaxi-demo/docs/app/profile/index.html";
+    // redirect to profile
+    window.location.href = "/shahartaxi-demo/docs/app/profile/profile.html";
   });
 }
 
-// ==============================
-//  INIT
-// ==============================
+// ===============================
+//   INIT
+// ===============================
 (async function init() {
   await ensureRegionsLoaded();
+  console.log("CREATE-AD LOADED — regions:", Object.keys(TAXI_REGIONS).length);
   fillRegionSelects();
   setupHandlers();
-
-  console.log("CREATE-AD READY. Regions:", Object.keys(TAXI_REGIONS).length);
 })();
