@@ -1,84 +1,139 @@
-// app/user/js/regions-helper.js
-// Ushbu modul region → tuman selectlarini boshqaradi.
-// Faqat 1 ta joyga ulaysan va barcha sahifalarda avtomatik ishlaydi.
+// ======================================================
+//   REGIONS HELPER — ShaharTaxi
+//   Tumanlar va viloyatlar selectlarini boshqarish
+// ======================================================
 
-// ================================
-// VILOYATLARNI to‘ldirish
-// ================================
-function fillRegions(selectId) {
-    const sel = document.getElementById(selectId);
-    if (!sel || !window.regionsData) return;
+// Bu fayl regions-taxi.js ichidagi global `regions` obyektidan foydalanadi.
+// Hech qanday qisqartirish QILINMAGAN.
 
-    sel.innerHTML = '<option value="">Viloyat</option>';
-
-    for (let region in window.regionsData) {
-        sel.innerHTML += `<option value="${region}">${region}</option>`;
-    }
+// Elementni olish yordamchisi
+export function $(id) {
+    return document.getElementById(id);
 }
 
-// ================================
-// TUMANLARNI to‘ldirish
-// ================================
-function fillDistricts(regionId, districtId) {
-    const region = document.getElementById(regionId)?.value;
-    const districtSel = document.getElementById(districtId);
+// ------------------------------------------------------
+//    ADD AD (create-ad) sahifasi uchun
+// ------------------------------------------------------
+export function initRegionsForm() {
+    const fromRegion = $("fromRegion");
+    const toRegion = $("toRegion");
 
-    if (!districtSel) return;
+    if (!fromRegion || !toRegion) return;
 
-    districtSel.innerHTML = '<option value="">Tuman</option>';
+    fromRegion.innerHTML = '<option value="">Qayerdan (Viloyat)</option>';
+    toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
 
-    if (!region || !window.regionsData || !window.regionsData[region]) return;
+    Object.keys(regions).forEach(r => {
+        const opt1 = document.createElement("option");
+        opt1.value = r;
+        opt1.textContent = r;
+        fromRegion.appendChild(opt1);
 
-    window.regionsData[region].forEach(dist => {
-        districtSel.innerHTML += `<option value="${dist}">${dist}</option>`;
+        const opt2 = document.createElement("option");
+        opt2.value = r;
+        opt2.textContent = r;
+        toRegion.appendChild(opt2);
     });
 }
 
-// ================================
-// CREATE-AD PAGE uchun (qayerdan/qayerga)
-// ================================
-function updateDistricts(type) {
-    if (type === "from") fillDistricts("fromRegion", "fromDistrict");
-    else fillDistricts("toRegion", "toDistrict");
+// ------------------------------------------------------
+//   DISTRICT UPDATE (create-ad)
+// ------------------------------------------------------
+export function updateDistricts(type) {
+    const regionId = type === "from" ? "fromRegion" : "toRegion";
+    const districtId = type === "from" ? "fromDistrict" : "toDistrict";
+
+    const region = $(regionId).value;
+    const districtSelect = $(districtId);
+
+    districtSelect.innerHTML = '<option value="">Tuman</option>';
+
+    if (!region || !regions[region]) return;
+
+    regions[region].forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        districtSelect.appendChild(opt);
+    });
 }
 
-// ================================
-// EDIT-AD MODAL uchun
-// ================================
-function updateEditDistricts(type) {
-    if (type === "from") fillDistricts("editFromRegion", "editFromDistrict");
-    else fillDistricts("editToRegion", "editToDistrict");
+// ======================================================
+//       MY-ADS SAHIFASIDA EDIT QILISH UCHUN
+// ======================================================
+export function initEditRegions() {
+    const fr = $("editFromRegion");
+    const tr = $("editToRegion");
+
+    if (!fr || !tr) return;
+
+    fr.innerHTML = '<option value="">Viloyat</option>';
+    tr.innerHTML = '<option value="">Viloyat</option>';
+
+    Object.keys(regions).forEach(r => {
+        const opt1 = document.createElement("option");
+        opt1.value = r;
+        opt1.textContent = r;
+        fr.appendChild(opt1);
+
+        const opt2 = document.createElement("option");
+        opt2.value = r;
+        opt2.textContent = r;
+        tr.appendChild(opt2);
+    });
 }
 
-// ================================
-// PROFILE EDIT uchun
-// ================================
-function fillEditDistricts() {
-    fillDistricts("editRegion", "editDistrict");
+// ------------------------------------------------------
+//      EDIT DISTRICTS (my-ads)
+// ------------------------------------------------------
+export function updateEditDistricts(type) {
+    const regionId = type === "from" ? "editFromRegion" : "editToRegion";
+    const distId   = type === "from" ? "editFromDistrict" : "editToDistrict";
+
+    const region = $(regionId).value;
+    const distSelect = $(distId);
+
+    distSelect.innerHTML = '<option value="">Tuman</option>';
+
+    if (!region || !regions[region]) return;
+
+    regions[region].forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        distSelect.appendChild(opt);
+    });
 }
 
-// ================================
-// REGION FORMA STARTER
-// create-ad, edit-ad, profile — hammasi uchun umumiy
-// ================================
-function initRegionsForm() {
+// ======================================================
+//     PROFILE EDIT (profile.html)
+// ======================================================
+export function fillRegionSelect_forProfile() {
+    const reg = $("editRegion");
+    if (!reg) return;
+    
+    reg.innerHTML = '<option value="">Viloyat</option>';
 
-    // Create-ad sahifasi
-    if (document.getElementById("fromRegion")) fillRegions("fromRegion");
-    if (document.getElementById("toRegion")) fillRegions("toRegion");
-
-    // Edit-ad modali
-    if (document.getElementById("editFromRegion")) fillRegions("editFromRegion");
-    if (document.getElementById("editToRegion")) fillRegions("editToRegion");
-
-    // Profile edit sahifasi
-    if (document.getElementById("editRegion")) fillRegions("editRegion");
+    Object.keys(regions).forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r;
+        opt.textContent = r;
+        reg.appendChild(opt);
+    });
 }
 
-// ================================
-// GLOBALLASHTIRISH
-// ================================
-window.initRegionsForm = initRegionsForm;
-window.updateDistricts = updateDistricts;
-window.updateEditDistricts = updateEditDistricts;
-window.fillEditDistricts = fillEditDistricts;
+export function fillEditDistricts() {
+    const region = $("editRegion").value;
+    const dist = $("editDistrict");
+
+    dist.innerHTML = '<option value="">Tuman</option>';
+
+    if (!region || !regions[region]) return;
+
+    regions[region].forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t;
+        opt.textContent = t;
+        dist.appendChild(opt);
+    });
+}
