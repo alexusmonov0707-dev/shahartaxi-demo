@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Yangi e’lon qo‘shish</title>
 
-    <link rel="stylesheet" href="../../css/style.css" />
+    <link rel="stylesheet" href="/shahartaxi-demo/css/style.css" />
 </head>
 
 <body>
@@ -13,8 +13,7 @@
     <div class="topbar">Yangi e’lon qo‘shish</div>
 
     <div class="card">
-
-        <select id="fromRegion" onchange="updateDistricts('from')">
+        <select id="fromRegion">
             <option value="">Qayerdan (Viloyat)</option>
         </select>
 
@@ -22,7 +21,7 @@
             <option value="">Tuman</option>
         </select>
 
-        <select id="toRegion" onchange="updateDistricts('to')">
+        <select id="toRegion">
             <option value="">Qayerga (Viloyat)</option>
         </select>
 
@@ -37,22 +36,15 @@
 
         <button id="submitAdBtn" class="blue-btn">E’lonni joylash</button>
         <button id="clearFormBtn" class="gray-btn">Tozalash</button>
-
     </div>
 
-    <!-- 🔥 TO‘G‘RI YO‘LLARGA ULANGAN SCRIPT FAYLLAR -->
+    <!-- ABSOLUTE PATH BILAN MODULELAR -->
+    <script type="module" src="/shahartaxi-demo/assets/regions-helper.js"></script>
+    <script type="module" src="/shahartaxi-demo/assets/regions-taxi.js"></script>
+    <script type="module" src="/shahartaxi-demo/libs/lib.js"></script>
 
-    <!-- Regions Helper -->
-    <script type="module" src="../../assets/regions-helper.js"></script>
-
-    <!-- Regions Taxi -->
-    <script type="module" src="../../assets/regions-taxi.js"></script>
-
-    <!-- Libraries -->
-    <script type="module" src="../../libs/lib.js"></script>
-
-    <!-- Create AD Logic -->
-    <script type="module" src="create-ad.js"></script>
+    <!-- MAIN CREATE AD SCRIPT -->
+    <script type="module" src="/shahartaxi-demo/app/taxi/create-ad.js"></script>
 
 </body>
 </html>
