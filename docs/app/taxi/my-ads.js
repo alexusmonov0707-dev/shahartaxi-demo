@@ -1,5 +1,3 @@
-// app/user/js/my-ads.js
-
 import {
     auth,
     db,
@@ -9,17 +7,53 @@ import {
     remove,
     onAuthStateChanged,
     $
-} from "/shahartaxi-demo/libs/lib.js";
+} from "/shahartaxi-demo/docs/libs/lib.js";
 
+// =====================
+// FILL REGIONS (IDENTIK create-ad.js bilan)
+// =====================
+window.initRegionsForm = function () {
+    const fromRegion = $("editFromRegion");
+    const toRegion = $("editToRegion");
+
+    fromRegion.innerHTML = '<option value="">Viloyat</option>';
+    toRegion.innerHTML = '<option value="">Viloyat</option>';
+
+    regions.forEach(r => {
+        fromRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+        toRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+    });
+};
+
+window.updateEditDistricts = function (type) {
+    const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
+    const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
+
+    const regionName = regionSelect.value;
+
+    districtSelect.innerHTML = '<option value="">Tuman</option>';
+
+    if (!regionName) return;
+
+    const region = regions.find(r => r.name === regionName);
+    if (!region) return;
+
+    region.districts.forEach(dis => {
+        districtSelect.innerHTML += `<option value="${dis}">${dis}</option>`;
+    });
+};
+
+// =====================
 // GLOBAL
+// =====================
 let editingAdId = null;
 
-// ==========================
+// =====================
 // USER CHECK
-// ==========================
+// =====================
 onAuthStateChanged(auth, user => {
     if (!user) {
-        window.location.href = "/shahartaxi-demo/login.html";
+        window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
         return;
     }
 
@@ -27,9 +61,9 @@ onAuthStateChanged(auth, user => {
     loadMyAds(user.uid);
 });
 
-// ==========================
-// LOAD MY ADS
-// ==========================
+// =====================
+// LOAD USER ADS
+// =====================
 async function loadMyAds(uid) {
     const snap = await get(ref(db, "ads"));
     const list = $("myAdsList");
@@ -43,17 +77,11 @@ async function loadMyAds(uid) {
 
     snap.forEach(child => {
         const ad = child.val();
-
         if (ad.userId !== uid) return;
 
-        // ⭐ MUHIM: eski ADSlarni ham moslashtirib to‘g‘ri ko‘rsatish
-        const isDriver =
-            ad.type === "Haydovchi" ||
-            ad.driverSeats !== undefined;
-
-        const seatsText = isDriver
-            ? `<br><b>Bo‘sh joy:</b> ${ad.driverSeats ?? "-"}`
-            : `<br><b>Yo‘lovchilar:</b> ${ad.passengerCount ?? "-"}`;
+        const seatsText = ad.driverSeats
+            ? `<b>Bo'sh joy:</b> ${ad.driverSeats}`
+            : `<b>Yo'lovchilar:</b> ${ad.passengerCount ?? "-"}`;
 
         const box = document.createElement("div");
         box.className = "ad-box";
@@ -61,7 +89,7 @@ async function loadMyAds(uid) {
             <b style="color:#0069d9;">${ad.type}</b><br>
             ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
             Narx: <b style="color:#28a745">${ad.price}</b><br>
-            Vaqt: ${ad.departureTime}
+            Vaqt: ${ad.departureTime}<br>
             ${seatsText}
             <div style="margin-top:10px; display:flex; gap:10px;">
                 <button class="blue-btn" onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
@@ -74,21 +102,21 @@ async function loadMyAds(uid) {
     });
 }
 
-// ==========================
+// =====================
 // DELETE AD
-// ==========================
+// =====================
 window.deleteAd = async function (id) {
     if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
 
     await remove(ref(db, "ads/" + id));
 
-    alert("E’lon o‘chirildi!");
+    alert("O‘chirildi!");
     loadMyAds(currentUID);
 };
 
-// ==========================
-// OPEN EDIT MODAL
-// ==========================
+// =====================
+// OPEN MODAL
+// =====================
 window.openEditAd = function (id, ad) {
     editingAdId = id;
 
@@ -104,19 +132,19 @@ window.openEditAd = function (id, ad) {
 
     $("editPrice").value = ad.price;
     $("editTime").value = ad.departureTime;
-    $("editComment").value = ad.comment || "";
+    $("editComment").value = ad.comment ?? "";
 
-    // ⭐ MUHIM: har ikki turga mos qo‘yish
     $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
 
     $("editAdModal").style.display = "flex";
 };
 
-window.closeEditAd = () => $("editAdModal").style.display = "none";
+window.closeEditAd = () =>
+    $("editAdModal").style.display = "none";
 
-// ==========================
-// SAVE EDITED AD
-// ==========================
+// =====================
+// SAVE EDIT
+// =====================
 window.saveAdEdit = async function () {
     if (!editingAdId) return;
 
@@ -130,7 +158,6 @@ window.saveAdEdit = async function () {
         comment: $("editComment").value
     };
 
-    // ⭐ ROLE BO‘YICHA TO‘G‘RI SAQLASH
     const seats = $("editSeats").value;
 
     if (window.userRole === "driver")
@@ -140,7 +167,7 @@ window.saveAdEdit = async function () {
 
     await update(ref(db, "ads/" + editingAdId), updates);
 
-    alert("Yangilandi!");
+    alert("Tahrirlandi!");
     closeEditAd();
     loadMyAds(currentUID);
 };
