@@ -1,22 +1,60 @@
-<style>
-    body { font-family: Arial; margin: 0; background:#f5f7fa; }
-    .topbar {
-        background:#0069d9; padding:14px; color:white;
-        font-size:20px; text-align:center;
-    }
-    .card {
-        max-width:600px; margin:20px auto; background:white;
-        padding:20px; border-radius:12px;
-        box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    }
-    select, input, textarea {
-        width:100%; padding:12px; font-size:15px;
-        border-radius:6px; border:1px solid #ccc; margin-top:10px;
-    }
-    button {
-        padding:12px; border:none; font-size:16px;
-        border-radius:8px; cursor:pointer; width:100%;
-    }
-    .blue-btn { background:#0069d9; color:white; margin-top:15px; }
-    .gray-btn { background:#aaa; color:white; margin-top:10px; }
-</style>
+body {
+    font-family: Arial;
+    margin: 0;
+    background: #f5f7fa;
+}
+
+/* TOPBAR */
+.topbar {
+    background: #0069d9;
+    padding: 14px;
+    color: white;
+    font-size: 20px;
+    text-align: center;
+}
+
+/* CARD BOX */
+.card {
+    max-width: 600px;
+    margin: 20px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* FORM ELEMENTS */
+select,
+input,
+textarea {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    margin-top: 10px;
+}
+
+/* BUTTONS */
+button {
+    padding: 12px;
+    border: none;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+}
+
+/* BLUE SAVE BUTTON */
+.blue-btn {
+    background: #0069d9;
+    color: white;
+    margin-top: 15px;
+}
+
+/* GRAY RESET BUTTON */
+.gray-btn {
+    background: #aaa;
+    color: white;
+    margin-top: 10px;
+}
