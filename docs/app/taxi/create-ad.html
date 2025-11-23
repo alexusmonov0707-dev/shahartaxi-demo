@@ -1,50 +1,69 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Yangi e'lon qo'shish — ShaharTaxi</title>
+  <title>Yangi e’lon qo‘shish — ShaharTaxi</title>
+
   <style>
-    body{font-family:Arial;margin:0;background:#f5f7fa}
-    .topbar{background:#0069d9;padding:14px;color:#fff;text-align:center;font-size:20px}
-    .card{max-width:680px;margin:24px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
-    select,input,textarea{width:100%;padding:12px;font-size:15px;border-radius:6px;border:1px solid #ddd;margin-top:10px}
-    button{padding:12px;border:none;font-size:16px;border-radius:8px;cursor:pointer;width:100%}
-    .blue{background:#007bff;color:#fff;margin-top:16px}
-    .gray{background:#9aa0a6;color:#fff;margin-top:8px}
+    body { font-family: Arial, Helvetica, sans-serif; background: #f5f7fa; margin:0; }
+    .topbar { background:#0069d9; color:#fff; padding:14px; text-align:center; font-size:18px; }
+    .card { max-width:720px; margin:18px auto; background:#fff; padding:18px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+    select, input, textarea { width:100%; padding:10px; margin-top:10px; border-radius:6px; border:1px solid #ccc; box-sizing:border-box; font-size:15px; }
+    .row { display:flex; gap:10px; }
+    .row > * { flex:1; }
+    button { padding:12px; border-radius:8px; border:none; cursor:pointer; font-size:15px; }
+    .blue-btn { background:#0069d9; color:#fff; }
+    .gray-btn { background:#999; color:#fff; }
+    @media (max-width:640px){ .row { flex-direction:column; } }
   </style>
 </head>
 <body>
-  <div class="topbar">Yangi e'lon qo'shish</div>
+
+  <div class="topbar">Yangi e’lon qo‘shish</div>
 
   <div class="card">
-    <select id="fromRegion"><option value="">Qayerdan (Viloyat)</option></select>
-    <select id="fromDistrict"><option value="">Tuman</option></select>
+    <select id="fromRegion">
+      <option value="">Qayerdan (Viloyat)</option>
+    </select>
 
-    <select id="toRegion"><option value="">Qayerga (Viloyat)</option></select>
-    <select id="toDistrict"><option value="">Tuman</option></select>
+    <select id="fromDistrict">
+      <option value="">Tuman</option>
+    </select>
 
-    <input id="price" type="number" placeholder="Narx (so‘m)">
-    <input id="departureTime" type="datetime-local">
-    <input id="seats" type="number" placeholder="Joylar soni / Yo‘lovchilar soni">
+    <select id="toRegion">
+      <option value="">Qayerga (Viloyat)</option>
+    </select>
+
+    <select id="toDistrict">
+      <option value="">Tuman</option>
+    </select>
+
+    <div class="row">
+      <input id="price" type="number" placeholder="Narx (so‘m)" />
+      <input id="departureTime" type="datetime-local" />
+    </div>
+
+    <div class="row">
+      <input id="seats" type="number" placeholder="Joylar soni / Yo‘lovchilar soni" />
+      <input id="phoneOptional" type="text" placeholder="Qo'shimcha telefon (ixtiyoriy)" />
+    </div>
+
     <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
-    <button id="submitAdBtn" class="blue">E'lonni joylash</button>
-    <button id="clearFormBtn" class="gray">Tozalash</button>
+    <div style="margin-top:12px; display:flex; gap:10px;">
+      <button id="submitAdBtn" class="blue-btn" style="flex:1">E’lonni joylash</button>
+      <button id="clearFormBtn" class="gray-btn" style="flex:1">Tozalash</button>
+    </div>
   </div>
-  <script type="module" src"shahartaxi-demo/docs/assets/regions-taxi.js"></script>
-<script type="module" src"shahartaxi-demo/docs/assets/regions-helper.js"></script>
 
-<!-- LIB FIREBASE (MODULE) -->
-<script type="module" src"shahartaxi-demo/docs/libs/lib.js"></script>
+  <!-- Scripts: regions-helper, regions-taxi, libs then create-ad.js -->
+  <!-- PATHS are relative from this HTML file (docs/app/taxi/...) -->
+  <script type="module" src="../../assets/regions-taxi.js"></script>
+  <script type="module" src="../../assets/regions-helper.js"></script>
+  <script type="module" src="../../libs/lib.js"></script>
 
-<!-- CREATE-AD JS -->
-<script type="module" src="./create-ad.js"></script>
-
-<!-- LIB FIREBASE (MODULE) -->
-<script type="module" src"shahartaxi-demo/docs/libs/lib.js"></script>
-
-
-
+  <!-- main logic for create ad -->
+  <script type="module" src="./create-ad.js"></script>
 </body>
 </html>
