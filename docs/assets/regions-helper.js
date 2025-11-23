@@ -6,6 +6,9 @@
 // Bu fayl regions-taxi.js ichidagi global `regions` obyektidan foydalanadi.
 // Hech qanday qisqartirish QILINMAGAN.
 
+// === FIX: regions-taxi.js dan global obyektni olish ===
+const regions = window.TAXI_REGIONS || {};
+
 // Elementni olish yordamchisi
 export function $(id) {
     return document.getElementById(id);
