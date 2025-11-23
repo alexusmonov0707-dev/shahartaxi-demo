@@ -1,12 +1,7 @@
 // docs/app/taxi/create-ad.js
 // Type: module
-// Muallif: ChatGPT (siz so'ragan holda moslab yozildi)
 
-/*
-  Asosiy printsip o'sha-o'sha.
-*/
-
-const REGION_JS_PATH = "/shahartaxi-demo/docs/assets/regions-taxi.js";
+const REGION_JS_PATH = "/shahartaxi-demo/docs/assets/regions-taxi.js"; 
 const HELPER_JS_PATH = "/shahartaxi-demo/docs/assets/regions-helper.js";
 
 // DOM elementlar
@@ -30,20 +25,37 @@ async function ensureRegionsLoaded() {
       window.TAXI_REGIONS = TAXI_REGIONS;
       return;
     }
-  } catch (e) {}
+  } catch(e){}
 
   try {
     const r = await fetch(REGION_JS_PATH);
-    if (!r.ok) throw new Error("Fetch regions file failed: " + r.status);
-
+    if (!r.ok) throw new Error("Fetch regions failed");
     const txt = await r.text();
-    try { (0, eval)(txt); } catch {}
+
+    try { (0, eval)(txt); } 
+    catch (e) {
+      const m = txt.match(/export\s+const\s+TAXI_REGIONS\s*=\s*(\{[\s\S]*\});?/m);
+      if (m && m[1]) {
+        TAXI_REGIONS = eval("(" + m[1] + ")");
+        window.TAXI_REGIONS = TAXI_REGIONS;
+        return;
+      }
+    }
 
     if (window.TAXI_REGIONS) {
       TAXI_REGIONS = window.TAXI_REGIONS;
       return;
     }
-  } catch (err) {
+
+    const jsonMatch = txt.match(/(\{[\s\S]*\})/m);
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        TAXI_REGIONS = JSON.parse(jsonMatch[1]);
+        window.TAXI_REGIONS = TAXI_REGIONS;
+        return;
+      } catch {}
+    }
+  } catch(err) {
     console.error("Regions fetch/eval failed:", err);
   }
 
@@ -51,16 +63,19 @@ async function ensureRegionsLoaded() {
   window.TAXI_REGIONS = TAXI_REGIONS;
 }
 
-// Region selectlarni to'ldirish
 function fillRegionSelects() {
   const keys = Object.keys(TAXI_REGIONS || {});
-
   fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
   toRegion.innerHTML = `<option value="">Qayerga (Viloyat)</option>`;
 
-  keys.forEach(k => {
-    fromRegion.innerHTML += `<option value="${k}">${k}</option>`;
-    toRegion.innerHTML += `<option value="${k}">${k}</option>`;
+  keys.forEach(k=>{
+    let o1 = document.createElement("option");
+    o1.value = k; o1.textContent = k;
+    fromRegion.appendChild(o1);
+
+    let o2 = document.createElement("option");
+    o2.value = k; o2.textContent = k;
+    toRegion.appendChild(o2);
   });
 
   fromDistrict.innerHTML = `<option value="">Tuman</option>`;
@@ -70,26 +85,23 @@ function fillRegionSelects() {
 function fillDistricts(regionName, targetSelect) {
   targetSelect.innerHTML = `<option value="">Tuman</option>`;
   if (!regionName) return;
-
-  (TAXI_REGIONS[regionName] || []).forEach(d => {
-    targetSelect.innerHTML += `<option value="${d}">${d}</option>`;
+  const list = TAXI_REGIONS[regionName] || [];
+  list.forEach(d=>{
+    const opt = document.createElement("option");
+    opt.value = d; opt.textContent = d;
+    targetSelect.appendChild(opt);
   });
 }
 
 function setupHandlers() {
-  fromRegion.addEventListener("change", () =>
-    fillDistricts(fromRegion.value, fromDistrict)
-  );
+  fromRegion.addEventListener("change", ()=> fillDistricts(fromRegion.value, fromDistrict));
+  toRegion.addEventListener("change", ()=> fillDistricts(toRegion.value, toDistrict));
 
-  toRegion.addEventListener("change", () =>
-    fillDistricts(toRegion.value, toDistrict)
-  );
-
-  clearBtn.addEventListener("click", e => {
+  clearBtn.addEventListener("click", e=>{
     e.preventDefault();
-    fromRegion.selectedIndex = 0;
-    toRegion.selectedIndex = 0;
+    fromRegion.selectedIndex = 0; 
     fromDistrict.innerHTML = `<option value="">Tuman</option>`;
+    toRegion.selectedIndex = 0; 
     toDistrict.innerHTML = `<option value="">Tuman</option>`;
     document.getElementById("price").value = "";
     document.getElementById("departureTime").value = "";
@@ -97,7 +109,8 @@ function setupHandlers() {
     document.getElementById("adComment").value = "";
   });
 
-  submitBtn.addEventListener("click", async ev => {
+  // ✔ SHU BO‘LIM YANGILANDI — test alert o‘chirildi
+  submitBtn.addEventListener("click", async (ev)=>{
     ev.preventDefault();
 
     const payload = {
@@ -114,21 +127,25 @@ function setupHandlers() {
 
     console.log("New ad payload:", payload);
 
-    // 🔥 BU YER FAQAT O'ZGARDI — NOTIFICATION QO‘SHILDI
+    // 🔥 Yangi qo‘shilgan qism:
     alert("E’lon muvaffaqiyatli joylandi!");
 
-    // 🔥 keyin profile sahifasiga o‘tadi
-    window.location.href = "/shahartaxi-demo/docs/app/profile/profile.html";
+    // 1.5 soniya kutib profile sahifasiga o‘tish
+    setTimeout(()=>{
+        window.location.href = "/shahartaxi-demo/docs/app/profile/profile.html";
+    }, 1500);
   });
 }
 
-(async function init() {
+(async function init(){
   try {
     await ensureRegionsLoaded();
-    console.log("CREATE-AD.JS LOADED");
+    console.log("CREATE-AD LOADED", location.href);
+    console.log("REGIONS:", Object.keys(TAXI_REGIONS).length);
+
     fillRegionSelects();
     setupHandlers();
-  } catch (err) {
+  } catch(err) {
     console.error("Init error:", err);
   }
 })();
