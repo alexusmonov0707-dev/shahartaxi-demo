@@ -1,57 +1,91 @@
-import { db, pushData } from "/shahartaxi-demo/docs/assets/js/libs.js";
+import {
+    auth,
+    db,
+    ref,
+    push,
+    set,
+    onAuthStateChanged,
+    $
+} from "/shahartaxi-demo/assets/js/libs.js";
 
-import { 
-    loadRegions, 
-    loadDistricts 
-} from "/shahartaxi-demo/docs/assets/regions/regions-helper.js";
+// Sahifa yuklanganda regions dropdown to'ldiriladi
+document.addEventListener("DOMContentLoaded", () => {
+    if (typeof initRegionsForm === "function") {
+        initRegionsForm();
+    }
+});
 
-console.log("CREATE-AD JS LOADED");
+// Foydalanuvchi login bo‘lganini tekshirish
+onAuthStateChanged(auth, user => {
+    if (!user) {
+        window.location.href = "/shahartaxi-demo/app/auth/login.html";
+        return;
+    }
 
-// HTML elementlar
-const fromRegion = document.getElementById("fromRegion");
-const fromDistrict = document.getElementById("fromDistrict");
+    $("submitAdBtn").onclick = () => addAd(user.uid);
+    $("clearFormBtn").onclick = clearForm;
+});
 
-const toRegion = document.getElementById("toRegion");
-const toDistrict = document.getElementById("toDistrict");
+// ==========================
+//    E’lon qo‘shish
+// ==========================
+async function addAd(uid) {
 
-const price = document.getElementById("price");
-const time = document.getElementById("departureTime");
-const seats = document.getElementById("seats");
-const comment = document.getElementById("comment");
+    const fromRegion = $("fromRegion").value;
+    const fromDistrict = $("fromDistrict").value;
+    const toRegion = $("toRegion").value;
+    const toDistrict = $("toDistrict").value;
+    const price = $("price").value;
+    const departureTime = $("departureTime").value;
+    const seats = $("seats").value.trim();
+    const comment = $("adComment").value;
 
-const submitBtn = document.getElementById("submitAdBtn");
-const clearBtn = document.getElementById("clearFormBtn");
+    if (!fromRegion || !toRegion || !price || !departureTime) {
+        alert("Iltimos barcha maydonlarni to‘ldiring.");
+        return;
+    }
 
-// Viloyat va tumanlarni yuklash
-loadRegions(fromRegion);
-loadRegions(toRegion);
+    // Profil.js ichida role globalga saqlangan
+    const role = window.userRole || "passenger";
 
-fromRegion.onchange = () => loadDistricts(fromRegion, fromDistrict);
-toRegion.onchange = () => loadDistricts(toRegion, toDistrict);
+    const extra =
+        role === "driver"
+            ? { driverSeats: seats }
+            : { passengerCount: seats };
 
-// E’lonni bazaga yuborish
-submitBtn.onclick = async () => {
-    let ad = {
-        fromRegion: fromRegion.value,
-        fromDistrict: fromDistrict.value,
-        toRegion: toRegion.value,
-        toDistrict: toDistrict.value,
-        price: price.value,
-        time: time.value,
-        seats: seats.value,
-        comment: comment.value,
-        createdAt: Date.now()
+    const newAd = {
+        userId: uid,
+        type: role === "driver" ? "Haydovchi" : "Yo‘lovchi",
+        fromRegion,
+        fromDistrict,
+        toRegion,
+        toDistrict,
+        price,
+        departureTime,
+        comment,
+        createdAt: Date.now(),
+        approved: false,
+        ...extra
     };
 
-    await pushData("taxiAds", ad);
+    await push(ref(db, "ads"), newAd);
 
-    alert("E’lon muvaffaqiyatli joylandi!");
-};
+    alert("E’lon joylandi!");
+    window.location.href = "/shahartaxi-demo/app/taxi/my-ads.html";
+}
 
-// Tozalash tugmasi
-clearBtn.onclick = () => {
-    price.value = "";
-    seats.value = "";
-    comment.value = "";
-    time.value = "";
-};
+// ==========================
+//    FORMANI TOZALASH
+// ==========================
+function clearForm() {
+    $("fromRegion").value = "";
+    $("fromDistrict").innerHTML = '<option value="">Tuman</option>';
+
+    $("toRegion").value = "";
+    $("toDistrict").innerHTML = '<option value="">Tuman</option>';
+
+    $("price").value = "";
+    $("departureTime").value = "";
+    $("seats").value = "";
+    $("adComment").value = "";
+}
