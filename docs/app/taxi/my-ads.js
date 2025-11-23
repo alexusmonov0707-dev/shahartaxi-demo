@@ -1,112 +1,255 @@
-// ============================
-//  MY ADS — USER'S OWN ADS
-// ============================
+// /shahartaxi-demo/docs/app/taxi/my-ads.js
+console.log("MY-ADS.JS LOADED:", import.meta.url);
 
-import { 
-  auth, 
-  db, 
-  ref, 
-  get, 
-  update, 
-  set, 
-  onAuthStateChanged 
+import {
+  auth,
+  db,
+  ref,
+  get,
+  update,
+  remove,
+  onAuthStateChanged,
+  $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-const adsList = document.getElementById("adsList");
+/*
+ This file:
+ - yuklaydi va foydalanuvchiga tegishli "ads" yozuvlarini chiqaradi
+ - edit modal ochadi / saqlaydi
+ - o'chirishni bajaradi
+ - viloyat/tuman dropdownlarini local helper bilan to'ldiradi (regions global array dan foydalanadi)
+*/
 
-// -------------------------------
-// WAIT FOR USER LOGIN
-// -------------------------------
-onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-        adsList.innerHTML = `<div class="loading">Avval tizimga kiring...</div>`;
-        return;
-    }
+// --- helpers for regions (safe: if global 'regions' exists it will use it)
+function ensureRegionsPresent() {
+  if (typeof regions === "undefined" || !Array.isArray(regions)) {
+    // fallback: empty array so code won't crash; ideally regions-taxi.js present
+    console.warn("Warning: global 'regions' not found. region selects will be empty.");
+    window._localRegions = [];
+    return window._localRegions;
+  }
+  window._localRegions = regions;
+  return window._localRegions;
+}
 
-    loadMyAds(user.uid);
+function initRegionsFormForEdit() {
+  const regs = ensureRegionsPresent();
+  const fromRegion = $("editFromRegion");
+  const toRegion = $("editToRegion");
+
+  fromRegion.innerHTML = `<option value="">Viloyat</option>`;
+  toRegion.innerHTML = `<option value="">Viloyat</option>`;
+
+  regs.forEach(r => {
+    fromRegion.innerHTML += `<option value="${escapeHtml(r.name)}">${escapeHtml(r.name)}</option>`;
+    toRegion.innerHTML += `<option value="${escapeHtml(r.name)}">${escapeHtml(r.name)}</option>`;
+  });
+}
+
+function updateEditDistricts(type) {
+  const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
+  const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
+  const name = regionSelect.value;
+
+  districtSelect.innerHTML = `<option value="">Tuman</option>`;
+  if (!name) return;
+
+  const r = window._localRegions.find(rr => rr.name === name);
+  if (!r || !Array.isArray(r.districts)) return;
+
+  r.districts.forEach(dis => {
+    districtSelect.innerHTML += `<option value="${escapeHtml(dis)}">${escapeHtml(dis)}</option>`;
+  });
+}
+
+// small escape to avoid injecting HTML when filling selects via innerHTML
+function escapeHtml(s) {
+  if (s === null || s === undefined) return "";
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Global state
+let currentUID = null;
+let editingAdId = null;
+
+// Hook change listeners on region selects (we will attach after we init selects)
+function attachRegionSelectListeners() {
+  const f = $("editFromRegion");
+  const t = $("editToRegion");
+  if (f) f.addEventListener("change", () => updateEditDistricts("from"));
+  if (t) t.addEventListener("change", () => updateEditDistricts("to"));
+}
+
+// AUTH STATE
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    // not logged in -> redirect to login (docs path)
+    window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
+    return;
+  }
+  currentUID = user.uid;
+  // init region selects for modal
+  initRegionsFormForEdit();
+  attachRegionSelectListeners();
+  // load ads
+  loadMyAds(currentUID);
 });
 
-// -------------------------------
-// LOAD USER ADS
-// -------------------------------
-async function loadMyAds(userId) {
-    adsList.innerHTML = `<div class="loading">Yuklanmoqda...</div>`;
+// LOAD ADS FOR CURRENT USER
+async function loadMyAds(uid) {
+  const list = $("myAdsList");
+  if (!list) return;
 
-    try {
-        const userAdsRef = ref(db, `ads/${userId}`);
-        const snapshot = await get(userAdsRef);
+  list.innerHTML = "Yuklanmoqda...";
 
-        // No ads
-        if (!snapshot.exists()) {
-            adsList.innerHTML = `
-                <div class="empty">Siz hali e’lon joylamagansiz.</div>
-            `;
-            return;
-        }
+  try {
+    const snap = await get(ref(db, "ads"));
+    list.innerHTML = "";
 
-        const ads = snapshot.val();
-        adsList.innerHTML = ""; // Clear old output
-
-        Object.keys(ads).forEach((adId) => {
-            const ad = ads[adId];
-
-            adsList.innerHTML += generateAdHTML(adId, ad);
-        });
-
-    } catch (err) {
-        console.error(err);
-        adsList.innerHTML = `<div class="error">Xatolik yuz berdi!</div>`;
+    if (!snap.exists()) {
+      list.innerHTML = "<p>Hozircha e'lon yo'q.</p>";
+      return;
     }
-}
 
-// -------------------------------
-// GENERATE EACH AD BLOCK
-// -------------------------------
-function generateAdHTML(id, ad) {
-    return `
-        <div class="ad-card">
+    let found = false;
+    snap.forEach(child => {
+      const ad = child.val();
+      if (ad.userId !== uid) return; // skip others
+      found = true;
 
-            <div class="ad-main">
-                <div class="ad-route">
-                    ${ad.fromRegion} → ${ad.toRegion}
-                </div>
+      const seatsText = ad.driverSeats ? `Bo'sh joy: ${ad.driverSeats}` : `Yo'lovchilar: ${ad.passengerCount ?? "-"}`;
 
-                <div class="ad-meta">
-                    <span>${ad.price} so‘m</span>
-                    <span>${ad.seats} ta joy</span>
-                    <span>${ad.date}</span>
-                </div>
-
-                <div class="ad-comment">${ad.comment ?? ""}</div>
-            </div>
-
-            <div class="ad-actions">
-                <button class="delete-btn" onclick="deleteAd('${ad.userId}','${id}')">
-                    O‘chirish
-                </button>
-            </div>
+      const box = document.createElement("div");
+      box.className = "ad-box";
+      box.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700;color:#0069d9">${escapeHtml(ad.type || "")}</div>
+          <div style="font-weight:700;color:#28a745">${escapeHtml(ad.price||"-")}</div>
         </div>
-    `;
+        <div style="margin-top:8px">${escapeHtml(ad.fromRegion||"")}, ${escapeHtml(ad.fromDistrict||"")} → ${escapeHtml(ad.toRegion||"")}, ${escapeHtml(ad.toDistrict||"")}</div>
+        <div style="margin-top:6px;color:#6b7280">Vaqt: ${escapeHtml(ad.departureTime||"-")}</div>
+        <div style="margin-top:6px">${seatsText}</div>
+        <div style="margin-top:10px;display:flex;gap:8px;">
+          <button class="blue-btn" data-edit-key="${child.key}">Tahrirlash</button>
+          <button class="red-btn" data-del-key="${child.key}">O'chirish</button>
+        </div>
+      `;
+      list.appendChild(box);
+
+      // attach handlers
+      box.querySelector("[data-edit-key]").addEventListener("click", () => {
+        openEditAd(child.key, ad);
+      });
+      box.querySelector("[data-del-key]").addEventListener("click", () => {
+        deleteAd(child.key);
+      });
+    });
+
+    if (!found) {
+      list.innerHTML = "<p>Hozircha senga tegishli e'lon yo'q.</p>";
+    }
+  } catch (err) {
+    console.error("loadMyAds error:", err);
+    list.innerHTML = "<p>Xatolik yuz berdi. Konsolni tekshir.</p>";
+  }
 }
 
-// -------------------------------
-// DELETE AD — RTDB VERSION
-// -------------------------------
-window.deleteAd = async function(userId, adId) {
-    if (!confirm("Rostdan ham o‘chirmoqchimisiz?")) return;
+// OPEN EDIT MODAL
+function openEditAd(id, ad) {
+  editingAdId = id;
 
-    try {
-        // RTDB DELETE = set(ref, null)
-        await set(ref(db, `ads/${userId}/${adId}`), null);
+  // populate regions/districts
+  initRegionsFormForEdit();
 
-        // Remove from global ads list
-        await set(ref(db, `allAds/${adId}`), null);
+  // set values
+  $("editFromRegion").value = ad.fromRegion || "";
+  updateEditDistricts("from");
+  $("editFromDistrict").value = ad.fromDistrict || "";
 
-        alert("E’lon o‘chirildi!");
-        location.reload();
+  $("editToRegion").value = ad.toRegion || "";
+  updateEditDistricts("to");
+  $("editToDistrict").value = ad.toDistrict || "";
 
-    } catch (err) {
-        console.error(err);
-        alert("Xatolik yuz berdi!");
+  $("editPrice").value = ad.price || "";
+  // convert datetime if needed - assume stored as ISO or string compatible with input
+  $("editTime").value = ad.departureTime || "";
+
+  // seats
+  $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
+  $("editComment").value = ad.comment || "";
+
+  // show modal
+  $("editAdModal").style.display = "flex";
+}
+
+// CLOSE EDIT
+function closeEditAd() {
+  $("editAdModal").style.display = "none";
+  editingAdId = null;
+}
+
+// SAVE EDIT
+async function saveAdEdit() {
+  if (!editingAdId) return alert("Tahrir qila olmaymiz — ID topilmadi.");
+  const updates = {
+    fromRegion: $("editFromRegion").value,
+    fromDistrict: $("editFromDistrict").value,
+    toRegion: $("editToRegion").value,
+    toDistrict: $("editToDistrict").value,
+    price: $("editPrice").value,
+    departureTime: $("editTime").value,
+    comment: $("editComment").value
+  };
+
+  const seats = $("editSeats").value;
+  // preserve existing role-based fields: we will overwrite the one that exists
+  // For simplicity, set both fields appropriately:
+  // if driverSeats present in db => keep driverSeats, else use passengerCount
+  try {
+    // fetch current ad to check existing keys (safer)
+    const adSnap = await get(ref(db, "ads/" + editingAdId));
+    const adVal = adSnap.exists() ? adSnap.val() : null;
+    if (adVal && Object.prototype.hasOwnProperty.call(adVal, "driverSeats")) {
+      updates.driverSeats = seats;
+    } else {
+      updates.passengerCount = seats;
     }
-};
+
+    await update(ref(db, "ads/" + editingAdId), updates);
+    alert("Saqlandi");
+    closeEditAd();
+    // refresh
+    loadMyAds(currentUID);
+  } catch (err) {
+    console.error("saveAdEdit error:", err);
+    alert("Saqlashda xatolik. Konsolni tekshir.");
+  }
+}
+
+// DELETE
+async function deleteAd(id) {
+  if (!confirm("Rostdan o'chirishni xohlaysizmi?")) return;
+  try {
+    await remove(ref(db, "ads/" + id));
+    alert("O'chirildi");
+    loadMyAds(currentUID);
+  } catch (err) {
+    console.error("deleteAd error:", err);
+    alert("O'chirishda xato. Konsolga qarang.");
+  }
+}
+
+// attach modal buttons
+document.addEventListener("DOMContentLoaded", () => {
+  const saveBtn = $("saveEditBtn");
+  const closeBtn = $("closeEditBtn");
+  if (saveBtn) saveBtn.addEventListener("click", saveAdEdit);
+  if (closeBtn) closeBtn.addEventListener("click", closeEditAd);
+  // allow clicking outside modal box to close
+  const modal = $("editAdModal");
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeEditAd();
+    });
+  }
+});
