@@ -20,7 +20,18 @@ import {
   set,
   update,
   push,
-  remove   // ⭐⭐⭐ QO‘SHILDI!
+  remove,
+  child,
+  query,
+  orderByChild,
+  orderByKey,
+  orderByValue,
+  limitToFirst,
+  limitToLast,
+  startAt,
+  endAt,
+  equalTo,
+  onValue
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
@@ -36,6 +47,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
+// persistence for auth (keep user logged in)
 await setPersistence(auth, browserLocalPersistence);
 
 function createRecaptcha(containerId = "recaptcha-container") {
@@ -50,11 +62,22 @@ export {
   auth,
   db,
   ref,
+  child,
   get,
   set,
   update,
   push,
-  remove,            // ⭐⭐⭐ EXPORT QO‘SHILDI
+  remove,
+  query,
+  orderByChild,
+  orderByKey,
+  orderByValue,
+  limitToFirst,
+  limitToLast,
+  startAt,
+  endAt,
+  equalTo,
+  onValue,
   onAuthStateChanged,
   RecaptchaVerifier,
   signInWithPhoneNumber,
