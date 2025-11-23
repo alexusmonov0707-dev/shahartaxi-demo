@@ -1,10 +1,3 @@
-console.log("CREATE-AD LOADED");
-
-// viloyatlarni yuklash
-fillRegions("fromRegion");
-fillRegions("toRegion");
-
-
 
 console.log("CREATE-AD.JS LOADED:", import.meta.url);
 
