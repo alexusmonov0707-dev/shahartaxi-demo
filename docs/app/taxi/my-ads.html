@@ -1,110 +1,101 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mening e'lonlarim — ShaharTaxi</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mening e'lonlarim — ShaharTaxi</title>
 
-  <!-- style: agar docs/css/style.css joyida bo'lsa shu yo'lni ishlat -->
-  <link rel="stylesheet" href="/shahartaxi-demo/docs/css/style.css">
+    <link rel="stylesheet" href="/shahartaxi-demo/docs/css/style.css" />
 
-  <style>
-    /* Agar global style yetishmasa, minimal fallback */
-    .container { max-width: 980px; margin: 20px auto; padding: 0 12px; }
-    .card { background: #fff; padding: 18px; border-radius: 12px; box-shadow: 0 6px 20px rgba(16,24,40,0.06); }
-    .topbar { background: #0069d9; color: #fff; padding: 12px 20px; font-size: 20px; }
-    .ad-box { background: #fff; padding: 14px; border-radius: 10px; margin-bottom: 12px; border:1px solid #eef2f7; }
-    .blue-btn { background: #0069d9; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
-    .red-btn { background: #ff4d4f; color: #fff; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
-    .modal { position: fixed; inset: 0; display:none; justify-content:center; align-items:center; background: rgba(0,0,0,0.45); z-index:9999; padding: 18px; }
-    .modal-box { width: 100%; max-width: 640px; background: #fff; border-radius: 12px; padding: 16px; }
-    .form-row { display:flex; gap:8px; margin-top:8px; }
-    .form-row > * { flex:1; }
-    label { font-weight: 600; display:block; margin-top:8px; }
-    input, select, textarea { width:100%; padding:10px; border-radius:8px; border:1px solid #d1d5db; }
-  </style>
+    <style>
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 99;
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 480px;
+            padding: 20px;
+            border-radius: 12px;
+        }
+        select, input, textarea {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 10px;
+            width: 100%;
+            margin-top: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .blue-btn { background:#0069d9; color:white; }
+        .red-btn { background:#d9534f; color:white; }
+        .gray-btn { background:#6c757d; color:white; }
+    </style>
 </head>
+
 <body>
 
-  <div class="topbar">Mening e'lonlarim</div>
+<div id="myAdsList" style="padding:20px;">Yuklanmoqda...</div>
 
-  <div class="container">
-    <div class="card">
-      <div id="myAdsList">Yuklanmoqda...</div>
-    </div>
-  </div>
+<!-- ==========================
+      EDIT MODAL
+============================= -->
+<div id="editAdModal" class="modal">
+    <div class="modal-content">
 
- <!-- EDIT MODAL -->
-<div id="editAdModal" class="modal" style="
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.5);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 99999;">
-    
-    <div class="modal-content" style="
-        background: #fff;
-        padding: 20px;
-        border-radius: 12px;
-        width: 90%;
-        max-width: 500px;">
-        
-        <h3 style="margin-bottom: 15px;">Tahrirlash</h3>
+        <h3>Tahrirlash</h3>
 
-        <!-- FROM REGION -->
         <label>Qayerdan (viloyat)</label>
-        <select id="editFromRegion" onchange="updateEditDistricts('from')">
-            <option value="">Viloyat</option>
-        </select>
+        <select id="editFromRegion" onchange="updateEditDistricts('from')"></select>
 
         <label>Tuman</label>
-        <select id="editFromDistrict">
-            <option value="">Tuman</option>
-        </select>
+        <select id="editFromDistrict"></select>
 
-        <!-- TO REGION -->
         <label>Qayerga (viloyat)</label>
-        <select id="editToRegion" onchange="updateEditDistricts('to')">
-            <option value="">Viloyat</option>
-        </select>
+        <select id="editToRegion" onchange="updateEditDistricts('to')"></select>
 
         <label>Tuman</label>
-        <select id="editToDistrict">
-            <option value="">Tuman</option>
-        </select>
+        <select id="editToDistrict"></select>
 
-        <!-- PRICE -->
         <label>Narx</label>
-        <input type="number" id="editPrice" placeholder="Narx">
+        <input id="editPrice" type="number" />
 
-        <!-- TIME -->
         <label>Jo'nash vaqti</label>
-        <input type="datetime-local" id="editTime">
+        <input id="editTime" type="datetime-local" />
 
-        <!-- SEATS -->
-        <label>Joylar / Yo'lovchilar</label>
-        <input type="number" id="editSeats" placeholder="Joylar soni">
+        <label>Joylar / Yo‘lovchilar soni</label>
+        <input id="editSeats" type="number" />
 
-        <!-- COMMENT -->
         <label>Izoh</label>
         <textarea id="editComment" rows="3"></textarea>
 
-        <!-- BUTTONS -->
-        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-            <button id="saveEditBtn" class="blue-btn">Saqlash</button>
-            <button id="closeEditBtn" class="red-btn">Bekor qilish</button>
-        </div>
+        <button class="blue-btn" onclick="saveAdEdit()">Saqlash</button>
+        <button class="gray-btn" onclick="closeEditAd()">Bekor qilish</button>
+
     </div>
 </div>
 
+<!-- REGIONS -->
+<script src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
 
-  <!-- Regions data (global `regions` array expected) -->
-  <script type="module" src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
-  <!-- REGIONS HELPER -->
-<script type="module" src="/shahartaxi-demo/docs/assets/regions-helper.js"></script>
-  <!-- MAIN MODULE -->
-  <script type="module" src="/shahartaxi-demo/docs/app/taxi/my-ads.js"></script>
+<!-- HELPERS -->
+<script src="/shahartaxi-demo/docs/app/taxi/regions-helper.js"></script>
+
+<!-- MAIN LOGIC -->
+<script type="module" src="/shahartaxi-demo/docs/app/taxi/my-ads.js"></script>
+
 </body>
 </html>
