@@ -1,15 +1,23 @@
-import { regions, districts } from "../assets/regions-helper.js";
-import { taxiRegions } from "../assets/regions-taxi.js";
-import { push } from "../libs/lib.js";
+// =====================
+// YUKLANISH BLOKI
+// =====================
 
-console.log("CREATE-AD.JS LOADED");
+// Regions helper yuklash
+import "/shahartaxi-demo/docs/assets/regions-helper.js";
 
-// ELEMENTS
+// Regions taxi yuklash
+import "/shahartaxi-demo/docs/assets/regions-taxi.js";
+
+// Lib.js modulini chaqirish
+import * as lib from "/shahartaxi-demo/docs/libs/lib.js";
+
+// =====================
+// ELEMENTLARNI OQISH
+// =====================
 const fromRegion = document.getElementById("fromRegion");
 const fromDistrict = document.getElementById("fromDistrict");
 const toRegion = document.getElementById("toRegion");
 const toDistrict = document.getElementById("toDistrict");
-
 const priceInput = document.getElementById("price");
 const dateInput = document.getElementById("departureTime");
 const seatsInput = document.getElementById("seats");
@@ -18,64 +26,71 @@ const commentInput = document.getElementById("adComment");
 const submitBtn = document.getElementById("submitAdBtn");
 const clearBtn = document.getElementById("clearFormBtn");
 
-// REGIONS LOAD
-function loadRegions() {
-    regions.forEach(reg => {
-        fromRegion.innerHTML += `<option value="${reg}">${reg}</option>`;
-        toRegion.innerHTML += `<option value="${reg}">${reg}</option>`;
-    });
-}
-loadRegions();
+// =====================
+// REGIONSLARNI TO‘LDIRISH
+// =====================
+window.addEventListener("DOMContentLoaded", () => {
+    if (window.loadRegionsToSelect) {
+        loadRegionsToSelect(fromRegion);
+        loadRegionsToSelect(toRegion);
+        console.log("REGIONS LOADED");
+    } else {
+        console.error("❌ regions-helper.js topilmadi yoki yuklanmadi");
+    }
+});
 
-// UPDATE DISTRICTS
-window.updateDistricts = function (type) {
-    const regionSelect = type === "from" ? fromRegion : toRegion;
-    const districtSelect = type === "from" ? fromDistrict : toDistrict;
+// =====================
+// TUMANLARNI YUKLASH
+// =====================
+fromRegion.addEventListener("change", () => {
+    loadDistrictsToSelect(fromDistrict, fromRegion.value);
+});
 
-    const selectedRegion = regionSelect.value;
-    districtSelect.innerHTML = `<option value="">Tuman</option>`;
+toRegion.addEventListener("change", () => {
+    loadDistrictsToSelect(toDistrict, toRegion.value);
+});
 
-    if (!selectedRegion || !districts[selectedRegion]) return;
-
-    districts[selectedRegion].forEach(d => {
-        districtSelect.innerHTML += `<option value="${d}">${d}</option>`;
-    });
-};
-
-// CLEAR FORM
-clearBtn.onclick = () => {
-    fromRegion.value = "";
-    fromDistrict.innerHTML = `<option value="">Tuman</option>`;
-    toRegion.value = "";
-    toDistrict.innerHTML = `<option value="">Tuman</option>`;
-    priceInput.value = "";
-    dateInput.value = "";
-    seatsInput.value = "";
-    commentInput.value = "";
-};
-
-// SUBMIT
-submitBtn.onclick = async () => {
+// =====================
+// E’LON YUBORISH
+// =====================
+submitBtn.addEventListener("click", async () => {
     const ad = {
         fromRegion: fromRegion.value,
         fromDistrict: fromDistrict.value,
         toRegion: toRegion.value,
         toDistrict: toDistrict.value,
         price: priceInput.value,
-        date: dateInput.value,
+        time: dateInput.value,
         seats: seatsInput.value,
         comment: commentInput.value,
         createdAt: Date.now()
     };
 
-    console.log("YUBORILYAPTI:", ad);
+    if (!lib.push) {
+        console.error("❌ lib.push eksport qilinmagan");
+        alert("Xatolik: lib.push topilmadi!");
+        return;
+    }
 
     try {
-        await push("ads", ad);
-        alert("E’lon muvaffaqiyatli joylandi!");
-        clearBtn.click();
-    } catch (err) {
-        console.error(err);
-        alert("Xatolik yuz berdi");
+        await lib.push("ads", ad);
+        alert("E’lon muvaffaqiyatli qo‘shildi!");
+    } catch (error) {
+        console.error("❌ E’lon qo‘shishda xatolik:", error);
+        alert("Xatolik!!! Konsolni tekshiring.");
     }
-};
+});
+
+// =====================
+// FORMANI TOZALASH
+// =====================
+clearBtn.addEventListener("click", () => {
+    fromRegion.value = "";
+    fromDistrict.innerHTML = "<option value=''>Tuman</option>";
+    toRegion.value = "";
+    toDistrict.innerHTML = "<option value=''>Tuman</option>";
+    priceInput.value = "";
+    dateInput.value = "";
+    seatsInput.value = "";
+    commentInput.value = "";
+});
