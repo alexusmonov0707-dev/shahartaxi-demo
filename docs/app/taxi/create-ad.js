@@ -1,24 +1,20 @@
-// ==============================
-// YUKLANISH BLOKI
-// ==============================
+// =======================================
+//  CREATE-AD.JS (FULL VERSION, FIXED)
+// =======================================
 
-// Regions helper yuklash
-import "/shahartaxi-demo/docs/assets/regions-helper.js";
-
-// Regions taxi yuklash
-import "/shahartaxi-demo/docs/assets/regions-taxi.js";
-
-// Lib.js modulini chaqirish
-import * as lib from "/shahartaxi-demo/docs/libs/lib.js";
-
+// Fayl manzillari (docs/ ichida)
+const REGION_JS_PATH = "/shahartaxi-demo/docs/assets/regions-taxi.js";
+const HELPER_JS_PATH = "/shahartaxi-demo/docs/assets/regions-helper.js";
+const LIB_JS_PATH    = "/shahartaxi-demo/docs/libs/lib.js";
 
 // ==============================
-// ELEMENTLARNI OQISH
+// DOM ELEMENTLAR
 // ==============================
 const fromRegion = document.getElementById("fromRegion");
 const fromDistrict = document.getElementById("fromDistrict");
 const toRegion = document.getElementById("toRegion");
 const toDistrict = document.getElementById("toDistrict");
+
 const priceInput = document.getElementById("price");
 const dateInput = document.getElementById("departureTime");
 const seatsInput = document.getElementById("seats");
@@ -26,93 +22,150 @@ const commentInput = document.getElementById("adComment");
 
 const submitBtn = document.getElementById("submitAdBtn");
 const clearBtn = document.getElementById("clearFormBtn");
+
 // ==============================
-// REGIONS YUKLASH
+// GLOBAL REGIONS HOLDER
 // ==============================
+let TAXI_REGIONS = window.TAXI_REGIONS || null;
 
-// FROM REGION
-fromRegion.innerHTML = '<option value="">Viloyat</option>';
-Object.keys(TAXI_REGIONS).forEach(region => {
-    fromRegion.innerHTML += `<option value="${region}">${region}</option>`;
-});
-
-// FROM DISTRICT
-fromRegion.addEventListener("change", () => {
-    fromDistrict.innerHTML = "";
-    const selected = TAXI_REGIONS[fromRegion.value];
-
-    if (!selected) return;
-
-    selected.forEach(t => {
-        fromDistrict.innerHTML += `<option value="${t}">${t}</option>`;
-    });
-});
-fromRegion.dispatchEvent(new Event("change"));
-
-
-// TO REGION
-toRegion.innerHTML = '<option value="">Viloyat</option>';
-Object.keys(TAXI_REGIONS).forEach(region => {
-    toRegion.innerHTML += `<option value="${region}">${region}</option>`;
-});
-
-// TO DISTRICT
-toRegion.addEventListener("change", () => {
-    toDistrict.innerHTML = "";
-    const selected = TAXI_REGIONS[toRegion.value];
-
-    if (!selected) return;
-
-    selected.forEach(t => {
-        toDistrict.innerHTML += `<option value="${t}">${t}</option>`;
-    });
-});
-toRegion.dispatchEvent(new Event("change"));
 // ==============================
-// FORM SUBMIT BLOKI
+//  REGIONS YUKLASH BLOKI
 // ==============================
-submitBtn.addEventListener("click", async () => {
-    try {
-        const newAd = {
-            fromRegion: fromRegion.value,
-            fromDistrict: fromDistrict.value,
-            toRegion: toRegion.value,
-            toDistrict: toDistrict.value,
-            price: priceInput.value,
-            departureTime: dateInput.value,
-            seats: seatsInput.value,
-            comment: commentInput.value,
-            createdAt: Date.now(),
-        };
+async function ensureRegionsLoaded() {
+  if (TAXI_REGIONS) return;
 
-        console.log("New Ad:", newAd);
+  try {
+    const mod = await import(REGION_JS_PATH);
 
-        const uid = lib.getCurrentUserId();
-        if (!uid) {
-            alert("Iltimos, avval tizimga kiring!");
-            return;
-        }
+    if (mod.default) TAXI_REGIONS = mod.default;
+    if (mod.TAXI_REGIONS) TAXI_REGIONS = mod.TAXI_REGIONS;
+    if (mod.regions) TAXI_REGIONS = mod.regions;
 
-        await lib.pushNewAd(uid, newAd);
+    window.TAXI_REGIONS = TAXI_REGIONS;
+    return;
 
-        // 🔥 Test alert olib tashlandi — endi real redirect bo'ladi
-        window.location.href = "/shahartaxi-demo/docs/profile/profile.html";
+  } catch (e) {}
 
-    } catch (error) {
-        console.error("E'lon yuklashda xatolik:", error);
-        alert("Xatolik yuz berdi. Qayta urinib ko'ring.");
+  try {
+    const res = await fetch(REGION_JS_PATH);
+    const txt = await res.text();
+
+    try { (0, eval)(txt); } catch (e) {}
+
+    if (window.TAXI_REGIONS) {
+      TAXI_REGIONS = window.TAXI_REGIONS;
+      return;
     }
-});
-clearBtn.addEventListener("click", () => {
+
+  } catch (e) {
+    console.error("Failed to load regions:", e);
+  }
+
+  TAXI_REGIONS = {};
+  window.TAXI_REGIONS = {};
+}
+
+// ==============================
+// SELECTLARNI TO‘LDIRISH
+// ==============================
+function fillRegionSelects() {
+  const keys = Object.keys(TAXI_REGIONS);
+
+  fromRegion.innerHTML = `<option value="">Qayerdan (Viloyat)</option>`;
+  toRegion.innerHTML   = `<option value="">Qayerga (Viloyat)</option>`;
+
+  keys.forEach(v => {
+    fromRegion.innerHTML += `<option value="${v}">${v}</option>`;
+    toRegion.innerHTML   += `<option value="${v}">${v}</option>`;
+  });
+
+  fromDistrict.innerHTML = `<option value="">Tuman</option>`;
+  toDistrict.innerHTML   = `<option value="">Tuman</option>`;
+}
+
+function fillDistricts(region, target) {
+  target.innerHTML = `<option value="">Tuman</option>`;
+  if (!region) return;
+
+  TAXI_REGIONS[region]?.forEach(d => {
+    target.innerHTML += `<option value="${d}">${d}</option>`;
+  });
+}
+
+// ==============================
+//  HANDLERLAR
+// ==============================
+function setupHandlers() {
+  fromRegion.addEventListener("change", () => {
+    fillDistricts(fromRegion.value, fromDistrict);
+  });
+
+  toRegion.addEventListener("change", () => {
+    fillDistricts(toRegion.value, toDistrict);
+  });
+
+  clearBtn.addEventListener("click", e => {
+    e.preventDefault();
+    fromRegion.selectedIndex = 0;
+    toRegion.selectedIndex = 0;
+
+    fromDistrict.innerHTML = `<option value="">Tuman</option>`;
+    toDistrict.innerHTML   = `<option value="">Tuman</option>`;
+
     priceInput.value = "";
     dateInput.value = "";
     seatsInput.value = "";
     commentInput.value = "";
+  });
 
-    fromRegion.selectedIndex = 0;
-    toRegion.selectedIndex = 0;
+  // ============================
+  //  E'LON YUBORISH
+  // ============================
+  submitBtn.addEventListener("click", async e => {
+    e.preventDefault();
 
-    fromRegion.dispatchEvent(new Event("change"));
-    toRegion.dispatchEvent(new Event("change"));
-});
+    const payload = {
+      fromRegion: fromRegion.value,
+      fromDistrict: fromDistrict.value,
+      toRegion: toRegion.value,
+      toDistrict: toDistrict.value,
+      price: priceInput.value,
+      departureTime: dateInput.value,
+      seats: seatsInput.value,
+      comment: commentInput.value,
+      createdAt: Date.now()
+    };
 
+    // Firebase yuklash
+    const lib = await import(LIB_JS_PATH);
+    const { db, ref, push, set, auth } = lib;
+
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Kirish kerak. Login qiling.");
+      return;
+    }
+
+    const newRef = push(ref(db, "taxi_ads"));
+    await set(newRef, {
+      ...payload,
+      userId: user.uid
+    });
+
+    alert("E’lon muvaffaqiyatli joylandi!");
+
+    // PROFILGA O‘TISH:
+    window.location.href = "/shahartaxi-demo/docs/app/profile/index.html";
+  });
+}
+
+// ==============================
+//  INIT
+// ==============================
+(async function init() {
+  await ensureRegionsLoaded();
+  fillRegionSelects();
+  setupHandlers();
+
+  console.log("CREATE-AD READY. Regions:", Object.keys(TAXI_REGIONS).length);
+})();
