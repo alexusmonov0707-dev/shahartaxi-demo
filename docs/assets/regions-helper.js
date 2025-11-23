@@ -1,26 +1,28 @@
-// ===============================
-//   REGIONS HELPER — FULL VERSION
-//   moslashgan: my-ads.js + create-ad.js
-// ===============================
+// ======================================
+//   REGIONS HELPER — MOSLASHGAN FULL VERSION
+//   mos: regions-taxi.js (window.regions = {...})
+//   mos: create-ad.js + my-ads.js
+// ======================================
 
-import { regionsTaxi } from "./regions-taxi.js";
+// ⚠️ Eslatma:
+// regions-taxi.js → window.regions = { Andijon: [...], ... }
 
-// GLOBAL O'ZGARUVCHI — my-ads.js shu nomni kutadi
-window.regions = Object.keys(regionsTaxi).map(name => ({
+// GLOBAL formatga aylantiramiz
+window.regionsList = Object.keys(window.regions).map(name => ({
     name,
-    districts: regionsTaxi[name]
+    districts: window.regions[name]
 }));
 
-// ==========================
+// ======================================
 //   SELECTGA VILOYATLARNI YOZISH
-// ==========================
-window.fillRegions = function(selectId) {
+// ======================================
+window.fillRegions = function (selectId) {
     const el = document.getElementById(selectId);
     if (!el) return;
 
     el.innerHTML = `<option value="">Viloyat</option>`;
 
-    window.regions.forEach(r => {
+    window.regionsList.forEach(r => {
         const op = document.createElement("option");
         op.value = r.name;
         op.textContent = r.name;
@@ -28,19 +30,21 @@ window.fillRegions = function(selectId) {
     });
 };
 
-// ==========================
+// ======================================
 //   TUMANLARNI TO‘LDIRISH
-// ==========================
-window.updateDistricts = function(type) {
+// ======================================
+window.updateDistricts = function (type) {
     const regionSelect = document.getElementById(type + "Region");
     const districtSelect = document.getElementById(type + "District");
+
+    if (!regionSelect || !districtSelect) return;
 
     districtSelect.innerHTML = `<option value="">Tuman</option>`;
 
     const selectedRegion = regionSelect.value;
     if (!selectedRegion) return;
 
-    const regionData = window.regions.find(r => r.name === selectedRegion);
+    const regionData = window.regionsList.find(r => r.name === selectedRegion);
     if (!regionData) return;
 
     regionData.districts.forEach(d => {
