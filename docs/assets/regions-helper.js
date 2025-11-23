@@ -1,22 +1,18 @@
 // ======================================================
 //   REGIONS HELPER — ShaharTaxi
-//   Tumanlar va viloyatlar selectlarini boshqarish
 // ======================================================
 
-// Bu fayl regions-taxi.js ichidagi global `regions` obyektidan foydalanadi.
-// Hech qanday qisqartirish QILINMAGAN.
+// taxi regions globaldan olinadi
+const regions = window.TAXI_REGIONS;
 
-// === FIX: regions-taxi.js dan global obyektni olish ===
-const regions = window.TAXI_REGIONS || {};
-
-// Elementni olish yordamchisi
+// Element olish helperi
 export function $(id) {
     return document.getElementById(id);
 }
 
-// ------------------------------------------------------
-//    ADD AD (create-ad) sahifasi uchun
-// ------------------------------------------------------
+// ======================================================
+//     CREATE-AD SAHIFASI
+// ======================================================
 export function initRegionsForm() {
     const fromRegion = $("fromRegion");
     const toRegion = $("toRegion");
@@ -27,21 +23,17 @@ export function initRegionsForm() {
     toRegion.innerHTML = '<option value="">Qayerga (Viloyat)</option>';
 
     Object.keys(regions).forEach(r => {
-        const opt1 = document.createElement("option");
-        opt1.value = r;
-        opt1.textContent = r;
-        fromRegion.appendChild(opt1);
+        let o1 = document.createElement("option");
+        o1.value = r; o1.textContent = r;
+        fromRegion.appendChild(o1);
 
-        const opt2 = document.createElement("option");
-        opt2.value = r;
-        opt2.textContent = r;
-        toRegion.appendChild(opt2);
+        let o2 = document.createElement("option");
+        o2.value = r; o2.textContent = r;
+        toRegion.appendChild(o2);
     });
 }
 
-// ------------------------------------------------------
-//   DISTRICT UPDATE (create-ad)
-// ------------------------------------------------------
+// --- districts ---
 export function updateDistricts(type) {
     const regionId = type === "from" ? "fromRegion" : "toRegion";
     const districtId = type === "from" ? "fromDistrict" : "toDistrict";
@@ -54,7 +46,7 @@ export function updateDistricts(type) {
     if (!region || !regions[region]) return;
 
     regions[region].forEach(t => {
-        const opt = document.createElement("option");
+        let opt = document.createElement("option");
         opt.value = t;
         opt.textContent = t;
         districtSelect.appendChild(opt);
@@ -62,7 +54,7 @@ export function updateDistricts(type) {
 }
 
 // ======================================================
-//       MY-ADS SAHIFASIDA EDIT QILISH UCHUN
+//     MY ADS — EDIT
 // ======================================================
 export function initEditRegions() {
     const fr = $("editFromRegion");
@@ -74,21 +66,16 @@ export function initEditRegions() {
     tr.innerHTML = '<option value="">Viloyat</option>';
 
     Object.keys(regions).forEach(r => {
-        const opt1 = document.createElement("option");
-        opt1.value = r;
-        opt1.textContent = r;
-        fr.appendChild(opt1);
+        let o1 = document.createElement("option");
+        o1.value = r; o1.textContent = r;
+        fr.appendChild(o1);
 
-        const opt2 = document.createElement("option");
-        opt2.value = r;
-        opt2.textContent = r;
-        tr.appendChild(opt2);
+        let o2 = document.createElement("option");
+        o2.value = r; o2.textContent = r;
+        tr.appendChild(o2);
     });
 }
 
-// ------------------------------------------------------
-//      EDIT DISTRICTS (my-ads)
-// ------------------------------------------------------
 export function updateEditDistricts(type) {
     const regionId = type === "from" ? "editFromRegion" : "editToRegion";
     const distId   = type === "from" ? "editFromDistrict" : "editToDistrict";
@@ -101,7 +88,7 @@ export function updateEditDistricts(type) {
     if (!region || !regions[region]) return;
 
     regions[region].forEach(t => {
-        const opt = document.createElement("option");
+        let opt = document.createElement("option");
         opt.value = t;
         opt.textContent = t;
         distSelect.appendChild(opt);
@@ -109,17 +96,17 @@ export function updateEditDistricts(type) {
 }
 
 // ======================================================
-//     PROFILE EDIT (profile.html)
+//      PROFILE
 // ======================================================
 export function fillRegionSelect_forProfile() {
     const reg = $("editRegion");
     if (!reg) return;
-    
+
     reg.innerHTML = '<option value="">Viloyat</option>';
 
     Object.keys(regions).forEach(r => {
-        const opt = document.createElement("option");
-        opt.value = r;
+        let opt = document.createElement("option");
+        opt.value = r; 
         opt.textContent = r;
         reg.appendChild(opt);
     });
@@ -127,14 +114,14 @@ export function fillRegionSelect_forProfile() {
 
 export function fillEditDistricts() {
     const region = $("editRegion").value;
-    const dist = $("editDistrict");
+    const dist   = $("editDistrict");
 
     dist.innerHTML = '<option value="">Tuman</option>';
 
     if (!region || !regions[region]) return;
 
     regions[region].forEach(t => {
-        const opt = document.createElement("option");
+        let opt = document.createElement("option");
         opt.value = t;
         opt.textContent = t;
         dist.appendChild(opt);
