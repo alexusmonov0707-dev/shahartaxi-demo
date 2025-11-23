@@ -9,39 +9,8 @@ import {
     $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-// =====================
-// FILL REGIONS (IDENTIK create-ad.js bilan)
-// =====================
-window.initRegionsForm = function () {
-    const fromRegion = $("editFromRegion");
-    const toRegion = $("editToRegion");
-
-    fromRegion.innerHTML = '<option value="">Viloyat</option>';
-    toRegion.innerHTML = '<option value="">Viloyat</option>';
-
-    regions.forEach(r => {
-        fromRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-        toRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-    });
-};
-
-window.updateEditDistricts = function (type) {
-    const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
-    const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
-
-    const regionName = regionSelect.value;
-
-    districtSelect.innerHTML = '<option value="">Tuman</option>';
-
-    if (!regionName) return;
-
-    const region = regions.find(r => r.name === regionName);
-    if (!region) return;
-
-    region.districts.forEach(dis => {
-        districtSelect.innerHTML += `<option value="${dis}">${dis}</option>`;
-    });
-};
+// Regions helper (GLOBAL funksiyalar)
+import "/shahartaxi-demo/docs/assets/regions-helper.js";
 
 // =====================
 // GLOBAL
@@ -49,7 +18,7 @@ window.updateEditDistricts = function (type) {
 let editingAdId = null;
 
 // =====================
-// USER CHECK
+// AUTH CHECK
 // =====================
 onAuthStateChanged(auth, user => {
     if (!user) {
@@ -62,7 +31,7 @@ onAuthStateChanged(auth, user => {
 });
 
 // =====================
-// LOAD USER ADS
+// LOAD MY ADS
 // =====================
 async function loadMyAds(uid) {
     const snap = await get(ref(db, "ads"));
@@ -115,25 +84,27 @@ window.deleteAd = async function (id) {
 };
 
 // =====================
-// OPEN MODAL
+// OPEN EDIT MODAL
 // =====================
 window.openEditAd = function (id, ad) {
     editingAdId = id;
 
-    initRegionsForm();
+    // Regions
+    fillRegions("editFromRegion");
+    fillRegions("editToRegion");
 
     $("editFromRegion").value = ad.fromRegion;
-    updateEditDistricts("from");
+    updateDistricts("editFrom".replace("edit", "").toLowerCase());
     $("editFromDistrict").value = ad.fromDistrict;
 
     $("editToRegion").value = ad.toRegion;
-    updateEditDistricts("to");
+    updateDistricts("editTo".replace("edit", "").toLowerCase());
     $("editToDistrict").value = ad.toDistrict;
 
+    // Other fields
     $("editPrice").value = ad.price;
     $("editTime").value = ad.departureTime;
     $("editComment").value = ad.comment ?? "";
-
     $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
 
     $("editAdModal").style.display = "flex";
