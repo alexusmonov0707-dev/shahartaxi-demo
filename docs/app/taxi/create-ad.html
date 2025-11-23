@@ -1,49 +1,38 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E’lon qo‘shish — ShaharTaxi</title>
-
-    <!-- STYLE (TO‘G‘RI PATH!) -->
-    <link rel="stylesheet" href="../../css/create-ad.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Yangi e'lon qo'shish — ShaharTaxi</title>
+  <style>
+    body{font-family:Arial;margin:0;background:#f5f7fa}
+    .topbar{background:#0069d9;padding:14px;color:#fff;text-align:center;font-size:20px}
+    .card{max-width:680px;margin:24px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    select,input,textarea{width:100%;padding:12px;font-size:15px;border-radius:6px;border:1px solid #ddd;margin-top:10px}
+    button{padding:12px;border:none;font-size:16px;border-radius:8px;cursor:pointer;width:100%}
+    .blue{background:#007bff;color:#fff;margin-top:16px}
+    .gray{background:#9aa0a6;color:#fff;margin-top:8px}
+  </style>
 </head>
-
 <body>
+  <div class="topbar">Yangi e'lon qo'shish</div>
 
-<h2 style="margin: 20px;">Yangi e’lon qo‘shish</h2>
+  <div class="card">
+    <select id="fromRegion"><option value="">Qayerdan (Viloyat)</option></select>
+    <select id="fromDistrict"><option value="">Tuman</option></select>
 
-<div class="card">
-
-    <select id="fromRegion" onchange="updateDistricts('from')">
-        <option value="">Qayerdan (Viloyat)</option>
-    </select>
-
-    <select id="fromDistrict">
-        <option value="">Tuman</option>
-    </select>
-
-    <select id="toRegion" onchange="updateDistricts('to')">
-        <option value="">Qayerga (Viloyat)</option>
-    </select>
-
-    <select id="toDistrict">
-        <option value="">Tuman</option>
-    </select>
+    <select id="toRegion"><option value="">Qayerga (Viloyat)</option></select>
+    <select id="toDistrict"><option value="">Tuman</option></select>
 
     <input id="price" type="number" placeholder="Narx (so‘m)">
     <input id="departureTime" type="datetime-local">
     <input id="seats" type="number" placeholder="Joylar soni / Yo‘lovchilar soni">
-
     <textarea id="adComment" rows="3" placeholder="Qo‘shimcha izoh"></textarea>
 
-    <button id="submitAdBtn" class="blue-btn">E’lonni joylash</button>
-    <button id="clearFormBtn" class="gray-btn">Tozalash</button>
-
-</div>
-
-<script type="module" src"shahartaxi-demo/docs/assets/regions-taxi.js"></script>
+    <button id="submitAdBtn" class="blue">E'lonni joylash</button>
+    <button id="clearFormBtn" class="gray">Tozalash</button>
+  </div>
+  <script type="module" src"shahartaxi-demo/docs/assets/regions-taxi.js"></script>
 <script type="module" src"shahartaxi-demo/docs/assets/regions-helper.js"></script>
 
 <!-- LIB FIREBASE (MODULE) -->
