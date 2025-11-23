@@ -26,7 +26,6 @@
         .blue-btn { background:#0069d9; color:white; padding:6px 12px; border:none; border-radius:6px; }
         .red-btn { background:#ff4444; color:white; padding:6px 12px; border:none; border-radius:6px; }
 
-        /* Modal */
         #editAdModal {
             position:fixed; inset:0;
             background:rgba(0,0,0,0.6);
@@ -48,7 +47,7 @@
 
     <div class="topbar">
         <span>Mening e’lonlarim</span>
-        <a href="profile.html" style="color:white; text-decoration:none;">Profil ←</a>
+        <a href="../profile/profile.html" style="color:white; text-decoration:none;">Profil ←</a>
     </div>
 
     <div class="card">
@@ -84,12 +83,12 @@
         </div>
     </div>
 
-    <!-- regions -->
-    <script src="/shahartaxi-demo/assets/regions-taxi.js"></script>
-<script src="/shahartaxi-demo/assets/regions-helper.js"></script>
+    <!-- IMPORTANT: correct regions path -->
+    <script src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
+    <script src="/shahartaxi-demo/docs/assets/regions-helper.js"></script>
 
-<script type="module" src="/shahartaxi-demo/app/user/my-ads.js"></script>
-
+    <!-- JS logic -->
+    <script type="module" src="/shahartaxi-demo/docs/app/taxi/my-ads.js"></script>
 
 </body>
 </html>
