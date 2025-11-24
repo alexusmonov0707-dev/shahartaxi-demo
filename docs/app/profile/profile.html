@@ -8,14 +8,15 @@
 <body>
 
 <div class="topbar">
-    <div class="logo">ShaharTaxi — Profil</div>
+    <div class="logo">Profil</div>
     <button id="logoutBtn" class="btn btn-danger">Chiqish</button>
 </div>
 
-<div class="container" id="profileContainer">
+<div class="container">
 
     <div class="profile-card">
 
+        <!-- Avatar -->
         <div class="avatar-block">
             <img id="avatarImg" class="avatar" src="" alt="Avatar">
         </div>
@@ -27,25 +28,22 @@
             <div class="balance-box">
                 <span>Balans: </span>
                 <b id="balance">0 so‘m</b>
-                <button class="btn btn-success" id="topUpBtn">Balansni to‘ldirish</button>
+                <button class="btn btn-success" id="topUpBtn">To‘ldirish</button>
             </div>
 
-            <!-- Telefon (faqat ko‘rsatish) -->
             <div class="profile-line">
                 <b>Telefon:</b> <span id="phone"></span>
             </div>
 
-            <!-- Jinsi -->
             <div class="profile-line optional" id="genderRow" style="display:none">
                 <b>Jinsi:</b> <span id="gender"></span>
             </div>
 
-            <!-- Tug‘ilgan sana -->
             <div class="profile-line optional" id="birthRow" style="display:none">
                 <b>Tug‘ilgan sana:</b> <span id="birthdate"></span>
             </div>
 
-            <!-- Haydovchilik maydonlari -->
+            <!-- Haydovchi maydonlari -->
             <div id="driverBlock" style="display:none; margin-top:20px;">
 
                 <h3>Haydovchi ma’lumotlari</h3>
@@ -67,10 +65,33 @@
                 </div>
             </div>
 
+            <!-- SUPER-APP: Abonement bloki -->
+            <div id="subscriptionBlock" class="card" style="display:none; margin-top:25px;">
+
+                <h3>Abonement</h3>
+
+                <!-- Aktiv abonement -->
+                <div id="subActive" style="display:none;">
+                    <p>Status: <b style="color:green;">Aktiv</b></p>
+                    <p>Tarif: <span id="subPlan"></span></p>
+                    <p>Tugash sanasi: <span id="subExpire"></span></p>
+                    <button id="subManageBtn" class="btn btn-primary">Abonementni boshqarish</button>
+                </div>
+
+                <!-- Faollashtirilmagan -->
+                <div id="subInactive" style="display:none;">
+                    <p>Status: <b style="color:red;">Faollashtirilmagan</b></p>
+                    <button id="subBuyBtn" class="btn btn-success">Obuna bo‘lish</button>
+                </div>
+
+            </div>
+
             <br>
 
             <button id="editProfileBtn" class="btn btn-primary">Profilni tahrirlash</button>
+
             <br><br>
+
             <a href="/shahartaxi-demo/docs/app/my-ads/my-ads.html" class="btn btn-blue">
                 Mening e’lonlarim →
             </a>
@@ -80,9 +101,7 @@
 
 </div>
 
-<script type="module" src="/shahartaxi-demo/docs/libs/lib.js"></script>
 <script type="module" src="/shahartaxi-demo/docs/app/profile/profile.js"></script>
-
 
 </body>
 </html>
