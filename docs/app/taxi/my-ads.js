@@ -3,7 +3,7 @@
 
 import {
   auth, db, ref, get, update, remove, onAuthStateChanged, $
-} from "/shahartaxi-demo/docs/libs/lib.js";
+} from "../../libs/lib.js";
 
 function _$(id){ return document.getElementById(id); }
 const $el = (typeof $==="function") ? $ : _$;
