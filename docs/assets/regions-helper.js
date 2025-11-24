@@ -1,109 +1,94 @@
 (function () {
 
-  /* ------------------------------
-     1) REGIONS LIST READY CHECKER
-  ------------------------------ */
-  function ensureRegionsList() {
-    if (window.regions && typeof window.regions === "object") {
-      window.regionsList = Object.keys(window.regions).map(name => ({
-        name,
-        districts: window.regions[name]
-      }));
-      return true;
-    }
-    return false;
+  // 1) regions borligini tekshirish
+  function ensureRegionsReady() {
+    return (window.regions && typeof window.regions === "object");
   }
 
-  // initialize once
-  ensureRegionsList();
+  // 2) regionsList yaratish
+  function buildRegionsList() {
+    if (!ensureRegionsReady()) return false;
+    window.regionsList = Object.keys(window.regions).map(region => ({
+      name: region,
+      districts: window.regions[region]
+    }));
+    return true;
+  }
 
-  /* ------------------------------
-      2) FILL REGIONS DROPDOWN
-  ------------------------------ */
-  window.fillRegions = function (selectId) {
-    const el = document.getElementById(selectId);
+  buildRegionsList();
+
+  // 3) VILOYATLARNI TO‘LDIRISH
+  window.fillRegions = function (id) {
+    const el = document.getElementById(id);
     if (!el) return;
 
     let tries = 0;
     (function wait() {
       tries++;
-      if (ensureRegionsList() || tries > 20) {
-        // reset select
+      if (buildRegionsList() || tries > 20) {
         el.innerHTML = `<option value="">Viloyat</option>`;
-        if (window.regionsList) {
-          window.regionsList.forEach(r => {
-            const op = document.createElement("option");
-            op.value = r.name;
-            op.textContent = r.name;
-            el.appendChild(op);
-          });
-        }
+        (window.regionsList || []).forEach(r => {
+          const op = document.createElement("option");
+          op.value = r.name;
+          op.textContent = r.name;
+          el.appendChild(op);
+        });
       } else {
-        setTimeout(wait, 25);
+        setTimeout(wait, 20);
       }
     })();
   };
 
+  // 4) TUMANLARNI TOLA RESET QILISH
+  function resetDistricts(dSel) {
+    dSel.innerHTML = `<option value="">Tuman</option>`;
+    dSel.value = "";
+    dSel.selectedIndex = 0;
+  }
 
-  /* ------------------------------
-      3) UPDATE DISTRICTS UNIVERSAL
-  ------------------------------ */
-  window.updateDistricts = function (type, callback = null) {
-    let regionId = type + "Region";
-    let districtId = type + "District";
+  // 5) TUMANLARNI TO‘LDIRISH (TRIGGER)
+  window.updateDistricts = function (type, callback) {
+    let rSel = document.getElementById(type + "Region");
+    let dSel = document.getElementById(type + "District");
 
-    // EDIT MODAL fallback
-    if (!document.getElementById(regionId)) {
-      regionId = "edit" + regionId.charAt(0).toUpperCase() + regionId.slice(1);
+    // edit modal fallback
+    if (!rSel || !dSel) {
+      const R = "edit" + type.charAt(0).toUpperCase() + type.slice(1) + "Region";
+      const D = "edit" + type.charAt(0).toUpperCase() + type.slice(1) + "District";
+      rSel = document.getElementById(R);
+      dSel = document.getElementById(D);
     }
-    if (!document.getElementById(districtId)) {
-      districtId = "edit" + districtId.charAt(0).toUpperCase() + districtId.slice(1);
-    }
-
-    const rSel = document.getElementById(regionId);
-    const dSel = document.getElementById(districtId);
 
     if (!rSel || !dSel) return;
+
+    resetDistricts(dSel);
 
     let tries = 0;
     (function wait() {
       tries++;
-      if (ensureRegionsList() || tries > 20) {
-        fillDistricts(rSel, dSel);
-        if (typeof callback === "function") {
-          setTimeout(callback, 15);
+
+      if (buildRegionsList() || tries > 20) {
+
+        const region = rSel.value;
+        const info = (window.regionsList || []).find(r => r.name === region);
+
+        if (info) {
+          info.districts.forEach(dist => {
+            const op = document.createElement("option");
+            op.value = dist;
+            op.textContent = dist;
+            dSel.appendChild(op);
+          });
         }
-      } else setTimeout(wait, 25);
+
+        // **MUHIM** – district to‘liq yuklangach callback
+        if (typeof callback === "function") {
+          setTimeout(callback, 10);
+        }
+
+      } else setTimeout(wait, 20);
+
     })();
   };
-
-
-  /* ------------------------------
-      4) FILL DISTRICTS SAFE
-  ------------------------------ */
-  function fillDistricts(rSel, dSel) {
-
-    // RESET tumanlar
-    dSel.innerHTML = `<option value="">Tuman</option>`;
-    dSel.value = "";
-    dSel.selectedIndex = 0;
-
-    const regionName = rSel.value;
-    if (!regionName) return;
-
-    const regionData = window.regionsList?.find(r => r.name === regionName);
-    if (!regionData) return;
-
-    regionData.districts.forEach(dist => {
-      const op = document.createElement("option");
-      op.value = dist;
-      op.textContent = dist;
-      dSel.appendChild(op);
-    });
-
-    // RESET AGAIN to prevent any old values
-    dSel.value = "";
-    dSel.selectedIndex = 0;
-  }
 
 })();
