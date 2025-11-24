@@ -84,30 +84,41 @@ function createAdElement(ad, id, owner){
     return "-";
   })();
 
-  // createdAt for card
-  let createdAtDisp = "-";
-  if(ad && ad.createdAt){
-    let ms = null;
-    if(typeof ad.createdAt === "number") ms = ad.createdAt;
-    else if(typeof ad.createdAt === "string"){
-      const parsed = Date.parse(ad.createdAt);
-      ms = isNaN(parsed) ? null : parsed;
-    }
-    createdAtDisp = ms ? fmt(ms) : String(ad.createdAt || "-");
+// createdAt for card
+let createdAtDisp = "-";
+if(ad && ad.createdAt){
+  let ms = null;
+  if(typeof ad.createdAt === "number") ms = ad.createdAt;
+  else if(typeof ad.createdAt === "string"){
+    const parsed = Date.parse(ad.createdAt);
+    ms = isNaN(parsed) ? null : parsed;
   }
+  createdAtDisp = ms ? fmt(ms) : String(ad.createdAt || "-");
+}
 
-  box.innerHTML = `
-    <div style="font-weight:700;color:#0069d9">${escapeHtml(roleLabel)}</div>
-    <div class="ad-route" style="margin-top:6px;font-weight:600">${escapeHtml(ad.fromRegion||"")} ${escapeHtml(ad.fromDistrict||"")} → ${escapeHtml(ad.toRegion||"")} ${escapeHtml(ad.toDistrict||"")}</div>
-    <div class="ad-meta" style="margin-top:8px">Narx: <b>${escapeHtml(String(ad.price||""))}</b></div>
-    <div class="ad-meta">Vaqt: ${departureDisplay}</div>
-    <div class="ad-meta">Joy: ${escapeHtml(String(s||""))}</div>
-    <div class="ad-meta" style="text-align:right; color:#6b7280; margin-top:8px">E'lon berilgan: ${escapeHtml(createdAtDisp)}</div>
-    <div class="ad-actions" style="margin-top:10px">
-      <button class="btn btn-primary edit" data-id="${id}" data-owner="${owner}">Tahrirlash</button>
-      <button class="btn btn-danger delete" data-id="${id}" data-owner="${owner}">O‘chirish</button>
-    </div>
-  `;
+box.innerHTML = `
+  <div style="font-weight:700;color:#0069d9">${escapeHtml(roleLabel)}</div>
+  <div class="ad-route" style="margin-top:6px;font-weight:600">
+    ${escapeHtml(ad.fromRegion||"")} ${escapeHtml(ad.fromDistrict||"")}
+    →
+    ${escapeHtml(ad.toRegion||"")} ${escapeHtml(ad.toDistrict||"")}
+  </div>
+
+  <div class="ad-meta" style="margin-top:8px">Narx: <b>${escapeHtml(String(ad.price||""))}</b></div>
+  <div class="ad-meta">Vaqt: ${departureDisplay}</div>
+  <div class="ad-meta">Joy: ${escapeHtml(String(s||""))}</div>
+
+  <!-- Sana + vaqt (oddiy, minimal) -->
+  <div class="ad-meta" style="text-align:right; color:#6b7280; margin-top:18px;">
+    ${escapeHtml(createdAtDisp)}
+  </div>
+
+  <div class="ad-actions" style="margin-top:10px">
+    <button class="btn btn-primary edit" data-id="${id}" data-owner="${owner}">Tahrirlash</button>
+    <button class="btn btn-danger delete" data-id="${id}" data-owner="${owner}">O‘chirish</button>
+  </div>
+`;
+
   return box;
 }
 
