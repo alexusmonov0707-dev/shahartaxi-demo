@@ -30,7 +30,7 @@ loginBtn.onclick = async () => {
     }
 
     // redirect to unified dashboard
-    window.location.href = "/shahartaxi-demo/app/user/index.html";
+    window.location.href = "/shahartaxi-demo/docs/app/taxi/index.html";
 
   } catch (err) {
     console.error(err);
