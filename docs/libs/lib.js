@@ -46,13 +46,13 @@ import {
 // INITIALIZE
 // ==============================
 const firebaseConfig = {
-    apiKey: "AIzaSyBLGU1t6wJAbBjC0ATk5vpywUextNhRKt0",
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
     authDomain: "shahartaxi-demo.firebaseapp.com",
     databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
     projectId: "shahartaxi-demo",
     storageBucket: "shahartaxi-demo.appspot.com",
-    messagingSenderId: "385802387503",
-    appId: "1:385802387503:web:2e7f403d3ab216e8b2ad87"
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
 };
 
 const app = initializeApp(firebaseConfig);
