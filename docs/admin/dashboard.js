@@ -1,56 +1,54 @@
-import { db, ref, get } from "./firebase.js";
+import { auth, onAuthStateChanged, signOut, db, ref, get } from "../libs/lib.js";
 
-console.log("DASHBOARD.JS loaded");
+// Sahifa yuklanganda admin login tekshiruvi
+onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+        // foydalanuvchi yo'q — loginga qaytarish
+        location.href = "/shahartaxi-demo/docs/admin/login.html";
+        return;
+    }
 
-// =====================
-// ADMIN AUTH CHECK
-// =====================
-const adminId = localStorage.getItem("admin");
+    // admin malumotlari
+    const snap = await get(ref(db, "admins/" + user.uid));
+    if (!snap.exists()) {
+        alert("Siz admin emassiz!");
+        await signOut(auth);
+        location.href = "/shahartaxi-demo/docs/admin/login.html";
+        return;
+    }
 
-if (!adminId) {
-  // admin login qilmagan → chiqarib yuboramiz
-  window.location.href = "./login.html";
-} 
+    const adminData = snap.val();
+    document.getElementById("adminName").textContent = adminData.fullName || "Admin";
 
-// admin nomini chiqaramiz
-document.getElementById("adminName").textContent = `Admin: ${adminId}`;
-
-// =====================
-// LOGOUT
-// =====================
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  localStorage.removeItem("admin");
-  window.location.href = "./login.html";
+    // statistikani yuklaymiz
+    loadStats();
 });
 
-// =====================
-// LOAD STATISTICS
-// =====================
+// statistikani olish
 async function loadStats() {
-  try {
     const adsSnap = await get(ref(db, "ads"));
     const usersSnap = await get(ref(db, "users"));
 
-    // drivers alohida bo'lmagan — users ichidan "role=driver" bo'yicha sanaymiz
-    let driverCount = 0;
+    let ads = 0;
+    let users = 0;
+    let drivers = 0;
+
+    if (adsSnap.exists()) {
+        ads = Object.keys(adsSnap.val()).length;
+    }
     if (usersSnap.exists()) {
-      const users = usersSnap.val();
-      Object.values(users).forEach(u => {
-        if (u.role === "driver") driverCount++;
-      });
+        const list = usersSnap.val();
+        users = Object.keys(list).length;
+        drivers = Object.values(list).filter(u => u.role === "driver").length;
     }
 
-    document.getElementById("statAds").textContent =
-      adsSnap.exists() ? Object.keys(adsSnap.val()).length : 0;
-
-    document.getElementById("statUsers").textContent =
-      usersSnap.exists() ? Object.keys(usersSnap.val()).length : 0;
-
-    document.getElementById("statDrivers").textContent = driverCount;
-
-  } catch (err) {
-    console.error("Stat load error:", err);
-  }
+    document.getElementById("statAds").textContent = ads;
+    document.getElementById("statUsers").textContent = users;
+    document.getElementById("statDrivers").textContent = drivers;
 }
 
-loadStats();
+// logout
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+    await signOut(auth);
+    location.href = "/shahartaxi-demo/docs/admin/login.html";
+});
