@@ -1,95 +1,33 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ShaharTaxi — Ro‘yxatdan o‘tish</title>
-
-  <style>
-    body{
-      font-family: Arial;
-      background:#f2f4f8;
-      padding:0;margin:0;
-      display:flex;justify-content:center;align-items:center;height:100vh;
-    }
-
-    .card{
-      background:#fff;
-      width:360px;
-      padding:22px;
-      border-radius:12px;
-      box-shadow:0 6px 22px rgba(0,0,0,.08);
-      text-align:center;
-    }
-
-    .role-btn{
-      width:100%;
-      padding:12px;
-      margin-top:10px;
-      font-size:16px;
-      border:none;
-      background:#0069d9;
-      color:white;
-      border-radius:8px;
-      cursor:pointer;
-    }
-
-    input{
-      width:100%;
-      padding:10px;
-      margin-top:10px;
-      border-radius:8px;
-      border:1px solid #ccc;
-      font-size:15px;
-      box-sizing:border-box;
-    }
-
-    #extraFields{ display:none; margin-top:12px; text-align:left; }
-
-    .saveBtn{
-      width:100%;
-      padding:12px;
-      background:#28a745;
-      border:none;
-      margin-top:12px;
-      color:white;
-      font-size:16px;
-      border-radius:8px;
-      cursor:pointer;
-    }
-
-    .muted { color:#666; font-size:13px; margin-top:6px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Ro‘yxatdan o‘tish</title>
+    <link rel="stylesheet" href="/shahartaxi-demo/style.css">
 </head>
 <body>
 
-  <div class="card">
+<div class="auth-container">
     <h2>Ro‘yxatdan o‘tish</h2>
-    <p id="selectedRole" style="font-weight:600;"></p>
 
-    <button class="role-btn" onclick="selectRole('driver')">🚕 Men — Haydovchi</button>
-    <button class="role-btn" onclick="selectRole('passenger')">🚶‍♂️ Men — Yo‘lovchi</button>
+    <input type="text" id="fullName" placeholder="To‘liq ism" />
+    <input type="text" id="phone" placeholder="Telefon raqam" />
+    
+    <select id="role">
+        <option value="passenger">Yo‘lovchi</option>
+        <option value="driver">Haydovchi</option>
+    </select>
 
-    <div id="extraFields">
-      <label class="muted">Telefon</label>
-      <input id="phone" placeholder="+998901234567" disabled>
+    <input type="password" id="password" placeholder="Parol" />
 
-      <label class="muted">To‘liq ism</label>
-      <input id="fullName" placeholder="Ism Familiya">
+    <button id="registerBtn" class="btn btn-primary">Ro‘yxatdan o‘tish</button>
 
-      <div id="driverFields" style="display:none;">
-        <label class="muted">Mashina modeli</label>
-        <input id="carModel" placeholder="Nexia 3, Gentra...">
-
-        <label class="muted">Davlat raqami</label>
-        <input id="license" placeholder="01A123BC">
-      </div>
-
-      <button class="saveBtn" onclick="saveRole()">Saqlash va davom etish</button>
+    <div class="switch">
+        Akkount bormi?
+        <a href="/shahartaxi-demo/app/auth/login.html">Kirish</a>
     </div>
-  </div>
+</div>
 
-  <!-- script: register.js (module) -->
-  <script type="module" src="./js/register.js"></script>
+<script type="module" src="/shahartaxi-demo/app/auth/register.js"></script>
 </body>
 </html>
