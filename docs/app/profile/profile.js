@@ -55,7 +55,7 @@ async function loadProfile(uid) {
     if (!snap.exists()) return;
     const u = snap.val();
 
-    avatarImg.src = u.avatar || "../../assets/img/avatar-default.png";
+    avatarImg.src = u.avatar || "../../assets/img/avatar-default1.png";
     fullName.textContent = u.fullName || "";
     phone.textContent = u.phone || "-";
     balance.textContent = (u.balance || 0) + " so‘m";
