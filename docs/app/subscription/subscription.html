@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Abonement</title>
+    <link rel="stylesheet" href="/shahartaxi-demo/docs/style.css">
+</head>
+<body>
+
+<div class="topbar">
+    <div class="logo">Abonement</div>
+    <button onclick="history.back()" class="btn btn-danger">Orqaga</button>
+</div>
+
+<div class="container" style="max-width:600px; margin:auto;">
+
+    <div id="currentSub" style="display:none;">
+        <h2>Faol abonement</h2>
+        <p>Tarif: <span id="planName"></span></p>
+        <p>Muddati: <span id="expires"></span></p>
+    </div>
+
+    <div id="buySection" style="display:none;">
+        <h2>Abonement tariflari</h2>
+
+        <div class="card">
+            <h3>Haftalik</h3>
+            <p>5 000 so‘m</p>
+            <button class="btn btn-primary" onclick="buy('weekly')">Obuna bo‘lish</button>
+        </div>
+
+        <br>
+
+        <div class="card">
+            <h3>Oylik</h3>
+            <p>20 000 so‘m</p>
+            <button class="btn btn-primary" onclick="buy('monthly')">Obuna bo‘lish</button>
+        </div>
+    </div>
+
+</div>
+
+<script type="module" src="/shahartaxi-demo/docs/app/subscription/subscription.js"></script>
+
+</body>
+</html>
