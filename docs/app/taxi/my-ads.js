@@ -60,8 +60,7 @@ function getRoleLabel(ad){
   if(tRaw === "haydovchi" || tRaw === "driver") return "Haydovchi";
   if(tRaw === "yo'lovchi" || tRaw === "yolovchi" || tRaw === "passenger") return "Yo‘lovchi";
   // fallback heuristics
-  if(ad.driverSeats) return "Haydovchi";
-  if(ad.passengerCount) return "Yo‘lovchi";
+ 
   return "";
 }
 
