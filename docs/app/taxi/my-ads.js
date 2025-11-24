@@ -1,21 +1,26 @@
-// ===============================================
-//  SHAHARTAXI — MY ADS (FINAL — fillEditRegions YO‘Q)
-//  100% region ↔ district sync
-//  Works with regions-helper (11).js
-// ===============================================
+// my-ads.js (FINAL for your project)
+// - uses window.fillRegions and window.updateDistricts (helper)
+// - supports nested (ads/<uid>/<adId>) and flat (ads/<adId>) structures
+// - sets district values only inside helper callback to avoid stale mismatches
 
 import {
-  auth, db, ref, get, update, remove,
-  onAuthStateChanged, $
+  auth,
+  db,
+  ref,
+  get,
+  update,
+  remove,
+  onAuthStateChanged,
+  $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
+// fallback if $ not exists
 function _$(id){ return document.getElementById(id); }
-const $el = typeof $ === "function" ? $ : _$;
+const $el = (typeof $ === "function") ? $ : _$;
 
-// DOM
+// DOM refs
 const myAdsList = $el("myAdsList");
 
-// Modal
 const editModal = $el("editModal");
 const editFromRegion = $el("editFromRegion");
 const editFromDistrict = $el("editFromDistrict");
@@ -31,158 +36,237 @@ const closeEditBtn = $el("closeEditBtn");
 let editingAdId = null;
 let editingAdOwner = null;
 
-window.userRole = "passenger";
+window.userRole = window.userRole || "passenger";
 
-function format(ms){
+function formatDatetime(ms){
   if(!ms) return "-";
   const d = new Date(ms);
   if(isNaN(d)) return "-";
-  return d.toLocaleString("uz-UZ");
+  return d.toLocaleString("uz-UZ", {
+    year:"numeric", month:"long", day:"numeric",
+    hour:"2-digit", minute:"2-digit"
+  });
 }
 
-/* LOAD ROLE */
+// load user role
 async function loadUserRole(uid){
-  const snap = await get(ref(db, "users/"+uid));
-  if(snap.exists()) window.userRole = snap.val().role || "passenger";
+  try {
+    const snap = await get(ref(db, "users/" + uid));
+    if (snap.exists()) {
+      window.userRole = snap.val().role || "passenger";
+    }
+  } catch(e){
+    window.userRole = "passenger";
+    console.warn("loadUserRole error:", e);
+  }
 }
 
-/* LOAD ADS */
+// Fill edit region selects (uses helper fillRegions which retries if regions not ready)
+function fillEditRegions(){
+  if (typeof window.fillRegions === "function") {
+    window.fillRegions("editFromRegion");
+    window.fillRegions("editToRegion");
+  } else {
+    // fallback: try after small delay
+    setTimeout(() => {
+      if (typeof window.fillRegions === "function") {
+        window.fillRegions("editFromRegion");
+        window.fillRegions("editToRegion");
+      }
+    }, 50);
+  }
+}
+
+// load ads with robust nested/flat handling
 async function loadMyAds(){
   const user = auth.currentUser;
   if(!user) return;
 
   myAdsList.innerHTML = "Yuklanmoqda...";
 
-  const snap = await get(ref(db, "ads"));
-  myAdsList.innerHTML = "";
+  try {
+    const snap = await get(ref(db, "ads"));
+    myAdsList.innerHTML = "";
 
-  if(!snap.exists()){
-    myAdsList.innerHTML = "<p>E'lon yo‘q</p>";
-    return;
-  }
-
-  let arr = [];
-
-  snap.forEach(node => {
-    const val = node.val();
-
-    // nested
-    let nested = false;
-    node.forEach(ch => {
-      const cv = ch.val();
-      if(cv && cv.createdAt) nested = true;
-    });
-
-    if(nested){
-      if(node.key === user.uid){
-        node.forEach(ch => {
-          arr.push({ ad: ch.val(), id: ch.key, owner: user.uid });
-        });
-      }
+    if (!snap.exists()) {
+      myAdsList.innerHTML = "<p>Hozircha e'lon yo'q.</p>";
       return;
     }
 
-    // flat
-    if(val.userId === user.uid){
-      arr.push({ ad: val, id: node.key, owner: val.userId });
+    const list = [];
+
+    snap.forEach(node => {
+      const nodeVal = node.val();
+
+      // detect nested: node has children that look like ads (has createdAt or price)
+      let nested = false;
+      node.forEach(child => {
+        const cv = child.val();
+        if (cv && (cv.createdAt || cv.price || cv.fromRegion)) nested = true;
+      });
+
+      if (nested) {
+        // if nested under current user
+        if (node.key === user.uid) {
+          node.forEach(adNode => {
+            list.push({ ad: adNode.val(), id: adNode.key, owner: node.key });
+          });
+        }
+      } else {
+        // flat
+        if (nodeVal && nodeVal.userId === user.uid) {
+          list.push({ ad: nodeVal, id: node.key, owner: nodeVal.userId });
+        }
+      }
+    });
+
+    if (list.length === 0) {
+      myAdsList.innerHTML = "<p>Hozircha e'lon yo'q.</p>";
+      return;
     }
-  });
 
-  if(arr.length === 0){
-    myAdsList.innerHTML = "<p>E'lon yo‘q</p>";
-    return;
+    list.forEach(x => renderAd(x.ad, x.id, x.owner));
+
+  } catch (err) {
+    console.error("loadMyAds error:", err);
+    myAdsList.innerHTML = "<p>Xatolik yuz berdi.</p>";
   }
-
-  arr.forEach(x => renderAd(x.ad, x.id, x.owner));
 }
 
-function renderAd(ad, id, owner){
+function renderAd(ad, id, owner) {
   const seats = ad.driverSeats || ad.passengerCount || "";
-  const div = document.createElement("div");
-  div.className = "ad-box";
-
-  div.innerHTML = `
-    <div style="font-weight:700; color:#0069d9">${ad.type || ""}</div>
+  const item = document.createElement("div");
+  item.className = "ad-box";
+  item.innerHTML = `
+    <div style="font-weight:700;color:#0069d9">${ad.type || ""}</div>
     <div>${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}</div>
-    <div class="ad-meta">Narx: <b>${ad.price}</b></div>
-    <div class="ad-meta">Vaqt: ${format(ad.departureTime)}</div>
+    <div class="ad-meta">Narx: <b>${ad.price || "-"}</b></div>
+    <div class="ad-meta">Vaqt: ${formatDatetime(ad.departureTime)}</div>
     <div class="ad-meta">Joy: ${seats}</div>
-
     <div class="ad-actions">
-      <button class="btn btn-primary edit" data-id="${id}" data-owner="${owner}">Tahrirlash</button>
-      <button class="btn btn-danger delete" data-id="${id}" data-owner="${owner}">O‘chirish</button>
+      <button class="btn btn-primary edit-btn" data-id="${id}" data-owner="${owner || ""}">Tahrirlash</button>
+      <button class="btn btn-danger delete-btn" data-id="${id}" data-owner="${owner || ""}">O'chirish</button>
     </div>
   `;
-
-  myAdsList.appendChild(div);
+  myAdsList.appendChild(item);
 }
 
+// click handlers
 myAdsList.addEventListener("click", e => {
-  if(e.target.classList.contains("edit")){
+  if (e.target.classList.contains("edit-btn")) {
     openEdit(e.target.dataset.id, e.target.dataset.owner);
   }
-  if(e.target.classList.contains("delete")){
+  if (e.target.classList.contains("delete-btn")) {
     deleteAd(e.target.dataset.id, e.target.dataset.owner);
   }
 });
 
-/* OPEN EDIT MODAL */
-async function openEdit(id, owner){
+closeEditBtn.onclick = () => editModal.style.display = "none";
+
+// open edit modal
+async function openEdit(id, owner) {
   editingAdId = id;
-  editingAdOwner = owner;
+  editingAdOwner = owner || null;
 
-  let snap = await get(ref(db, `ads/${owner}/${id}`));
-  if(!snap.exists()) snap = await get(ref(db, `ads/${id}`));
+  try {
+    // try nested path first if owner provided
+    let snap = null;
+    if (owner) {
+      snap = await get(ref(db, `ads/${owner}/${id}`));
+    }
+    if (!snap || !snap.exists()) {
+      // try flat
+      snap = await get(ref(db, `ads/${id}`));
+    }
+    if (!snap || !snap.exists()) {
+      // fallback search nested nodes
+      const all = await get(ref(db, "ads"));
+      if (all.exists()) {
+        let found = null;
+        all.forEach(userNode => {
+          if (found) return;
+          userNode.forEach(adNode => {
+            if (adNode.key === id) {
+              found = { ad: adNode.val(), owner: userNode.key };
+            }
+          });
+        });
+        if (found) {
+          populateEditModal(found.ad);
+          editingAdOwner = found.owner;
+          editModal.style.display = "flex";
+          return;
+        }
+      }
+      alert("E'lon topilmadi.");
+      return;
+    }
 
-  if(!snap.exists()){
-    alert("E’lon topilmadi");
-    return;
+    populateEditModal(snap.val());
+    editModal.style.display = "flex";
+
+  } catch (err) {
+    console.error("openEdit error:", err);
+    alert("E'lonni ochishda xatolik.");
   }
-
-  const ad = snap.val();
-
-  // **REGIONS DROPDOWN**
-  fillRegions("editFromRegion");
-  fillRegions("editToRegion");
-
-  // **AFTER regions loaded**
-  setTimeout(() => {
-    populateEditModal(ad);
-  }, 40);
-
-  editModal.style.display = "flex";
 }
 
-/* FIXED — PERFECT REGION/DISTRICT SYNC */
-function populateEditModal(ad){
+// populate modal (THIS IS THE FIX: ONLY set district inside callback)
+function populateEditModal(ad) {
+  // ensure region selects are filled
+  fillEditRegions();
 
-  // FROM region
+  // FROM
   editFromRegion.value = ad.fromRegion || "";
-  window.updateDistricts("from", () => {
-    editFromDistrict.value = ad.fromDistrict || "";
-  });
+  // call helper with callback — callback sets district AFTER district options appended
+  if (typeof window.updateDistricts === "function") {
+    window.updateDistricts("from", () => {
+      if (editFromDistrict) editFromDistrict.value = ad.fromDistrict || "";
+    });
+  } else {
+    // fallback: small delay
+    setTimeout(() => {
+      if (typeof window.updateDistricts === "function") {
+        window.updateDistricts("from", () => {
+          if (editFromDistrict) editFromDistrict.value = ad.fromDistrict || "";
+        });
+      }
+    }, 60);
+  }
 
-  // TO region
+  // TO
   editToRegion.value = ad.toRegion || "";
-  window.updateDistricts("to", () => {
-    editToDistrict.value = ad.toDistrict || "";
-  });
+  if (typeof window.updateDistricts === "function") {
+    window.updateDistricts("to", () => {
+      if (editToDistrict) editToDistrict.value = ad.toDistrict || "";
+    });
+  } else {
+    setTimeout(() => {
+      if (typeof window.updateDistricts === "function") {
+        window.updateDistricts("to", () => {
+          if (editToDistrict) editToDistrict.value = ad.toDistrict || "";
+        });
+      }
+    }, 60);
+  }
 
   // other fields
   editPrice.value = ad.price || "";
   editComment.value = ad.comment || "";
   editSeats.value = ad.driverSeats || ad.passengerCount || "";
 
-  if(ad.departureTime){
+  if (ad.departureTime) {
     const d = new Date(ad.departureTime);
-    const pad = n=>String(n).padStart(2,"0");
+    const pad = n => String(n).padStart(2, "0");
     editTime.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } else {
+    editTime.value = "";
   }
 }
 
-closeEditBtn.onclick = () => editModal.style.display="none";
-
+// save edit
 saveEditBtn.onclick = async () => {
+  if (!editingAdId) return alert("Tahrirlash uchun e'lon tanlanmagan.");
 
   const data = {
     fromRegion: editFromRegion.value,
@@ -194,42 +278,82 @@ saveEditBtn.onclick = async () => {
     departureTime: editTime.value ? new Date(editTime.value).getTime() : null
   };
 
-  if(window.userRole==="driver"){
-    data.driverSeats = editSeats.value;
-  } else {
-    data.passengerCount = editSeats.value;
-  }
+  if (window.userRole === "driver") data.driverSeats = editSeats.value;
+  else data.passengerCount = editSeats.value;
 
-  const flat = await get(ref(db, `ads/${editingAdId}`));
-  if(flat.exists()){
-    await update(ref(db, `ads/${editingAdId}`), data);
-  } else {
-    await update(ref(db, `ads/${editingAdOwner}/${editingAdId}`), data);
-  }
+  try {
+    // attempt flat update first
+    const flatSnap = await get(ref(db, `ads/${editingAdId}`));
+    if (flatSnap.exists()) {
+      await update(ref(db, `ads/${editingAdId}`), data);
+    } else {
+      // nested update path
+      if (!editingAdOwner) {
+        // try to find owner
+        const all = await get(ref(db, "ads"));
+        if (all.exists()) {
+          for (const uid of Object.keys(all.val() || {})) {
+            const node = all.val()[uid];
+            if (node && node[editingAdId]) {
+              editingAdOwner = uid;
+              break;
+            }
+          }
+        }
+      }
+      if (editingAdOwner) {
+        await update(ref(db, `ads/${editingAdOwner}/${editingAdId}`), data);
+      } else {
+        throw new Error("Ad path topilmadi");
+      }
+    }
 
-  alert("Yangilandi!");
-  editModal.style.display="none";
-  loadMyAds();
+    alert("E'lon yangilandi!");
+    editModal.style.display = "none";
+    loadMyAds();
+  } catch (err) {
+    console.error("saveEdit error:", err);
+    alert("Yangilashda xatolik yuz berdi.");
+  }
 };
 
-async function deleteAd(id, owner){
-  if(!confirm("O‘chirilsinmi?")) return;
-
-  const flat = await get(ref(db, `ads/${id}`));
-  if(flat.exists()) await remove(ref(db, `ads/${id}`));
-  else await remove(ref(db, `ads/${owner}/${id}`));
-
-  loadMyAds();
+// delete ad
+async function deleteAd(id, owner) {
+  if (!confirm("Rostdan o'chirish?")) return;
+  try {
+    const flatSnap = await get(ref(db, `ads/${id}`));
+    if (flatSnap.exists()) {
+      await remove(ref(db, `ads/${id}`));
+    } else if (owner) {
+      await remove(ref(db, `ads/${owner}/${id}`));
+    } else {
+      // search
+      const all = await get(ref(db, "ads"));
+      if (all.exists()) {
+        for (const uid of Object.keys(all.val() || {})) {
+          if (all.val()[uid] && all.val()[uid][id]) {
+            await remove(ref(db, `ads/${uid}/${id}`));
+            break;
+          }
+        }
+      }
+    }
+    loadMyAds();
+  } catch (err) {
+    console.error("deleteAd error:", err);
+    alert("O'chirishda xatolik yuz berdi.");
+  }
 }
 
-/* INIT */
+// init
 onAuthStateChanged(auth, async user => {
-  if(!user){
-    location.href="/shahartaxi-demo/docs/app/auth/login.html";
+  if (!user) {
+    location.href = "/shahartaxi-demo/docs/app/auth/login.html";
     return;
   }
-
   await loadUserRole(user.uid);
-
+  // ensure edit selects are filled
+  fillEditRegions();
+  // load ads
   loadMyAds();
 });
