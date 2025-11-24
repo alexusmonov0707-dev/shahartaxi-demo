@@ -1,87 +1,97 @@
-// ============================
-// FIREBASE INIT
-// ============================
-import {
-  getDatabase, ref, get, update, remove
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+// ================= FIREBASE INIT ===================
+const firebaseConfig = {
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.appspot.com",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
 
-import {
-  getAuth, onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.getAuth(app);
+const db = firebase.getDatabase(app);
 
-const db = getDatabase();
-const auth = getAuth();
-
+// ============ ELEMENTS =================
 const $ = id => document.getElementById(id);
+const myAdsList = $("myAdsList");
 
-let editingAdId = null;
+// =============== LOAD REGIONS ==============
 
-// ============================
-// LOAD MY ADS
-// ============================
-onAuthStateChanged(auth, user => {
-  if (!user) location.href = "../auth/login.html";
-  else loadMyAds(user.uid);
+function fillRegionSelects() {
+  const fr = $("editFromRegion");
+  const tr = $("editToRegion");
+
+  fr.innerHTML = `<option value="">Viloyat</option>`;
+  tr.innerHTML = `<option value="">Viloyat</option>`;
+
+  regionsTaxi.forEach(r => {
+    fr.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+    tr.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+  });
+}
+
+window.updateEditDistricts = function(type){
+  const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
+  const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
+
+  const region = regionsTaxi.find(r => r.name === regionSelect.value);
+  districtSelect.innerHTML = `<option value="">Tuman</option>`;
+
+  if (!region) return;
+  region.districts.forEach(d => districtSelect.innerHTML += `<option value="${d}">${d}</option>`);
+};
+
+// =============== MY ADS LOAD ===================
+
+firebase.onAuthStateChanged(auth, user => {
+  if (!user) return window.location.href = "/app/auth/login.html";
+  window.currentUID = user.uid;
+  loadMyAds();
 });
 
-async function loadMyAds(uid) {
-  const snap = await get(ref(db, "ads"));
-  const list = $("myAdsList");
-
-  list.innerHTML = "";
+async function loadMyAds() {
+  const snap = await firebase.get(firebase.ref(db, "ads"));
+  myAdsList.innerHTML = "";
 
   if (!snap.exists()) {
-    list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+    myAdsList.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
     return;
   }
 
   snap.forEach(child => {
-    let ad = child.val();
-    if (ad.userId !== uid) return;
+    const ad = child.val();
+    if (ad.userId !== currentUID) return;
 
-    const safeJson = JSON.stringify(ad).replace(/'/g, "&apos;");
-
-    const div = document.createElement("div");
-    div.className = "ad-box";
-    div.innerHTML = `
-      <b style="color:#0069d9;">${ad.type}</b><br>
+    const box = document.createElement("div");
+    box.className = "ad-box";
+    box.innerHTML = `
+      <b style="color:#0069d9">${ad.type}</b><br>
       ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
-      Narx: <b style="color:#28a745">${ad.price}</b><br>
+      Narx: <b style="color:#28a745">${ad.price} so‘m</b><br>
       Vaqt: ${ad.departureTime}<br>
-      <button class="blue-btn edit-btn" 
-              data-id="${child.key}" 
-              data-ad='${safeJson}'>Tahrirlash</button>
-      <button class="red-btn delete-btn" data-id="${child.key}">O‘chirish</button>
+      Bo‘sh joy: ${ad.driverSeats ?? ad.passengerCount ?? "-"}
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <button class="blue-btn" onclick='openEditAd("${child.key}")'>Tahrirlash</button>
+        <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
+      </div>
     `;
-
-    list.appendChild(div);
+    myAdsList.appendChild(box);
   });
 }
 
-// ============================
-// EDIT CLICK HANDLER
-// ============================
-document.addEventListener("click", e => {
-  if (e.target.classList.contains("edit-btn")) {
+// ================== EDIT LOGIC ==================
 
-    const adId = e.target.dataset.id;
-    const ad = JSON.parse(e.target.dataset.ad.replace(/&apos;/g, "'"));
+let editingAdId = null;
 
-    openEditAd(adId, ad);
-  }
-
-  else if (e.target.classList.contains("delete-btn")) {
-    deleteAd(e.target.dataset.id);
-  }
-});
-
-// ============================
-// OPEN EDIT MODAL
-// ============================
-window.openEditAd = function(id, ad) {
+window.openEditAd = async function(id){
   editingAdId = id;
 
-  fillEditRegions(); // selectlarni to‘ldirish
+  const snap = await firebase.get(firebase.ref(db, "ads/" + id));
+  const ad = snap.val();
+
+  fillRegionSelects();
 
   $("editFromRegion").value = ad.fromRegion;
   updateEditDistricts("from");
@@ -91,22 +101,17 @@ window.openEditAd = function(id, ad) {
   updateEditDistricts("to");
   $("editToDistrict").value = ad.toDistrict;
 
-  $("editPrice").value = ad.price || "";
-  $("editTime").value = ad.departureTime || "";
-  $("editComment").value = ad.comment || "";
-  $("editSeats").value = ad.driverSeats || ad.passengerCount || "";
+  $("editPrice").value = ad.price;
+  $("editTime").value = ad.departureTime;
+  $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
+  $("editComment").value = ad.comment ?? "";
 
   $("editAdModal").style.display = "flex";
 };
 
 window.closeEditAd = () => $("editAdModal").style.display = "none";
 
-// ============================
-// SAVE EDIT
-// ============================
-window.saveAdEdit = async function() {
-  if (!editingAdId) return;
-
+window.saveAdEdit = async function(){
   const updates = {
     fromRegion: $("editFromRegion").value,
     fromDistrict: $("editFromDistrict").value,
@@ -118,45 +123,16 @@ window.saveAdEdit = async function() {
     driverSeats: $("editSeats").value
   };
 
-  await update(ref(db, "ads/" + editingAdId), updates);
+  await firebase.update(firebase.ref(db, "ads/" + editingAdId), updates);
 
   alert("Tahrirlandi!");
   closeEditAd();
-  loadMyAds(auth.currentUser.uid);
+  loadMyAds();
 };
 
-// ============================
-// DELETE AD
-// ============================
-async function deleteAd(id) {
-  if (!confirm("Rostdan o‘chirilsinmi?")) return;
-  await remove(ref(db, "ads/" + id));
-  loadMyAds(auth.currentUser.uid);
-}
-
-// ============================
-// REGION HELPERS
-// ============================
-function fillEditRegions() {
-  $("editFromRegion").innerHTML = '<option value="">Viloyat</option>';
-  $("editToRegion").innerHTML = '<option value="">Viloyat</option>';
-
-  regions.forEach(r => {
-    $("editFromRegion").innerHTML += `<option value="${r.name}">${r.name}</option>`;
-    $("editToRegion").innerHTML += `<option value="${r.name}">${r.name}</option>`;
-  });
-}
-
-window.updateEditDistricts = function(type) {
-  let region = $(type === "from" ? "editFromRegion" : "editToRegion").value;
-  let district = $(type === "from" ? "editFromDistrict" : "editToDistrict");
-
-  district.innerHTML = '<option value="">Tuman</option>';
-
-  const reg = regions.find(r => r.name === region);
-  if (!reg) return;
-
-  reg.districts.forEach(t => {
-    district.innerHTML += `<option value="${t}">${t}</option>`;
-  });
+// ============= DELETE ===============
+window.deleteAd = async function(id){
+  if (!confirm("O‘chirilsinmi?")) return;
+  await firebase.remove(firebase.ref(db, "ads/" + id));
+  loadMyAds();
 };
