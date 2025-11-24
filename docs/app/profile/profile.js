@@ -1,5 +1,5 @@
 import { auth, db, ref, get, onAuthStateChanged }
-from "/shahartaxi-demo/docs/libs/lib.js";
+from "../../libs/lib.js";
 
 const avatarImg = document.getElementById("avatarImg");
 const fullName = document.getElementById("fullName");
