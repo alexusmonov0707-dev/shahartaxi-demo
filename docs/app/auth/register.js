@@ -132,5 +132,5 @@ registerBtn.onclick = async () => {
   await set(ref(db, "users/" + uid), userObj);
 
   alert("Ro‘yxatdan o‘tildi! Agar haydovchi bo‘lsangiz, admin tasdiqlashini kuting.");
-  window.location.href = "/shahartaxi-demo/app/user/index.html";
+  window.location.href = "/shahartaxi-demo/docs/app/user/index.html";
 };
