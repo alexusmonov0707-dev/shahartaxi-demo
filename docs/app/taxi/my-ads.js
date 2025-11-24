@@ -1,8 +1,8 @@
 // ===============================================
-//  SHAHARTAXI – MY ADS (FINAL, PERFECT VERSION)
+//  SHAHARTAXI – MY ADS (FINAL FIXED VERSION)
 //  ✔ works with universal regions-helper.js
+//  ✔ NO fillEditRegions() required
 //  ✔ perfect region → district sync
-//  ✔ edit modal fully fixed
 // ===============================================
 
 import {
@@ -16,10 +16,9 @@ import {
   $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-
 const myAdsList = $("myAdsList");
 
-// EDIT MODAL ELEMENTS
+// EDIT MODAL
 const editModal = $("editModal");
 const editFromRegion = $("editFromRegion");
 const editFromDistrict = $("editFromDistrict");
@@ -33,9 +32,8 @@ const saveEditBtn = $("saveEditBtn");
 const closeEditBtn = $("closeEditBtn");
 
 let editingAdId = null;
-let editingAdOwner = null;
 
-window.userRole = window.userRole || "passenger";
+window.userRole = "passenger";
 
 // ===============================
 // LOAD USER ROLE
@@ -51,9 +49,8 @@ async function loadUserRole(uid){
   }
 }
 
-
 // ===============================
-// LOAD USER ADS
+// LOAD MY ADS
 // ===============================
 async function loadMyAds(){
   const user = auth.currentUser;
@@ -61,21 +58,20 @@ async function loadMyAds(){
 
   myAdsList.innerHTML = "Yuklanmoqda...";
 
-  const adsSnap = await get(ref(db, "ads"));
+  const snap = await get(ref(db, "ads"));
   myAdsList.innerHTML = "";
 
-  if (!adsSnap.exists()){
+  if (!snap.exists()){
     myAdsList.innerHTML = "<p>E'lonlar yo'q.</p>";
     return;
   }
 
   let found = false;
 
-  // FLAT ads/<adId>
-  adsSnap.forEach(adNode => {
-    const ad = adNode.val();
+  snap.forEach(node => {
+    const ad = node.val();
     if (ad.userId === user.uid){
-      renderAdItem(ad, adNode.key, user.uid);
+      renderAd(ad, node.key);
       found = true;
     }
   });
@@ -85,49 +81,46 @@ async function loadMyAds(){
   }
 }
 
-
 // ===============================
-// RENDER AD BLOCK
+// RENDER ONE AD
 // ===============================
-function renderAdItem(ad, adId, owner){
+function renderAd(ad, adId){
   const seats = ad.driverSeats || ad.passengerCount || "";
-  const box = document.createElement("div");
-  box.className = "ad-box";
 
-  box.innerHTML = `
-    <div><b>${ad.fromRegion || ""}, ${ad.fromDistrict || ""}</b> → <b>${ad.toRegion || ""}, ${ad.toDistrict || ""}</b></div>
+  const el = document.createElement("div");
+  el.className = "ad-box";
+
+  el.innerHTML = `
+    <div><b>${ad.fromRegion}, ${ad.fromDistrict}</b> → <b>${ad.toRegion}, ${ad.toDistrict}</b></div>
     <div>Narx: <b>${ad.price || "-"}</b></div>
     <div>Vaqt: ${ad.departureTime ? new Date(ad.departureTime).toLocaleString() : "-"}</div>
     <div>Joy: ${seats}</div>
-    <button class="btn btn-primary edit-btn" data-id="${adId}" data-owner="${owner}">Tahrirlash</button>
-    <button class="btn btn-danger delete-btn" data-id="${adId}" data-owner="${owner}">O'chirish</button>
+    <button class="btn edit-btn" data-id="${adId}">Tahrirlash</button>
+    <button class="btn delete-btn" data-id="${adId}">O'chirish</button>
   `;
 
-  myAdsList.appendChild(box);
+  myAdsList.appendChild(el);
 }
 
-
 // ===============================
-// BUTTON EVENTS
+// EDIT / DELETE BUTTONS
 // ===============================
 myAdsList.addEventListener("click", e => {
   if (e.target.classList.contains("edit-btn")){
-    openEdit(e.target.dataset.id, e.target.dataset.owner);
+    openEdit(e.target.dataset.id);
   }
   if (e.target.classList.contains("delete-btn")){
-    deleteAd(e.target.dataset.id, e.target.dataset.owner);
+    deleteAd(e.target.dataset.id);
   }
 });
 
 closeEditBtn.onclick = () => editModal.style.display = "none";
 
-
 // ===============================
 // OPEN EDIT MODAL
 // ===============================
-async function openEdit(adId, owner){
+async function openEdit(adId){
   editingAdId = adId;
-  editingAdOwner = owner;
 
   const snap = await get(ref(db, "ads/" + adId));
   if (!snap.exists()){
@@ -136,42 +129,28 @@ async function openEdit(adId, owner){
   }
 
   const ad = snap.val();
-  fillEditRegions();
 
-  populateEditModal(ad);
-
-  editModal.style.display = "block";
+  populateEdit(ad);
+  editModal.style.display = "flex";
 }
 
-
 // ===============================
-// FILL EDIT MODAL (PERFECT FIXED)
+// FIXED VERSION — populate modal
 // ===============================
-function populateEditModal(ad){
+function populateEdit(ad){
 
-  // ---------------------------
-  // FROM
-  // ---------------------------
-  editFromRegion.value = ad.fromRegion || "";
-
+  // FROM REGION
+  editFromRegion.value = ad.fromRegion;
   window.updateDistricts("from", () => {
-    editFromDistrict.value = ad.fromDistrict || "";
+    editFromDistrict.value = ad.fromDistrict;
   });
 
-
-  // ---------------------------
-  // TO
-  // ---------------------------
-  editToRegion.value = ad.toRegion || "";
-
+  // TO REGION
+  editToRegion.value = ad.toRegion;
   window.updateDistricts("to", () => {
-    editToDistrict.value = ad.toDistrict || "";
+    editToDistrict.value = ad.toDistrict;
   });
 
-
-  // ---------------------------
-  // OTHER FIELDS
-  // ---------------------------
   editPrice.value = ad.price || "";
   editComment.value = ad.comment || "";
   editSeats.value = ad.driverSeats || ad.passengerCount || "";
@@ -185,13 +164,12 @@ function populateEditModal(ad){
   }
 }
 
-
 // ===============================
-// SAVE EDITED AD
+// SAVE EDIT
 // ===============================
 saveEditBtn.onclick = async () => {
 
-  const u = {
+  const updated = {
     fromRegion: editFromRegion.value,
     fromDistrict: editFromDistrict.value,
     toRegion: editToRegion.value,
@@ -202,34 +180,29 @@ saveEditBtn.onclick = async () => {
   };
 
   if (window.userRole === "driver"){
-    u.driverSeats = editSeats.value;
+    updated.driverSeats = editSeats.value;
   } else {
-    u.passengerCount = editSeats.value;
+    updated.passengerCount = editSeats.value;
   }
 
-  await update(ref(db, "ads/" + editingAdId), u);
+  await update(ref(db, "ads/" + editingAdId), updated);
 
   alert("E'lon yangilandi!");
   editModal.style.display = "none";
   loadMyAds();
 };
 
-
 // ===============================
 // DELETE AD
 // ===============================
 async function deleteAd(id){
-
-  if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
-
+  if (!confirm("O'chirish?")) return;
   await remove(ref(db, "ads/" + id));
-
   loadMyAds();
 }
 
-
 // ===============================
-// INIT
+// START
 // ===============================
 onAuthStateChanged(auth, async user => {
   if (!user){
@@ -238,7 +211,5 @@ onAuthStateChanged(auth, async user => {
   }
 
   await loadUserRole(user.uid);
-  fillEditRegions();
-
   loadMyAds();
 });
