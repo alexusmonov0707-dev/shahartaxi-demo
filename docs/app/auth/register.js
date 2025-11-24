@@ -11,7 +11,7 @@ import {
   CONFIG
   - IMGBB API keyni o'zingizning kalitingiz bilan almashtiring
 */
-const IMGBB_API_KEY = "4e27dc8a0b6f5bd0262b6f3cba04b09a"; // o'zingiznikini qo'ying
+const IMGBB_API_KEY = "9917553dc3fcb02146527f9e5ba63d23"; // o'zingiznikini qo'ying
 
 // LOCAL DEFAULT AVATAR (platforma upload/transform uchun shu yerda LOCAL PATH mavjud)
 const DEFAULT_AVATAR_LOCAL_PATH = "/mnt/data/avatar-default.png"; // <-- platformangiz shu pathni URLga aylantiradi
