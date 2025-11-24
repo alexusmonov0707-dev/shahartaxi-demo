@@ -100,3 +100,28 @@
   // initialize if possible now
   ensureRegionsList();
 })();
+// === Extended support for modal edit IDs ===
+window.updateEditDistricts = function (mode) {
+  const regionId = mode === "from" ? "editFromRegion" : "editToRegion";
+  const districtId = mode === "from" ? "editFromDistrict" : "editToDistrict";
+
+  const regionSelect = document.getElementById(regionId);
+  const districtSelect = document.getElementById(districtId);
+
+  if (!regionSelect || !districtSelect) return;
+
+  districtSelect.innerHTML = `<option value="">Tuman</option>`;
+  const selectedRegion = regionSelect.value;
+  if (!selectedRegion) return;
+
+  const regionData = (window.regionsList || []).find(r => r.name === selectedRegion);
+  if (!regionData) return;
+
+  regionData.districts.forEach(d => {
+    const op = document.createElement("option");
+    op.value = d;
+    op.textContent = d;
+    districtSelect.appendChild(op);
+  });
+}
+
