@@ -1,29 +1,21 @@
 // ===============================================
-//  SHAHARTAXI — MY ADS (FINAL FIXED VERSION)
-//  100% region → district sync
+//  SHAHARTAXI — MY ADS (FINAL — fillEditRegions YO‘Q)
+//  100% region ↔ district sync
 //  Works with regions-helper (11).js
-//  No mismatch, no stale district
 // ===============================================
 
 import {
-  auth,
-  db,
-  ref,
-  get,
-  update,
-  remove,
-  onAuthStateChanged,
-  $
+  auth, db, ref, get, update, remove,
+  onAuthStateChanged, $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-// fallback if $ not exists
 function _$(id){ return document.getElementById(id); }
 const $el = typeof $ === "function" ? $ : _$;
 
 // DOM
 const myAdsList = $el("myAdsList");
 
-// Modal elements
+// Modal
 const editModal = $el("editModal");
 const editFromRegion = $el("editFromRegion");
 const editFromDistrict = $el("editFromDistrict");
@@ -41,102 +33,81 @@ let editingAdOwner = null;
 
 window.userRole = "passenger";
 
-function formatDatetime(ms){
+function format(ms){
   if(!ms) return "-";
   const d = new Date(ms);
   if(isNaN(d)) return "-";
-  return d.toLocaleString("uz-UZ", {
-    year:"numeric", month:"long", day:"numeric",
-    hour:"2-digit", minute:"2-digit",
-  });
+  return d.toLocaleString("uz-UZ");
 }
 
-/* -----------------------------------------------------
-   LOAD USER ROLE
------------------------------------------------------ */
+/* LOAD ROLE */
 async function loadUserRole(uid){
-  try {
-    const snap = await get(ref(db, "users/" + uid));
-    if(snap.exists()){
-      window.userRole = snap.val().role || "passenger";
-    }
-  } catch(e){
-    window.userRole = "passenger";
-  }
+  const snap = await get(ref(db, "users/"+uid));
+  if(snap.exists()) window.userRole = snap.val().role || "passenger";
 }
 
-/* -----------------------------------------------------
-   LOAD MY ADS (supports flat + nested)
------------------------------------------------------ */
+/* LOAD ADS */
 async function loadMyAds(){
   const user = auth.currentUser;
   if(!user) return;
 
   myAdsList.innerHTML = "Yuklanmoqda...";
 
-  try{
-    const snap = await get(ref(db, "ads"));
-    myAdsList.innerHTML = "";
+  const snap = await get(ref(db, "ads"));
+  myAdsList.innerHTML = "";
 
-    if(!snap.exists()){
-      myAdsList.innerHTML = "<p>E'lon yo‘q.</p>";
-      return;
-    }
+  if(!snap.exists()){
+    myAdsList.innerHTML = "<p>E'lon yo‘q</p>";
+    return;
+  }
 
-    let results = [];
+  let arr = [];
 
-    snap.forEach(node => {
-      const val = node.val();
+  snap.forEach(node => {
+    const val = node.val();
 
-      // 1) NESTED (ads/userId/adId)
-      let hasChildAds = false;
-      node.forEach(ch => {
-        const cv = ch.val();
-        if(cv && cv.createdAt) hasChildAds = true;
-      });
-
-      if(hasChildAds){
-        if(node.key === user.uid){
-          node.forEach(ch => {
-            results.push({ ad: ch.val(), id: ch.key, owner: user.uid });
-          });
-        }
-        return;
-      }
-
-      // 2) FLAT (ads/adId)
-      if(val && val.userId === user.uid){
-        results.push({ ad: val, id: node.key, owner: val.userId });
-      }
+    // nested
+    let nested = false;
+    node.forEach(ch => {
+      const cv = ch.val();
+      if(cv && cv.createdAt) nested = true;
     });
 
-    if(results.length === 0){
-      myAdsList.innerHTML = "<p>E'lon yo‘q.</p>";
+    if(nested){
+      if(node.key === user.uid){
+        node.forEach(ch => {
+          arr.push({ ad: ch.val(), id: ch.key, owner: user.uid });
+        });
+      }
       return;
     }
 
-    results.forEach(x => renderAd(x.ad, x.id, x.owner));
+    // flat
+    if(val.userId === user.uid){
+      arr.push({ ad: val, id: node.key, owner: val.userId });
+    }
+  });
 
-  } catch(e){
-    console.error(e);
-    myAdsList.innerHTML = "<p>Xatolik yuz berdi.</p>";
+  if(arr.length === 0){
+    myAdsList.innerHTML = "<p>E'lon yo‘q</p>";
+    return;
   }
+
+  arr.forEach(x => renderAd(x.ad, x.id, x.owner));
 }
 
-/* -----------------------------------------------------
-   RENDER AD
------------------------------------------------------ */
 function renderAd(ad, id, owner){
   const seats = ad.driverSeats || ad.passengerCount || "";
   const div = document.createElement("div");
   div.className = "ad-box";
 
   div.innerHTML = `
-    <div style="font-weight:700;color:#0069d9">${ad.type || ""}</div>
+    <div style="font-weight:700; color:#0069d9">${ad.type || ""}</div>
     <div>${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}</div>
     <div class="ad-meta">Narx: <b>${ad.price}</b></div>
-    <div class="ad-meta">Vaqt: ${formatDatetime(ad.departureTime)}</div>
+    <div class="ad-meta">Vaqt: ${format(ad.departureTime)}</div>
     <div class="ad-meta">Joy: ${seats}</div>
+
     <div class="ad-actions">
       <button class="btn btn-primary edit" data-id="${id}" data-owner="${owner}">Tahrirlash</button>
       <button class="btn btn-danger delete" data-id="${id}" data-owner="${owner}">O‘chirish</button>
@@ -146,9 +117,6 @@ function renderAd(ad, id, owner){
   myAdsList.appendChild(div);
 }
 
-/* -----------------------------------------------------
-   BUTTON EVENTS
------------------------------------------------------ */
 myAdsList.addEventListener("click", e => {
   if(e.target.classList.contains("edit")){
     openEdit(e.target.dataset.id, e.target.dataset.owner);
@@ -158,71 +126,62 @@ myAdsList.addEventListener("click", e => {
   }
 });
 
-closeEditBtn.onclick = () => editModal.style.display = "none";
-
-/* -----------------------------------------------------
-   OPEN EDIT MODAL
------------------------------------------------------ */
+/* OPEN EDIT MODAL */
 async function openEdit(id, owner){
   editingAdId = id;
   editingAdOwner = owner;
 
   let snap = await get(ref(db, `ads/${owner}/${id}`));
-  if(!snap.exists()){
-    snap = await get(ref(db, `ads/${id}`));
-  }
+  if(!snap.exists()) snap = await get(ref(db, `ads/${id}`));
 
   if(!snap.exists()){
-    alert("E’lon topilmadi!");
+    alert("E’lon topilmadi");
     return;
   }
 
   const ad = snap.val();
 
-  populateEditModal(ad);
+  // **REGIONS DROPDOWN**
+  fillRegions("editFromRegion");
+  fillRegions("editToRegion");
+
+  // **AFTER regions loaded**
+  setTimeout(() => {
+    populateEditModal(ad);
+  }, 40);
 
   editModal.style.display = "flex";
 }
 
-/* -----------------------------------------------------
-   MAIN FIXED FUNCTION
-   populateEditModal()  — 100% corrections
------------------------------------------------------ */
+/* FIXED — PERFECT REGION/DISTRICT SYNC */
 function populateEditModal(ad){
 
-  // 1) Fill region lists
-  fillEditRegions();
-
-  // 2) FROM region → district
+  // FROM region
   editFromRegion.value = ad.fromRegion || "";
   window.updateDistricts("from", () => {
     editFromDistrict.value = ad.fromDistrict || "";
   });
 
-  // 3) TO region → district
+  // TO region
   editToRegion.value = ad.toRegion || "";
   window.updateDistricts("to", () => {
     editToDistrict.value = ad.toDistrict || "";
   });
 
-  // 4) Other fields
+  // other fields
   editPrice.value = ad.price || "";
   editComment.value = ad.comment || "";
   editSeats.value = ad.driverSeats || ad.passengerCount || "";
 
   if(ad.departureTime){
     const d = new Date(ad.departureTime);
-    const pad = n => String(n).padStart(2,"0");
-    editTime.value =
-      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  } else {
-    editTime.value = "";
+    const pad = n=>String(n).padStart(2,"0");
+    editTime.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 }
 
-/* -----------------------------------------------------
-   SAVE EDIT
------------------------------------------------------ */
+closeEditBtn.onclick = () => editModal.style.display="none";
+
 saveEditBtn.onclick = async () => {
 
   const data = {
@@ -235,14 +194,13 @@ saveEditBtn.onclick = async () => {
     departureTime: editTime.value ? new Date(editTime.value).getTime() : null
   };
 
-  if(window.userRole === "driver")
+  if(window.userRole==="driver"){
     data.driverSeats = editSeats.value;
-  else
+  } else {
     data.passengerCount = editSeats.value;
+  }
 
-  // update path
   const flat = await get(ref(db, `ads/${editingAdId}`));
-
   if(flat.exists()){
     await update(ref(db, `ads/${editingAdId}`), data);
   } else {
@@ -250,37 +208,28 @@ saveEditBtn.onclick = async () => {
   }
 
   alert("Yangilandi!");
-  editModal.style.display = "none";
+  editModal.style.display="none";
   loadMyAds();
 };
 
-/* -----------------------------------------------------
-   DELETE AD
------------------------------------------------------ */
 async function deleteAd(id, owner){
-  if(!confirm("Rostdan o‘chirmoqchimisiz?")) return;
+  if(!confirm("O‘chirilsinmi?")) return;
 
   const flat = await get(ref(db, `ads/${id}`));
-
-  if(flat.exists()){
-    await remove(ref(db, `ads/${id}`));
-  } else {
-    await remove(ref(db, `ads/${owner}/${id}`));
-  }
+  if(flat.exists()) await remove(ref(db, `ads/${id}`));
+  else await remove(ref(db, `ads/${owner}/${id}`));
 
   loadMyAds();
 }
 
-/* -----------------------------------------------------
-   INIT
------------------------------------------------------ */
+/* INIT */
 onAuthStateChanged(auth, async user => {
   if(!user){
-    location.href = "/shahartaxi-demo/docs/app/auth/login.html";
+    location.href="/shahartaxi-demo/docs/app/auth/login.html";
     return;
   }
 
   await loadUserRole(user.uid);
-  fillEditRegions();
+
   loadMyAds();
 });
