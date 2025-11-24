@@ -3,31 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <title>Ro‘yxatdan o‘tish</title>
-    <link rel="stylesheet" href="/shahartaxi-demo/docs/style.css">
+    <link rel="stylesheet" href="/shahartaxi-demo/style.css">
+    <style>
+        .hidden { display: none; }
+        .form-group { margin-bottom: 12px; }
+        label { font-size: 14px; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 10px; font-size: 15px; }
+        .section-title { font-size: 16px; font-weight: bold; margin-top: 20px; }
+    </style>
 </head>
 <body>
 
 <div class="auth-container">
     <h2>Ro‘yxatdan o‘tish</h2>
 
-    <input type="text" id="fullName" placeholder="To‘liq ism" />
-    <input type="text" id="phone" placeholder="Telefon raqam" />
-    
-    <select id="role">
-        <option value="passenger">Yo‘lovchi</option>
-        <option value="driver">Haydovchi</option>
-    </select>
+    <div class="form-group">
+        <label>To‘liq ism</label>
+        <input type="text" id="fullName" />
+    </div>
 
-    <input type="password" id="password" placeholder="Parol" />
+    <div class="form-group">
+        <label>Telefon</label>
+        <input type="text" id="phone" placeholder="+998901234567" />
+    </div>
+
+    <div class="form-group">
+        <label>Parol</label>
+        <input type="password" id="password" />
+    </div>
+
+    <div class="form-group">
+        <label>Rol</label>
+        <select id="role">
+            <option value="passenger">Yo‘lovchi</option>
+            <option value="driver">Haydovchi</option>
+        </select>
+    </div>
+
+    <!-- DRIVER EXTRA FORM -->
+    <div id="driverFields" class="hidden">
+
+        <div class="section-title">Haydovchi ma’lumotlari</div>
+
+        <div class="form-group">
+            <label>Mashina modeli</label>
+            <input type="text" id="carModel" placeholder="Nexia 3, Cobalt..." />
+        </div>
+
+        <div class="form-group">
+            <label>Mashina rangi</label>
+            <input type="text" id="carColor" placeholder="Oq, qora..." />
+        </div>
+
+        <div class="form-group">
+            <label>Mashina raqami</label>
+            <input type="text" id="carNumber" placeholder="01 A 123 BC" />
+        </div>
+
+        <div class="form-group">
+            <label>Guvohnoma raqami</label>
+            <input type="text" id="license" />
+        </div>
+
+        <div class="form-group">
+            <label>Tug‘ilgan sana</label>
+            <input type="date" id="birthdate" />
+        </div>
+
+        <div class="form-group">
+            <label>Tex pasport rasm (majburiy)</label>
+            <input type="file" id="techPassport" accept="image/*" />
+        </div>
+
+        <div class="form-group">
+            <label>Avatar rasm (ixtiyoriy)</label>
+            <input type="file" id="avatar" accept="image/*" />
+        </div>
+
+    </div>
 
     <button id="registerBtn" class="btn btn-primary">Ro‘yxatdan o‘tish</button>
 
     <div class="switch">
-        Akkount bormi?
-        <a href="/shahartaxi-demo/docs/app/auth/login.html">Kirish</a>
+        Akkountingiz bormi?
+        <a href="/shahartaxi-demo/app/auth/login.html">Kirish</a>
     </div>
+
 </div>
 
-<script type="module" src="/shahartaxi-demo/docs/app/auth/register.js"></script>
+<script type="module" src="/shahartaxi-demo/app/auth/register.js"></script>
+
 </body>
 </html>
