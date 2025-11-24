@@ -34,7 +34,7 @@ document.getElementById("registerBtn").onclick = async () => {
 
         alert("Akkount yaratildi!");
 
-        window.location.href = "/shahartaxi-demo/app/user/index.html";
+        window.location.href = "/shahartaxi-demo/docs/app/user/index.html";
 
     } catch (err) {
         console.error(err);
