@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mening e'lonlarim — ShaharTaxi</title>
 
+  <!-- sening style-laring o‘zgarmagan -->
   <style>
     :root{
       --primary:#0069d9; --danger:#ff5a5f; --muted:#6b7280;
@@ -46,16 +47,16 @@
       <h3>Tahrirlash</h3>
 
       <label>Qayerdan (Viloyat)</label>
-      <select id="editFromRegion" class="fullwidth"><option value="">Viloyat</option></select>
+      <select id="editFromRegion" class="fullwidth"></select>
 
       <label>Tuman</label>
-      <select id="editFromDistrict" class="fullwidth"><option value="">Tuman</option></select>
+      <select id="editFromDistrict" class="fullwidth"></select>
 
       <label>Qayerga (Viloyat)</label>
-      <select id="editToRegion" class="fullwidth"><option value="">Viloyat</option></select>
+      <select id="editToRegion" class="fullwidth"></select>
 
       <label>Tuman</label>
-      <select id="editToDistrict" class="fullwidth"><option value="">Tuman</option></select>
+      <select id="editToDistrict" class="fullwidth"></select>
 
       <label>Narx</label>
       <input id="editPrice" class="fullwidth">
@@ -76,9 +77,10 @@
     </div>
   </div>
 
- <script src="/shahartaxi-demo/docs/assets/regions-helper.js"></script>
-<script src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
-<script type="module" src="my-ads.js"></script>
+  <!-- ⚠️ MUHIM TAHRIR — TO‘G‘RI TARTIB -->
+  <script src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
+  <script src="/shahartaxi-demo/docs/assets/regions-helper.js"></script>
+  <script type="module" src="my-ads.js"></script>
 
 </body>
 </html>
