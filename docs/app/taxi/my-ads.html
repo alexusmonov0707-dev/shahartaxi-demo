@@ -18,7 +18,7 @@
     .btn{ padding:10px 14px; border-radius:8px; border:0; cursor:pointer; font-weight:600; }
     .btn-primary{ background:var(--primary); color:#fff }
     .btn-danger{ background:var(--danger); color:#fff }
-    .ad-box{ border:1px solid #eef2f7; border-radius:10px; padding:12px; margin-bottom:12px; background:#fff }
+    .ad-box{ border:1px solid #eef2f7; border-radius:10px; padding:12px; margin-bottom:12px; background:#fff; transition:opacity .18s }
     .ad-meta{ color:var(--muted); margin-top:6px; font-size:14px }
     .ad-actions{ display:flex; gap:8px; margin-top:10px; }
 
@@ -26,6 +26,14 @@
     .modal .box{ width:100%; max-width:520px; background:white; padding:18px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.2) }
     label{ font-weight:600; font-size:14px; display:block; margin:8px 0 6px; color:#334155 }
     .fullwidth{ width:100% }
+
+    /* createdAt o‘ng past burchakda */
+    .created-at-box{
+      text-align:right;
+      margin-top:12px;
+      font-size:13px;
+      color:#6b7280;
+    }
   </style>
 </head>
 
@@ -69,6 +77,11 @@
       <label>Izoh</label>
       <textarea id="editComment" rows="3" class="fullwidth"></textarea>
 
+      <!-- CREATED AT – o‘ng past burchak -->
+      <div class="created-at-box">
+        <span id="editCreatedAt"></span>
+      </div>
+
       <div style="display:flex; gap:8px; margin-top:10px;">
         <button id="saveEditBtn" class="btn btn-primary">Saqlash</button>
         <button id="closeEditBtn" class="btn btn-ghost">Bekor qilish</button>
@@ -76,11 +89,11 @@
     </div>
   </div>
 
-  <!-- REGIONS JS -->
+  <!-- REGIONS -->
   <script src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
   <script src="/shahartaxi-demo/docs/assets/regions-helper.js"></script>
 
-  <!-- 👉 MUHIM QO‘SHILGAN QISM — VILOYAT O‘ZGARGANDA TUMAN YANGILANADI -->
+  <!-- REGION CHANGE LISTENERS -->
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const frR = document.getElementById("editFromRegion");
