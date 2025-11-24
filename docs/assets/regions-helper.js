@@ -1,9 +1,9 @@
 // ======================================================
 //  UNIVERSAL REGIONS HELPER (create-ad + my-ads + future)
-//  ✔ ID autodetect
-//  ✔ regions late-load safe
-//  ✔ both edit and normal mode
-//  ✔ no crash even if regions not ready
+//  ✔ Auto-detect IDs
+//  ✔ Late-load safe (wait for regions)
+//  ✔ No more stuck district bug
+//  ✔ Supports: fromRegion/fromDistrict + editFromRegion/editFromDistrict
 // ======================================================
 
 (function () {
@@ -25,7 +25,8 @@
     return false;
   }
 
-  ensureRegionsList(); // first attempt
+  // First try
+  ensureRegionsList();
 
 
   //---------------------------------------
@@ -35,7 +36,6 @@
     const el = document.getElementById(selectId);
     if (!el) return;
 
-    // Retry loading if needed
     let attempts = 0;
     const tryFill = () => {
       attempts++;
@@ -45,6 +45,7 @@
         setTimeout(tryFill, 50);
       }
     };
+
     tryFill();
   };
 
@@ -61,15 +62,12 @@
 
   //---------------------------------------
   // 3) UNIVERSAL DISTRICT UPDATER
-  //    Supports both:
-  //    - fromRegion / fromDistrict
-  //    - editFromRegion / editFromDistrict
   //---------------------------------------
   window.updateDistricts = function (type) {
     let regionSelect = document.getElementById(type + "Region");
     let districtSelect = document.getElementById(type + "District");
 
-    // AUTODETECT IF NOT FOUND (edit modal)
+    // AUTODETECT (edit modal)
     if (!regionSelect || !districtSelect) {
       const map = {
         from: { r: "editFromRegion", d: "editFromDistrict" },
@@ -84,7 +82,6 @@
 
     if (!regionSelect || !districtSelect) return;
 
-    // retry safe
     let attempts = 0;
     const tryUpdate = () => {
       attempts++;
@@ -94,12 +91,19 @@
         setTimeout(tryUpdate, 50);
       }
     };
+
     tryUpdate();
   };
 
 
+  //---------------------------------------
+  // 4) DISTRICTS FILLER (FIXED VERSION)
+  //---------------------------------------
   function fillDistricts(regionSelect, districtSelect) {
+
+    // Har safar tozalaymiz:
     districtSelect.innerHTML = `<option value="">Tuman</option>`;
+    districtSelect.selectedIndex = 0;  // ★ ENG MUHIM FIX — eski tuman qotib qolmaydi
 
     const selectedRegion = regionSelect.value;
     if (!selectedRegion) return;
@@ -107,12 +111,16 @@
     const regionData = (window.regionsList || []).find(r => r.name === selectedRegion);
     if (!regionData) return;
 
+    // Yangi tumanlarni qo‘shish
     regionData.districts.forEach(d => {
       const op = document.createElement("option");
       op.value = d;
       op.textContent = d;
       districtSelect.appendChild(op);
     });
+
+    // Yangi tumanga default qaytish (yana kafolat)
+    districtSelect.selectedIndex = 0;
   }
 
 })();
