@@ -2,50 +2,25 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <title>ShaharTaxi — Kirish</title>
-
-    <link rel="stylesheet" href="../../style.css?v=3">
-
-    <style>
-        body { background:#eef2f7; font-family:Arial; }
-        .login-box {
-            width:360px; margin:70px auto; background:white; padding:25px;
-            border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,.08); text-align:center;
-        }
-        input {
-            width:100%; padding:12px; margin-top:10px; border-radius:8px;
-            border:1px solid #ccc; font-size:16px;
-        }
-        button {
-            width:100%; padding:12px; background:#0069d9; border:none;
-            margin-top:12px; color:white; font-size:18px; border-radius:8px;
-            cursor:pointer;
-        }
-    </style>
+    <title>Kirish</title>
+    <link rel="stylesheet" href="/shahartaxi-demo/style.css">
 </head>
-
 <body>
 
-<div class="login-box">
-    <h2>ShaharTaxi — Kirish</h2>
+<div class="auth-container">
+    <h2>Kirish</h2>
 
-    <input id="phone" type="text" placeholder="+998901234567">
+    <input type="text" id="phone" placeholder="Telefon raqam" />
+    <input type="password" id="password" placeholder="Parol" />
 
-    <div id="recaptcha-container"></div>
+    <button id="loginBtn" class="btn btn-primary">Kirish</button>
 
-    <button id="sendBtn">SMS yuborish</button>
-
-    <input id="smsCode" type="text" placeholder="SMS kod">
-
-    <button id="verifyBtn">Kirish</button>
-
-    <p style="margin-top:15px">
-        <a href="register.html">Ro‘yxatdan o‘tish</a>
-    </p>
+    <div class="switch">
+        Akkount yo‘qmi?
+        <a href="/shahartaxi-demo/app/auth/register.html">Ro‘yxatdan o‘tish</a>
+    </div>
 </div>
 
-<!-- 🇺🇿 faqat shu JS kerak -->
-<script type="module" src="/shahartaxi-demo/app/user/js/login.js"></script>
-
+<script type="module" src="/shahartaxi-demo/app/auth/login.js"></script>
 </body>
 </html>
