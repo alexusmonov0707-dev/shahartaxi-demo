@@ -1,10 +1,14 @@
 // ======================================================
-//   UNIVERSAL REGIONS HELPER (FINAL FIXED VERSION)
+//   SUPER UNIVERSAL REGIONS HELPER (FINAL VERSION)
+//   supports create-ad + edit modal + ANY ID formats
+//   100% correct district selection reset + sync
 // ======================================================
 
 (function () {
 
-  // 1) REGIONS LOAD
+  // -------------------------------
+  // 1) REGIONS LOADING (SAFE)
+  // -------------------------------
   function ensureRegionsList() {
     try {
       if (window.regions && typeof window.regions === "object") {
@@ -18,34 +22,37 @@
     window.regionsList = window.regionsList || [];
     return false;
   }
+
   ensureRegionsList();
 
-
-  // 2) FILL REGIONS
+  // -------------------------------
+  // 2) REGION SELECT FILLER
+  // -------------------------------
   window.fillRegions = function (selectId) {
     const el = document.getElementById(selectId);
     if (!el) return;
 
-    let tries = 0;
+    let attempts = 0;
     (function wait() {
-      tries++;
-      if (ensureRegionsList() || tries > 10) {
+      attempts++;
+      if (ensureRegionsList() || attempts > 15) {
         el.innerHTML = `<option value="">Viloyat</option>`;
         (window.regionsList || []).forEach(r => {
-          const opt = document.createElement("option");
-          opt.value = r.name;
-          opt.textContent = r.name;
-          el.appendChild(opt);
+          const op = document.createElement("option");
+          op.value = r.name;
+          op.textContent = r.name;
+          el.appendChild(op);
         });
-      } else {
-        setTimeout(wait, 50);
-      }
+      } else setTimeout(wait, 30);
     })();
   };
 
 
-  // 3) UPDATE DISTRICTS (auto-detect edit modal or create-ad)
-  window.updateDistricts = function (type) {
+  // -------------------------------
+  // 3) UNIVERSAL DISTRICT UPDATER
+  //    (supports edit + normal modes)
+  // -------------------------------
+  window.updateDistricts = function (type, callback = null) {
     let rSel = document.getElementById(type + "Region");
     let dSel = document.getElementById(type + "District");
 
@@ -53,7 +60,7 @@
     if (!rSel || !dSel) {
       const m = {
         from: { r: "editFromRegion", d: "editFromDistrict" },
-        to: { r: "editToRegion", d: "editToDistrict" }
+        to:   { r: "editToRegion",   d: "editToDistrict" }
       }[type];
 
       if (m) {
@@ -67,22 +74,25 @@
     let tries = 0;
     (function wait() {
       tries++;
-      if (ensureRegionsList() || tries > 10) {
+      if (ensureRegionsList() || tries > 15) {
         fillDistricts(rSel, dSel);
+        if (callback) setTimeout(callback, 20); // ★ tumanni yuklab bo‘lgandan keyin callback
       } else {
-        setTimeout(wait, 50);
+        setTimeout(wait, 30);
       }
     })();
   };
 
 
-  // 4) FINAL DISTRICT FILLER — 100% FIXED VERSION
+  // -------------------------------
+  // 4) DISTRICTS FILLER (FINAL FIX)
+  // -------------------------------
   function fillDistricts(regionSelect, districtSelect) {
 
-    // ALWAYS reset district select:
+    // ★ ALWAYS reset district select completely
     districtSelect.innerHTML = `<option value="">Tuman</option>`;
-    districtSelect.value = "";           // ★ KEY FIX
-    districtSelect.selectedIndex = 0;    // ★ KEY FIX
+    districtSelect.value = "";
+    districtSelect.selectedIndex = 0;
 
     const selectedRegion = regionSelect.value;
     if (!selectedRegion) return;
@@ -91,13 +101,13 @@
     if (!regionData) return;
 
     regionData.districts.forEach(d => {
-      const opt = document.createElement("option");
-      opt.value = d;
-      opt.textContent = d;
-      districtSelect.appendChild(opt);
+      const op = document.createElement("option");
+      op.value = d;
+      op.textContent = d;
+      districtSelect.appendChild(op);
     });
 
-    // after load → must reset again so old value isn't restored
+    // ★ ensure NO OLD district stays
     districtSelect.value = "";
     districtSelect.selectedIndex = 0;
   }
