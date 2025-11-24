@@ -273,40 +273,39 @@ async function openEdit(id, ownerProvided = null){
 }
 
 /* Populate modal fields and regions (FIXED: set district only after helper finished) */
-function populateEditModal(ad){
-  // prepare regions dropdowns
-  fillEditRegions();
+function populateEditModal(ad) {
 
-  // FROM region -> set region first, then load districts, then set district value via callback
-  editFromRegion.value = ad.fromRegion || "";
-  window.updateEditDistricts("from", () => {
-    // ensure district select exists then set
-    if(editFromDistrict){
-      // if ad.fromDistrict is not present, keep default empty
-      editFromDistrict.value = ad.fromDistrict || "";
+    // REGION LIST
+    fillEditRegions();
+
+    // FROM
+    editFromRegion.value = ad.fromRegion || "";
+    window.updateDistricts("from", () => {
+        editFromDistrict.value = ad.fromDistrict || "";
+    });
+
+    // TO
+    editToRegion.value = ad.toRegion || "";
+    window.updateDistricts("to", () => {
+        editToDistrict.value = ad.toDistrict || "";
+    });
+
+    // Sof fieldlar
+    editPrice.value = ad.price || "";
+    editComment.value = ad.comment || "";
+
+    editSeats.value = ad.driverSeats || ad.passengerCount || "";
+
+    if (ad.departureTime) {
+        const d = new Date(ad.departureTime);
+        const pad = n => String(n).padStart(2, "0");
+        editTime.value =
+            `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } else {
+        editTime.value = "";
     }
-  });
+}
 
-  // TO region -> same logic
-  editToRegion.value = ad.toRegion || "";
-  window.updateEditDistricts("to", () => {
-    if(editToDistrict){
-      editToDistrict.value = ad.toDistrict || "";
-    }
-  });
-
-  // Other fields
-  editPrice.value = ad.price || "";
-  editSeats.value = ad.driverSeats || ad.passengerCount || "";
-  editComment.value = ad.comment || "";
-
-  if(ad.departureTime){
-    const d = new Date(ad.departureTime);
-    const pad= n=> String(n).padStart(2,"0");
-    editTime.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  } else {
-    editTime.value = "";
-  }
 
   // Show/hide seats logic based on userRole (driver/passenger)
   if(window.userRole === "driver"){
