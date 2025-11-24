@@ -1,9 +1,5 @@
-// my-ads.js — OPTIMIZED FULL VERSION
-// Uses regions-helper.js (window.fillRegions, window.updateDistricts)
-// Caching: window.adsCache
-// Only updates single card DOM on edit (with fade animation)
-// createdAt shown in modal (#editCreatedAt)
-// Keep all previous features intact.
+// my-ads.js — FINAL FIX: role rendering + createdAt in card + cache + single-card update + smooth fade
+// Keeps all original features. Uses regions-helper.js functions (window.fillRegions, window.updateDistricts)
 
 import {
   auth, db, ref, get, update, remove, onAuthStateChanged, $
@@ -45,7 +41,7 @@ function fmt(ms){
   return d.toLocaleString("uz-UZ");
 }
 
-// --- load role ---
+// --- load role (kept for compatibility) ---
 async function loadUserRole(uid){
   const s = await get(ref(db,"users/"+uid));
   if(s.exists()) window.userRole = s.val().role || "passenger";
@@ -57,21 +53,58 @@ function fillEditRegions(){
   window.fillRegions("editToRegion");
 }
 
+// determine role label for display using ad.type primarily
+function getRoleLabel(ad){
+  if(!ad) return "";
+  const tRaw = (ad.type || "").toString().trim().toLowerCase();
+  if(tRaw === "haydovchi" || tRaw === "driver") return "Haydovchi";
+  if(tRaw === "yo'lovchi" || tRaw === "yolovchi" || tRaw === "passenger") return "Yo‘lovchi";
+  // fallback heuristics
+  if(ad.driverSeats) return "Haydovchi";
+  if(ad.passengerCount) return "Yo‘lovchi";
+  return "";
+}
+
 // helper: create card DOM (returns element)
 function createAdElement(ad, id, owner){
+  const roleLabel = getRoleLabel(ad);
   const s = ad.driverSeats || ad.passengerCount || "";
   const box = document.createElement("div");
   box.className = "ad-box";
   box.dataset.id = id;
   box.dataset.owner = owner;
+
+  // compute departure display
+  const departureDisplay = (()=>{
+    if(!ad) return "-";
+    if(ad.departureTime && typeof ad.departureTime === "number") return fmt(ad.departureTime);
+    if(ad.departureTime && typeof ad.departureTime === "string"){
+      const parsed = Date.parse(ad.departureTime);
+      return isNaN(parsed) ? ad.departureTime : fmt(parsed);
+    }
+    return "-";
+  })();
+
+  // createdAt for card
+  let createdAtDisp = "-";
+  if(ad && ad.createdAt){
+    let ms = null;
+    if(typeof ad.createdAt === "number") ms = ad.createdAt;
+    else if(typeof ad.createdAt === "string"){
+      const parsed = Date.parse(ad.createdAt);
+      ms = isNaN(parsed) ? null : parsed;
+    }
+    createdAtDisp = ms ? fmt(ms) : String(ad.createdAt || "-");
+  }
+
   box.innerHTML = `
-    <div style="font-weight:700;color:#0069d9">${ad.type||""}</div>
-    <div class="ad-route">${escapeHtml(ad.fromRegion||"")} ${escapeHtml(ad.fromDistrict||"")} → ${escapeHtml(ad.toRegion||"")} ${escapeHtml(ad.toDistrict||"")}</div>
-    <div class="ad-meta">Narx: <b>${escapeHtml(String(ad.price||""))}</b></div>
-    <div class="ad-meta">Vaqt: ${fmt(ad.departureTime)}</div>
+    <div style="font-weight:700;color:#0069d9">${escapeHtml(roleLabel)}</div>
+    <div class="ad-route" style="margin-top:6px;font-weight:600">${escapeHtml(ad.fromRegion||"")} ${escapeHtml(ad.fromDistrict||"")} → ${escapeHtml(ad.toRegion||"")} ${escapeHtml(ad.toDistrict||"")}</div>
+    <div class="ad-meta" style="margin-top:8px">Narx: <b>${escapeHtml(String(ad.price||""))}</b></div>
+    <div class="ad-meta">Vaqt: ${departureDisplay}</div>
     <div class="ad-meta">Joy: ${escapeHtml(String(s||""))}</div>
-    <div class="ad-meta">E'lon berilgan: ${fmt(ad.createdAt)}</div>
-    <div class="ad-actions">
+    <div class="ad-meta" style="text-align:right; color:#6b7280; margin-top:8px">E'lon berilgan: ${escapeHtml(createdAtDisp)}</div>
+    <div class="ad-actions" style="margin-top:10px">
       <button class="btn btn-primary edit" data-id="${id}" data-owner="${owner}">Tahrirlash</button>
       <button class="btn btn-danger delete" data-id="${id}" data-owner="${owner}">O‘chirish</button>
     </div>
@@ -313,7 +346,6 @@ saveBtn.onclick = async ()=>{
     // merge fields locally to keep createdAt, type, userId etc.
     window.adsCache[editingId].ad = Object.assign({}, window.adsCache[editingId].ad, data);
     // ensure departureTime stored as ms (we set it above)
-    // re-render only this card
     updateCardInDOM(window.adsCache[editingId].ad, editingId, window.adsCache[editingId].owner);
   } else {
     // If not in cache, fetch single snapshot and update DOM
