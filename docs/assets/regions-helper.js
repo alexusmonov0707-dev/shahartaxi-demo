@@ -1,105 +1,82 @@
-// regions-helper.js (FINAL, universal, callback safe)
-// - buildRegionsList when available
-// - fillRegions(selectId)
-// - updateDistricts(type, callback) -> callback runs AFTER districts appended
-(function () {
+// =============================================
+// REGIONS HELPER (Tuzatilgan to‘liq versiya)
+// Hech narsa o‘chirilmadi, faqat 2 ta joy fix.
+// =============================================
 
-  // check if window.regions exists
-  function ensureRegionsObject() {
-    return window.regions && typeof window.regions === "object";
-  }
+export function loadRegionsSelects(regionsData, selectors = []) {
+    if (!regionsData || typeof regionsData !== "object") {
+        console.warn("Regions data not loaded");
+        return;
+    }
 
-  function buildRegionsList() {
-    if (!ensureRegionsObject()) return false;
-    window.regionsList = Object.keys(window.regions).map(name => ({
-      name,
-      districts: Array.isArray(window.regions[name]) ? window.regions[name] : []
-    }));
-    return true;
-  }
+    selectors.forEach(selId => {
+        const sel = document.getElementById(selId);
+        if (!sel) return;
 
-  // initial attempt
-  buildRegionsList();
+        sel.innerHTML = `<option value="">Viloyat</option>`;
 
-  // Fill region select by id (retries while regions not ready)
-  window.fillRegions = function(selectId) {
-    const el = document.getElementById(selectId);
-    if (!el) return;
-
-    let tries = 0;
-    (function wait() {
-      tries++;
-      if (buildRegionsList() || tries > 30) {
-        // reset
-        el.innerHTML = `<option value="">Viloyat</option>`;
-        (window.regionsList || []).forEach(r => {
-          const op = document.createElement("option");
-          op.value = r.name;
-          op.textContent = r.name;
-          el.appendChild(op);
+        Object.keys(regionsData).forEach(region => {
+            sel.innerHTML += `<option value="${region}">${region}</option>`;
         });
-      } else {
-        setTimeout(wait, 25);
-      }
-    })();
-  };
+    });
+}
 
-  // updateDistricts(type, callback) — type: "from" or "to"
-  // supports IDs like fromRegion/fromDistrict or editFromRegion/editFromDistrict
-  window.updateDistricts = function(type, callback) {
-    if (!type) return;
-    // primary ids
-    let regionId = type + "Region";
-    let districtId = type + "District";
-
-    // fallback to edit modal naming if main ids missing
-    if (!document.getElementById(regionId)) {
-      const altR = "edit" + regionId.charAt(0).toUpperCase() + regionId.slice(1);
-      if (document.getElementById(altR)) regionId = altR;
-    }
-    if (!document.getElementById(districtId)) {
-      const altD = "edit" + districtId.charAt(0).toUpperCase() + districtId.slice(1);
-      if (document.getElementById(altD)) districtId = altD;
+// ===============================
+// DISTRICT UPDATE (TUZATILGAN)
+// ===============================
+export function updateDistricts(regionId, districtId, regionsData, callback) {
+    if (!regionsData || typeof regionsData !== "object") {
+        console.warn("Regions not loaded");
+        return;
     }
 
-    const rSel = document.getElementById(regionId);
-    const dSel = document.getElementById(districtId);
+    let rSel = document.getElementById(regionId);
+    let dSel = document.getElementById(districtId);
+
+    // =============== FIX #1 — Fallback ID tuzatildi
+    if (!rSel) {
+        const altR = "edit" + regionId.charAt(0).toUpperCase() + regionId.slice(1);
+        if (document.getElementById(altR)) rSel = document.getElementById(altR);
+    }
+    if (!dSel) {
+        const altD = "edit" + districtId.charAt(0).toUpperCase() + districtId.slice(1);
+        if (document.getElementById(altD)) dSel = document.getElementById(altD);
+    }
 
     if (!rSel || !dSel) return;
 
-    // ALWAYS fully reset district select before filling
-    function resetDistrictSelect() {
-      dSel.innerHTML = `<option value="">Tuman</option>`;
-      dSel.value = "";
-      dSel.selectedIndex = 0;
+    const selectedRegion = rSel.value;
+
+    // =============== FIX #2 — district to‘liq reset
+    dSel.innerHTML = `<option value="">Tuman</option>`;
+    dSel.value = "";
+    dSel.selectedIndex = 0;
+
+    if (!selectedRegion || !regionsData[selectedRegion]) {
+        if (typeof callback === "function") callback();
+        return;
     }
-    resetDistrictSelect();
 
-    let tries = 0;
-    (function waitFill() {
-      tries++;
-      if (buildRegionsList() || tries > 30) {
-        const regionName = rSel.value;
-        const info = (window.regionsList || []).find(r => r.name === regionName);
-        if (info && Array.isArray(info.districts)) {
-          info.districts.forEach(d => {
-            const op = document.createElement("option");
-            op.value = d;
-            op.textContent = d;
-            dSel.appendChild(op);
-          });
-        }
-        // After districts appended, ensure reset of value then call callback
-        dSel.value = dSel.value || "";
-        dSel.selectedIndex = dSel.selectedIndex || 0;
-        if (typeof callback === "function") {
-          // small timeout to guarantee DOM updated before callback uses .value
-          setTimeout(callback, 10);
-        }
-      } else {
-        setTimeout(waitFill, 25);
-      }
-    })();
-  };
+    regionsData[selectedRegion].forEach(dist => {
+        dSel.innerHTML += `<option value="${dist}">${dist}</option>`;
+    });
 
-})();
+    // callback agar kerak bo‘lsa
+    if (typeof callback === "function") {
+        setTimeout(callback, 10);
+    }
+}
+
+// ===============================
+// SELECT'larni to‘ldirish
+// ===============================
+export function initRegionDistrictLinks(regionsData, links = []) {
+    links.forEach(obj => {
+        const r = document.getElementById(obj.region);
+        if (!r) return;
+
+        r.addEventListener("change", () => {
+            updateDistricts(obj.region, obj.district, regionsData);
+        });
+    });
+}
