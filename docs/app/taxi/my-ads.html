@@ -1,89 +1,68 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>Mening e’lonlarim</title>
-
   <style>
-    body { font-family: Arial; background:#f2f4f8; margin:0; }
-    .topbar { background:#0069d9; color:#fff; padding:14px 20px; font-size:20px; }
-    .card {
-      max-width:900px; margin:20px auto; background:#fff; padding:20px;
-      border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    }
-    .ad-box {
-      border:1px solid #ddd;
-      border-radius:10px;
-      padding:12px;
-      margin-bottom:12px;
-      background:#f8faff;
-    }
-    button {
-      padding:10px 20px; border:none; border-radius:6px; cursor:pointer;
-    }
+    body { font-family: Arial; background:#f2f4f8; margin:0; padding:0; }
+    .card { max-width:900px; margin:20px auto; background:#fff; padding:20px;
+            border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+    .ad-box { border:1px solid #ddd; border-radius:10px; padding:12px; margin-bottom:12px; }
+    button { padding:10px; border:none; border-radius:6px; cursor:pointer; width:100%; }
     .blue-btn { background:#0069d9; color:#fff; }
-    .red-btn { background:#d9534f; color:#fff; }
-
-    #editAdModal {
-      position:fixed; left:0; top:0; right:0; bottom:0;
-      background:rgba(0,0,0,0.5); display:none;
-      justify-content:center; align-items:center;
-    }
-    .modal-box {
-      background:#fff; padding:20px; border-radius:12px;
-      width:350px; box-shadow:0 4px 12px rgba(0,0,0,0.3);
-    }
-    select, input, textarea {
-      width:100%; padding:10px; margin-top:8px;
-      border:1px solid #ccc; border-radius:6px;
-      box-sizing:border-box;
-    }
+    .red-btn  { background:#d9534f; color:#fff; }
+    #editAdModal { position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.6);
+                   display:none; justify-content:center; align-items:center; z-index:999; }
+    .modal-box { background:#fff; padding:20px; border-radius:12px; width:360px; }
+    select, input, textarea { width:100%; padding:10px; margin-top:8px; border-radius:6px;
+                              border:1px solid #ccc; font-size:15px; box-sizing:border-box; }
   </style>
 </head>
-
 <body>
 
-  <div class="topbar">Mening e’lonlarim</div>
+<div class="card">
+  <h2>Mening e’lonlarim</h2>
+  <div id="myAdsList">Yuklanmoqda...</div>
+</div>
 
-  <div class="card">
-    <div id="myAdsList">Yuklanmoqda...</div>
+<!-- EDIT MODAL -->
+<div id="editAdModal">
+  <div class="modal-box">
+    <h3>E’lonni tahrirlash</h3>
+
+    <select id="editFromRegion" onchange="updateEditDistricts('from')">
+      <option value="">Viloyat</option>
+    </select>
+
+    <select id="editFromDistrict">
+      <option value="">Tuman</option>
+    </select>
+
+    <select id="editToRegion" onchange="updateEditDistricts('to')">
+      <option value="">Viloyat</option>
+    </select>
+
+    <select id="editToDistrict">
+      <option value="">Tuman</option>
+    </select>
+
+    <input id="editPrice" placeholder="Narx">
+    <input id="editTime" type="datetime-local">
+    <input id="editSeats" type="number" placeholder="Bo‘sh joy/yo‘lovchi" min="0">
+    <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
+
+    <button onclick="saveAdEdit()" class="blue-btn" style="margin-top:10px">Saqlash</button>
+    <button onclick="closeEditAd()" class="red-btn" style="margin-top:10px">Bekor qilish</button>
   </div>
+</div>
 
-  <!-- EDIT AD MODAL -->
-  <div id="editAdModal">
-    <div class="modal-box">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
 
-      <h3>E’lonni tahrirlash</h3>
-
-      <label>Qayerdan (Viloyat)</label>
-      <select id="editFromRegion" onchange="updateEditDistricts('from')"></select>
-
-      <label>Tuman</label>
-      <select id="editFromDistrict"></select>
-
-      <label>Qayerga (Viloyat)</label>
-      <select id="editToRegion" onchange="updateEditDistricts('to')"></select>
-
-      <label>Tuman</label>
-      <select id="editToDistrict"></select>
-
-      <input id="editPrice" placeholder="Narx">
-      <input id="editTime" type="datetime-local">
-      <input id="editSeats" placeholder="Joylar / yo‘lovchilar">
-      <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
-
-      <div style="display:flex; gap:10px; margin-top:10px;">
-        <button onclick="saveAdEdit()" class="blue-btn" style="flex:1;">Saqlash</button>
-        <button onclick="closeEditAd()" class="red-btn" style="flex:1;">Bekor</button>
-      </div>
-
-    </div>
-  </div>
-
-  <script src="../assets/regions-taxi.js"></script>
-  <script src="../assets/regions-helper.js"></script>
-  <script type="module" src="my-ads.js"></script>
+<script src="regions-helper.js"></script>
+<script src="regions-taxi.js"></script>
+<script src="my-ads.js?v=5"></script>
 
 </body>
 </html>
