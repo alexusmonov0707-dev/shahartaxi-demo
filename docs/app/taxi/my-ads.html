@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mening e'lonlarim — ShaharTaxi</title>
 
-  <!-- sening style-laring o‘zgarmagan -->
   <style>
     :root{
       --primary:#0069d9; --danger:#ff5a5f; --muted:#6b7280;
@@ -41,7 +40,7 @@
     </div>
   </div>
 
-  <!-- EDIT AD MODAL -->
+  <!-- EDIT MODAL -->
   <div id="editModal" class="modal">
     <div class="box">
       <h3>Tahrirlash</h3>
@@ -77,9 +76,22 @@
     </div>
   </div>
 
-  <!-- ⚠️ MUHIM TAHRIR — TO‘G‘RI TARTIB -->
+  <!-- REGIONS JS -->
   <script src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
   <script src="/shahartaxi-demo/docs/assets/regions-helper.js"></script>
+
+  <!-- 👉 MUHIM QO‘SHILGAN QISM — VILOYAT O‘ZGARGANDA TUMAN YANGILANADI -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const frR = document.getElementById("editFromRegion");
+      const toR = document.getElementById("editToRegion");
+
+      frR.addEventListener("change", () => window.updateDistricts("from"));
+      toR.addEventListener("change", () => window.updateDistricts("to"));
+    });
+  </script>
+
+  <!-- MAIN JS -->
   <script type="module" src="my-ads.js"></script>
 
 </body>
