@@ -1,115 +1,109 @@
-// ======================================================
-//   SUPER UNIVERSAL REGIONS HELPER (FINAL VERSION)
-//   supports create-ad + edit modal + ANY ID formats
-//   100% correct district selection reset + sync
-// ======================================================
-
 (function () {
 
-  // -------------------------------
-  // 1) REGIONS LOADING (SAFE)
-  // -------------------------------
+  /* ------------------------------
+     1) REGIONS LIST READY CHECKER
+  ------------------------------ */
   function ensureRegionsList() {
-    try {
-      if (window.regions && typeof window.regions === "object") {
-        window.regionsList = Object.keys(window.regions).map(name => ({
-          name,
-          districts: window.regions[name]
-        }));
-        return true;
-      }
-    } catch {}
-    window.regionsList = window.regionsList || [];
+    if (window.regions && typeof window.regions === "object") {
+      window.regionsList = Object.keys(window.regions).map(name => ({
+        name,
+        districts: window.regions[name]
+      }));
+      return true;
+    }
     return false;
   }
 
+  // initialize once
   ensureRegionsList();
 
-  // -------------------------------
-  // 2) REGION SELECT FILLER
-  // -------------------------------
+  /* ------------------------------
+      2) FILL REGIONS DROPDOWN
+  ------------------------------ */
   window.fillRegions = function (selectId) {
     const el = document.getElementById(selectId);
     if (!el) return;
 
-    let attempts = 0;
+    let tries = 0;
     (function wait() {
-      attempts++;
-      if (ensureRegionsList() || attempts > 15) {
+      tries++;
+      if (ensureRegionsList() || tries > 20) {
+        // reset select
         el.innerHTML = `<option value="">Viloyat</option>`;
-        (window.regionsList || []).forEach(r => {
-          const op = document.createElement("option");
-          op.value = r.name;
-          op.textContent = r.name;
-          el.appendChild(op);
-        });
-      } else setTimeout(wait, 30);
+        if (window.regionsList) {
+          window.regionsList.forEach(r => {
+            const op = document.createElement("option");
+            op.value = r.name;
+            op.textContent = r.name;
+            el.appendChild(op);
+          });
+        }
+      } else {
+        setTimeout(wait, 25);
+      }
     })();
   };
 
 
-  // -------------------------------
-  // 3) UNIVERSAL DISTRICT UPDATER
-  //    (supports edit + normal modes)
-  // -------------------------------
+  /* ------------------------------
+      3) UPDATE DISTRICTS UNIVERSAL
+  ------------------------------ */
   window.updateDistricts = function (type, callback = null) {
-    let rSel = document.getElementById(type + "Region");
-    let dSel = document.getElementById(type + "District");
+    let regionId = type + "Region";
+    let districtId = type + "District";
 
-    // auto-detect for edit modal
-    if (!rSel || !dSel) {
-      const m = {
-        from: { r: "editFromRegion", d: "editFromDistrict" },
-        to:   { r: "editToRegion",   d: "editToDistrict" }
-      }[type];
-
-      if (m) {
-        rSel = document.getElementById(m.r);
-        dSel = document.getElementById(m.d);
-      }
+    // EDIT MODAL fallback
+    if (!document.getElementById(regionId)) {
+      regionId = "edit" + regionId.charAt(0).toUpperCase() + regionId.slice(1);
     }
+    if (!document.getElementById(districtId)) {
+      districtId = "edit" + districtId.charAt(0).toUpperCase() + districtId.slice(1);
+    }
+
+    const rSel = document.getElementById(regionId);
+    const dSel = document.getElementById(districtId);
 
     if (!rSel || !dSel) return;
 
     let tries = 0;
     (function wait() {
       tries++;
-      if (ensureRegionsList() || tries > 15) {
+      if (ensureRegionsList() || tries > 20) {
         fillDistricts(rSel, dSel);
-        if (callback) setTimeout(callback, 20); // ★ tumanni yuklab bo‘lgandan keyin callback
-      } else {
-        setTimeout(wait, 30);
-      }
+        if (typeof callback === "function") {
+          setTimeout(callback, 15);
+        }
+      } else setTimeout(wait, 25);
     })();
   };
 
 
-  // -------------------------------
-  // 4) DISTRICTS FILLER (FINAL FIX)
-  // -------------------------------
-  function fillDistricts(regionSelect, districtSelect) {
+  /* ------------------------------
+      4) FILL DISTRICTS SAFE
+  ------------------------------ */
+  function fillDistricts(rSel, dSel) {
 
-    // ★ ALWAYS reset district select completely
-    districtSelect.innerHTML = `<option value="">Tuman</option>`;
-    districtSelect.value = "";
-    districtSelect.selectedIndex = 0;
+    // RESET tumanlar
+    dSel.innerHTML = `<option value="">Tuman</option>`;
+    dSel.value = "";
+    dSel.selectedIndex = 0;
 
-    const selectedRegion = regionSelect.value;
-    if (!selectedRegion) return;
+    const regionName = rSel.value;
+    if (!regionName) return;
 
-    const regionData = (window.regionsList || []).find(r => r.name === selectedRegion);
+    const regionData = window.regionsList?.find(r => r.name === regionName);
     if (!regionData) return;
 
-    regionData.districts.forEach(d => {
+    regionData.districts.forEach(dist => {
       const op = document.createElement("option");
-      op.value = d;
-      op.textContent = d;
-      districtSelect.appendChild(op);
+      op.value = dist;
+      op.textContent = dist;
+      dSel.appendChild(op);
     });
 
-    // ★ ensure NO OLD district stays
-    districtSelect.value = "";
-    districtSelect.selectedIndex = 0;
+    // RESET AGAIN to prevent any old values
+    dSel.value = "";
+    dSel.selectedIndex = 0;
   }
 
 })();
