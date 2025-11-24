@@ -1,4 +1,4 @@
-// IMPORTS – modul holida ishlaydi
+// IMPORTS
 import { auth, db, ref, get, onAuthStateChanged } 
 from "/shahartaxi-demo/docs/libs/lib.js";
 
@@ -26,16 +26,26 @@ const license = document.getElementById("license");
 
 const balance = document.getElementById("balance");
 
-// LOGOUT tugma
+
+// ===== 🔵 TUGMALAR ULANISHI =====
+
+// CHIQISH
 document.getElementById("logoutBtn").onclick = () => auth.signOut();
 
-// EDIT PROFILE tugma
+// PROFILNI TAHRIRLASH
 document.getElementById("editProfileBtn").onclick = () => {
     window.location.href = "/shahartaxi-demo/docs/app/profile/profile-edit.html";
 };
 
-// AUTH
-onAuthStateChanged(auth, async (user) => {
+// BALANSNI TO‘LDIRISH — SENI MUAMMONING YECHIMI!
+document.getElementById("topUpBtn").onclick = () => {
+    window.location.href = "/shahartaxi-demo/docs/app/profile/top-up.html";
+};
+
+
+// ===== 🔵 FIREBASE AUTH =====
+
+onAuthStateChanged(auth, async user => {
     if (!user) {
         location.href = "/shahartaxi-demo/docs/app/auth/login.html";
         return;
@@ -44,7 +54,9 @@ onAuthStateChanged(auth, async (user) => {
     loadProfile(user.uid);
 });
 
-// PROFILNI YUKLASH
+
+// ===== 🔵 PROFILNI YUKLASH =====
+
 async function loadProfile(uid) {
     const snap = await get(ref(db, "users/" + uid));
 
@@ -55,7 +67,7 @@ async function loadProfile(uid) {
     // Avatar
     avatarImg.src = u.avatar || "/shahartaxi-demo/docs/img/avatar-default.png";
 
-    // Asosiy maydonlar
+    // Asosiy ma’lumotlar
     fullName.textContent = u.fullName || "Yuklanmoqda...";
     phone.textContent = u.phone || "-";
     balance.textContent = (u.balance || 0) + " so‘m";
@@ -66,13 +78,13 @@ async function loadProfile(uid) {
         genderRow.style.display = "block";
     }
 
-    // Birthdate
+    // Tug‘ilgan sana
     if (u.birthdate) {
         birthdate.textContent = u.birthdate;
         birthRow.style.display = "block";
     }
 
-    // DRIVER / PASSENGER
+    // Haydovchi bo‘lsa
     if (u.role === "driver") {
         driverBlock.style.display = "block";
 
