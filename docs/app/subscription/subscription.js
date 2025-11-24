@@ -20,31 +20,26 @@ async function loadUser() {
     const user = snap.val();
     balance = user.balance || 0;
 
-    // Yo'lovchiga abonement kerak emas
     if (user.role !== "driver") {
-        document.querySelector("body").innerHTML =
-            "<h2 style='text-align:center;margin-top:40px;'>Sizga abonement kerak emas</h2>";
+        document.body.innerHTML = "<h2 style='text-align:center;margin-top:40px;'>Sizga abonement kerak emas</h2>";
         return;
     }
 
-    const sub = user.subscription;
+    const sub = user.subscriptions?.taxi;
 
     if (sub && sub.active && sub.expiresAt > Date.now()) {
-        // Faol abonement
         document.getElementById("currentSub").style.display = "block";
         document.getElementById("planName").textContent = sub.plan;
-        document.getElementById("expires").textContent = 
+        document.getElementById("expires").textContent =
             new Date(sub.expiresAt).toLocaleString("uz-UZ");
-
     } else {
-        // Abonement yo'q
         document.getElementById("buySection").style.display = "block";
     }
 }
 
 window.buy = async (plan) => {
     const price = (plan === "weekly") ? 5000 : 20000;
-    const duration = (plan === "weekly") ? 7 : 30; // kun
+    const duration = (plan === "weekly") ? 7 : 30;
 
     if (balance < price) {
         alert("Balansingizda mablag‘ yetarli emas.");
@@ -53,13 +48,15 @@ window.buy = async (plan) => {
 
     const expiresAt = Date.now() + duration * 24 * 60 * 60 * 1000;
 
-    await update(ref(db, "users/" + uid), {
-        balance: balance - price,
-        subscription: {
-            active: true,
-            plan,
-            expiresAt
-        }
+    // 🔥 Super-app arxitekturasi uchun MUSTAQIL update
+    await update(ref(db, `users/${uid}/subscriptions/taxi`), {
+        active: true,
+        plan,
+        expiresAt
+    });
+
+    await update(ref(db, `users/${uid}`), {
+        balance: balance - price
     });
 
     alert("Abonement muvaffaqiyatli faollashtirildi!");
