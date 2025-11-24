@@ -1,165 +1,87 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi — Profil</title>
-
-  <style>
-    body { font-family: Arial; background:#f2f4f8; margin:0; }
-    .topbar {
-      background:#0069d9; color:#fff; padding:14px 20px; font-size:20px;
-      display:flex; justify-content:space-between; align-items:center;
-    }
-    .logout { background:#ff4444; padding:6px 16px; border:none; border-radius:6px;
-      color:#fff; cursor:pointer; font-size:15px; }
-
-    .card {
-      max-width:900px; margin:20px auto; background:#fff; padding:20px;
-      border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    }
-    .profile { display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
-    .profile img {
-      width:90px; height:90px; border-radius:12px;
-      object-fit:cover; cursor:pointer; border:3px solid #ddd;
-    }
-    .title { text-align:center; font-size:24px; margin-top:10px; color:#0069d9; }
-
-    select, input, textarea {
-      width:100%; padding:10px; margin-top:8px; border-radius:6px;
-      border:1px solid #ccc; font-size:15px;
-      box-sizing:border-box;
-    }
-
-    button { padding:10px 20px; border:none; border-radius:6px; cursor:pointer; }
-    .blue-btn { background:#0069d9; color:#fff; }
-    .gray-btn { background:#ccc; }
-    .green-btn { background:#28a745; color:#fff; }
-
-    #editModal, #balanceModal {
-      position:fixed; left:0; top:0; right:0; bottom:0;
-      background:rgba(0,0,0,0.6); display:none;
-      justify-content:center; align-items:center;
-      z-index:999;
-    }
-    .modal-box {
-      background:#fff; padding:20px; border-radius:12px; width:360px;
-      box-shadow:0 4px 12px rgba(0,0,0,0.3);
-    }
-
-  </style>
+    <meta charset="UTF-8">
+    <title>ShaharTaxi — Profil</title>
+    <link rel="stylesheet" href="/shahartaxi-demo/docs/style.css">
 </head>
-
 <body>
 
-  <div class="topbar">
-    <div>ShaharTaxi — Profil</div>
-    <button class="logout" onclick="logout()">Chiqish</button>
-  </div>
+<div class="topbar">
+    <div class="logo">ShaharTaxi — Profil</div>
+    <button id="logoutBtn" class="btn btn-danger">Chiqish</button>
+</div>
 
-  <!-- PROFILE CARD -->
-  <div class="card profile">
+<div class="container" id="profileContainer">
 
-    <img id="avatar" onclick="chooseAvatar()"
-      src="https://raw.githubusercontent.com/rahmadiana/default-images/main/user-default.png">
+    <div class="profile-card">
 
-    <input id="avatarInput" type="file" accept="image/*" style="display:none">
+        <div class="avatar-block">
+            <img id="avatarImg" class="avatar" src="" alt="Avatar">
+        </div>
 
-    <div style="flex:1;">
-      <div id="fullName" style="font-size:20px; font-weight:bold;">Yuklanmoqda...</div>
-      <div id="phone" style="margin-top:6px; color:#666;"></div>
+        <div class="info-block">
 
-      <!-- extra info -->
-      <div id="userDetails" style="margin-top:12px;"></div>
+            <h2 id="fullName">Yuklanmoqda...</h2>
+
+            <div class="balance-box">
+                <span>Balans: </span>
+                <b id="balance">0 so‘m</b>
+                <button class="btn btn-success" id="topUpBtn">Balansni to‘ldirish</button>
+            </div>
+
+            <!-- Telefon (faqat ko‘rsatish) -->
+            <div class="profile-line">
+                <b>Telefon:</b> <span id="phone"></span>
+            </div>
+
+            <!-- Jinsi -->
+            <div class="profile-line optional" id="genderRow" style="display:none">
+                <b>Jinsi:</b> <span id="gender"></span>
+            </div>
+
+            <!-- Tug‘ilgan sana -->
+            <div class="profile-line optional" id="birthRow" style="display:none">
+                <b>Tug‘ilgan sana:</b> <span id="birthdate"></span>
+            </div>
+
+            <!-- Haydovchilik maydonlari -->
+            <div id="driverBlock" style="display:none; margin-top:20px;">
+
+                <h3>Haydovchi ma’lumotlari</h3>
+
+                <div class="profile-line optional" id="carModelRow" style="display:none">
+                    <b>Model:</b> <span id="carModel"></span>
+                </div>
+
+                <div class="profile-line optional" id="carColorRow" style="display:none">
+                    <b>Rangi:</b> <span id="carColor"></span>
+                </div>
+
+                <div class="profile-line optional" id="carNumberRow" style="display:none">
+                    <b>Raqam:</b> <span id="carNumber"></span>
+                </div>
+
+                <div class="profile-line optional" id="licenseRow" style="display:none">
+                    <b>Guvohnoma:</b> <span id="license"></span>
+                </div>
+            </div>
+
+            <br>
+
+            <button id="editProfileBtn" class="btn btn-primary">Profilni tahrirlash</button>
+            <br><br>
+            <a href="/shahartaxi-demo/docs/app/my-ads/my-ads.html" class="btn btn-blue">
+                Mening e’lonlarim →
+            </a>
+
+        </div>
     </div>
 
-    <div style="text-align:right; min-width:220px;">
-      <div id="balanceBox" style="font-size:16px; color:#0069d9; font-weight:bold; margin-bottom:8px;">
-        Balans: 0 so‘m
-      </div>
+</div>
 
-      <button onclick="openBalanceModal()" class="green-btn" style="width:100%; margin-bottom:8px;">
-        Balansni to‘ldirish
-      </button>
-
-      <button onclick="openEditProfile()" class="blue-btn" style="width:100%;">
-        Profilni tahrirlash
-      </button>
-    </div>
-
-    <div style="width:100%; margin-top:15px;">
-      <div id="carDetailsBox" style="display:none;">
-        <h4>Mashina ma’lumotlari</h4>
-        <div id="carDetails"></div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- MY ADS LINK -->
-  <div class="card">
-    <a href="my-ads.html" class="blue-btn" style="display:block; text-align:center; padding:12px;">
-      Mening e’lonlarim → 
-    </a>
-  </div>
-
-  <!-- EDIT PROFILE MODAL -->
-  <div id="editModal">
-    <div class="modal-box">
-      <h3>Profilni tahrirlash</h3>
-
-      <input id="editFullName" placeholder="Ism va familiya">
-      <input id="editPhoneInput" placeholder="Telefon" readonly>
-
-      <h4>Qo‘shimcha</h4>
-      <input id="editBirthdate" type="date">
-      <select id="editGender">
-        <option value="">Jinsi</option>
-        <option value="Erkak">Erkak</option>
-        <option value="Ayol">Ayol</option>
-      </select>
-
-      <div style="display:flex; gap:10px;">
-        <select id="editRegion" onchange="fillEditDistricts()" style="flex:1;">
-          <option value="">Viloyat</option>
-        </select>
-        <select id="editDistrict" style="flex:1;">
-          <option value="">Tuman</option>
-        </select>
-      </div>
-
-      <h4>Mashina (haydovchilar uchun)</h4>
-      <input id="carModel" placeholder="Model (Nexia 3)">
-      <input id="carNumber" placeholder="Davlat raqami (01A123BC)">
-      <input id="carColor" placeholder="Rangi">
-      <input id="seatCount" type="number" placeholder="O‘rindiqlar soni">
-
-      <div style="display:flex; margin-top:15px; gap:10px;">
-        <button onclick="saveProfileEdit()" class="blue-btn" style="flex:1;">Saqlash</button>
-        <button onclick="closeEditProfile()" class="gray-btn" style="flex:1;">Bekor</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- BALANCE MODAL -->
-  <div id="balanceModal">
-    <div class="modal-box">
-      <h3>Balansni to‘ldirish</h3>
-      <input id="balanceAmount" type="number" placeholder="Summani kiriting">
-
-      <div style="display:flex; gap:10px; margin-top:10px;">
-        <button onclick="addBalance()" class="blue-btn" style="flex:1;">Tasdiqlash</button>
-        <button onclick="closeBalanceModal()" class="gray-btn" style="flex:1;">Bekor</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- regions -->
- <script src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
-<script src="/shahartaxi-demo/docs/assets/regions-helper.js"></script>
-
-<script type="module" src="/shahartaxi-demo/docs/app/user/profile.js"></script>
-
+<script src="/shahartaxi-demo/docs/libs/lib.js"></script>
+<script src="/shahartaxi-demo/docs/app/profile/profile.js"></script>
 
 </body>
 </html>
