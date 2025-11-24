@@ -1,138 +1,173 @@
-// ================= FIREBASE INIT ===================
-const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.appspot.com",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+import {
+    auth,
+    db,
+    ref,
+    get,
+    update,
+    remove,
+    onAuthStateChanged,
+    $
+} from "/shahartaxi-demo/docs/libs/lib.js";
+
+// =====================
+// FILL REGIONS (IDENTIK create-ad.js bilan)
+// =====================
+window.initRegionsForm = function () {
+    const fromRegion = $("editFromRegion");
+    const toRegion = $("editToRegion");
+
+    fromRegion.innerHTML = '<option value="">Viloyat</option>';
+    toRegion.innerHTML = '<option value="">Viloyat</option>';
+
+    regions.forEach(r => {
+        fromRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+        toRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
+    });
 };
 
-const app = firebase.initializeApp(firebaseConfig);
-const auth = firebase.getAuth(app);
-const db = firebase.getDatabase(app);
+window.updateEditDistricts = function (type) {
+    const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
+    const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
 
-// ============ ELEMENTS =================
-const $ = id => document.getElementById(id);
-const myAdsList = $("myAdsList");
+    const regionName = regionSelect.value;
 
-// =============== LOAD REGIONS ==============
+    districtSelect.innerHTML = '<option value="">Tuman</option>';
 
-function fillRegionSelects() {
-  const fr = $("editFromRegion");
-  const tr = $("editToRegion");
+    if (!regionName) return;
 
-  fr.innerHTML = `<option value="">Viloyat</option>`;
-  tr.innerHTML = `<option value="">Viloyat</option>`;
+    const region = regions.find(r => r.name === regionName);
+    if (!region) return;
 
-  regionsTaxi.forEach(r => {
-    fr.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-    tr.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-  });
-}
-
-window.updateEditDistricts = function(type){
-  const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
-  const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
-
-  const region = regionsTaxi.find(r => r.name === regionSelect.value);
-  districtSelect.innerHTML = `<option value="">Tuman</option>`;
-
-  if (!region) return;
-  region.districts.forEach(d => districtSelect.innerHTML += `<option value="${d}">${d}</option>`);
+    region.districts.forEach(dis => {
+        districtSelect.innerHTML += `<option value="${dis}">${dis}</option>`;
+    });
 };
 
-// =============== MY ADS LOAD ===================
-
-firebase.onAuthStateChanged(auth, user => {
-  if (!user) return window.location.href = "/app/auth/login.html";
-  window.currentUID = user.uid;
-  loadMyAds();
-});
-
-async function loadMyAds() {
-  const snap = await firebase.get(firebase.ref(db, "ads"));
-  myAdsList.innerHTML = "";
-
-  if (!snap.exists()) {
-    myAdsList.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-    return;
-  }
-
-  snap.forEach(child => {
-    const ad = child.val();
-    if (ad.userId !== currentUID) return;
-
-    const box = document.createElement("div");
-    box.className = "ad-box";
-    box.innerHTML = `
-      <b style="color:#0069d9">${ad.type}</b><br>
-      ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
-      Narx: <b style="color:#28a745">${ad.price} so‘m</b><br>
-      Vaqt: ${ad.departureTime}<br>
-      Bo‘sh joy: ${ad.driverSeats ?? ad.passengerCount ?? "-"}
-      <div style="display:flex; gap:10px; margin-top:10px;">
-        <button class="blue-btn" onclick='openEditAd("${child.key}")'>Tahrirlash</button>
-        <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
-      </div>
-    `;
-    myAdsList.appendChild(box);
-  });
-}
-
-// ================== EDIT LOGIC ==================
-
+// =====================
+// GLOBAL
+// =====================
 let editingAdId = null;
 
-window.openEditAd = async function(id){
-  editingAdId = id;
+// =====================
+// USER CHECK
+// =====================
+onAuthStateChanged(auth, user => {
+    if (!user) {
+        window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
+        return;
+    }
 
-  const snap = await firebase.get(firebase.ref(db, "ads/" + id));
-  const ad = snap.val();
+    window.currentUID = user.uid;
+    loadMyAds(user.uid);
+});
 
-  fillRegionSelects();
+// =====================
+// LOAD USER ADS
+// =====================
+async function loadMyAds(uid) {
+    const snap = await get(ref(db, "ads"));
+    const list = $("myAdsList");
 
-  $("editFromRegion").value = ad.fromRegion;
-  updateEditDistricts("from");
-  $("editFromDistrict").value = ad.fromDistrict;
+    list.innerHTML = "";
 
-  $("editToRegion").value = ad.toRegion;
-  updateEditDistricts("to");
-  $("editToDistrict").value = ad.toDistrict;
+    if (!snap.exists()) {
+        list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
+        return;
+    }
 
-  $("editPrice").value = ad.price;
-  $("editTime").value = ad.departureTime;
-  $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
-  $("editComment").value = ad.comment ?? "";
+    snap.forEach(child => {
+        const ad = child.val();
+        if (ad.userId !== uid) return;
 
-  $("editAdModal").style.display = "flex";
+        const seatsText = ad.driverSeats
+            ? `<b>Bo'sh joy:</b> ${ad.driverSeats}`
+            : `<b>Yo'lovchilar:</b> ${ad.passengerCount ?? "-"}`;
+
+        const box = document.createElement("div");
+        box.className = "ad-box";
+        box.innerHTML = `
+            <b style="color:#0069d9;">${ad.type}</b><br>
+            ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
+            Narx: <b style="color:#28a745">${ad.price}</b><br>
+            Vaqt: ${ad.departureTime}<br>
+            ${seatsText}
+            <div style="margin-top:10px; display:flex; gap:10px;">
+                <button class="blue-btn" onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
+                    Tahrirlash
+                </button>
+                <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
+            </div>
+        `;
+        list.appendChild(box);
+    });
+}
+
+// =====================
+// DELETE AD
+// =====================
+window.deleteAd = async function (id) {
+    if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
+
+    await remove(ref(db, "ads/" + id));
+
+    alert("O‘chirildi!");
+    loadMyAds(currentUID);
 };
 
-window.closeEditAd = () => $("editAdModal").style.display = "none";
+// =====================
+// OPEN MODAL
+// =====================
+window.openEditAd = function (id, ad) {
+    editingAdId = id;
 
-window.saveAdEdit = async function(){
-  const updates = {
-    fromRegion: $("editFromRegion").value,
-    fromDistrict: $("editFromDistrict").value,
-    toRegion: $("editToRegion").value,
-    toDistrict: $("editToDistrict").value,
-    price: $("editPrice").value,
-    departureTime: $("editTime").value,
-    comment: $("editComment").value,
-    driverSeats: $("editSeats").value
-  };
+    initRegionsForm();
 
-  await firebase.update(firebase.ref(db, "ads/" + editingAdId), updates);
+    $("editFromRegion").value = ad.fromRegion;
+    updateEditDistricts("from");
+    $("editFromDistrict").value = ad.fromDistrict;
 
-  alert("Tahrirlandi!");
-  closeEditAd();
-  loadMyAds();
+    $("editToRegion").value = ad.toRegion;
+    updateEditDistricts("to");
+    $("editToDistrict").value = ad.toDistrict;
+
+    $("editPrice").value = ad.price;
+    $("editTime").value = ad.departureTime;
+    $("editComment").value = ad.comment ?? "";
+
+    $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
+
+    $("editAdModal").style.display = "flex";
 };
 
-// ============= DELETE ===============
-window.deleteAd = async function(id){
-  if (!confirm("O‘chirilsinmi?")) return;
-  await firebase.remove(firebase.ref(db, "ads/" + id));
-  loadMyAds();
+window.closeEditAd = () =>
+    $("editAdModal").style.display = "none";
+
+// =====================
+// SAVE EDIT
+// =====================
+window.saveAdEdit = async function () {
+    if (!editingAdId) return;
+
+    const updates = {
+        fromRegion: $("editFromRegion").value,
+        fromDistrict: $("editFromDistrict").value,
+        toRegion: $("editToRegion").value,
+        toDistrict: $("editToDistrict").value,
+        price: $("editPrice").value,
+        departureTime: $("editTime").value,
+        comment: $("editComment").value
+    };
+
+    const seats = $("editSeats").value;
+
+    if (window.userRole === "driver")
+        updates.driverSeats = seats;
+    else
+        updates.passengerCount = seats;
+
+    await update(ref(db, "ads/" + editingAdId), updates);
+
+    alert("Tahrirlandi!");
+    closeEditAd();
+    loadMyAds(currentUID);
 };
