@@ -84,3 +84,9 @@ async function loadProfile(uid) {
         }
     }
 }
+<script>
+document.getElementById("editProfileBtn").onclick = () => {
+    window.location.href = "profile-edit.html";
+};
+</script>
+
