@@ -304,7 +304,7 @@ function populateEditModal(ad) {
     } else {
         editTime.value = "";
     }
-}
+
 
 
   // Show/hide seats logic based on userRole (driver/passenger)
