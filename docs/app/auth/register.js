@@ -1,3 +1,4 @@
+// register.js
 import {
   auth,
   db,
@@ -6,10 +7,16 @@ import {
   createUserWithEmailAndPassword
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-// IMGBB key (agar o'zgartirsang o'zingniki)
-const IMGBB_API_KEY = "f8b227af45bcd7e4d9d8d2aa5feab5d5";
+/*
+  CONFIG
+  - IMGBB API keyni o'zingizning kalitingiz bilan almashtiring
+*/
+const IMGBB_API_KEY = "4e27dc8a0b6f5bd0262b6f3cba04b09a"; // o'zingiznikini qo'ying
 
-// upload helper
+// LOCAL DEFAULT AVATAR (platforma upload/transform uchun shu yerda LOCAL PATH mavjud)
+const DEFAULT_AVATAR_LOCAL_PATH = "/mnt/data/avatar-default.png"; // <-- platformangiz shu pathni URLga aylantiradi
+
+// helper: imgbb upload
 async function uploadImageToImgbb(file) {
   const formData = new FormData();
   formData.append("image", file);
@@ -18,119 +25,154 @@ async function uploadImageToImgbb(file) {
     body: formData
   });
   const data = await res.json();
-  if (!data.success) throw new Error("Rasm yuklashda xato");
+  if (!data || !data.success) throw new Error("Image upload failed");
   return data.data.url;
 }
 
 // DOM
-const nameInput = document.getElementById("fullName");
-const phoneInput = document.getElementById("phone");
-const passwordInput = document.getElementById("password");
-const roleSelect = document.getElementById("role");
+const fullNameEl = document.getElementById("fullName");
+const phoneEl = document.getElementById("phone");
+const passwordEl = document.getElementById("password");
+const roleEl = document.getElementById("role");
 
 const driverFields = document.getElementById("driverFields");
-const carModelInput = document.getElementById("carModel");
-const carColorInput = document.getElementById("carColor");
-const carNumberInput = document.getElementById("carNumber");
-const licenseInput = document.getElementById("license");
-const birthdateInput = document.getElementById("birthdate");
-const techPassportInput = document.getElementById("techPassport");
-const avatarInput = document.getElementById("avatar");
+const carModelEl = document.getElementById("carModel");
+const carColorEl = document.getElementById("carColor");
+const carNumberEl = document.getElementById("carNumber");
+const licenseEl = document.getElementById("license");
+const birthdateEl = document.getElementById("birthdate");
+const techPassportEl = document.getElementById("techPassport");
+const avatarEl = document.getElementById("avatar");
 
 const registerBtn = document.getElementById("registerBtn");
 
-roleSelect.onchange = () => {
-  if (roleSelect.value === "driver") driverFields.classList.remove("hidden");
+// role toggle
+roleEl.addEventListener("change", () => {
+  if (roleEl.value === "driver") driverFields.classList.remove("hidden");
   else driverFields.classList.add("hidden");
-};
+});
 
-registerBtn.onclick = async () => {
-  const fullName = nameInput.value.trim();
-  const phone = phoneInput.value.trim();
-  const password = passwordInput.value;
-  const role = roleSelect.value;
+// sanitize phone: ensure +998XXXXXXXXX form
+function normalizePhone(input) {
+  if (!input) return "";
+  input = input.trim();
+  // remove spaces, dashes, parentheses
+  input = input.replace(/[\s\-()]/g, "");
+  if (input.startsWith("+")) input = input.slice(1);
+  // if user typed 998901234567 or 90901234567
+  if (input.length === 9 && input.startsWith("9")) input = "998" + input;
+  if (input.length === 12 && input.startsWith("998")) return "+" + input;
+  if (input.length === 13 && input.startsWith("+998")) return input;
+  // fallback: try to add + if missing
+  if (input.length === 12) return "+" + input;
+  return input; // may be invalid, will be validated later
+}
+
+registerBtn.addEventListener("click", async () => {
+  const fullName = (fullNameEl.value || "").trim();
+  const phoneRaw = (phoneEl.value || "").trim();
+  const phone = normalizePhone(phoneRaw);
+  const password = (passwordEl.value || "").trim();
+  const role = roleEl.value || "passenger";
 
   if (!fullName || !phone || !password) {
-    alert("Iltimos: ism, telefon va parolni kiriting.");
+    alert("Iltimos: ism, telefon va parolni to'liq kiriting (telefon +998...)");
     return;
   }
 
-  // driver specific checks
+  // driver required fields
   let carModel = null, carColor = null, carNumber = null, license = null, birthdate = null;
   let techPassportUrl = null, avatarUrl = null;
 
   if (role === "driver") {
-    carModel = carModelInput.value.trim();
-    carColor = carColorInput.value.trim();
-    carNumber = carNumberInput.value.trim();
-    license = licenseInput.value.trim();
-    birthdate = birthdateInput.value;
+    carModel = (carModelEl.value || "").trim();
+    carColor = (carColorEl.value || "").trim();
+    carNumber = (carNumberEl.value || "").trim();
+    license = (licenseEl.value || "").trim();
+    birthdate = (birthdateEl.value || "").trim();
 
     if (!carModel || !carColor || !carNumber || !license || !birthdate) {
-      alert("Haydovchi uchun barcha maydonlar to‘ldirilishi kerak.");
+      alert("Haydovchi uchun barcha maydonlar majburiy.");
       return;
     }
 
-    if (!techPassportInput.files[0]) {
-      alert("Tex pasport rasm majburiy.");
+    if (!techPassportEl.files || !techPassportEl.files[0]) {
+      alert("Tex pasport rasm majburiy (rasm yuklang).");
       return;
     }
 
+    // upload tech passport
     try {
-      techPassportUrl = await uploadImageToImgbb(techPassportInput.files[0]);
-    } catch (e) {
-      console.error(e);
-      alert("Tex pasport yuklashda xato.");
+      techPassportUrl = await uploadImageToImgbb(techPassportEl.files[0]);
+    } catch (err) {
+      console.error(err);
+      alert("Tex pasportni yuklashda xatolik. Rasm hajmini tekshiring yoki API key-ni yangilang.");
       return;
     }
   }
 
   // avatar optional
-  if (avatarInput.files[0]) {
+  if (avatarEl.files && avatarEl.files[0]) {
     try {
-      avatarUrl = await uploadImageToImgbb(avatarInput.files[0]);
-    } catch (e) {
-      console.warn("Avatar yuklash xatosi, davom etamiz.");
+      avatarUrl = await uploadImageToImgbb(avatarEl.files[0]);
+    } catch (err) {
+      console.warn("Avatar upload failed, using default.");
+      avatarUrl = null;
     }
   }
 
-  // create user (email fake)
-  const emailFake = phone + "@shahartaxi.uz";
+  // fallback default avatar (local file path will be transformed to URL by platform)
+  const avatarToSave = avatarUrl || DEFAULT_AVATAR_LOCAL_PATH;
+
+  // create pseudo-email from phone (remove plus)
+  const phoneDigits = phone.replace(/\+/g, "");
+  const emailFake = phoneDigits + "@phone.shahartaxi.uz";
+
+  // create user in Firebase Auth
   let userCredential;
   try {
     userCredential = await createUserWithEmailAndPassword(auth, emailFake, password);
   } catch (err) {
-    console.error(err);
-    alert("Ro‘yxatdan o‘tishda xatolik — foydalanuvchi allaqachon bor yoki server xatosi.");
+    console.error("Auth create error:", err);
+    alert("Ro'yxatdan o'tishda xatolik (telefon allaqachon ro'yxatda bo'lishi mumkin).");
     return;
   }
 
   const uid = userCredential.user.uid;
 
-  // write user data to DB; do NOT store password
+  // prepare DB object
   const userObj = {
     uid,
     fullName,
     phone,
     role,
-    avatar: avatarUrl || null,
+    avatar: avatarToSave,
     balance: 0,
     subscriptions: { taxi: { active: false } },
     createdAt: Date.now(),
-    verified: role === "driver" ? false : true  // drivers must be verified by admin
+    verified: role === "driver" ? false : true // drivers must be approved by admin
   };
 
   if (role === "driver") {
-    userObj.carModel = carModel;
-    userObj.carColor = carColor;
-    userObj.carNumber = carNumber;
-    userObj.license = license;
-    userObj.birthdate = birthdate;
-    userObj.techPassportUrl = techPassportUrl;
+    userObj.driverInfo = {
+      carModel,
+      carColor,
+      carNumber,
+      license,
+      birthdate,
+      techPassportUrl
+    };
   }
 
-  await set(ref(db, "users/" + uid), userObj);
+  // write to DB (Realtime DB)
+  try {
+    await set(ref(db, "users/" + uid), userObj);
+  } catch (err) {
+    console.error("DB write error:", err);
+    alert("Ro'yxatdan o'tishda DB ga yozishda xatolik. Iltimos keyinroq qayta urinib ko'ring.");
+    return;
+  }
 
-  alert("Ro‘yxatdan o‘tildi! Agar haydovchi bo‘lsangiz, admin tasdiqlashini kuting.");
-  window.location.href = "/shahartaxi-demo/docs/app/taxi/index.html";
-};
+  alert("Ro'yxatdan muvaffaqiyatli o'tdingiz. Agar haydovchi bo'lsangiz, admin tasdiqlashini kuting.");
+  window.location.href = "/shahartaxi-demo/app/user/index.html";
+});
