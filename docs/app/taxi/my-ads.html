@@ -1,68 +1,134 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <title>Mening e’lonlarim</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mening e'lonlarim — ShaharTaxi</title>
   <style>
-    body { font-family: Arial; background:#f2f4f8; margin:0; padding:0; }
-    .card { max-width:900px; margin:20px auto; background:#fff; padding:20px;
-            border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-    .ad-box { border:1px solid #ddd; border-radius:10px; padding:12px; margin-bottom:12px; }
-    button { padding:10px; border:none; border-radius:6px; cursor:pointer; width:100%; }
-    .blue-btn { background:#0069d9; color:#fff; }
-    .red-btn  { background:#d9534f; color:#fff; }
-    #editAdModal { position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.6);
-                   display:none; justify-content:center; align-items:center; z-index:999; }
-    .modal-box { background:#fff; padding:20px; border-radius:12px; width:360px; }
-    select, input, textarea { width:100%; padding:10px; margin-top:8px; border-radius:6px;
-                              border:1px solid #ccc; font-size:15px; box-sizing:border-box; }
+    :root{
+      --primary:#0069d9; --danger:#ff5a5f; --muted:#6b7280;
+      --card:#fff; --bg:#f2f4f8;
+    }
+    body{ margin:0; font-family:Inter, Arial, sans-serif; background:var(--bg); color:#111 }
+    .topbar{ background:var(--primary); color:#fff; padding:14px 18px; font-size:20px }
+    .container{ max-width:980px; margin:18px auto; padding:0 16px;}
+    .card{ background:var(--card); padding:18px; border-radius:12px; box-shadow:0 6px 20px rgba(16,24,40,0.06); margin-bottom:18px;}
+    .title{ font-size:18px; color:var(--primary); margin-bottom:12px; font-weight:700 }
+    .filters select, .filters input, .filters textarea { width:100%; padding:10px; border-radius:8px; border:1px solid #e5e7eb; font-size:14px; margin-bottom:10px; box-sizing:border-box; background:white }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; }
+    .col{ flex:1; min-width:160px; }
+    .btn{ padding:10px 14px; border-radius:8px; border:0; cursor:pointer; font-weight:600; }
+    .btn-primary{ background:var(--primary); color:#fff }
+    .btn-ghost{ background:#eee; color:#333 }
+    .ad-box{ border:1px solid #eef2f7; border-radius:10px; padding:12px; margin-bottom:12px; background:#fff }
+    .ad-meta{ color:var(--muted); margin-top:6px; font-size:14px }
+    .ad-actions{ display:flex; gap:8px; margin-top:10px; }
+    .btn-danger{ background:var(--danger); color:#fff }
+    /* Modal */
+    .modal{ position:fixed; inset:0; display:none; justify-content:center; align-items:center; background:rgba(0,0,0,0.45); z-index:9999; }
+    .modal .box{ width:100%; max-width:520px; background:white; padding:18px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.2) }
+    label{ font-weight:600; font-size:14px; display:block; margin:8px 0 6px; color:#334155 }
+    small.muted{ color:var(--muted) }
+    .fullwidth{ width:100% }
   </style>
 </head>
 <body>
+  <div class="topbar">Mening e'lonlarim</div>
 
-<div class="card">
-  <h2>Mening e’lonlarim</h2>
-  <div id="myAdsList">Yuklanmoqda...</div>
-</div>
+  <div class="container">
+    <!-- Add ad card -->
+    <div class="card" id="addCard">
+      <div class="title">Yangi e’lon qo‘shish</div>
 
-<!-- EDIT MODAL -->
-<div id="editAdModal">
-  <div class="modal-box">
-    <h3>E’lonni tahrirlash</h3>
+      <div class="filters">
+        <div class="row">
+          <div class="col">
+            <label>Qayerdan (Viloyat)</label>
+            <select id="fromRegion"><option value="">Qayerdan (Viloyat)</option></select>
+          </div>
+          <div class="col">
+            <label>Tuman</label>
+            <select id="fromDistrict"><option value="">Tuman</option></select>
+          </div>
+          <div class="col">
+            <label>Qayerga (Viloyat)</label>
+            <select id="toRegion"><option value="">Qayerga (Viloyat)</option></select>
+          </div>
+          <div class="col">
+            <label>Tuman</label>
+            <select id="toDistrict"><option value="">Tuman</option></select>
+          </div>
+        </div>
 
-    <select id="editFromRegion" onchange="updateEditDistricts('from')">
-      <option value="">Viloyat</option>
-    </select>
+        <label>Narx (so'm)</label>
+        <input id="price" placeholder="Narx (so'm)">
 
-    <select id="editFromDistrict">
-      <option value="">Tuman</option>
-    </select>
+        <label>Jo'nash vaqti</label>
+        <input id="departureTime" type="datetime-local">
 
-    <select id="editToRegion" onchange="updateEditDistricts('to')">
-      <option value="">Viloyat</option>
-    </select>
+        <label>Joylar / Yo'lovchilar</label>
+        <input id="seats" type="number" min="0" placeholder="Bo'sh joylar yoki yo'lovchilar soni">
 
-    <select id="editToDistrict">
-      <option value="">Tuman</option>
-    </select>
+        <label>Qo'shimcha izoh</label>
+        <textarea id="adComment" rows="3"></textarea>
 
-    <input id="editPrice" placeholder="Narx">
-    <input id="editTime" type="datetime-local">
-    <input id="editSeats" type="number" placeholder="Bo‘sh joy/yo‘lovchi" min="0">
-    <textarea id="editComment" rows="3" placeholder="Izoh"></textarea>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button id="addAdBtn" class="btn btn-primary">E'lonni joylash</button>
+          <button id="clearAddBtn" class="btn btn-ghost">Tozalash</button>
+        </div>
+      </div>
+    </div>
 
-    <button onclick="saveAdEdit()" class="blue-btn" style="margin-top:10px">Saqlash</button>
-    <button onclick="closeEditAd()" class="red-btn" style="margin-top:10px">Bekor qilish</button>
+    <!-- My ads -->
+    <div class="card">
+      <div class="title">Mening e'lonlarim</div>
+      <div id="myAdsList">Yuklanmoqda...</div>
+    </div>
   </div>
-</div>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js"></script>
+  <!-- EDIT AD MODAL -->
+  <div id="editModal" class="modal">
+    <div class="box">
+      <h3>Tahrirlash</h3>
+      <div>
+        <label>Qayerdan (Viloyat)</label>
+        <select id="editFromRegion" class="fullwidth"><option value="">Viloyat</option></select>
 
-<script src="regions-helper.js"></script>
-<script src="regions-taxi.js"></script>
-<script src="my-ads.js?v=5"></script>
+        <label>Tuman</label>
+        <select id="editFromDistrict" class="fullwidth"><option value="">Tuman</option></select>
 
+        <label>Qayerga (Viloyat)</label>
+        <select id="editToRegion" class="fullwidth"><option value="">Viloyat</option></select>
+
+        <label>Tuman</label>
+        <select id="editToDistrict" class="fullwidth"><option value="">Tuman</option></select>
+
+        <label>Narx</label>
+        <input id="editPrice" class="fullwidth">
+
+        <label>Jo'nash vaqti</label>
+        <input id="editTime" type="datetime-local" class="fullwidth">
+
+        <label>Joylar / Yo'lovchilar</label>
+        <input id="editSeats" type="number" min="0" class="fullwidth">
+
+        <label>Izoh</label>
+        <textarea id="editComment" rows="3" class="fullwidth"></textarea>
+
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button id="saveEditBtn" class="btn btn-primary">Saqlash</button>
+          <button id="closeEditBtn" class="btn btn-ghost">Bekor qilish</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS: regions and helper must be loaded BEFORE my-ads.js -->
+  <!-- adjust paths to where your files live in repo -->
+  <script src="/shahartaxi-demo/docs/assets/regions-taxi.js"></script>
+  <script src="/shahartaxi-demo/docs/app/taxi/regions-helper.js"></script>
+
+  <!-- my-ads.js is a module that imports from libs/lib.js -->
+  <script type="module" src="/shahartaxi-demo/docs/app/taxi/my-ads.js"></script>
 </body>
 </html>
