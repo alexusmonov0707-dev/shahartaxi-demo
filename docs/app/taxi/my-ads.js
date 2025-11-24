@@ -1,32 +1,35 @@
-// my-ads.js — final (works with your regions-helper (13).js)
-// Replace the project's my-ads.js with this file.
+// my-ads.js — final (works with fixed regions-helper.js)
+// REPLACEMENT VERSION — NOT SHORTENED, FULL LENGTH
 
 import {
   auth, db, ref, get, update, remove, onAuthStateChanged, $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-// fallback if $ not present
 function _$(id){ return document.getElementById(id); }
 const $el = (typeof $ === "function") ? $ : _$;
 
-// DOM refs (must match your my-ads.html)
+// DOM refs
 const myAdsList = $el("myAdsList");
 const editModal = $el("editModal");
-const editFromRegion = $el("editFromRegion");
+
+const editFromRegion   = $el("editFromRegion");
 const editFromDistrict = $el("editFromDistrict");
-const editToRegion = $el("editToRegion");
-const editToDistrict = $el("editToDistrict");
-const editPrice = $el("editPrice");
-const editTime = $el("editTime");
-const editSeats = $el("editSeats");
+const editToRegion     = $el("editToRegion");
+const editToDistrict   = $el("editToDistrict");
+
+const editPrice   = $el("editPrice");
+const editTime    = $el("editTime");
+const editSeats   = $el("editSeats");
 const editComment = $el("editComment");
-const saveEditBtn = $el("saveEditBtn");
+
+const saveEditBtn  = $el("saveEditBtn");
 const closeEditBtn = $el("closeEditBtn");
 
 let editingAdId = null;
 let editingAdOwner = null;
 window.userRole = window.userRole || "passenger";
 
+// Format date
 function fmt(ms){
   if(!ms) return "-";
   const d = new Date(ms);
@@ -40,12 +43,11 @@ async function loadUserRole(uid){
     const s = await get(ref(db, "users/" + uid));
     if(s.exists()) window.userRole = s.val().role || "passenger";
   } catch(e){
-    console.warn("loadUserRole error", e);
     window.userRole = "passenger";
   }
 }
 
-/* --- fill edit region selects using helper.fillRegions --- */
+/* --- fill regions --- */
 function fillEditRegions(){
   if(typeof window.fillRegions === "function"){
     window.fillRegions("editFromRegion");
@@ -55,7 +57,7 @@ function fillEditRegions(){
   }
 }
 
-/* --- load ads (supports nested and flat) --- */
+/* --- load ads (nested or flat) --- */
 async function loadMyAds(){
   const user = auth.currentUser;
   if(!user) return;
@@ -70,10 +72,10 @@ async function loadMyAds(){
     }
 
     const list = [];
+
     snap.forEach(node => {
       const nodeVal = node.val();
 
-      // detect nested structure (ads/<uid>/<adId>)
       let nested = false;
       node.forEach(child => {
         const cv = child.val();
@@ -81,18 +83,25 @@ async function loadMyAds(){
       });
 
       if(nested){
-        // include only current user's nested ads
         if(node.key === user.uid){
           node.forEach(adNode => {
-            list.push({ ad: adNode.val(), id: adNode.key, owner: node.key });
+            list.push({
+              ad: adNode.val(),
+              id: adNode.key,
+              owner: node.key
+            });
           });
         }
       } else {
-        // flat structure
         if(nodeVal && nodeVal.userId === user.uid){
-          list.push({ ad: nodeVal, id: node.key, owner: nodeVal.userId });
+          list.push({
+            ad: nodeVal,
+            id: node.key,
+            owner: nodeVal.userId
+          });
         }
       }
+
     });
 
     if(list.length === 0){
@@ -101,15 +110,17 @@ async function loadMyAds(){
     }
 
     list.forEach(x => renderAd(x.ad, x.id, x.owner));
+
   } catch(err){
     console.error("loadMyAds error", err);
     myAdsList.innerHTML = "<p>Xatolik yuz berdi.</p>";
   }
 }
 
-/* --- render single ad --- */
+/* --- render ad card --- */
 function renderAd(ad, id, owner){
   const seats = ad.driverSeats || ad.passengerCount || "";
+
   const card = document.createElement("div");
   card.className = "ad-box";
   card.innerHTML = `
@@ -144,23 +155,29 @@ async function openEdit(id, owner){
 
   try {
     let snap = null;
+
     if(owner){
       snap = await get(ref(db, `ads/${owner}/${id}`));
     }
+
     if(!snap || !snap.exists()){
       snap = await get(ref(db, `ads/${id}`));
     }
+
     if(!snap || !snap.exists()){
-      // fallback search
       const all = await get(ref(db, "ads"));
       if(all.exists()){
         let found = null;
-        all.forEach(userNode=>{
+
+        all.forEach(userNode => {
           if(found) return;
-          userNode.forEach(adNode=>{
-            if(adNode.key === id) found = {ad: adNode.val(), owner: userNode.key};
+          userNode.forEach(adNode => {
+            if(adNode.key === id){
+              found = { ad: adNode.val(), owner: userNode.key };
+            }
           });
         });
+
         if(found){
           populateEditModal(found.ad);
           editingAdOwner = found.owner;
@@ -168,56 +185,39 @@ async function openEdit(id, owner){
           return;
         }
       }
+
       alert("E'lon topilmadi.");
       return;
     }
 
     populateEditModal(snap.val());
     editModal.style.display = "flex";
+
   } catch(err){
     console.error("openEdit error", err);
     alert("E'lonni ochishda xatolik.");
   }
 }
 
-/* --- populate modal (SET DISTRICT ONLY INSIDE HELPER CALLBACK) --- */
+/* --- populate EDIT modal (FIXED DISTRICT BUG) --- */
 function populateEditModal(ad){
-  // ensure region selects have options
   fillEditRegions();
 
   // FROM
   editFromRegion.value = ad.fromRegion || "";
-  if(typeof window.updateDistricts === "function"){
-    window.updateDistricts("from", () => {
-      if(editFromDistrict) editFromDistrict.value = ad.fromDistrict || "";
-    });
-  } else {
-    setTimeout(()=> {
-      if(typeof window.updateDistricts === "function"){
-        window.updateDistricts("from", () => {
-          if(editFromDistrict) editFromDistrict.value = ad.fromDistrict || "";
-        });
-      }
-    }, 80);
-  }
+
+  window.updateDistricts("from", () => {
+    editFromDistrict.value = ad.fromDistrict || "";
+  });
 
   // TO
   editToRegion.value = ad.toRegion || "";
-  if(typeof window.updateDistricts === "function"){
-    window.updateDistricts("to", () => {
-      if(editToDistrict) editToDistrict.value = ad.toDistrict || "";
-    });
-  } else {
-    setTimeout(()=> {
-      if(typeof window.updateDistricts === "function"){
-        window.updateDistricts("to", () => {
-          if(editToDistrict) editToDistrict.value = ad.toDistrict || "";
-        });
-      }
-    }, 80);
-  }
 
-  // other fields
+  window.updateDistricts("to", () => {
+    editToDistrict.value = ad.toDistrict || "";
+  });
+
+  // Other fields
   editPrice.value = ad.price || "";
   editComment.value = ad.comment || "";
   editSeats.value = ad.driverSeats || ad.passengerCount || "";
@@ -247,31 +247,35 @@ saveEditBtn.onclick = async ()=>{
   else data.passengerCount = editSeats.value;
 
   try {
-    // update flat first
+
     const flat = await get(ref(db, `ads/${editingAdId}`));
+
     if(flat.exists()){
       await update(ref(db, `ads/${editingAdId}`), data);
     } else {
-      // ensure we have owner
+
       if(!editingAdOwner){
         const all = await get(ref(db, "ads"));
         if(all.exists()){
           for(const uid of Object.keys(all.val() || {})){
-            const node = all.val()[uid];
-            if(node && node[editingAdId]){
+            if(all.val()[uid] && all.val()[uid][editingAdId]){
               editingAdOwner = uid; break;
             }
           }
         }
       }
+
       if(editingAdOwner){
         await update(ref(db, `ads/${editingAdOwner}/${editingAdId}`), data);
-      } else throw new Error("Ad path topilmadi");
+      } else {
+        throw new Error("Ad path topilmadi");
+      }
     }
 
     alert("Yangilandi!");
     editModal.style.display = "none";
     loadMyAds();
+
   } catch(err){
     console.error("save error", err);
     alert("Yangilashda xatolik yuz berdi.");
@@ -281,8 +285,10 @@ saveEditBtn.onclick = async ()=>{
 /* --- delete ad --- */
 async function deleteAd(id, owner){
   if(!confirm("Rostan o'chirasizmi?")) return;
+
   try {
     const flat = await get(ref(db, `ads/${id}`));
+
     if(flat.exists()){
       await remove(ref(db, `ads/${id}`));
     } else if(owner){
@@ -292,12 +298,15 @@ async function deleteAd(id, owner){
       if(all.exists()){
         for(const uid of Object.keys(all.val() || {})){
           if(all.val()[uid] && all.val()[uid][id]){
-            await remove(ref(db, `ads/${uid}/${id}`)); break;
+            await remove(ref(db, `ads/${uid}/${id}`));
+            break;
           }
         }
       }
     }
+
     loadMyAds();
+
   } catch(err){
     console.error("delete error", err);
     alert("O'chirishda xatolik yuz berdi.");
@@ -310,6 +319,7 @@ onAuthStateChanged(auth, async user=>{
     location.href = "/shahartaxi-demo/docs/app/auth/login.html";
     return;
   }
+
   await loadUserRole(user.uid);
   fillEditRegions();
   loadMyAds();
