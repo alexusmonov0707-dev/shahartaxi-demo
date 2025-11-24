@@ -1,11 +1,11 @@
-// IMPORTS
-import { auth, db, ref, get, onAuthStateChanged } 
+import { auth, db, ref, get, onAuthStateChanged }
 from "/shahartaxi-demo/docs/libs/lib.js";
 
-// ELEMENTLAR
+// Elementlar
 const avatarImg = document.getElementById("avatarImg");
 const fullName = document.getElementById("fullName");
 const phone = document.getElementById("phone");
+const balance = document.getElementById("balance");
 
 const genderRow = document.getElementById("genderRow");
 const gender = document.getElementById("gender");
@@ -24,42 +24,43 @@ const carColor = document.getElementById("carColor");
 const carNumber = document.getElementById("carNumber");
 const license = document.getElementById("license");
 
-const balance = document.getElementById("balance");
+// Abonement elementi
+const subscriptionBlock = document.getElementById("subscriptionBlock");
+const subActive = document.getElementById("subActive");
+const subInactive = document.getElementById("subInactive");
+const subPlan = document.getElementById("subPlan");
+const subExpire = document.getElementById("subExpire");
 
+const subBuyBtn = document.getElementById("subBuyBtn");
+const subManageBtn = document.getElementById("subManageBtn");
 
-// ===== 🔵 TUGMALAR ULANISHI =====
-
-// CHIQISH
+// Logout
 document.getElementById("logoutBtn").onclick = () => auth.signOut();
 
-// PROFILNI TAHRIRLASH
+// Profil tahrirlash
 document.getElementById("editProfileBtn").onclick = () => {
     window.location.href = "/shahartaxi-demo/docs/app/profile/profile-edit.html";
 };
 
-// BALANSNI TO‘LDIRISH — SENI MUAMMONING YECHIMI!
+// Balans to‘ldirish
 document.getElementById("topUpBtn").onclick = () => {
     window.location.href = "/shahartaxi-demo/docs/app/profile/top-up.html";
 };
 
 
-// ===== 🔵 FIREBASE AUTH =====
-
+// AUTH
 onAuthStateChanged(auth, async user => {
     if (!user) {
         location.href = "/shahartaxi-demo/docs/app/auth/login.html";
         return;
     }
-
     loadProfile(user.uid);
 });
 
 
-// ===== 🔵 PROFILNI YUKLASH =====
-
+// PROFILNI YUKLASH
 async function loadProfile(uid) {
     const snap = await get(ref(db, "users/" + uid));
-
     if (!snap.exists()) return;
 
     const u = snap.val();
@@ -67,45 +68,57 @@ async function loadProfile(uid) {
     // Avatar
     avatarImg.src = u.avatar || "/shahartaxi-demo/docs/img/avatar-default.png";
 
-    // Asosiy ma’lumotlar
+    // Basic info
     fullName.textContent = u.fullName || "Yuklanmoqda...";
     phone.textContent = u.phone || "-";
     balance.textContent = (u.balance || 0) + " so‘m";
 
     // Gender
     if (u.gender) {
-        gender.textContent = u.gender;
         genderRow.style.display = "block";
+        gender.textContent = u.gender;
     }
 
-    // Tug‘ilgan sana
+    // Birthdate
     if (u.birthdate) {
-        birthdate.textContent = u.birthdate;
         birthRow.style.display = "block";
+        birthdate.textContent = u.birthdate;
     }
 
-    // Haydovchi bo‘lsa
+    // Driver info
     if (u.role === "driver") {
         driverBlock.style.display = "block";
 
-        if (u.carModel) {
-            carModel.textContent = u.carModel;
-            carModelRow.style.display = "block";
-        }
+        if (u.carModel) { carModelRow.style.display = "block"; carModel.textContent = u.carModel; }
+        if (u.carColor) { carColorRow.style.display = "block"; carColor.textContent = u.carColor; }
+        if (u.carNumber) { carNumberRow.style.display = "block"; carNumber.textContent = u.carNumber; }
+        if (u.license) { licenseRow.style.display = "block"; license.textContent = u.license; }
 
-        if (u.carColor) {
-            carColor.textContent = u.carColor;
-            carColorRow.style.display = "block";
-        }
+        // SUPER-APP: ABONEMENT
+        subscriptionBlock.style.display = "block";
 
-        if (u.carNumber) {
-            carNumber.textContent = u.carNumber;
-            carNumberRow.style.display = "block";
-        }
+        const sub = u.subscriptions?.taxi;
 
-        if (u.license) {
-            license.textContent = u.license;
-            licenseRow.style.display = "block";
+        if (sub && sub.active && sub.expiresAt > Date.now()) {
+            // Aktiv abonement
+            subActive.style.display = "block";
+            subInactive.style.display = "none";
+
+            subPlan.textContent = sub.plan;
+            subExpire.textContent = new Date(sub.expiresAt).toLocaleString("uz-UZ");
+
+        } else {
+            // Abonement yo‘q
+            subActive.style.display = "none";
+            subInactive.style.display = "block";
         }
     }
+
+    // Abonement tugmalari
+    subBuyBtn.onclick = () => {
+        window.location.href = "/shahartaxi-demo/docs/app/subscription/subscription.html";
+    };
+    subManageBtn.onclick = () => {
+        window.location.href = "/shahartaxi-demo/docs/app/subscription/subscription.html";
+    };
 }
