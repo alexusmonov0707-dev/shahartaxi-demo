@@ -2,7 +2,7 @@
 // Keeps all original features. Uses regions-helper.js functions (window.fillRegions, window.updateDistricts)
 
 import {
-  auth, db, ref, get, update, remove, onAuthStateChanged, $
+  auth, db, ref, get, update, remove, onAuthStateChanged, 
 } from "../../libs/lib.js";
 
 function _$(id){ return document.getElementById(id); }
