@@ -1,69 +1,34 @@
-// app/user/js/login.js
-import {
-  auth,
-  db,
-  ref,
-  get,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  $
-} from "../../libs/lib.js";
+import { auth, signInWithEmailAndPassword, db, ref, get } 
+from "/shahartaxi-demo/docs/libs/lib.js";
 
-// ==========================
-// INVISIBLE RECAPTCHA
-// ==========================
-window.recaptchaVerifier = new RecaptchaVerifier(
-  auth,
-  "recaptcha-container",
-  { size: "invisible" }
-);
+const phoneInput = document.getElementById("phone");
+const passwordInput = document.getElementById("password");
+const loginBtn = document.getElementById("loginBtn");
 
-// ==========================
-// SEND SMS
-// ==========================
-$("sendBtn").onclick = async () => {
-  const phone = $("phone").value.trim();
+loginBtn.onclick = async () => {
 
-  if (!phone.startsWith("+998")) {
-    alert("Telefonni +998 bilan kiriting");
-    return;
-  }
+    const phone = phoneInput.value.trim();
+    const password = passwordInput.value;
 
-  try {
-    const confirmation = await signInWithPhoneNumber(
-      auth,
-      phone,
-      window.recaptchaVerifier
-    );
-
-    window.confirmationResult = confirmation;
-    alert("SMS yuborildi!");
-
-  } catch (e) {
-    console.error(e);
-    alert("SMS yuborishda xatolik: " + e.message);
-  }
-};
-
-// ==========================
-// VERIFY CODE
-// ==========================
-$("verifyBtn").onclick = async () => {
-  const code = $("smsCode").value.trim();
-
-  try {
-    const result = await window.confirmationResult.confirm(code);
-    const user = result.user;
-
-    const snap = await get(ref(db, "users/" + user.uid));
-
-    if (snap.exists()) {
-      window.location.href = "/shahartaxi-demo/app/user/index.html";
-    } else {
-      window.location.href = "/shahartaxi-demo/app/user/register.html";
+    if (!phone || !password) {
+        alert("Iltimos, barcha maydonlarni to‘ldiring.");
+        return;
     }
 
-  } catch (e) {
-    alert("Kod xato yoki muddati tugagan!");
-  }
+    const email = phone + "@shahartaxi.uz";
+
+    try {
+        const user = await signInWithEmailAndPassword(auth, email, password);
+
+        // USER DATA YUKLASH
+        const snap = await get(ref(db, "users/" + user.user.uid));
+        const u = snap.val();
+
+        // Bitta umumiy dashboard
+        window.location.href = "/shahartaxi-demo/app/user/index.html";
+
+    } catch (err) {
+        console.error(err);
+        alert("Telefon yoki parol noto‘g‘ri.");
+    }
 };
