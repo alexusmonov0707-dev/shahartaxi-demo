@@ -83,10 +83,11 @@ async function loadProfile(uid) {
             licenseRow.style.display = "block";
         }
     }
-}
-<script>
+    <script>
 document.getElementById("editProfileBtn").onclick = () => {
     window.location.href = "profile-edit.html";
 };
 </script>
+}
+
 
