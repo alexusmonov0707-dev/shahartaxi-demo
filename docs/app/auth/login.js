@@ -50,7 +50,7 @@ loginBtn.addEventListener("click", async () => {
     }
 
     // if driver not verified — allow login but restrict posting (handled in create-ad)
-    window.location.href = "/shahartaxi-demo/app/user/index.html";
+    window.location.href = "/shahartaxi-demo/docs/app/taxi/index.html";
 
   } catch (err) {
     console.error("Login error:", err);
