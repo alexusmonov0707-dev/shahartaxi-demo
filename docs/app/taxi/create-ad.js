@@ -45,6 +45,37 @@ clearBtn.addEventListener("click", (e) => {
     document.getElementById("seats").value = "";
     document.getElementById("adComment").value = "";
 });
+// at top: import onAuthStateChanged, get, ref...
+import { auth, db, ref, get, onAuthStateChanged } from "/shahartaxi-demo/docs/libs/lib.js";
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    // not logged in — redirect
+    location.href = "/shahartaxi-demo/app/auth/login.html";
+    return;
+  }
+  const snap = await get(ref(db, `users/${user.uid}`));
+  const u = snap.exists() ? snap.val() : null;
+  if (!u) {
+    alert("Profil ma'lumotlari topilmadi. Admin bilan bog'laning.");
+    await auth.signOut();
+    location.href = "/shahartaxi-demo/app/auth/login.html";
+    return;
+  }
+  // block driver if not verified
+  if (u.role === "driver" && u.verified !== true) {
+    // disable form submit button
+    const submitBtn = document.getElementById("postAdBtn");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.title = "Profilingiz admin tomonidan tasdiqlanishini kuting";
+    }
+    // optionally show banner
+    const note = document.getElementById("verificationNotice");
+    if (note) note.textContent = "Profilingiz hali tasdiqlanmagan. E'lon joylay olmaysiz.";
+  }
+});
+
 
 // ===============================
 //       SUBMIT — FIREBASE
