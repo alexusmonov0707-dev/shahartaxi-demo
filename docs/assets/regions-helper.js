@@ -1,92 +1,96 @@
 (function () {
 
-  // 1) regions borligini tekshirish
-  function ensureRegionsReady() {
-    return (window.regions && typeof window.regions === "object");
+  // -----------------------------
+  //  REGIONS READY
+  // -----------------------------
+  function ensureRegions() {
+    return window.regions && typeof window.regions === "object";
   }
 
-  // 2) regionsList yaratish
-  function buildRegionsList() {
-    if (!ensureRegionsReady()) return false;
-    window.regionsList = Object.keys(window.regions).map(region => ({
-      name: region,
-      districts: window.regions[region]
+  // -----------------------------
+  //  BUILD REGIONS LIST
+  // -----------------------------
+  function buildList() {
+    if (!ensureRegions()) return false;
+
+    window.regionsList = Object.keys(window.regions).map(r => ({
+      name: r,
+      districts: window.regions[r]
     }));
+
     return true;
   }
 
-  buildRegionsList();
+  buildList();
 
-  // 3) VILOYATLARNI TO‘LDIRISH
+  // -----------------------------
+  //  FILL REGIONS (FOR DROPDOWNS)
+  // -----------------------------
   window.fillRegions = function (id) {
-    const el = document.getElementById(id);
-    if (!el) return;
+    const sel = document.getElementById(id);
+    if (!sel) return;
 
     let tries = 0;
     (function wait() {
       tries++;
-      if (buildRegionsList() || tries > 20) {
-        el.innerHTML = `<option value="">Viloyat</option>`;
-        (window.regionsList || []).forEach(r => {
+      if (buildList() || tries > 20) {
+        sel.innerHTML = `<option value="">Viloyat</option>`;
+        window.regionsList.forEach(r => {
           const op = document.createElement("option");
           op.value = r.name;
           op.textContent = r.name;
-          el.appendChild(op);
+          sel.appendChild(op);
         });
       } else {
-        setTimeout(wait, 20);
+        setTimeout(wait, 15);
       }
     })();
   };
 
-  // 4) TUMANLARNI TOLA RESET QILISH
-  function resetDistricts(dSel) {
-    dSel.innerHTML = `<option value="">Tuman</option>`;
-    dSel.value = "";
-    dSel.selectedIndex = 0;
-  }
-
-  // 5) TUMANLARNI TO‘LDIRISH (TRIGGER)
+  // -----------------------------
+  //  UPDATE DISTRICTS (KEY FIX)
+  // -----------------------------
   window.updateDistricts = function (type, callback) {
-    let rSel = document.getElementById(type + "Region");
-    let dSel = document.getElementById(type + "District");
 
-    // edit modal fallback
-    if (!rSel || !dSel) {
-      const R = "edit" + type.charAt(0).toUpperCase() + type.slice(1) + "Region";
-      const D = "edit" + type.charAt(0).toUpperCase() + type.slice(1) + "District";
-      rSel = document.getElementById(R);
-      dSel = document.getElementById(D);
-    }
+    let regionId = type + "Region";
+    let districtId = type + "District";
+
+    // For edit modal
+    if (!document.getElementById(regionId)) regionId = "edit" + regionId.charAt(0).toUpperCase() + regionId.slice(1);
+    if (!document.getElementById(districtId)) districtId = "edit" + districtId.charAt(0).toUpperCase() + districtId.slice(1);
+
+    const rSel = document.getElementById(regionId);
+    const dSel = document.getElementById(districtId);
 
     if (!rSel || !dSel) return;
 
-    resetDistricts(dSel);
+    // RESET properly
+    dSel.innerHTML = `<option value="">Tuman</option>`;
+    dSel.value = "";
 
     let tries = 0;
-    (function wait() {
+    (function wait2() {
       tries++;
+      if (buildList() || tries > 20) {
 
-      if (buildRegionsList() || tries > 20) {
+        const regionName = rSel.value;
+        const data = window.regionsList.find(r => r.name === regionName);
 
-        const region = rSel.value;
-        const info = (window.regionsList || []).find(r => r.name === region);
-
-        if (info) {
-          info.districts.forEach(dist => {
+        if (data) {
+          data.districts.forEach(d => {
             const op = document.createElement("option");
-            op.value = dist;
-            op.textContent = dist;
+            op.value = d;
+            op.textContent = d;
             dSel.appendChild(op);
           });
         }
 
-        // **MUHIM** – district to‘liq yuklangach callback
+        // MOST IMPORTANT PART:
         if (typeof callback === "function") {
           setTimeout(callback, 10);
         }
 
-      } else setTimeout(wait, 20);
+      } else setTimeout(wait2, 15);
 
     })();
   };
