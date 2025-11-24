@@ -1,83 +1,43 @@
-// app/user/js/register.js
-// Modullar: lib.js dan eksport qilinganlar bilan ishlaydi
+import { auth, createUserWithEmailAndPassword, db, ref, set }
+from "/shahartaxi-demo/docs/libs/lib.js";
 
-import { auth, db, ref, get, update, onAuthStateChanged } from "../../libs/lib.js";
+const nameInput = document.getElementById("fullName");
+const phoneInput = document.getElementById("phone");
+const roleInput = document.getElementById("role");
+const passwordInput = document.getElementById("password");
 
-let SELECTED_ROLE = null;
-let CURRENT_UID = null;
-let CURRENT_PHONE = null;
+document.getElementById("registerBtn").onclick = async () => {
 
-// DOM helpers
-const $ = id => document.getElementById(id);
+    const fullName = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const role = roleInput.value;
+    const password = passwordInput.value;
 
-// Auth holatini kuzatish — agar user login qilmagan bo'lsa qaytaradi
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    // Agar login qilmagan bo'lsa, kirish sahifasiga o'tkazish
-    window.location.href = "login.html";
-    return;
-  }
+    if (!fullName || !phone || !password) {
+        alert("Barcha maydonlarni to‘ldiring.");
+        return;
+    }
 
-  // Agar login bo'lsa — telefon va uid saqlaymiz va inputni to'ldiramiz
-  CURRENT_UID = user.uid;
-  CURRENT_PHONE = user.phoneNumber || "";
-  if ($("phone")) $("phone").value = CURRENT_PHONE;
-});
+    const email = phone + "@shahartaxi.uz";
 
-// Role tanlash funksiyasi — sahifadagi maydonlarni ko'rsatadi
-window.selectRole = function(role) {
-  SELECTED_ROLE = role;
-  $("selectedRole").textContent = role === "driver"
-    ? "Haydovchi sifatida ro‘yxatdan o‘tish"
-    : "Yo‘lovchi sifatida ro‘yxatdan o‘tish";
+    try {
+        const user = await createUserWithEmailAndPassword(auth, email, password);
 
-  $("extraFields").style.display = "block";
+        await set(ref(db, "users/" + user.user.uid), {
+            uid: user.user.uid,
+            fullName,
+            phone,
+            role,
+            balance: 0,
+            subscriptions: { taxi: { active: false } }
+        });
 
-  if (role === "driver") {
-    $("driverFields").style.display = "block";
-  } else {
-    $("driverFields").style.display = "none";
-  }
-};
+        alert("Akkount yaratildi!");
 
-// DB ga role va boshqa ma'lumotlarni yozish
-window.saveRole = async function() {
-  if (!SELECTED_ROLE) return alert("Iltimos, rolni tanlang.");
+        window.location.href = "/shahartaxi-demo/app/user/index.html";
 
-  // Foydalanuvchi hozir autentifikatsiyadan o'tgan bo'lishi kerak
-  const user = auth.currentUser;
-  if (!user) {
-    alert("Tizimdan chiqib ketilgan. Iltimos, qayta kirish qiling.");
-    window.location.href = "login.html";
-    return;
-  }
-
-  const fullName = ($("fullName").value || "").trim();
-  if (!fullName) return alert("Ism va familiyangizni kiriting.");
-
-  // Tayyorlanayotgan data obyekti
-  const data = {
-    fullName,
-    phone: CURRENT_PHONE,
-    role: SELECTED_ROLE,
-    updatedAt: Date.now()
-  };
-
-  if (SELECTED_ROLE === "driver") {
-    data.carModel = ($("carModel").value || "").trim();
-    data.license  = ($("license").value || "").trim();
-  }
-
-  try {
-    // update — mavjud maydonlarni yangilaydi, yangi user uchun ham yaxshi ishlaydi
-    await update(ref(db, "users/" + user.uid), data);
-
-    alert("Ro'yxatdan o'tish muvaffaqiyatli!");
-
-    // Index sahifasiga o'tish (app/user/index.html)
-    window.location.href = "index.html";
-  } catch (err) {
-    console.error("Register error:", err);
-    alert("Xatolik yuz berdi: " + (err.message || err));
-  }
+    } catch (err) {
+        console.error(err);
+        alert("Ro‘yxatdan o‘tishda xatolik!");
+    }
 };
