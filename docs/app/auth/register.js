@@ -7,7 +7,7 @@ import {
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
 // IMGBB key (agar o'zgartirsang o'zingniki)
-const IMGBB_API_KEY = "99ab532b24271b982285ecf24a805787";
+const IMGBB_API_KEY = "4e27dc8a0b6f5bd0262b6f3cba04b09a";
 
 // upload helper
 async function uploadImageToImgbb(file) {
