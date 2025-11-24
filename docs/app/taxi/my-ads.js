@@ -1,173 +1,351 @@
+// my-ads.js (module)
 import {
-    auth,
-    db,
-    ref,
-    get,
-    update,
-    remove,
-    onAuthStateChanged,
-    $
+  auth,
+  db,
+  ref,
+  get,
+  push,
+  update,
+  remove,
+  onAuthStateChanged,
+  $
 } from "/shahartaxi-demo/docs/libs/lib.js";
 
-// =====================
-// FILL REGIONS (IDENTIK create-ad.js bilan)
-// =====================
-window.initRegionsForm = function () {
-    const fromRegion = $("editFromRegion");
-    const toRegion = $("editToRegion");
+// simple helper if $ not exported (fallback)
+function _$(id){ return document.getElementById(id) }
+const $el = typeof $ === "function" ? $ : _$;
 
-    fromRegion.innerHTML = '<option value="">Viloyat</option>';
-    toRegion.innerHTML = '<option value="">Viloyat</option>';
+// DOM refs
+const fromRegion = $el("fromRegion");
+const fromDistrict = $el("fromDistrict");
+const toRegion = $el("toRegion");
+const toDistrict = $el("toDistrict");
+const price = $el("price");
+const departureTime = $el("departureTime");
+const seats = $el("seats");
+const adComment = $el("adComment");
+const addAdBtn = $el("addAdBtn");
+const clearAddBtn = $el("clearAddBtn");
+const myAdsList = $el("myAdsList");
 
-    regions.forEach(r => {
-        fromRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-        toRegion.innerHTML += `<option value="${r.name}">${r.name}</option>`;
-    });
-};
+const editModal = $el("editModal");
+const editFromRegion = $el("editFromRegion");
+const editFromDistrict = $el("editFromDistrict");
+const editToRegion = $el("editToRegion");
+const editToDistrict = $el("editToDistrict");
+const editPrice = $el("editPrice");
+const editTime = $el("editTime");
+const editSeats = $el("editSeats");
+const editComment = $el("editComment");
+const saveEditBtn = $el("saveEditBtn");
+const closeEditBtn = $el("closeEditBtn");
 
-window.updateEditDistricts = function (type) {
-    const regionSelect = type === "from" ? $("editFromRegion") : $("editToRegion");
-    const districtSelect = type === "from" ? $("editFromDistrict") : $("editToDistrict");
-
-    const regionName = regionSelect.value;
-
-    districtSelect.innerHTML = '<option value="">Tuman</option>';
-
-    if (!regionName) return;
-
-    const region = regions.find(r => r.name === regionName);
-    if (!region) return;
-
-    region.districts.forEach(dis => {
-        districtSelect.innerHTML += `<option value="${dis}">${dis}</option>`;
-    });
-};
-
-// =====================
-// GLOBAL
-// =====================
 let editingAdId = null;
 
-// =====================
-// USER CHECK
-// =====================
-onAuthStateChanged(auth, user => {
-    if (!user) {
-        window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
-        return;
-    }
-
-    window.currentUID = user.uid;
-    loadMyAds(user.uid);
-});
-
-// =====================
-// LOAD USER ADS
-// =====================
-async function loadMyAds(uid) {
-    const snap = await get(ref(db, "ads"));
-    const list = $("myAdsList");
-
-    list.innerHTML = "";
-
-    if (!snap.exists()) {
-        list.innerHTML = "<p>Hozircha e’lon yo‘q.</p>";
-        return;
-    }
-
-    snap.forEach(child => {
-        const ad = child.val();
-        if (ad.userId !== uid) return;
-
-        const seatsText = ad.driverSeats
-            ? `<b>Bo'sh joy:</b> ${ad.driverSeats}`
-            : `<b>Yo'lovchilar:</b> ${ad.passengerCount ?? "-"}`;
-
-        const box = document.createElement("div");
-        box.className = "ad-box";
-        box.innerHTML = `
-            <b style="color:#0069d9;">${ad.type}</b><br>
-            ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}<br>
-            Narx: <b style="color:#28a745">${ad.price}</b><br>
-            Vaqt: ${ad.departureTime}<br>
-            ${seatsText}
-            <div style="margin-top:10px; display:flex; gap:10px;">
-                <button class="blue-btn" onclick='openEditAd("${child.key}", ${JSON.stringify(ad).replace(/</g,"\\u003c")})'>
-                    Tahrirlash
-                </button>
-                <button class="red-btn" onclick='deleteAd("${child.key}")'>O‘chirish</button>
-            </div>
-        `;
-        list.appendChild(box);
-    });
+// datetime formatting helper
+function formatDatetime(dt){
+  if(!dt) return "-";
+  try {
+    const d = new Date(dt);
+    if(isNaN(d)) return dt;
+    return d.toLocaleString("uz-UZ", {year:"numeric", month:"long", day:"numeric", hour:"2-digit", minute:"2-digit"});
+  } catch(e){ return dt }
 }
 
-// =====================
-// DELETE AD
-// =====================
-window.deleteAd = async function (id) {
-    if (!confirm("Rostdan o‘chirmoqchimisiz?")) return;
+// ---------- REGIONS: fill selects ----------
+function ensureRegionsLoaded(){
+  if (!window.regionsData) {
+    // regions not loaded by regions-taxi.js — warn and exit
+    console.warn("Regions data not loaded (window.regionsData). Region selects will be empty.");
+    return false;
+  }
+  return true;
+}
 
-    await remove(ref(db, "ads/" + id));
+function fillRegionSelects(){
+  if(!ensureRegionsLoaded()) return;
+  const keys = Object.keys(window.regionsData);
 
-    alert("O‘chirildi!");
-    loadMyAds(currentUID);
+  function fill(sel, placeholder){
+    if(!sel) return;
+    sel.innerHTML = `<option value="">${placeholder}</option>`;
+    keys.forEach(r => sel.innerHTML += `<option value="${r}">${r}</option>`);
+  }
+
+  fill(fromRegion, "Qayerdan (Viloyat)");
+  fill(toRegion, "Qayerga (Viloyat)");
+  fill(editFromRegion, "Viloyat");
+  fill(editToRegion, "Viloyat");
+}
+
+window.updateDistricts = function(type){
+  if(!ensureRegionsLoaded()) return;
+  const region = document.getElementById(type + "Region").value;
+  const districtSelect = document.getElementById(type + "District");
+  districtSelect.innerHTML = '<option value="">Tuman</option>';
+  if(region && window.regionsData[region]){
+    window.regionsData[region].forEach(t => districtSelect.innerHTML += `<option value="${t}">${t}</option>`);
+  }
 };
 
-// =====================
-// OPEN MODAL
-// =====================
-window.openEditAd = function (id, ad) {
+window.updateEditDistricts = function(type){
+  if(!ensureRegionsLoaded()) return;
+  const region = (type === "from") ? (editFromRegion.value || "") : (editToRegion.value || "");
+  const districtSelect = (type === "from") ? editFromDistrict : editToDistrict;
+  districtSelect.innerHTML = '<option value="">Tuman</option>';
+  if(region && window.regionsData[region]){
+    window.regionsData[region].forEach(t => districtSelect.innerHTML += `<option value="${t}">${t}</option>`);
+  }
+};
+
+// ---------- AUTH + init ----------
+onAuthStateChanged(auth, user => {
+  if(!user){
+    // redirect to login relative path
+    window.location.href = "/shahartaxi-demo/docs/app/auth/login.html";
+    return;
+  }
+  // fill region selects now that page loaded
+  fillRegionSelects();
+  loadMyAds();
+});
+
+// ---------- ADD AD ----------
+if(addAdBtn) addAdBtn.addEventListener("click", async () => {
+  const user = auth.currentUser;
+  if(!user) return alert("Iltimos, tizimga kiring.");
+
+  const ad = {
+    userId: user.uid,
+    type: window.userRole === "driver" ? "Haydovchi" : "Yo'lovchi",
+    fromRegion: fromRegion ? fromRegion.value : "",
+    fromDistrict: fromDistrict ? fromDistrict.value : "",
+    toRegion: toRegion ? toRegion.value : "",
+    toDistrict: toDistrict ? toDistrict.value : "",
+    price: price ? price.value : "",
+    comment: adComment ? adComment.value : "",
+    departureTime: departureTime ? departureTime.value : "",
+    createdAt: Date.now(),
+    approved: false
+  };
+
+  if(seats && seats.value){
+    if(window.userRole === "driver") ad.driverSeats = seats.value;
+    else ad.passengerCount = seats.value;
+  }
+
+  try {
+    await push(ref(db, "ads"), ad);
+    alert("E'lon joylandi!");
+    clearAddForm();
+    loadMyAds();
+  } catch (err) {
+    console.error(err);
+    alert("Xatolik yuz berdi.");
+  }
+});
+
+if(clearAddBtn) clearAddBtn.addEventListener("click", clearAddForm);
+
+function clearAddForm(){
+  if(fromRegion) fromRegion.value = "";
+  if(fromDistrict) fromDistrict.innerHTML = '<option value="">Tuman</option>';
+  if(toRegion) toRegion.value = "";
+  if(toDistrict) toDistrict.innerHTML = '<option value="">Tuman</option>';
+  if(price) price.value = "";
+  if(departureTime) departureTime.value = "";
+  if(seats) seats.value = "";
+  if(adComment) adComment.value = "";
+}
+
+// ---------- LOAD MY ADS ----------
+async function loadMyAds(){
+  const user = auth.currentUser;
+  if(!user){
+    myAdsList.innerHTML = "<p>Tizimga kirilmadi.</p>";
+    return;
+  }
+  myAdsList.innerHTML = "Yuklanmoqda...";
+  try {
+    const snap = await get(ref(db, "ads"));
+    myAdsList.innerHTML = "";
+    if(!snap.exists()){
+      myAdsList.innerHTML = "<p>Hozircha e'lon yo'q.</p>";
+      return;
+    }
+    snap.forEach(child => {
+      const ad = child.val();
+      if(ad.userId !== user.uid) return;
+
+      const seatsInfo = ad.driverSeats ? `<div class="ad-meta"><b>Bo'sh joy:</b> ${ad.driverSeats}</div>`
+                      : ad.passengerCount ? `<div class="ad-meta"><b>Yo'lovchilar:</b> ${ad.passengerCount}</div>` : "";
+
+      const created = ad.createdAt ? formatDatetime(ad.createdAt) : "-";
+
+      const div = document.createElement("div");
+      div.className = "ad-box";
+      div.dataset.adId = child.key;
+      div.innerHTML = `
+        <div style="font-weight:700; color:var(--primary);">${ad.type || "E'lon"}</div>
+        <div style="margin-top:6px;">
+          <span>${ad.fromRegion || "-"}${ad.fromDistrict ? ", " + ad.fromDistrict : ""}</span>
+          &nbsp;→&nbsp;
+          <span>${ad.toRegion || "-"}${ad.toDistrict ? ", " + ad.toDistrict : ""}</span>
+        </div>
+        <div class="ad-meta">Narx: <b style="color:#28a745">${ad.price || "-"}</b></div>
+        <div class="ad-meta">Vaqt: ${formatDatetime(ad.departureTime)}</div>
+        ${seatsInfo}
+        <div class="ad-actions">
+          <button class="btn btn-primary btn-edit" data-id="${child.key}">Tahrirlash</button>
+          <button class="btn btn-danger btn-delete" data-id="${child.key}">O'chirish</button>
+        </div>
+        <small class="muted">Qo'shilgan: ${created}</small>
+      `;
+      myAdsList.appendChild(div);
+    });
+  } catch(e){
+    console.error(e);
+    myAdsList.innerHTML = "<p>Xatolik yuz berdi.</p>";
+  }
+}
+
+// ---------- DELEGATED ACTIONS FOR EDIT / DELETE ----------
+myAdsList.addEventListener("click", (ev) => {
+  const editBtn = ev.target.closest(".btn-edit");
+  const delBtn = ev.target.closest(".btn-delete");
+  if(editBtn){
+    const id = editBtn.dataset.id;
+    openEditAdById(id);
+    return;
+  }
+  if(delBtn){
+    const id = delBtn.dataset.id;
+    if(confirm("Rostdan o'chirishni xohlaysizmi?")) deleteAdById(id);
+    return;
+  }
+});
+
+// ---------- OPEN EDIT ----------
+async function openEditAdById(id){
+  if(!id) return;
+  try {
+    const snap = await get(ref(db, "ads/" + id));
+    if(!snap.exists()) return alert("E'lon topilmadi");
+    const ad = snap.val();
+
+    // ensure regions filled
+    fillRegionSelects(); // fill edit selects too
+
     editingAdId = id;
 
-    initRegionsForm();
+    // populate edit fields
+    if(editFromRegion) editFromRegion.value = ad.fromRegion || "";
+    window.updateEditDistricts("from");
+    if(editFromDistrict) editFromDistrict.value = ad.fromDistrict || "";
 
-    $("editFromRegion").value = ad.fromRegion;
-    updateEditDistricts("from");
-    $("editFromDistrict").value = ad.fromDistrict;
+    if(editToRegion) editToRegion.value = ad.toRegion || "";
+    window.updateEditDistricts("to");
+    if(editToDistrict) editToDistrict.value = ad.toDistrict || "";
 
-    $("editToRegion").value = ad.toRegion;
-    updateEditDistricts("to");
-    $("editToDistrict").value = ad.toDistrict;
+    if(editPrice) editPrice.value = ad.price || "";
+    if(editTime) {
+      // try to support both timestamp and iso
+      if(ad.departureTime && String(ad.departureTime).length > 0 && !isNaN(new Date(ad.departureTime))) {
+        // if it's parseable to Date, convert to input value form
+        const dt = new Date(ad.departureTime);
+        // format to yyyy-MM-ddTHH:mm
+        const pad = n => n.toString().padStart(2,"0");
+        const yyyy = dt.getFullYear();
+        const mm = pad(dt.getMonth()+1);
+        const dd = pad(dt.getDate());
+        const hh = pad(dt.getHours());
+        const min = pad(dt.getMinutes());
+        editTime.value = `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+      } else {
+        editTime.value = ad.departureTime || "";
+      }
+    }
+    if(editSeats) editSeats.value = ad.driverSeats || ad.passengerCount || "";
+    if(editComment) editComment.value = ad.comment || "";
 
-    $("editPrice").value = ad.price;
-    $("editTime").value = ad.departureTime;
-    $("editComment").value = ad.comment ?? "";
+    // show modal
+    if(editModal) editModal.style.display = "flex";
+  } catch(e){
+    console.error(e);
+    alert("E'lon yuklanishda xatolik.");
+  }
+}
 
-    $("editSeats").value = ad.driverSeats ?? ad.passengerCount ?? "";
+// close edit
+if(closeEditBtn) closeEditBtn.addEventListener("click", () => {
+  editingAdId = null;
+  if(editModal) editModal.style.display = "none";
+});
 
-    $("editAdModal").style.display = "flex";
-};
+// save edit
+if(saveEditBtn) saveEditBtn.addEventListener("click", async () => {
+  if(!editingAdId) return alert("Tahrirlanadigan e'lon aniqlanmadi.");
+  const updates = {
+    fromRegion: editFromRegion ? editFromRegion.value : "",
+    fromDistrict: editFromDistrict ? editFromDistrict.value : "",
+    toRegion: editToRegion ? editToRegion.value : "",
+    toDistrict: editToDistrict ? editToDistrict.value : "",
+    price: editPrice ? editPrice.value : "",
+    departureTime: editTime ? editTime.value : "",
+    comment: editComment ? editComment.value : ""
+  };
+  if(editSeats){
+    if(window.userRole === "driver") updates.driverSeats = editSeats.value || "";
+    else updates.passengerCount = editSeats.value || "";
+  }
 
-window.closeEditAd = () =>
-    $("editAdModal").style.display = "none";
-
-// =====================
-// SAVE EDIT
-// =====================
-window.saveAdEdit = async function () {
-    if (!editingAdId) return;
-
-    const updates = {
-        fromRegion: $("editFromRegion").value,
-        fromDistrict: $("editFromDistrict").value,
-        toRegion: $("editToRegion").value,
-        toDistrict: $("editToDistrict").value,
-        price: $("editPrice").value,
-        departureTime: $("editTime").value,
-        comment: $("editComment").value
-    };
-
-    const seats = $("editSeats").value;
-
-    if (window.userRole === "driver")
-        updates.driverSeats = seats;
-    else
-        updates.passengerCount = seats;
-
+  try {
     await update(ref(db, "ads/" + editingAdId), updates);
+    alert("E'lon yangilandi!");
+    editingAdId = null;
+    if(editModal) editModal.style.display = "none";
+    loadMyAds();
+  } catch(e){
+    console.error(e);
+    alert("Saqlashda xatolik yuz berdi.");
+  }
+});
 
-    alert("Tahrirlandi!");
-    closeEditAd();
-    loadMyAds(currentUID);
-};
+// delete
+async function deleteAdById(id){
+  try {
+    await remove(ref(db, "ads/" + id));
+    alert("E'lon o'chirildi");
+    loadMyAds();
+  } catch(e){
+    console.error(e);
+    alert("O'chirishda xatolik.");
+  }
+}
+
+// if user clicks outside modal, close it
+window.addEventListener("click", (ev) => {
+  if(ev.target === editModal) {
+    editingAdId = null;
+    editModal.style.display = "none";
+  }
+});
+
+// expose some functions for other modules if needed
+window.loadMyAds = loadMyAds;
+window.openEditAd = openEditAdById;
+window.updateEditDistricts = window.updateEditDistricts;
+window.updateDistricts = window.updateDistricts;
+
+// fill region selects also when regions script becomes available later
+if (!window.regionsData) {
+  // maybe regions script loads later; watch for it
+  const checkRegionsInterval = setInterval(() => {
+    if(window.regionsData){
+      fillRegionSelects();
+      clearInterval(checkRegionsInterval);
+    }
+  }, 300);
+} else {
+  fillRegionSelects();
+}
