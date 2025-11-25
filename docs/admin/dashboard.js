@@ -1,3 +1,9 @@
+const admin = JSON.parse(localStorage.getItem("adminUser"));
+
+if (!admin || admin.role !== "admin") {
+    location.href = "./login.html";
+}
+
 import { auth, onAuthStateChanged, signOut, db, ref, get } from "../libs/lib.js";
 
 // Sahifa yuklanganda admin login tekshiruvi
