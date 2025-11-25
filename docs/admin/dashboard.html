@@ -54,6 +54,16 @@
       </div>
     </section>
   </main>
+  <script type="module">
+import { db, ref, get } from "../libs/lib.js";
+
+// admin session bor-yo‘qligini tekshiramiz
+const admin = sessionStorage.getItem("admin");
+if (!admin) {
+    location.href = "/shahartaxi-demo/docs/admin/login.html";
+}
+</script>
+
 <!-- include script -->
 <script type="module" src="./admin-verification.js"></script>
   <script type="module" src="./dashboard.js"></script>
