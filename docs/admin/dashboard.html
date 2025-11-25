@@ -46,6 +46,12 @@
     </section>
 
   </main>
+<script>
+const admin = sessionStorage.getItem("admin");
+if (!admin) {
+   location.href = "/shahartaxi-demo/docs/admin/login.html";
+}
+</script>
 
   <!-- Scripts -->
   <script type="module" src="./admin-verification.js"></script>
