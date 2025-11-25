@@ -1,16 +1,21 @@
 import { db, ref, get } from "../libs/lib.js";
 
-window.loginAdmin = async () => {
+async function loginAdmin() {
     const login = document.getElementById("login").value.trim();
     const pass = document.getElementById("pass").value.trim();
     const error = document.getElementById("error");
 
     error.textContent = "";
 
+    if (!login || !pass) {
+        error.textContent = "Login va parolni kiriting!";
+        return;
+    }
+
     try {
-        const snap = await get(ref(db, `admins/${login}`));
+        const snap = await get(ref(db, "admins/" + login));
         if (!snap.exists()) {
-            error.textContent = "Login yoki parol noto‘g‘ri!";
+            error.textContent = "Bunday admin topilmadi!";
             return;
         }
 
@@ -21,13 +26,15 @@ window.loginAdmin = async () => {
             return;
         }
 
-        // LOGIN MUVAFFAQIYATLI — SESSION SAQLAYMIZ
+        // SUCCESS — sessionga saqlaymiz
         sessionStorage.setItem("admin", login);
 
-        location.href = "./dashboard.html";
+        location.href = "/shaahrtaxi-demo/docs/admin/dashboard.html";
+
+    } catch (err) {
+        console.error(err);
+        error.textContent = "Server xatosi!";
     }
-    catch (e) {
-        error.textContent = "Xatolik yuz berdi!";
-        console.log(e);
-    }
-};
+}
+
+window.loginAdmin = loginAdmin;
