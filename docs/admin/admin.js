@@ -29,7 +29,7 @@ async function loginAdmin() {
         // SUCCESS — sessionga saqlaymiz
         sessionStorage.setItem("admin", login);
 
-        location.href = "/shaahrtaxi-demo/docs/admin/dashboard.html";
+        location.href = "/shahartaxi-demo/docs/admin/dashboard.html";
 
     } catch (err) {
         console.error(err);
