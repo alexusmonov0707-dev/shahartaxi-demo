@@ -3,15 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <title>Foydalanuvchilar</title>
-    <link rel="stylesheet" href="../assets/admin.css">
+    <link rel="stylesheet" href="../assets/admin.css"> 
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+        th { background: #f2f2f2; }
+
+        .modal-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .modal-box {
+            background: white;
+            width: 400px;
+            padding: 25px;
+            border-radius: 8px;
+        }
+        .close-btn {
+            background: #e74c3c;
+            padding: 7px 15px;
+            color: white;
+            border: 0;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
 
 <h2>Foydalanuvchilar</h2>
 
-<input id="search" placeholder="Qidiruv: ism, telefon, mashina…" style="width:250px; padding:6px;">
+<input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." style="width:250px; padding:7px;">
 
-<table border="1" cellspacing="0" cellpadding="8" style="width:100%; margin-top:20px;">
+<table>
     <thead>
         <tr>
             <th>Ismi</th>
@@ -24,6 +54,25 @@
     <tbody id="usersTable"></tbody>
 </table>
 
-<script type="module" src="./users.js"></script>
+
+<!-- ▶️ MODAL -->
+<div class="modal-bg" id="userModal">
+    <div class="modal-box">
+        <h3 id="m_name"></h3>
+
+        <p><b>Telefon:</b> <span id="m_phone"></span></p>
+        <p><b>Hudud:</b> <span id="m_region"></span></p>
+        <p><b>Tuman:</b> <span id="m_district"></span></p>
+        <p><b>Mashina:</b> <span id="m_car"></span></p>
+        <p><b>Rangi:</b> <span id="m_color"></span></p>
+        <p><b>Raqami:</b> <span id="m_number"></span></p>
+        <p><b>Balans:</b> <span id="m_balance"></span></p>
+
+        <button class="close-btn" onclick="closeModal()">Yopish</button>
+    </div>
+</div>
+
+<script type="module" src="users.js"></script>
+
 </body>
 </html>
