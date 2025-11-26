@@ -1,66 +1,114 @@
-import { db, ref, onValue, update, remove } from "../libs/lib.js";
+import { db, ref, onValue, remove, update } from "../libs/lib.js";
 
-const tbody = document.getElementById("userTable");
+const tbody = document.getElementById("usersTable");
+const searchInput = document.getElementById("search");
 
-onValue(ref(db, "users"), snapshot => {
-    tbody.innerHTML = "";
+if (!tbody) {
+    console.error("❌ Xato: #usersTable topilmadi!");
+}
 
-    snapshot.forEach(child => {
-        let user = child.val();
-        let uid = child.key;
+let USERS = {};
 
-        let row = `
-        <tr onclick="showDetails('${uid}')">
-            <td>${user.fullName || ""}</td>
-            <td>${user.phone || ""}</td>
-
-            <!-- ⭐ TO‘G‘RILANGAN QATOR ⭐ -->
-            <td>${(user.regionName || "/")} / ${(user.districtName || "")}</td>
-
-            <td>${user.active ? "✔ Aktiv" : "❌ Bloklangan"}</td>
-
-            <td>
-                <button class="btn-warning" onclick="event.stopPropagation(); blockUser('${uid}')">
-                    ${user.active ? "Block" : "Unblock"}
-                </button>
-                <button class="btn-danger" onclick="event.stopPropagation(); deleteUser('${uid}')">
-                    Delete
-                </button>
-            </td>
-        </tr>
-        `;
-
-        tbody.innerHTML += row;
-    });
+onValue(ref(db, "users"), (snap) => {
+    USERS = snap.val() || {};
+    renderUsers(USERS);
 });
 
-window.blockUser = async function (uid) {
-    await update(ref(db, `users/${uid}`), {
-        active: false
+/* ============================
+   Foydalanuvchilarni chiqarish
+============================= */
+
+function renderUsers(data) {
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    Object.entries(data).forEach(([id, user]) => {
+
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+            <td>${user.name || ""}</td>
+            <td>${user.phone || ""}</td>
+            <td>${(user.region || "undefined") + " / " + (user.city || "undefined")}</td>
+            <td>${user.active ? "✓ Aktiv" : "❌ Bloklangan"}</td>
+            <td>
+                <button class="btn btn-warning btn-sm" onclick="blockUser('${id}', ${user.active})">Block</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteUser('${id}')">Delete</button>
+            </td>
+        `;
+
+        tr.onclick = () => showModal(user);
+
+        tbody.appendChild(tr);
     });
+}
+
+/* ============================
+          Qidiruv
+============================= */
+
+searchInput?.addEventListener("input", () => {
+    const txt = searchInput.value.toLowerCase();
+    const filtered = {};
+
+    for (const id in USERS) {
+        const u = USERS[id];
+        if (
+            (u.name || "").toLowerCase().includes(txt) ||
+            (u.phone || "").includes(txt) ||
+            (u.carModel || "").toLowerCase().includes(txt)
+        ) {
+            filtered[id] = u;
+        }
+    }
+    renderUsers(filtered);
+});
+
+/* ============================
+        Block / Unblock
+============================= */
+
+window.blockUser = (id, active) => {
+    update(ref(db, "users/" + id), { active: !active });
 };
 
-window.deleteUser = async function (uid) {
-    if (!confirm("O‘chirishni xohlaysizmi?")) return;
-    await remove(ref(db, `users/${uid}`));
+/* ============================
+            Delete
+============================= */
+
+window.deleteUser = (id) => {
+    if (confirm("Rostdan ham o‘chirilsinmi?")) {
+        remove(ref(db, "users/" + id));
+    }
 };
 
-window.showDetails = function (uid) {
-    onValue(ref(db, `users/${uid}`), snap => {
-        let user = snap.val();
-        
-        document.getElementById("modalName").innerText = user.fullName;
-        document.getElementById("modalPhone").innerText = user.phone;
-        document.getElementById("modalCar").innerText = user.carName;
-        document.getElementById("modalColor").innerText = user.color;
-        document.getElementById("modalPlate").innerText = user.plate;
-        document.getElementById("modalBalance").innerText = user.balance;
-        document.getElementById("modalAvatar").src = user.avatar || "../img/avatar-default.png";
+/* ============================
+           MODAL
+============================= */
 
-        document.getElementById("modal").classList.remove("hidden");
-    });
-};
+const modal = document.getElementById("userModal");
+const modalBody = document.getElementById("modalBody");
 
-window.hideModal = function () {
-    document.getElementById("modal").classList.add("hidden");
+function showModal(user) {
+    if (!modal || !modalBody) return;
+
+    modal.style.display = "flex";
+
+    modalBody.innerHTML = `
+        <h3>${user.name}</h3>
+        <img src="${user.avatar || '../img/avatar-default.png'}" class="avatar">
+        <p><b>Telefon:</b> ${user.phone}</p>
+        <p><b>Hudud:</b> ${user.region || ''}</p>
+        <p><b>Tuman:</b> ${user.city || ''}</p>
+        <p><b>Mašina:</b> ${user.carModel || ''}</p>
+        <p><b>Rangi:</b> ${user.carColor || ''}</p>
+        <p><b>Raqami:</b> ${user.carNumber || ''}</p>
+        <p><b>Balans:</b> ${user.balance || 0}</p>
+        <button onclick="closeModal()" class="btn btn-success">Yopish</button>
+    `;
+}
+
+window.closeModal = () => {
+    if (modal) modal.style.display = "none";
 };
