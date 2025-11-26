@@ -73,13 +73,20 @@ function drawRow(ad, user, userId, adId) {
         <td>${price}</td>
         <td>${date}</td>
         <td>
-            <button class="btn" data-open="${userId}|${adId}">Ko‘rish</button>
+            <button class="btn viewBtn" data-open="${userId}|${adId}">Ko‘rish</button>
             <button class="btn delete" data-del="${userId}|${adId}">Delete</button>
         </td>
     `;
 
+    // Ko‘rish tugmasini majburan aktiv qilamiz
+    const viewBtn = tr.querySelector(".viewBtn");
+    viewBtn.removeAttribute("disabled");
+    viewBtn.style.pointerEvents = "auto";
+    viewBtn.style.opacity = "1";
+
     adsTable.appendChild(tr);
 }
+
 
 // === EVENT delegation (module bo‘lmaganda ishlaydi) ===
 document.addEventListener("click", e => {
