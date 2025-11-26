@@ -1,99 +1,100 @@
+/* === GENERAL === */
 body {
-    font-family: Arial, sans-serif;
-    background: #f6f6f6;
-    margin: 0;
+    font-family: Arial;
     padding: 20px;
+    background: #f5f5f5;
 }
 
-.title {
+h2 {
+    margin-bottom: 20px;
+    font-size: 26px;
+    font-weight: bold;
+}
+
+/* === SEARCH === */
+#search {
+    width: 350px;
+    padding: 10px;
+    font-size: 15px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
     margin-bottom: 20px;
 }
 
-.search {
-    width: 300px;
-    padding: 8px 12px;
-    margin-bottom: 15px;
-    border-radius: 5px;
-    border: 1px solid #bbb;
-}
-
-.table {
+/* === TABLE === */
+table {
     width: 100%;
     border-collapse: collapse;
     background: white;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-.table th, .table td {
-    border: 1px solid #ddd;
+th, td {
     padding: 12px;
+    border-bottom: 1px solid #eee;
 }
 
-.table th {
-    background: #f0f0f0;
+th {
+    background: #eee;
+    text-align: left;
 }
 
-.btn {
-    padding: 5px 12px;
-    border: none;
+/* === BADGES === */
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
     color: white;
-    cursor: pointer;
-    border-radius: 5px;
 }
 
-.blockBtn { background: orange; }
-.deleteBtn { background: red; }
+.driver { background: purple; }
+.user { background: gray; }
 
-/* ===================== MODAL ====================== */
+.verified { background: green; }
+.pending { background: orange; }
+.rejected { background: red; }
 
-.modal {
-    display: none;
+/* === BUTTONS === */
+.btn {
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: white;
+    border: none;
+    font-size: 13px;
+}
+
+.block { background: #ff9800; }
+.unblock { background: #4caf50; }
+.delete { background: #f44336; }
+
+/* === MODAL === */
+#modal {
     position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.45);
-    display: flex;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.65);
+    display: none;
     justify-content: center;
     align-items: center;
-    padding: 20px;
+    z-index: 9999;
 }
 
-.modal-content {
+#modalContent {
+    width: 480px;
     background: white;
-    width: 90%;
-    max-width: 420px;
-    padding: 20px;
-    border-radius: 10px;
-    position: relative;
-    animation: fadeIn 0.3s ease;
+    padding: 25px;
+    border-radius: 8px;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: scale(.9); }
-    to   { opacity: 1; transform: scale(1); }
-}
-
-.close {
-    position: absolute;
-    right: 12px;
-    top: 10px;
-    font-size: 26px;
-    cursor: pointer;
-}
-
-.avatar {
-    width: 110px;
-    height: 110px;
+#modal img {
+    width: 130px;
+    height: 130px;
     border-radius: 50%;
     object-fit: cover;
-    margin: 10px auto;
     display: block;
-}
-
-.closeBtn {
-    padding: 10px 20px;
-    background: #444;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    margin-top: 15px;
-    cursor: pointer;
+    margin: auto;
+    margin-bottom: 15px;
 }
