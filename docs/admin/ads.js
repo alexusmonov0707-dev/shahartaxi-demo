@@ -1,186 +1,126 @@
-// ads.js — admin ads manager
-// expects ../libs/lib.js to export: db, ref, get, remove (Firebase helper wrapper)
-import { db, ref, get, remove } from "../libs/lib.js";
+// ==================== FIREBASE ====================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  onValue,
+  remove,
+  get
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 
-let adsCache = [];    // flattened list: { userId, adId, ...adFields }
-let usersMap = {};    // users data from /users
+const firebaseConfig = {
+  apiKey: "AIzaSyC8F5vJmOgpbHm8ViEXIou8I1vSnDNXeVA",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.appspot.com",
+  messagingSenderId: "450810691220",
+  appId: "1:450810691220:web:d214b47451f6216f95180f",
+};
 
-// --- HELPERS ---
-function formatDate(ts) {
-  if (!ts) return "-";
-  // some createdAt may be string or number (ms)
-  const n = Number(ts);
-  if (!isNaN(n)) return new Date(n).toLocaleString();
-  // fallback
-  const d = new Date(ts);
-  return isNaN(d.getTime()) ? "-" : d.toLocaleString();
-}
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-function safe(val, fallback = "-") {
-  if (val === undefined || val === null || val === "") return fallback;
-  return val;
-}
 
-// --- RENDER ---
-function renderAds(list) {
-  const tbody = document.getElementById("adsTable");
-  tbody.innerHTML = "";
+// ==================== HMTL ELEMENTS ====================
+const adsTable = document.getElementById("adsTable");
+const searchInput = document.getElementById("searchInput");
 
-  if (!list || list.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:18px;color:#666">E'lonlar mavjud emas</td></tr>`;
-    return;
-  }
+const modal = document.getElementById("modal");
+const modalContent = document.getElementById("modal-content");
 
-  list.forEach(ad => {
-    const user = usersMap[ad.userId] ?? {};
-    const route = `${safe(ad.fromRegion, "-")} / ${safe(ad.fromDistrict, "-")} → ${safe(ad.toRegion, "-")} / ${safe(ad.toDistrict, "-")}`;
 
-    const priceText = ad.price ? `${ad.price} so‘m` : "-";
-
-    tbody.innerHTML += `
-      <tr>
-        <td>${safe(user.fullName, "Noma'lum")}<br><small style="color:#666">${safe(user.phone, "")}</small></td>
-        <td>${route}</td>
-        <td>${priceText}</td>
-        <td>${formatDate(ad.createdAt)}</td>
-        <td>
-          <button class="btn view" onclick="openModal('${ad.userId}','${ad.adId}')">Ko'rish</button>
-          <button class="btn delete" onclick="deleteAd('${ad.userId}','${ad.adId}')">Delete</button>
-        </td>
-      </tr>
-    `;
-  });
-}
-
-// --- LOAD ---
+// ==================== LOAD ADS ====================
 async function loadAds() {
-  const tbody = document.getElementById("adsTable");
-  tbody.innerHTML = "<tr><td colspan='5' style='padding:18px;color:#666'>Yuklanmoqda...</td></tr>";
+  const adsRef = ref(db, "ads");
+  const usersRef = ref(db, "users");
 
-  const adsSnap = await get(ref(db, "ads"));
-  const usersSnap = await get(ref(db, "users"));
+  const [adsSnap, usersSnap] = await Promise.all([get(adsRef), get(usersRef)]);
 
-  usersMap = usersSnap.exists() ? usersSnap.val() : {};
+  const adsData = adsSnap.val() || {};
+  const usersData = usersSnap.val() || {};
 
-  if (!adsSnap.exists()) {
-    renderAds([]);
-    return;
-  }
+  adsTable.innerHTML = "";
 
-  adsCache = [];
+  Object.entries(adsData).forEach(([userId, userAds]) => {
+    Object.entries(userAds).forEach(([adId, ad]) => {
+      const user = usersData[userId] || {};
+      const tr = document.createElement("tr");
 
-  const adsRoot = adsSnap.val();
+      tr.innerHTML = `
+        <td>${user.fullName || "Noma'lum"}<br><small>${user.phone || ""}</small></td>
 
-  // DATABASE LAYOUT: ads/{userId}/{adId}/{fields...}
-  // Flatten them to array
-  for (const userId in adsRoot) {
-    const userAds = adsRoot[userId];
-    if (!userAds) continue;
-    for (const adId in userAds) {
-      const ad = userAds[adId];
-      if (!ad) continue;
-      adsCache.push({
-        userId,
-        adId,
-        ...ad
-      });
-    }
-  }
+        <td>${ad.fromRegion || "-"} / ${ad.fromDistrict || "-"} → 
+            ${ad.toRegion || "-"} / ${ad.toDistrict || "-"}</td>
 
-  renderAds(adsCache);
+        <td>${ad.price ? ad.price + " so‘m" : "-"}</td>
+
+        <td>${ad.createdAt ? new Date(ad.createdAt).toLocaleString() : "-"}</td>
+
+        <td>
+          <button class="btn btn-primary" onclick="openModal('${userId}', '${adId}')">Ko‘rish</button>
+          <button class="btn btn-danger" onclick="deleteAd('${userId}', '${adId}')">Delete</button>
+        </td>
+      `;
+
+      adsTable.appendChild(tr);
+    });
+  });
 }
 
-// --- SEARCH ---
-window.searchAds = function () {
-  const q = (document.getElementById("search").value || "").toLowerCase().trim();
+loadAds();
 
-  if (!q) {
-    renderAds(adsCache);
-    return;
-  }
 
-  const filtered = adsCache.filter(ad => {
-    const user = usersMap[ad.userId] ?? {};
-    return (
-      (user.fullName || "").toLowerCase().includes(q) ||
-      (user.phone || "").toLowerCase().includes(q) ||
-      (ad.fromRegion || "").toLowerCase().includes(q) ||
-      (ad.fromDistrict || "").toLowerCase().includes(q) ||
-      (ad.toRegion || "").toLowerCase().includes(q) ||
-      (ad.toDistrict || "").toLowerCase().includes(q) ||
-      (ad.comment || "").toLowerCase().includes(q) ||
-      (String(ad.price || "")).toLowerCase().includes(q)
-    );
+// ==================== SEARCH ====================
+searchInput.addEventListener("keyup", () => {
+  const q = searchInput.value.toLowerCase();
+  Array.from(adsTable.children).forEach(row => {
+    row.style.display = row.innerText.toLowerCase().includes(q) ? "" : "none";
   });
+});
 
-  renderAds(filtered);
-};
 
-// --- MODAL HANDLERS ---
+// ==================== MODAL OPEN (GLOBAL) ====================
 window.openModal = function (userId, adId) {
-  const ad = adsCache.find(a => a.userId === userId && a.adId === adId);
-  const user = usersMap[userId] ?? {};
+  get(ref(db, `ads/${userId}/${adId}`)).then((snap) => {
+    const ad = snap.val();
+    modalContent.innerHTML = `
+      <h3>E'lon tafsilotlari</h3>
+      <p><b>Izoh:</b> ${ad.comment || "-"}</p>
 
-  if (!ad) return alert("E'lon topilmadi!");
+      <p><b>Yo'nalish:</b> 
+      ${ad.fromRegion || "-"} / ${ad.fromDistrict || "-"} →
+      ${ad.toRegion || "-"} / ${ad.toDistrict || "-"}</p>
 
-  // fill modal fields
-  const route = `${safe(ad.fromRegion, "-")} / ${safe(ad.fromDistrict, "-")} → ${safe(ad.toRegion, "-")} / ${safe(ad.toDistrict, "-")}`;
-  document.getElementById("m_route").innerText = route;
-  document.getElementById("m_depart").innerText = ad.departureTime ? formatDate(ad.departureTime) : "-";
-  document.getElementById("m_price").innerText = ad.price ? `${ad.price} so‘m` : "-";
-  document.getElementById("m_seats").innerText = safe(ad.seats, "-");
-  document.getElementById("m_dseats").innerText = safe(ad.driverSeats, "-");
-  document.getElementById("m_comment").innerText = safe(ad.comment, "-");
-  document.getElementById("m_created").innerText = formatDate(ad.createdAt);
+      <p><b>Narx:</b> ${ad.price ? ad.price + " so‘m" : "-"}</p>
 
-  document.getElementById("m_userName").innerText = safe(user.fullName, "Noma'lum");
-  document.getElementById("m_userPhone").innerText = safe(user.phone, "-");
-  document.getElementById("m_userRole").innerText = safe(user.role, "-");
+      <p><b>Ketish vaqti:</b> ${ad.departureTime || "-"}</p>
+      <p><b>Joylar:</b> ${ad.seats || "-"}</p>
 
-  // avatar
-  const avatarEl = document.getElementById("m_avatar");
-  avatarEl.src = user.avatar || "/assets/default.png";
-  avatarEl.alt = user.fullName || "avatar";
+      <hr>
 
-  // bind delete
-  const deleteBtn = document.getElementById("deleteBtn");
-  deleteBtn.onclick = () => deleteAd(userId, adId);
+      <button class="btn btn-danger" onclick="deleteAd('${userId}', '${adId}')">E'lonni o‘chirish</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Yopish</button>
+    `;
 
-  // show modal
-  const modal = document.getElementById("modal");
-  modal.style.display = "flex";
-  modal.setAttribute("aria-hidden", "false");
+    modal.style.display = "flex";
+  });
 };
 
-// close
-document.getElementById("closeBtn").addEventListener("click", () => {
-  const modal = document.getElementById("modal");
+
+// ==================== MODAL CLOSE (GLOBAL) ====================
+window.closeModal = function () {
   modal.style.display = "none";
-  modal.setAttribute("aria-hidden", "true");
-});
+};
 
-// allow click outside to close
-document.getElementById("modal").addEventListener("click", (e) => {
-  if (e.target.id === "modal") {
-    document.getElementById("modal").style.display = "none";
-    document.getElementById("modal").setAttribute("aria-hidden", "true");
-  }
-});
 
-// --- DELETE ---
+// ==================== DELETE AD (GLOBAL) ====================
 window.deleteAd = async function (userId, adId) {
-  if (!confirm("E'lonni o'chirishni tasdiqlaysizmi?")) return;
+  const ok = confirm("E'lonni o‘chirasizmi?");
+  if (!ok) return;
 
   await remove(ref(db, `ads/${userId}/${adId}`));
 
-  // refresh list
+  closeModal();
   await loadAds();
-
-  // hide modal if open
-  const modal = document.getElementById("modal");
-  modal.style.display = "none";
-  modal.setAttribute("aria-hidden", "true");
-}
-
-// init
-loadAds();
+};
