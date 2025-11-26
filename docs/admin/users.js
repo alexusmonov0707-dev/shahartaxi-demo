@@ -1,79 +1,81 @@
-import { db, ref, get, remove, update } from "../libs/lib.js";
+import { db, ref, onValue, remove, update } from "../libs/lib.js";
 
-const usersList = document.getElementById("usersList");
+const tableBody = document.getElementById("usersTable");
+const modal = document.getElementById("userModal");
 
 // MODAL ELEMENTS
-const modal = document.getElementById("userModal");
-const closeModal = document.getElementById("closeModal");
-const closeBtn = document.getElementById("closeBtn");
+const m_name = document.getElementById("m_name");
+const m_phone = document.getElementById("m_phone");
+const m_region = document.getElementById("m_region");
+const m_district = document.getElementById("m_district");
+const m_status = document.getElementById("m_status");
+const m_avatar = document.getElementById("m_avatar");
 
-function openModal() { modal.style.display = "block"; }
-function hideModal() { modal.style.display = "none"; }
 
-closeModal.onclick = hideModal;
-closeBtn.onclick = hideModal;
+function closeModal() {
+    modal.style.display = "none";
+}
 
-// USERS NI CHAQISH
-async function loadUsers() {
-    const usersRef = ref(db, "users");
-    const snap = await get(usersRef);
+function openModal(user) {
+    m_name.textContent = user.name || "Noma'lum";
+    m_phone.textContent = user.phone || "-";
+    m_region.textContent = user.region || "/";
+    m_district.textContent = user.district || "/";
+    m_status.textContent = user.status === "active" ? "✓ Aktiv" : "Bloklangan";
 
-    usersList.innerHTML = "";
+    m_avatar.src = user.avatar || "../img/default.png";
 
-    if (!snap.exists()) return;
+    modal.style.display = "flex";
+}
 
-    const users = snap.val();
 
-    Object.entries(users).forEach(([uid, user]) => {
-        const name = user.name ?? "No name";
-        const phone = user.phone ?? "---";
-        const region = user.region ?? "/";
-        const avatar = user.avatar ?? "../assets/default-avatar.png";
-        const status = user.status === "active" ? "✓ Aktiv" : "Block";
+// LOAD USERS
+onValue(ref(db, "users"), (snapshot) => {
+    tableBody.innerHTML = "";
+    snapshot.forEach(child => {
+        const id = child.key;
+        const u = child.val();
 
-        usersList.innerHTML += `
-        <tr>
-            <td><img src="${avatar}" class="avatar-sm"></td>
-            <td>${name}</td>
+        const name = u.name ?? "undefined";
+        const phone = u.phone ?? "-";
+        const region = u.region ?? "/";
+        const status = u.status === "active" ? "✓ Aktiv" : "Bloklangan";
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td style="cursor:pointer;color:#007bff" onclick='openUser("${id}")'>
+                ${name}
+            </td>
             <td>${phone}</td>
             <td>${region}</td>
             <td>${status}</td>
             <td>
-                <button onclick="showUser('${uid}')">Ko'rish</button>
-                <button onclick="blockUser('${uid}')">Block</button>
-                <button onclick="deleteUser('${uid}')">Delete</button>
+                <button class="btn btn-block" onclick="blockUser('${id}')">Block</button>
+                <button class="btn btn-delete" onclick="deleteUser('${id}')">Delete</button>
             </td>
-        </tr>`;
+        `;
+
+        tableBody.appendChild(tr);
     });
-}
+});
 
-window.showUser = async function (uid) {
-    const snap = await get(ref(db, "users/" + uid));
-    if (!snap.exists()) return;
 
-    const user = snap.val();
-
-    document.getElementById("m_name").innerText = user.name ?? "No name";
-    document.getElementById("m_avatar").src = user.avatar ?? "../assets/default-avatar.png";
-    document.getElementById("m_phone").innerText = user.phone ?? "-";
-    document.getElementById("m_region").innerText = user.region ?? "-";
-    document.getElementById("m_district").innerText = user.district ?? "-";
-    document.getElementById("m_car").innerText = user.car ?? "-";
-    document.getElementById("m_color").innerText = user.carColor ?? "-";
-    document.getElementById("m_number").innerText = user.carNumber ?? "-";
-    document.getElementById("m_balance").innerText = user.balance ?? "0";
-
-    openModal();
+// OPEN USER DETAILS
+window.openUser = function(id) {
+    onValue(ref(db, "users/" + id), (snap) => {
+        openModal(snap.val());
+    }, { onlyOnce: true });
 };
 
-window.blockUser = async function (uid) {
-    await update(ref(db, "users/" + uid), { status: "blocked" });
-    loadUsers();
+
+// DELETE USER
+window.deleteUser = function(id) {
+    if (confirm("Rostdan o‘chirilsinmi?")) {
+        remove(ref(db, "users/" + id));
+    }
 };
 
-window.deleteUser = async function (uid) {
-    await remove(ref(db, "users/" + uid));
-    loadUsers();
+// BLOCK USER
+window.blockUser = function(id) {
+    update(ref(db, "users/" + id), { status: "blocked" });
 };
-
-loadUsers();
