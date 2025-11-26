@@ -1,114 +1,106 @@
-import { db, ref, onValue, remove, update } from "../libs/lib.js";
+import { db, ref, get, update, remove, onValue } from "../../libs/lib.js";
 
-const tbody = document.getElementById("usersTable");
-const searchInput = document.getElementById("search");
+// Elementlar
+const usersTable = document.getElementById("usersTable");
+const searchInput = document.getElementById("searchInput");
+const userModal = document.getElementById("userModal");
+const modalContent = document.getElementById("modalContent");
+const modalClose = document.getElementById("modalClose");
 
-if (!tbody) {
-    console.error("❌ Xato: #usersTable topilmadi!");
-}
+// =======================
+// 🚀 Foydalanuvchilarni yuklash
+// =======================
+function loadUsers() {
+    const usersRef = ref(db, "users");
 
-let USERS = {};
+    onValue(usersRef, (snapshot) => {
+        const data = snapshot.val();
+        usersTable.innerHTML = ""; // tozalaymiz
 
-onValue(ref(db, "users"), (snap) => {
-    USERS = snap.val() || {};
-    renderUsers(USERS);
-});
+        if (!data) return;
 
-/* ============================
-   Foydalanuvchilarni chiqarish
-============================= */
+        Object.entries(data).forEach(([uid, user]) => {
+            const name = user.fullName || "—";
+            const phone = user.phone || "—";
+            const region = (user.region || "—") + " / " + (user.city || "—");
+            const status = user.blocked ? "❌ Bloklangan" : "✓ Aktiv";
 
-function renderUsers(data) {
-    if (!tbody) return;
+            const row = `
+                <tr>
+                    <td>${name}</td>
+                    <td>${phone}</td>
+                    <td>${region}</td>
+                    <td>${status}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning blockBtn" data-uid="${uid}">
+                            ${user.blocked ? "Unblock" : "Block"}
+                        </button>
+                        <button class="btn btn-sm btn-danger deleteBtn" data-uid="${uid}">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+            `;
 
-    tbody.innerHTML = "";
+            usersTable.insertAdjacentHTML("beforeend", row);
+        });
 
-    Object.entries(data).forEach(([id, user]) => {
-
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td>${user.name || ""}</td>
-            <td>${user.phone || ""}</td>
-            <td>${(user.region || "undefined") + " / " + (user.city || "undefined")}</td>
-            <td>${user.active ? "✓ Aktiv" : "❌ Bloklangan"}</td>
-            <td>
-                <button class="btn btn-warning btn-sm" onclick="blockUser('${id}', ${user.active})">Block</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteUser('${id}')">Delete</button>
-            </td>
-        `;
-
-        tr.onclick = () => showModal(user);
-
-        tbody.appendChild(tr);
+        attachEvents();
     });
 }
 
-/* ============================
-          Qidiruv
-============================= */
+loadUsers();
 
-searchInput?.addEventListener("input", () => {
-    const txt = searchInput.value.toLowerCase();
-    const filtered = {};
+// =======================
+// 🔍 Qidiruv
+// =======================
+searchInput.addEventListener("input", () => {
+    const value = searchInput.value.toLowerCase();
 
-    for (const id in USERS) {
-        const u = USERS[id];
-        if (
-            (u.name || "").toLowerCase().includes(txt) ||
-            (u.phone || "").includes(txt) ||
-            (u.carModel || "").toLowerCase().includes(txt)
-        ) {
-            filtered[id] = u;
-        }
-    }
-    renderUsers(filtered);
+    Array.from(usersTable.children).forEach((tr) => {
+        tr.style.display = tr.innerText.toLowerCase().includes(value) ? "" : "none";
+    });
 });
 
-/* ============================
-        Block / Unblock
-============================= */
+// =======================
+// 🧷 Tugmalarni ulang
+// =======================
+function attachEvents() {
+    document.querySelectorAll(".blockBtn").forEach((btn) =>
+        btn.addEventListener("click", blockUser)
+    );
 
-window.blockUser = (id, active) => {
-    update(ref(db, "users/" + id), { active: !active });
-};
-
-/* ============================
-            Delete
-============================= */
-
-window.deleteUser = (id) => {
-    if (confirm("Rostdan ham o‘chirilsinmi?")) {
-        remove(ref(db, "users/" + id));
-    }
-};
-
-/* ============================
-           MODAL
-============================= */
-
-const modal = document.getElementById("userModal");
-const modalBody = document.getElementById("modalBody");
-
-function showModal(user) {
-    if (!modal || !modalBody) return;
-
-    modal.style.display = "flex";
-
-    modalBody.innerHTML = `
-        <h3>${user.name}</h3>
-        <img src="${user.avatar || '../img/avatar-default.png'}" class="avatar">
-        <p><b>Telefon:</b> ${user.phone}</p>
-        <p><b>Hudud:</b> ${user.region || ''}</p>
-        <p><b>Tuman:</b> ${user.city || ''}</p>
-        <p><b>Mašina:</b> ${user.carModel || ''}</p>
-        <p><b>Rangi:</b> ${user.carColor || ''}</p>
-        <p><b>Raqami:</b> ${user.carNumber || ''}</p>
-        <p><b>Balans:</b> ${user.balance || 0}</p>
-        <button onclick="closeModal()" class="btn btn-success">Yopish</button>
-    `;
+    document.querySelectorAll(".deleteBtn").forEach((btn) =>
+        btn.addEventListener("click", deleteUser)
+    );
 }
 
-window.closeModal = () => {
-    if (modal) modal.style.display = "none";
-};
+// =======================
+// 🚫 Block / Unblock
+// =======================
+function blockUser() {
+    const uid = this.dataset.uid;
+    const userRef = ref(db, "users/" + uid);
+
+    update(userRef, {
+        blocked: this.innerText === "Block" ? true : false,
+    });
+}
+
+// =======================
+// 🗑 Delete user
+// =======================
+function deleteUser() {
+    const uid = this.dataset.uid;
+
+    if (!confirm("Rostdan ham o‘chirmoqchimisiz?")) return;
+
+    remove(ref(db, "users/" + uid));
+}
+
+// =======================
+// 📄 Modalni ko‘rsatish (hozircha yopiq turadi)
+// =======================
+modalClose.addEventListener("click", () => {
+    userModal.style.display = "none";
+});
