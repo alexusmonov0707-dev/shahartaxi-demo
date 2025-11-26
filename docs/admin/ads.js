@@ -1,194 +1,126 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import {
-  getDatabase,
-  ref,
-  onValue,
-  remove,
-  get
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-// ===============================
-//  FIREBASE CONFIG
-// ===============================
+// Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyCEt1WvUX0nJDS8NnSgKPXDYgoisW5uSxg",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.appspot.com",
-  messagingSenderId: "633894055386",
-  appId: "1:633894055386:web:0b12a671a9b16b9035f6b1"
+    apiKey: "AIzaSyD3vG5X6Y9...",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.appspot.com",
+    messagingSenderId: "123456789",
+    appId: "1:123456789:web:abcd1234"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-const adsTable = document.getElementById("adsTable");
-const searchInput = document.getElementById("search");
+// HTML elementlari
+const adsTable = document.getElementById("adsTableBody");
+const searchInput = document.getElementById("searchInput");
 
-let adsData = {};
-let usersData = {};
-let selectedAdId = null;
+// Modal elementlari
+const modal = document.getElementById("detailsModal");
+const modalUserName = document.getElementById("modalUserName");
+const modalUserPhone = document.getElementById("modalPhone");
+const modalComment = document.getElementById("modalComment");
+const modalRoute = document.getElementById("modalRoute");
+const modalPrice = document.getElementById("modalPrice");
+const modalSeats = document.getElementById("modalSeats");
+const modalDate = document.getElementById("modalDate");
+const modalCloseBtn = document.getElementById("closeModal");
 
-// ===============================
-//  LOAD USERS (REQUIRED)
-// ===============================
-async function loadUsers() {
-  const usersRef = ref(db, "users");
-  const snap = await get(usersRef);
-  if (snap.exists()) {
-    usersData = snap.val();
-  }
+// Delete modal button
+const deleteInModalBtn = document.getElementById("deleteInModal");
+
+// Adsni yuklash
+function loadAds() {
+    adsTable.innerHTML = "";
+
+    db.ref("ads").once("value", snapshot => {
+        snapshot.forEach(userAds => {
+            const userId = userAds.key;
+
+            userAds.forEach(adSnap => {
+                const adId = adSnap.key;
+                const ad = adSnap.val();
+
+                // User ma’lumotini olish
+                db.ref("users/" + userId).once("value", userSnap => {
+                    const user = userSnap.val() || {
+                        fullName: "Noma'lum",
+                        phone: "-"
+                    };
+
+                    addRow(ad, user, userId, adId);
+                });
+            });
+        });
+    });
 }
 
-// ===============================
-//  LOAD ADS
-// ===============================
-async function loadAds() {
-  await loadUsers();
+loadAds();
 
-  const adsRef = ref(db, "ads");
-
-  onValue(adsRef, (snapshot) => {
-    adsData = snapshot.val() || {};
-    renderAds();
-  });
-}
-
-// ===============================
-//  FORMAT DATE
-// ===============================
-function formatDate(ts) {
-  if (!ts) return "-";
-  return new Date(ts).toLocaleString("uz-UZ");
-}
-
-// ===============================
-//  RENDER ADS TO TABLE
-// ===============================
-function renderAds() {
-  adsTable.innerHTML = "";
-
-  Object.entries(adsData).forEach(([id, ad]) => {
-    const user = usersData[ad.uid] || {};
-
-    const route =
-      `${ad.fromRegion || "-"} / ${ad.fromDistrict || "-"} → ` +
-      `${ad.toRegion || "-"} / ${ad.toDistrict || "-"}`;
-
+// Jadvalga qo‘shish
+function addRow(ad, user, userId, adId) {
     const tr = document.createElement("tr");
 
+    const from = `${ad.fromRegion || "-"} / ${ad.fromDistrict || "-"}`;
+    const to = `${ad.toRegion || "-"} / ${ad.toDistrict || "-"}`;
+
+    const route = `${from} → ${to}`;
+    const date = ad.departureTime ? new Date(ad.departureTime).toLocaleString() : "-";
+    const price = ad.price ? `${ad.price} so'm` : "-";
+
     tr.innerHTML = `
-      <td>
-        ${user.fullName || "Noma'lum"}<br>
-        <small>${user.phone || "-"}</small>
-      </td>
+        <td>
+            <strong>${user.fullName || "Noma'lum"}</strong><br>
+            <small>${user.phone || "-"}</small>
+        </td>
 
-      <td>${route}</td>
+        <td>${route}</td>
+        <td>${price}</td>
+        <td>${date}</td>
 
-      <td>${ad.price || "-"} so‘m</td>
-
-      <td>${formatDate(ad.departureTime)}</td>
-
-      <td>
-        <button class="viewBtn" data-id="${id}">Ko‘rish</button>
-        <button class="deleteBtn" data-id="${id}">Delete</button>
-      </td>
+        <td>
+            <button class="btn btn-primary btn-sm" onclick="openModal('${userId}', '${adId}')">Ko'rish</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAd('${userId}', '${adId}')">Delete</button>
+        </td>
     `;
 
     adsTable.appendChild(tr);
-  });
-
-  attachListeners();
 }
 
-// ===============================
-//  ATTACH BUTTON EVENTS
-// ===============================
-function attachListeners() {
-  document.querySelectorAll(".deleteBtn").forEach((btn) => {
-    btn.addEventListener("click", () => deleteAd(btn.dataset.id));
-  });
+// Modalni ochish
+function openModal(userId, adId) {
+    db.ref(`ads/${userId}/${adId}`).once("value", adSnap => {
+        const ad = adSnap.val();
 
-  document.querySelectorAll(".viewBtn").forEach((btn) => {
-    btn.addEventListener("click", () => openModal(btn.dataset.id));
-  });
+        db.ref("users/" + userId).once("value", userSnap => {
+            const user = userSnap.val();
+
+            modalUserName.innerText = user.fullName;
+            modalUserPhone.innerText = user.phone;
+
+            modalComment.innerText = ad.comment || "-";
+            modalRoute.innerText = `${ad.fromRegion} / ${ad.fromDistrict} → ${ad.toRegion} / ${ad.toDistrict}`;
+            modalPrice.innerText = ad.price + " so'm";
+            modalSeats.innerText = ad.seats;
+            modalDate.innerText = new Date(ad.departureTime).toLocaleString();
+
+            deleteInModalBtn.setAttribute("onclick", `deleteAd('${userId}', '${adId}', true)`);
+
+            modal.style.display = "block";
+        });
+    });
 }
 
-// ===============================
-//  DELETE AD
-// ===============================
-function deleteAd(id) {
-  if (!confirm("O‘chirilsinmi?")) return;
+modalCloseBtn.onclick = () => modal.style.display = "none";
 
-  remove(ref(db, "ads/" + id))
-    .then(() => alert("O‘chirildi"))
-    .catch(console.error);
+// Delete
+function deleteAd(userId, adId, fromModal = false) {
+    if (!confirm("Rostdan ham o'chirmoqchimisiz?")) return;
+
+    db.ref(`ads/${userId}/${adId}`).remove().then(() => {
+        alert("O'chirildi!");
+        modal.style.display = "none";
+        loadAds();
+    });
 }
-
-// ===============================
-//  MODAL (TO‘LDIRIB BERAMAN)
-// ===============================
-const modal = document.getElementById("modal");
-const closeBtn = document.getElementById("closeBtn");
-
-// modal fields
-const m_route = document.getElementById("m_route");
-const m_price = document.getElementById("m_price");
-const m_comment = document.getElementById("m_comment");
-const m_created = document.getElementById("m_created");
-const m_depart = document.getElementById("m_depart");
-const m_seats = document.getElementById("m_seats");
-const m_dseats = document.getElementById("m_dseats");
-
-const m_avatar = document.getElementById("m_avatar");
-const m_userName = document.getElementById("m_userName");
-const m_userPhone = document.getElementById("m_userPhone");
-const m_userRole = document.getElementById("m_userRole");
-
-// ===============================
-//  OPEN MODAL
-// ===============================
-function openModal(id) {
-  selectedAdId = id;
-  const ad = adsData[id];
-  const user = usersData[ad.uid] || {};
-
-  m_route.textContent =
-    `${ad.fromRegion} / ${ad.fromDistrict} → ${ad.toRegion} / ${ad.toDistrict}`;
-
-  m_price.textContent = ad.price + " so‘m";
-  m_comment.textContent = ad.comment || "-";
-  m_created.textContent = formatDate(ad.createdAt);
-  m_depart.textContent = formatDate(ad.departureTime);
-
-  m_seats.textContent = ad.seats || "-";
-  m_dseats.textContent = ad.driverSeats || "-";
-
-  m_userName.textContent = user.fullName || "-";
-  m_userPhone.textContent = user.phone || "-";
-  m_userRole.textContent = user.role || "-";
-  m_avatar.src = user.avatar || "/assets/avatar.png";
-
-  modal.style.display = "block";
-}
-
-closeBtn.addEventListener("click", () => {
-  modal.style.display = "none";
-});
-
-// ===============================
-//  SEARCH
-// ===============================
-searchInput.addEventListener("keyup", () => {
-  const q = searchInput.value.toLowerCase();
-
-  document.querySelectorAll("#adsTable tr").forEach((row) => {
-    row.style.display = row.innerText.toLowerCase().includes(q)
-      ? ""
-      : "none";
-  });
-});
-
-// START
-loadAds();
