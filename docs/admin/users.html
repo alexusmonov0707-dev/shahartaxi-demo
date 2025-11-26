@@ -5,14 +5,13 @@
     <title>Foydalanuvchilar</title>
     <link rel="stylesheet" href="../assets/admin.css">
 </head>
-
 <body>
 
 <h2>Foydalanuvchilar</h2>
 
-<input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." style="width:300px; margin-bottom:20px;">
+<input id="search" placeholder="Qidiruv: ism, telefon, mashina…" style="width:250px; padding:6px;">
 
-<table>
+<table border="1" cellspacing="0" cellpadding="8" style="width:100%; margin-top:20px;">
     <thead>
         <tr>
             <th>Ismi</th>
@@ -22,20 +21,8 @@
             <th>Amallar</th>
         </tr>
     </thead>
-
-    <!-- 🔥 MUHIM: JS shu yerga ma'lumot yozadi -->
     <tbody id="usersTable"></tbody>
 </table>
-
-<!-- 🔥 MUHIM: Modal oynasi -->
-<div id="userModal" class="modal" style="display:none;">
-    <div class="modal-content">
-        <span id="closeModal" class="close">&times;</span>
-
-        <!-- JS shu divga foydalanuvchi ma'lumotlarini joylaydi -->
-        <div id="modalBody"></div>
-    </div>
-</div>
 
 <script type="module" src="./users.js"></script>
 </body>
