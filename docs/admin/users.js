@@ -1,171 +1,95 @@
-// users.js — modul sifatida yuklanadi
-import { db, ref, get, update, remove } from "./firebase.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+    getDatabase,
+    ref,
+    onValue,
+    update,
+    remove,
+    get,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-let usersCache = []; // barcha userlarni cache qilamiz
+const firebaseConfig = {
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com"
+};
 
-// DOM tayyorligini kutamiz — skript pastda bo'lsa ham, qo'shimcha himoya
-document.addEventListener("DOMContentLoaded", () => {
-  // yuklash
-  loadUsers().catch(err => {
-    console.error("Load users error:", err);
-    const tbody = document.getElementById("usersTable");
-    if (tbody) tbody.innerHTML = "<tr><td colspan='5'>Xatolik yuz berdi</td></tr>";
-  });
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+const usersRef = ref(db, "users");
+const usersTable = document.getElementById("usersTable");
+
+// DEFAULT AVATAR
+const defaultAvatar = "https://i.ibb.co/0jKq0s3/avatar-default.png";
+
+// LOAD USERS
+onValue(usersRef, (snapshot) => {
+    usersTable.innerHTML = "";
+
+    snapshot.forEach(user => {
+        const data = user.val();
+
+        const name = data.fullName ?? "Noma'lum";
+        const phone = data.phone ?? "/";
+        const region = data.region ?? "/";
+        const district = data.district ?? "/";
+        const status = data.blocked ? "❌ Bloklangan" : "✓ Aktiv";
+        const avatar = data.avatar ?? defaultAvatar;
+
+        usersTable.innerHTML += `
+            <tr>
+                <td onclick="openModal('${user.key}')">${name}</td>
+                <td>${phone}</td>
+                <td>${region} / ${district}</td>
+                <td>${status}</td>
+                <td>
+                    <button class="btn btn-warning" onclick="blockUser('${user.key}', ${data.blocked})">Block</button>
+                    <button class="btn btn-danger" onclick="deleteUser('${user.key}')">Delete</button>
+                </td>
+            </tr>
+        `;
+    });
 });
 
-async function loadUsers() {
-  const tbody = document.getElementById("usersTable");
-  if (!tbody) return; // element topilmasa chiqamiz
+// BLOCK USER
+window.blockUser = function (uid, current) {
+    update(ref(db, "users/" + uid), { blocked: !current });
+};
 
-  tbody.innerHTML = "<tr><td colspan='5'>Yuklanmoqda...</td></tr>";
+// DELETE USER
+window.deleteUser = function (uid) {
+    if (confirm("Rostdan o‘chirmoqchimisiz?")) {
+        remove(ref(db, "users/" + uid));
+    }
+};
 
-  const snap = await get(ref(db, "users"));
-  if (!snap || !snap.exists()) {
-    tbody.innerHTML = "<tr><td colspan='5'>Foydalanuvchilar topilmadi</td></tr>";
-    usersCache = [];
-    return;
-  }
+// OPEN MODAL
+window.openModal = async function (uid) {
+    const snap = await get(ref(db, "users/" + uid));
+    const data = snap.val();
 
-  const data = snap.val();
-  usersCache = Object.entries(data).map(([id, u]) => ({ id, ...u }));
+    document.getElementById("modalAvatar").src = data.avatar ?? defaultAvatar;
+    document.getElementById("modalName").innerHTML = data.fullName ?? "Noma'lum";
+    document.getElementById("modalPhone").innerHTML = data.phone ?? "/";
+    document.getElementById("modalRegion").innerHTML = data.region ?? "/";
+    document.getElementById("modalDistrict").innerHTML = data.district ?? "/";
+    document.getElementById("modalStatus").innerHTML = data.blocked ? "Bloklangan" : "Aktiv";
 
-  renderTable(usersCache);
-}
+    document.getElementById("userModal").style.display = "flex";
+};
 
-function safe(v, def = "") {
-  return (v === undefined || v === null) ? def : v;
-}
+// CLOSE MODAL
+window.closeModal = function () {
+    document.getElementById("userModal").style.display = "none";
+};
 
-function renderTable(list) {
-  const tbody = document.getElementById("usersTable");
-  if (!tbody) return;
-  if (!Array.isArray(list) || list.length === 0) {
-    tbody.innerHTML = "<tr><td colspan='5'>Foydalanuvchilar topilmadi</td></tr>";
-    return;
-  }
+// SEARCH
+document.getElementById("search").addEventListener("input", function () {
+    const value = this.value.toLowerCase();
+    const rows = usersTable.querySelectorAll("tr");
 
-  // To'g'ri event bubbling uchun har bir satr ichida tugmalarni alohida handler bilan yaratamiz
-  tbody.innerHTML = list.map(u => {
-    const name = safe(u.fullName, "Noma'lum");
-    const phone = safe(u.phone, "");
-    const region = safe(u.fromRegion, "/");
-    const district = safe(u.fromDistrict, "/");
-    const status = (u.blocked) ? "🚫 Bloklangan" : "✔ Aktiv";
-
-    const blockBtnHtml = u.blocked
-      ? `<button class="btn unblock" data-action="unblock" data-id="${u.id}">Unblock</button>`
-      : `<button class="btn block" data-action="block" data-id="${u.id}">Block</button>`;
-
-    return `
-      <tr data-id="${u.id}" class="user-row" style="cursor:pointer">
-        <td class="u-name">${escapeHtml(name)}</td>
-        <td class="u-phone">${escapeHtml(phone)}</td>
-        <td class="u-region">${escapeHtml(region)} / ${escapeHtml(district)}</td>
-        <td class="u-status">${escapeHtml(status)}</td>
-        <td class="u-actions">
-          ${blockBtnHtml}
-          <button class="btn delete" data-action="delete" data-id="${u.id}">Delete</button>
-        </td>
-      </tr>
-    `;
-  }).join("");
-
-  // satr bosilganda modal ochish
-  tbody.querySelectorAll(".user-row").forEach(row => {
-    row.addEventListener("click", (e) => {
-      const id = row.getAttribute("data-id");
-      openModal(id);
+    rows.forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(value)
+            ? ""
+            : "none";
     });
-  });
-
-  // action tugmalariga event
-  tbody.querySelectorAll(".u-actions button").forEach(btn => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const action = btn.getAttribute("data-action");
-      const id = btn.getAttribute("data-id");
-      if (action === "block") blockUser(id);
-      if (action === "unblock") unblockUser(id);
-      if (action === "delete") deleteUser(id);
-    });
-  });
-}
-
-// qidiruv funksiyasi
-window.searchUsers = function() {
-  const q = (document.getElementById("search")?.value || "").toLowerCase();
-  const filtered = usersCache.filter(u => {
-    return (safe(u.fullName, "").toLowerCase().includes(q)) ||
-           (safe(u.phone, "").toLowerCase().includes(q)) ||
-           (safe(u.carModel, "").toLowerCase().includes(q));
-  });
-  renderTable(filtered);
-};
-
-// modal
-window.openModal = function(id) {
-  const u = usersCache.find(x => x.id === id);
-  if (!u) return;
-  document.getElementById("m_fullName").textContent = safe(u.fullName, "Noma'lum");
-  document.getElementById("m_phone").textContent = safe(u.phone, "-");
-  document.getElementById("m_region").textContent = safe(u.fromRegion, "/");
-  document.getElementById("m_district").textContent = safe(u.fromDistrict, "/");
-  document.getElementById("m_car").textContent = safe(u.carModel, "-");
-  document.getElementById("m_color").textContent = safe(u.carColor, "-");
-  document.getElementById("m_number").textContent = safe(u.carNumber, "-");
-  document.getElementById("m_balance").textContent = safe(u.balance, 0);
-
-  // avatar: agar techPassportUrl yoki avatar mavjud bo'lsa foydalanamiz, aks holda default
-  const avatarUrl = safe(u.techPassportUrl, "") || safe(u.avatar, "") || "https://i.ibb.co/0jKq0s3/avatar-default.png";
-  const imgEl = document.getElementById("m_avatar");
-  if (imgEl) imgEl.src = avatarUrl;
-
-  const modal = document.getElementById("modal");
-  if (modal) {
-    modal.style.display = "flex";
-    modal.setAttribute("aria-hidden", "false");
-  }
-};
-
-window.closeModal = function() {
-  const modal = document.getElementById("modal");
-  if (modal) {
-    modal.style.display = "none";
-    modal.setAttribute("aria-hidden", "true");
-  }
-};
-
-// bloklash/ochish/o'chirish
-async function reloadAndKeepSelection() {
-  await loadUsers();
-}
-
-window.blockUser = async function(id) {
-  if (!id) return;
-  await update(ref(db, `users/${id}`), { blocked: true });
-  await reloadAndKeepSelection();
-};
-
-window.unblockUser = async function(id) {
-  if (!id) return;
-  await update(ref(db, `users/${id}`), { blocked: false });
-  await reloadAndKeepSelection();
-};
-
-window.deleteUser = async function(id) {
-  if (!id) return;
-  if (!confirm("Foydalanuvchini o‘chirilsinmi?")) return;
-  await remove(ref(db, `users/${id}`));
-  await reloadAndKeepSelection();
-};
-
-// yordamchi: XSSdan himoya uchun oddiy escape
-function escapeHtml(unsafe) {
-  if (unsafe === null || unsafe === undefined) return "";
-  return String(unsafe)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
+});
