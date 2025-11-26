@@ -29,7 +29,8 @@ async function loginAdmin() {
         // SUCCESS — sessionga saqlaymiz
         sessionStorage.setItem("admin", login);
 
-        location.href = "/shahartaxi-demo/docs/admin/dashboard.html";
+        // 🔥 MUHIM! TO‘G‘RI YO‘NALISH
+        location.href = "./dashboard.html";
 
     } catch (err) {
         console.error(err);
