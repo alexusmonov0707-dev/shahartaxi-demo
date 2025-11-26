@@ -2,43 +2,55 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Foydalanuvchilar</title>
-    <link rel="stylesheet" href="./users.css">
+    <link rel="stylesheet" href="users.css">
 </head>
-
 <body>
 
-<h2>Foydalanuvchilar</h2>
+<h2 class="title">Foydalanuvchilar</h2>
 
-<!-- users.html ichida -->
-<input id="searchInput" placeholder="Qidiruv: ism, telefon, mashina..." />
-<table>
-  <thead>
-    <tr><th>Ismi</th><th>Telefon</th><th>Mintaqa</th><th>Holati</th><th>Amallar</th></tr>
-  </thead>
-  <tbody id="usersTable"></tbody> <!-- users.js shu id'ga yozadi -->
+<input type="text" id="searchInput" class="search" placeholder="Qidiruv: ism, telefon...">
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Ismi</th>
+            <th>Telefon</th>
+            <th>Mintaqa</th>
+            <th>Holati</th>
+            <th>Amallar</th>
+        </tr>
+    </thead>
+    <tbody id="usersList">
+        <!-- JS orqali to‘ladi -->
+    </tbody>
 </table>
 
-<!-- Modal (oddiy) -->
-<div id="adModal" class="modal">
+
+<!-- MODAL -->
+<div id="userModal" class="modal">
     <div class="modal-content">
-        <span class="close" id="closeModal">&times;</span>
+        <span class="close" onclick="closeModal()">&times;</span>
 
-        <h2 id="modalTitle">Elon maʼlumotlari</h2>
+        <h3 id="modalName">Foydalanuvchi</h3>
 
-        <img id="modalAvatar" class="modal-avatar" src="" alt="avatar">
+        <img id="modalAvatar" class="avatar">
 
-        <p><strong>Haydovchi:</strong> <span id="modalDriver"></span></p>
-        <p><strong>Telefon:</strong> <span id="modalPhone"></span></p>
-        <p><strong>Yo‘nalish:</strong> <span id="modalRoute"></span></p>
-        <p><strong>Narxi:</strong> <span id="modalPrice"></span></p>
+        <p><b>Telefon:</b> <span id="modalPhone"></span></p>
+        <p><b>Hudud:</b> <span id="modalRegion"></span></p>
+        <p><b>Tuman:</b> <span id="modalDistrict"></span></p>
+        <p><b>Holati:</b> <span id="modalStatus"></span></p>
 
-        <button id="modalCloseBtn" class="btn">Yopish</button>
+        <button onclick="closeModal()" class="closeBtn">Yopish</button>
     </div>
 </div>
 
 
-<script type="module" src="./users.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js"></script>
+
+<script src="users.js"></script>
 
 </body>
 </html>
