@@ -1,133 +1,175 @@
-import { db, ref, get, update, remove } from "../libs/lib.js";
+// users.js
+// module: saqlang va users.html ichida <script type="module" src="./users.js"></script> bilan chaqiring
 
-let usersCache = [];
+import { db, ref, onValue, remove, get } from "../libs/lib.js";
 
-// LOAD USERS
+// --- CONFIG ---
+const DEFAULT_AVATAR = "https://i.ibb.co/4nMfDymT/avatar-default-png.jpg"; // agar kerak bo'lsa o'zgartiring
+
+// DOM elementlar
+const usersTable = document.getElementById("usersTable");       // <tbody> yoki container
+const searchInput = document.getElementById("searchInput");     // qidiruv input
+const userModal = document.getElementById("userModal");         // modal container
+const modalName = document.getElementById("modalName");
+const modalPhone = document.getElementById("modalPhone");
+const modalRegion = document.getElementById("modalRegion");
+const modalDistrict = document.getElementById("modalDistrict");
+const modalAvatar = document.getElementById("modalAvatar");
+const modalStatus = document.getElementById("modalStatus");
+const modalCloseBtn = document.getElementById("modalCloseBtn");
+
+// xavfsizlik: elementlar mavjudligini tekshirish
+function elOrNull(id) { return document.getElementById(id) || null; }
+
+if (!usersTable) {
+  console.warn("usersTable elementi topilmadi. users.html ichida id='usersTable' qo'shing.");
+}
+
+// --- Modal funksiyalari ---
+function openModal(data = {}) {
+  if (!userModal) return;
+  modalName && (modalName.textContent = data.fullName || "Noma'lum");
+  modalPhone && (modalPhone.textContent = data.phone || "/");
+  modalRegion && (modalRegion.textContent = (data.driverInfo && data.driverInfo.fromRegion) || "/");
+  modalDistrict && (modalDistrict.textContent = (data.driverInfo && data.driverInfo.fromDistrict) || "/");
+  modalStatus && (modalStatus.textContent = data.blocked ? "Bloklangan" : "Aktiv");
+  modalAvatar && (modalAvatar.src = (data.techPassportUrl || data.avatar || DEFAULT_AVATAR));
+  userModal.style.display = "block";
+}
+function closeModal() {
+  if (!userModal) return;
+  userModal.style.display = "none";
+}
+if (modalCloseBtn) modalCloseBtn.addEventListener("click", closeModal);
+
+// hamma joyda foydalanish uchun global (agar kerak bo'lsa)
+window.openUserModal = openModal;
+window.closeModal = closeModal;
+
+// --- Helper: create table row ---
+function createUserRow(uid, userData) {
+  const tr = document.createElement("tr");
+
+  const name = userData.fullName || (userData.driverInfo && userData.driverInfo.fullName) || "Noma'lum";
+  const phone = userData.phone || "/";
+  const region = (userData.driverInfo && userData.driverInfo.fromRegion) || "/";
+  const blocked = !!userData.blocked;
+
+  tr.innerHTML = `
+    <td>${escapeHtml(name)}</td>
+    <td>${escapeHtml(phone)}</td>
+    <td>${escapeHtml(region)}</td>
+    <td>${blocked ? "Bloklangan" : "✓ Aktiv"}</td>
+    <td>
+      <button class="btn-block" data-uid="${uid}">Block</button>
+      <button class="btn-delete" data-uid="${uid}">Delete</button>
+      <button class="btn-view" data-uid="${uid}">View</button>
+    </td>
+  `;
+
+  // voqealar
+  tr.querySelector(".btn-delete")?.addEventListener("click", async () => {
+    if (!confirm("Foydalanuvchini o‘chirmoqchimisiz?")) return;
+    try {
+      await remove(ref(db, `users/${uid}`));
+      // tafsilot: agar ads yoki boshqa manbalardan ham tozalash kerak bo'lsa qo'shing
+      alert("O‘chirildi.");
+    } catch (err) {
+      console.error(err);
+      alert("O'chirishda xato.");
+    }
+  });
+
+  tr.querySelector(".btn-block")?.addEventListener("click", async () => {
+    try {
+      // toggle blocked — Read current then update
+      const userRef = ref(db, `users/${uid}`);
+      const snap = await get(userRef);
+      const u = snap.exists() ? snap.val() : null;
+      if (!u) { alert("Foydalanuvchi topilmadi."); return; }
+      await userRef.update
+        ? userRef.update({ blocked: !u.blocked })  // agar API update mavjud bo'lsa
+        : set(ref(db, `users/${uid}/blocked`), !u.blocked); // yoki fallback
+      alert("Holat o'zgardi.");
+    } catch (err) {
+      console.error(err);
+      alert("Holatni o'zgartirishda xato.");
+    }
+  });
+
+  tr.querySelector(".btn-view")?.addEventListener("click", async () => {
+    // modal ochish uchun original ma'lumotni olib kelamiz
+    try {
+      const snap = await get(ref(db, `users/${uid}`));
+      const data = snap.exists() ? snap.val() : {};
+      openModal(data);
+    } catch (err) {
+      console.error(err);
+      alert("Foydalanuvchi ma'lumotini olishda xato.");
+    }
+  });
+
+  return tr;
+}
+
+// --- XSS dan saqlash ---
+function escapeHtml(str) {
+  if (typeof str !== "string") return str || "";
+  return str.replace(/[&<>"'`=\/]/g, function(s) {
+    return ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '/': '&#x2F;',
+      '`': '&#x60;',
+      '=': '&#x3D;'
+    })[s];
+  });
+}
+
+// --- Yuklash / real-time kuzatuv ---
 async function loadUsers() {
-    const tbody = document.getElementById("usersTable");
-    tbody.innerHTML = "<tr><td colspan='6'>Yuklanmoqda...</td></tr>";
-
-    const snap = await get(ref(db, "users"));
-
-    if (!snap.exists()) {
-        tbody.innerHTML = "<tr><td colspan='6'>Userlar topilmadi</td></tr>";
-        return;
-    }
-
-    usersCache = Object.entries(snap.val()).map(([id, u]) => ({
-        id,
-        ...u
-    }));
-
-    renderUsers(usersCache);
-}
-
-// RENDER TABLE
-function renderUsers(list) {
-    const tbody = document.getElementById("usersTable");
-    tbody.innerHTML = "";
-
-    list.forEach(u => {
-        const region = u.region ?? "-";
-        const district = u.district ?? "-";
-        const phone = u.phone ?? "-";
-
-        const roleBadge =
-            `<span class="badge ${u.role === 'driver' ? 'driver' : 'user'}">${u.role}</span>`;
-
-        let status = "Foydalanuvchi";
-        if (u.role === "driver") {
-            if (u.verified === true) status = `<span class="badge verified">Tasdiqlangan</span>`;
-            else if (u.verified === false) status = `<span class="badge pending">Kutilmoqda</span>`;
-            else if (u.verified === "rejected") status = `<span class="badge rejected">Rad etilgan</span>`;
-        }
-
-        tbody.innerHTML += `
-            <tr onclick="openModal('${u.id}')">
-                <td>${u.fullName ?? "-"}</td>
-                <td>${phone}</td>
-                <td>${region} / ${district}</td>
-                <td>${roleBadge}</td>
-                <td>${status}</td>
-
-                <td>
-                    ${
-                        u.blocked
-                        ? `<button class="btn unblock" onclick="event.stopPropagation(); unblockUser('${u.id}')">Unblock</button>`
-                        : `<button class="btn block" onclick="event.stopPropagation(); blockUser('${u.id}')">Block</button>`
-                    }
-                    <button class="btn delete" onclick="event.stopPropagation(); deleteUser('${u.id}')">Delete</button>
-                </td>
-            </tr>
-        `;
+  if (!usersTable) return;
+  try {
+    const usersRef = ref(db, "users");
+    onValue(usersRef, (snapshot) => {
+      // sahifa bo'shatish
+      usersTable.innerHTML = "";
+      const val = snapshot.val();
+      if (!val) return;
+      Object.keys(val).forEach(uid => {
+        const u = val[uid];
+        const row = createUserRow(uid, u);
+        usersTable.appendChild(row);
+      });
+    }, (err) => {
+      console.error("DB onValue error:", err);
     });
+  } catch (err) {
+    console.error(err);
+  }
 }
 
-// SEARCH
-window.searchUsers = function () {
-    const q = document.getElementById("search").value.toLowerCase();
+// qidiruv (oddiy filter client-side)
+if (searchInput) {
+  searchInput.addEventListener("input", (e) => {
+    const q = (e.target.value || "").toLowerCase();
+    const rows = usersTable?.querySelectorAll("tr") || [];
+    rows.forEach(r => {
+      const text = r.textContent.toLowerCase();
+      r.style.display = text.indexOf(q) === -1 ? "none" : "";
+    });
+  });
+}
 
-    const filtered = usersCache.filter(u =>
-        (u.fullName ?? "").toLowerCase().includes(q) ||
-        (u.phone ?? "").includes(q) ||
-        (u.carModel ?? "").toLowerCase().includes(q)
-    );
-
-    renderUsers(filtered);
-};
-
-// MODAL OPEN
-window.openModal = function (id) {
-    const u = usersCache.find(x => x.id === id);
-
-    document.getElementById("m_fullName").textContent = u.fullName ?? "";
-    document.getElementById("m_phone").textContent = u.phone ?? "-";
-
-    document.getElementById("m_region").textContent = u.region ?? "-";
-    document.getElementById("m_district").textContent = u.district ?? "-";
-
-    document.getElementById("m_avatar").src = u.avatar ?? "/assets/default.png";
-
-    document.getElementById("m_car").textContent = u.carModel ?? "-";
-    document.getElementById("m_color").textContent = u.carColor ?? "-";
-    document.getElementById("m_number").textContent = u.carNumber ?? "-";
-
-    let status = "Foydalanuvchi";
-    if (u.role === "driver") {
-        if (u.verified === true) status = "Tasdiqlangan";
-        else if (u.verified === false) status = "Kutilmoqda";
-        else if (u.verified === "rejected") status = "Rad etilgan";
-    }
-    document.getElementById("m_status").textContent = status;
-
-    document.getElementById("m_balance").textContent = (u.balance ?? 0) + " so‘m";
-
-    document.getElementById("modal").style.display = "flex";
-};
-
-window.closeModal = function () {
-    document.getElementById("modal").style.display = "none";
-};
-
-// BLOCK / UNBLOCK
-window.blockUser = async function (id) {
-    await update(ref(db, "users/" + id), { blocked: true });
-    loadUsers();
-};
-
-window.unblockUser = async function (id) {
-    await update(ref(db, "users/" + id), { blocked: false });
-    loadUsers();
-};
-
-// DELETE USER + ADS
-window.deleteUser = async function (id) {
-    if (!confirm("Userni o‘chirishni tasdiqlaysizmi?")) return;
-
-    await remove(ref(db, "ads_by_user/" + id));
-    await remove(ref(db, "users/" + id));
-
-    loadUsers();
-};
-
-loadUsers();
+// DOM tayyor bo'lgandan so'ng ishga tushirish
+document.addEventListener("DOMContentLoaded", () => {
+  // elementlar mavjudligini yana tekshirish
+  if (!usersTable) {
+    console.warn("usersTable topilmadi — users.html ichida <tbody id='usersTable'> qo'shing.");
+    return;
+  }
+  loadUsers();
+});
