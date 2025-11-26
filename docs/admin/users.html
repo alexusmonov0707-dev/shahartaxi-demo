@@ -67,19 +67,22 @@ th { background:#f4f4f4; }
 <!-- MODAL -->
 <div id="userModal" class="modal">
     <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
+        <span onclick="closeModal()" class="close">&times;</span>
 
-        <h3 id="m_name"></h3>
-        <img id="m_avatar">
+        <img id="modalAvatar" class="avatar" src="" alt="avatar">
 
-        <p><b>Telefon:</b> <span id="m_phone"></span></p>
-        <p><b>Hudud:</b> <span id="m_region"></span></p>
-        <p><b>Tuman:</b> <span id="m_district"></span></p>
-        <p><b>Holati:</b> <span id="m_status"></span></p>
+        <h2 id="modalName"></h2>
 
-        <button class="btn" onclick="closeModal()">Yopish</button>
+        <p><strong>Telefon:</strong> <span id="modalPhone"></span></p>
+        <p><strong>Hudud:</strong> <span id="modalRegion"></span></p>
+        <p><strong>Tuman:</strong> <span id="modalDistrict"></span></p>
+        <p><strong>Holati:</strong> <span id="modalStatus"></span></p>
+
+        <button onclick="blockUser(currentUid)" class="blockBtn">Block</button>
+        <button onclick="closeModal()" class="closeBtn">Yopish</button>
     </div>
 </div>
+
 
 <script type="module" src="users.js"></script>
 </body>
