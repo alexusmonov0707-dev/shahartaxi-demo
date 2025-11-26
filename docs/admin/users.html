@@ -3,53 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <title>Foydalanuvchilar</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="./users.css">
 </head>
+<body>
 
-<body class="bg-gray-100">
+    <h2>Foydalanuvchilar</h2>
 
-    <div class="p-6">
-        <h1 class="text-2xl font-semibold mb-4">Foydalanuvchilar ro‘yxati</h1>
+    <input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." />
 
-        <!-- SEARCH + FILTERS -->
-        <div class="flex gap-4 mb-4">
-            <input id="searchInput"
-                   type="text"
-                   placeholder="Qidirish (Ism, telefon)..."
-                   class="border px-3 py-2 rounded w-1/3">
+    <table>
+        <thead>
+            <tr>
+                <th>Ismi</th>
+                <th>Telefon</th>
+                <th>Mintaqa</th>
+                <th>Role</th>
+                <th>Holati</th>
+                <th>Amallar</th>
+            </tr>
+        </thead>
+        <tbody id="usersTable"></tbody>
+    </table>
 
-            <select id="roleFilter" class="border px-3 py-2 rounded">
-                <option value="all">Barcha</option>
-                <option value="driver">Haydovchilar</option>
-                <option value="user">Yo‘lovchilar</option>
-            </select>
+    <!-- MODAL -->
+    <div id="modal">
+        <div id="modalContent">
+            <h3 id="m_fullName"></h3>
+            <img id="m_avatar" src="">
+            <p><b>Telefon:</b> <span id="m_phone"></span></p>
+            <p><b>Hudud:</b> <span id="m_region"></span></p>
+            <p><b>Tuman:</b> <span id="m_district"></span></p>
+            <p><b>Mashina:</b> <span id="m_car"></span></p>
+            <p><b>Rangi:</b> <span id="m_color"></span></p>
+            <p><b>Raqami:</b> <span id="m_number"></span></p>
+            <p><b>Holati:</b> <span id="m_status"></span></p>
+            <p><b>Balans:</b> <span id="m_balance"></span></p>
 
-            <select id="statusFilter" class="border px-3 py-2 rounded">
-                <option value="all">Holati: Barcha</option>
-                <option value="verified">Tasdiqlangan haydovchi</option>
-                <option value="pending">Kutilayotgan</option>
-                <option value="rejected">Rad etilgan</option>
-            </select>
-        </div>
-
-        <!-- USERS TABLE -->
-        <div class="bg-white rounded shadow">
-            <table class="w-full border-collapse">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="p-3 text-left">Ism</th>
-                        <th class="p-3 text-left">Telefon</th>
-                        <th class="p-3 text-left">Role</th>
-                        <th class="p-3 text-left">Holat</th>
-                        <th class="p-3 text-left">Balance</th>
-                        <th class="p-3 text-left">Amallar</th>
-                    </tr>
-                </thead>
-                <tbody id="usersTable"></tbody>
-            </table>
+            <button onclick="closeModal()" class="btn unblock">Yopish</button>
         </div>
     </div>
 
     <script type="module" src="./users.js"></script>
+
 </body>
 </html>
