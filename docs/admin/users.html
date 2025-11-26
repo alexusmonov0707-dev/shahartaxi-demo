@@ -10,43 +10,25 @@
 
 <h2>Foydalanuvchilar</h2>
 
-<input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." oninput="searchUsers()">
-
+<!-- users.html ichida -->
+<input id="searchInput" placeholder="Qidiruv: ism, telefon, mashina..." />
 <table>
-<thead>
-<tr>
-    <th>Ismi</th>
-    <th>Telefon</th>
-    <th>Mintaqa</th>
-    <th>Role</th>
-    <th>Holati</th>
-    <th>Amallar</th>
-</tr>
-</thead>
-<tbody id="usersTable"></tbody>
+  <thead>
+    <tr><th>Ismi</th><th>Telefon</th><th>Mintaqa</th><th>Holati</th><th>Amallar</th></tr>
+  </thead>
+  <tbody id="usersTable"></tbody> <!-- users.js shu id'ga yozadi -->
 </table>
 
-<!-- MODAL -->
-<div id="modal">
-    <div id="modalContent">
-
-        <h3 id="m_fullName"></h3>
-
-        <img id="m_avatar">
-
-        <p><b>Telefon:</b> <span id="m_phone"></span></p>
-        <p><b>Hudud:</b> <span id="m_region"></span></p>
-        <p><b>Tuman:</b> <span id="m_district"></span></p>
-
-        <p><b>Mashina:</b> <span id="m_car"></span></p>
-        <p><b>Rangi:</b> <span id="m_color"></span></p>
-        <p><b>Raqami:</b> <span id="m_number"></span></p>
-
-        <p><b>Holati:</b> <span id="m_status"></span></p>
-        <p><b>Balans:</b> <span id="m_balance"></span></p>
-
-        <button onclick="closeModal()" class="btn unblock" style="margin-top:20px">Yopish</button>
-    </div>
+<!-- Modal (oddiy) -->
+<div id="userModal" style="display:none;">
+  <button id="modalCloseBtn">X</button>
+  <h3 id="modalName">Noma'lum</h3>
+  <img id="modalAvatar" src="https://i.ibb.co/4nMfDymT/avatar-default-png.jpg" alt="Avatar" />
+  <p>Telefon: <span id="modalPhone"></span></p>
+  <p>Hudud: <span id="modalRegion"></span></p>
+  <p>Tuman: <span id="modalDistrict"></span></p>
+  <p>Holati: <span id="modalStatus"></span></p>
+  <button onclick="closeModal()">Yopish</button>
 </div>
 
 <script type="module" src="./users.js"></script>
