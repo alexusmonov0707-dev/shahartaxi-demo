@@ -1,102 +1,76 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { db, ref, get, update, remove } from "../libs/lib.js";
 
-const firebaseConfig = {
-    apiKey: "AIzaSyB3R.....",
-    authDomain: "shahartaxi-demo.firebaseapp.com",
-    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-    projectId: "shahartaxi-demo",
-    storageBucket: "shahartaxi-demo.appspot.com",
-    messagingSenderId: "00000000",
-    appId: "1:111:web:222"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-const usersList = document.getElementById("usersList");
-const search = document.getElementById("search");
-
-function loadUsers() {
-    const usersRef = ref(db, "users");
-    onValue(usersRef, snap => {
-        usersList.innerHTML = "";
-
-        snap.forEach(child => {
-            const d = child.val();
-            const id = child.key;
-
-            const name = d.fullName || "Noma'lum";
-            const phone = d.phone || "/";
-            const region = d.region || "/";
-            const district = d.district || "/";
-            const avatar = d.techPassportUrl || "../img/default.png";
-            const status = d.blocked ? "❌ Bloklangan" : "✓ Aktiv";
-
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${name}</td>
-                <td>${phone}</td>
-                <td>${region}</td>
-                <td>${status}</td>
-                <td>
-                    <button onclick="openModal('${id}')">Ko'rish</button>
-                    <button onclick="blockUser('${id}', ${d.blocked})">Block</button>
-                    <button onclick="deleteUser('${id}')">Delete</button>
-                </td>
-            `;
-
-            usersList.appendChild(tr);
-        });
-    });
-}
+const usersTable = document.getElementById("usersTable");
+const searchInput = document.getElementById("searchInput");
 
 loadUsers();
 
-// ********* MODAL **********
+async function loadUsers() {
+    const snap = await get(ref(db, "users"));
+    usersTable.innerHTML = "";
 
-window.openModal = function (id) {
-    const userRef = ref(db, "users/" + id);
+    if (!snap.exists()) return;
 
-    onValue(userRef, snap => {
-        const d = snap.val();
+    const users = snap.val();
 
-        document.getElementById("m_fullName").textContent = d.fullName || "Noma'lum";
-        document.getElementById("m_avatar").src = d.techPassportUrl || "../img/default.png";
-        document.getElementById("m_phone").textContent = d.phone || "/";
-        document.getElementById("m_region").textContent = d.region || "/";
-        document.getElementById("m_district").textContent = d.district || "/";
-        document.getElementById("m_status").textContent = d.blocked ? "❌ Bloklangan" : "✓ Aktiv";
+    Object.entries(users).forEach(([id, user]) => {
+        const tr = document.createElement("tr");
 
-        document.getElementById("userModal").style.display = "block";
-    }, { onlyOnce: true });
+        tr.innerHTML = `
+            <td>${user.fullName || "Nomalum"}</td>
+            <td>${user.phone || "-"}</td>
+            <td>${user.region || "/"}</td>
+            <td>${user.blocked ? "Bloklangan" : "✓ Aktiv"}</td>
+            <td>
+                <button onclick="openModal('${id}')">Ko‘rish</button>
+                <button onclick="blockUser('${id}', ${user.blocked})">Block</button>
+                <button onclick="deleteUser('${id}')">Delete</button>
+            </td>
+        `;
+
+        usersTable.appendChild(tr);
+    });
+}
+
+window.openModal = async function (id) {
+    const snap = await get(ref(db, "users/" + id));
+    if (!snap.exists()) return;
+
+    const u = snap.val();
+
+    document.getElementById("modalName").innerText = u.fullName || "Noma'lum";
+    document.getElementById("modalAvatar").src = u.techPassportUrl || "https://i.ibb.co/zG0Z3Qx/avatar.png";
+
+    document.getElementById("modalPhone").innerText = u.phone || "-";
+    document.getElementById("modalRegion").innerText = u.region || "/";
+    document.getElementById("modalDistrict").innerText = u.district || "/";
+    document.getElementById("modalStatus").innerText = u.blocked ? "Bloklangan" : "Aktiv";
+
+    document.getElementById("userModal").style.display = "flex";
 };
 
 window.closeModal = function () {
     document.getElementById("userModal").style.display = "none";
 };
 
-// ********* BLOCK **********
-
-window.blockUser = function (id, currentState) {
-    update(ref(db, "users/" + id), { blocked: !currentState });
+window.blockUser = async function (id, state) {
+    await update(ref(db, "users/" + id), { blocked: !state });
+    loadUsers();
 };
 
-// ********* DELETE **********
-
-window.deleteUser = function (id) {
-    if (confirm("Rostdan ham o‘chirasizmi?")) {
-        remove(ref(db, "users/" + id));
-    }
+window.deleteUser = async function (id) {
+    if (!confirm("O‘chirasizmi?")) return;
+    await remove(ref(db, "users/" + id));
+    loadUsers();
 };
 
-// ********* SEARCH **********
+searchInput.addEventListener("input", () => {
+    const value = searchInput.value.toLowerCase();
+    const rows = usersTable.querySelectorAll("tr");
 
-search.addEventListener("input", function () {
-    const q = this.value.toLowerCase();
-    const rows = usersList.getElementsByTagName("tr");
-
-    for (let r of rows) {
-        r.style.display = r.innerText.toLowerCase().includes(q) ? "" : "none";
-    }
+    rows.forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(value)
+            ? ""
+            : "none";
+    });
 });
