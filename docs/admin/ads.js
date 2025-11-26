@@ -1,7 +1,7 @@
 import { db, ref, get, remove } from "../libs/lib.js";
 
 let adsCache = [];
-let usersMap = {}; // user malumotlari uchun
+let usersMap = {}; 
 
 async function loadAds() {
     const tbody = document.getElementById("adsTable");
@@ -14,7 +14,7 @@ async function loadAds() {
         usersMap = usersSnap.val();
 
     if (!adsSnap.exists()) {
-        tbody.innerHTML = "<tr><td colspan='5'>E’lonlar yo‘q</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='5'>E’lonlar mavjud emas</td></tr>";
         return;
     }
 
@@ -31,66 +31,76 @@ function renderAds(list) {
     tbody.innerHTML = "";
 
     list.forEach(ad => {
-        const user = usersMap[ad.userId] ?? {};
+        const user = usersMap[ad.delivery_eYs8ytEJv] ?? {}; // e’lon egasi ID
+
+        const route = `${ad.fromRegion ?? '-'} / ${ad.fromDistrict ?? '-'} → ${ad.toRegion ?? '-'} / ${ad.toDistrict ?? '-'}`;
 
         tbody.innerHTML += `
             <tr>
-                <td>${user.fullName ?? "Noma'lum"}<br>${user.phone ?? ""}</td>
-                <td>${ad.from} → ${ad.to}</td>
-                <td>${ad.price} so‘m</td>
-                <td>${formatDate(ad.date)}</td>
+                <td>
+                    ${user.fullName ?? "Noma'lum"} <br>
+                    ${user.phone ?? ""}
+                </td>
+
+                <td>${route}</td>
+
+                <td>${ad.price ?? '-'} so‘m</td>
+
+                <td>${formatDate(ad.createdAt)}</td>
+
                 <td>
                     <button class="btn view" onclick="openModal('${ad.id}')">Ko‘rish</button>
+                    <button class="btn delete" onclick="deleteAd('${ad.id}')">Delete</button>
                 </td>
             </tr>
         `;
     });
 }
 
-// Qidiruv
 window.searchAds = function () {
     const q = document.getElementById("search").value.toLowerCase();
 
     const filtered = adsCache.filter(ad =>
-        ad.from.toLowerCase().includes(q) ||
-        ad.to.toLowerCase().includes(q)
+        (ad.fromRegion ?? "").toLowerCase().includes(q) ||
+        (ad.fromDistrict ?? "").toLowerCase().includes(q) ||
+        (ad.toRegion ?? "").toLowerCase().includes(q) ||
+        (ad.toDistrict ?? "").toLowerCase().includes(q)
     );
 
     renderAds(filtered);
 };
 
-// Sana formatlash
 function formatDate(ts) {
     if (!ts) return "-";
-    const d = new Date(ts);
-    return d.toLocaleDateString();
+    return new Date(ts).toLocaleString();
 }
 
-// === MODAL ===
 window.openModal = function (id) {
     const ad = adsCache.find(a => a.id === id);
-    const user = usersMap[ad.userId] ?? {};
+    const user = usersMap[ad.delivery_eYs8ytEJv] ?? {};
 
-    document.getElementById("m_route").textContent = ad.from + " → " + ad.to;
-    document.getElementById("m_price").textContent = ad.price + " so‘m";
-    document.getElementById("m_date").textContent = formatDate(ad.date);
-    document.getElementById("m_seats").textContent = ad.seats ?? "-";
+    const route = `${ad.fromRegion} / ${ad.fromDistrict} → ${ad.toRegion} / ${ad.toDistrict}`;
 
-    document.getElementById("m_userName").textContent = user.fullName ?? "Noma'lum";
-    document.getElementById("m_userPhone").textContent = user.phone ?? "-";
+    document.getElementById("m_route").innerText = route;
+    document.getElementById("m_price").innerText = ad.price + " so‘m";
+    document.getElementById("m_date").innerText = formatDate(ad.createdAt);
+    document.getElementById("m_seats").innerText = ad.seats;
+
+    document.getElementById("m_userName").innerText = user.fullName ?? "Noma'lum";
+    document.getElementById("m_userPhone").innerText = user.phone ?? "-";
 
     document.getElementById("deleteBtn").onclick = () => deleteAd(id);
+
     document.getElementById("modal").style.display = "flex";
-};
+}
 
 window.closeModal = function () {
     document.getElementById("modal").style.display = "none";
 };
 
-// DELETE
 async function deleteAd(id) {
-    if (!confirm("E’lonni o‘chirishni tasdiqlaysizmi?")) return;
-
+    if (!confirm("E’lonni o‘chirilsinmi?")) return;
+    
     await remove(ref(db, "ads/" + id));
 
     closeModal();
