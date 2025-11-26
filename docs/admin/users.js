@@ -1,89 +1,102 @@
-import { db, ref, get, update, remove } from "../libs/lib.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-const tableBody = document.querySelector("tbody");
-const modal = document.getElementById("userModal");
-const closeBtn = document.getElementById("closeModal");
-const modalName = document.getElementById("modalName");
-const modalPhone = document.getElementById("modalPhone");
-const modalRegion = document.getElementById("modalRegion");
-const modalDistrict = document.getElementById("modalDistrict");
-const modalCarModel = document.getElementById("modalCarModel");
-const modalCarNumber = document.getElementById("modalCarNumber");
-const modalStatus = document.getElementById("modalStatus");
-const modalAvatar = document.getElementById("modalAvatar");
+const firebaseConfig = {
+    apiKey: "AIzaSyB3R.....",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.appspot.com",
+    messagingSenderId: "00000000",
+    appId: "1:111:web:222"
+};
 
-async function loadUsers() {
-    try {
-        const usersRef = ref(db, "users");
-        const snapshot = await get(usersRef);
-        const users = snapshot.val();
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-        tableBody.innerHTML = ""; // tozalaymiz
+const usersList = document.getElementById("usersList");
+const search = document.getElementById("search");
 
-        Object.keys(users).forEach(uid => {
-            const u = users[uid];
+function loadUsers() {
+    const usersRef = ref(db, "users");
+    onValue(usersRef, snap => {
+        usersList.innerHTML = "";
 
-            // fallback values
-            const name = u.fullName || "Noma'lum";
-            const phone = u.phone || "Noma'lum";
-            const region = u.region || "/";
-            const district = u.district || "/";
-            const status = u.blocked ? "Bloklangan" : "✓ Aktiv";
+        snap.forEach(child => {
+            const d = child.val();
+            const id = child.key;
 
-            const row = document.createElement("tr");
+            const name = d.fullName || "Noma'lum";
+            const phone = d.phone || "/";
+            const region = d.region || "/";
+            const district = d.district || "/";
+            const avatar = d.techPassportUrl || "../img/default.png";
+            const status = d.blocked ? "❌ Bloklangan" : "✓ Aktiv";
 
-            row.innerHTML = `
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
                 <td>${name}</td>
                 <td>${phone}</td>
                 <td>${region}</td>
                 <td>${status}</td>
                 <td>
-                    <button class="blockBtn" data-id="${uid}">Blok</button>
-                    <button class="deleteBtn" data-id="${uid}">Delete</button>
-                    <button class="viewBtn" data-id="${uid}">Info</button>
+                    <button onclick="openModal('${id}')">Ko'rish</button>
+                    <button onclick="blockUser('${id}', ${d.blocked})">Block</button>
+                    <button onclick="deleteUser('${id}')">Delete</button>
                 </td>
             `;
 
-            // VIEW (MODAL) tugmasi
-            row.querySelector(".viewBtn").addEventListener("click", () => {
-                modalName.textContent = name;
-                modalPhone.textContent = phone;
-                modalRegion.textContent = region;
-                modalDistrict.textContent = district;
-                modalCarModel.textContent = u.carModel || "/";
-                modalCarNumber.textContent = u.carNumber || "/";
-                modalStatus.textContent = status;
-
-                modalAvatar.src = u.techPassportUrl || "./img/avatar.png";
-
-                modal.style.display = "flex";
-            });
-
-            // BLOK
-            row.querySelector(".blockBtn").addEventListener("click", async () => {
-                await update(ref(db, "users/" + uid), {
-                    blocked: !u.blocked
-                });
-                loadUsers();
-            });
-
-            // DELETE
-            row.querySelector(".deleteBtn").addEventListener("click", async () => {
-                await remove(ref(db, "users/" + uid));
-                loadUsers();
-            });
-
-            tableBody.appendChild(row);
+            usersList.appendChild(tr);
         });
-
-    } catch (err) {
-        console.error("ERROR:", err);
-    }
+    });
 }
 
-// MODAL YOPISH
-closeBtn.addEventListener("click", () => {
-    modal.style.display = "none";
-});
-
 loadUsers();
+
+// ********* MODAL **********
+
+window.openModal = function (id) {
+    const userRef = ref(db, "users/" + id);
+
+    onValue(userRef, snap => {
+        const d = snap.val();
+
+        document.getElementById("m_fullName").textContent = d.fullName || "Noma'lum";
+        document.getElementById("m_avatar").src = d.techPassportUrl || "../img/default.png";
+        document.getElementById("m_phone").textContent = d.phone || "/";
+        document.getElementById("m_region").textContent = d.region || "/";
+        document.getElementById("m_district").textContent = d.district || "/";
+        document.getElementById("m_status").textContent = d.blocked ? "❌ Bloklangan" : "✓ Aktiv";
+
+        document.getElementById("userModal").style.display = "block";
+    }, { onlyOnce: true });
+};
+
+window.closeModal = function () {
+    document.getElementById("userModal").style.display = "none";
+};
+
+// ********* BLOCK **********
+
+window.blockUser = function (id, currentState) {
+    update(ref(db, "users/" + id), { blocked: !currentState });
+};
+
+// ********* DELETE **********
+
+window.deleteUser = function (id) {
+    if (confirm("Rostdan ham o‘chirasizmi?")) {
+        remove(ref(db, "users/" + id));
+    }
+};
+
+// ********* SEARCH **********
+
+search.addEventListener("input", function () {
+    const q = this.value.toLowerCase();
+    const rows = usersList.getElementsByTagName("tr");
+
+    for (let r of rows) {
+        r.style.display = r.innerText.toLowerCase().includes(q) ? "" : "none";
+    }
+});
