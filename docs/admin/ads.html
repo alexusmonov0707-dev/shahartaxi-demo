@@ -10,7 +10,7 @@
 
   <header style="margin-bottom:18px;">
     <h1 style="margin:0 0 8px 0;">E'lonlar</h1>
-    <input id="search" type="text" placeholder="Qidiruv: qayerdan, qayerga, ism, telefon, izoh..." oninput="searchAds()" />
+    <input id="search" type="text" placeholder="Qidiruv: qayerdan, qayerga, ism, telefon, izoh..." />
   </header>
 
   <main>
@@ -24,25 +24,23 @@
           <th>Amallar</th>
         </tr>
       </thead>
-      <tbody id="adsTable">
-        <!-- JS to'ldiradi -->
-      </tbody>
+      <tbody id="adsTable"></tbody>
     </table>
   </main>
 
-  <!-- MODAL: TO'LIQ E'LON MA'LUMOTLARI -->
-  <div id="modal" class="modal" aria-hidden="true">
-    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <h3 id="modalTitle">E'lon tafsilotlari</h3>
+  <!-- MODAL -->
+  <div id="modal" class="modal">
+    <div class="modal-content">
+      <h3>E'lon tafsilotlari</h3>
 
       <section class="section">
-        <p><strong>Yo'nalish:</strong> <span id="m_route">-</span></p>
-        <p><strong>Jo'nash vaqti:</strong> <span id="m_depart">-</span></p>
-        <p><strong>Narx:</strong> <span id="m_price">-</span></p>
-        <p><strong>Joylar (user):</strong> <span id="m_seats">-</span></p>
-        <p><strong>Haydovchi o'rindiqlari:</strong> <span id="m_dseats">-</span></p>
-        <p><strong>Izoh:</strong> <span id="m_comment">-</span></p>
-        <p><strong>E'lon yaratilgan:</strong> <span id="m_created">-</span></p>
+        <p><strong>Yo'nalish:</strong> <span id="m_route"></span></p>
+        <p><strong>Jo'nash vaqti:</strong> <span id="m_depart"></span></p>
+        <p><strong>Narx:</strong> <span id="m_price"></span></p>
+        <p><strong>Joylar:</strong> <span id="m_seats"></span></p>
+        <p><strong>Haydovchi o‘rindiqlari:</strong> <span id="m_dseats"></span></p>
+        <p><strong>Izoh:</strong> <span id="m_comment"></span></p>
+        <p><strong>Yaratilgan:</strong> <span id="m_created"></span></p>
       </section>
 
       <hr>
@@ -50,11 +48,11 @@
       <section class="section">
         <h4>E'lon egasi</h4>
         <div class="owner">
-          <img id="m_avatar" src="" alt="avatar" />
+          <img id="m_avatar" src="" />
           <div class="owner-info">
-            <p><strong>Ismi:</strong> <span id="m_userName">-</span></p>
-            <p><strong>Telefon:</strong> <span id="m_userPhone">-</span></p>
-            <p><strong>Role:</strong> <span id="m_userRole">-</span></p>
+            <p><strong>Ismi:</strong> <span id="m_userName"></span></p>
+            <p><strong>Telefon:</strong> <span id="m_userPhone"></span></p>
+            <p><strong>Role:</strong> <span id="m_userRole"></span></p>
           </div>
         </div>
       </section>
@@ -66,6 +64,12 @@
     </div>
   </div>
 
-  <script type="module" src="./ads.js"></script>
+  <!-- FIREBASE SCRIPTS (v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <!-- JS -->
+  <script src="./ads.js"></script>
+
 </body>
 </html>
