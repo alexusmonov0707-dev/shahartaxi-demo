@@ -1,109 +1,100 @@
-import { db, ref, get, update, remove } from "./firebase.js";
+import { db, ref, get, remove } from "../libs/lib.js";
 
-console.log("ADS.JS LOADED");
+let adsCache = [];
+let usersMap = {}; // user malumotlari uchun
 
-const adsTable = document.getElementById("adsTable");
-const searchInput = document.getElementById("search");
-
-let ADS_CACHE = {}; // caching — faqat 1 marta yuklanadi
-
-// ====================================
-// 1) ADSlarni 1 MARTA yuklash
-// ====================================
 async function loadAds() {
-    const snap = await get(ref(db, "ads"));
+    const tbody = document.getElementById("adsTable");
+    tbody.innerHTML = "<tr><td colspan='5'>Yuklanmoqda...</td></tr>";
 
-    if (!snap.exists()) {
-        adsTable.innerHTML = `<tr><td colspan="5" class="p-4">E'lonlar topilmadi</td></tr>`;
+    const adsSnap = await get(ref(db, "ads"));
+    const usersSnap = await get(ref(db, "users"));
+
+    if (usersSnap.exists())
+        usersMap = usersSnap.val();
+
+    if (!adsSnap.exists()) {
+        tbody.innerHTML = "<tr><td colspan='5'>E’lonlar yo‘q</td></tr>";
         return;
     }
 
-    ADS_CACHE = snap.val(); // CACHEGA SAQLAYAPMIZ (Firebasega ikkinchi so‘rov bo‘lmaydi)
+    adsCache = Object.entries(adsSnap.val()).map(([id, a]) => ({
+        id,
+        ...a
+    }));
 
-    renderAds(ADS_CACHE);
+    renderAds(adsCache);
 }
 
+function renderAds(list) {
+    const tbody = document.getElementById("adsTable");
+    tbody.innerHTML = "";
 
-// ====================================
-// 2) ADSlarni render qilish (client-side)
-// ====================================
-function renderAds(data) {
-    adsTable.innerHTML = "";
+    list.forEach(ad => {
+        const user = usersMap[ad.userId] ?? {};
 
-    Object.entries(data).forEach(([id, ad]) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td class="p-3">${id}</td>
-            <td class="p-3">${ad.title || "(no title)"}</td>
-            <td class="p-3">${ad.user || "-"}</td>
-            <td class="p-3">${ad.status || "pending"}</td>
-            <td class="p-3">
-                <button data-id="${id}" class="approve px-2 py-1 bg-green-600 text-white rounded">OK</button>
-                <button data-id="${id}" class="reject px-2 py-1 bg-yellow-600 text-white rounded">Reject</button>
-                <button data-id="${id}" class="delete px-2 py-1 bg-red-600 text-white rounded">Delete</button>
-            </td>
+        tbody.innerHTML += `
+            <tr>
+                <td>${user.fullName ?? "Noma'lum"}<br>${user.phone ?? ""}</td>
+                <td>${ad.from} → ${ad.to}</td>
+                <td>${ad.price} so‘m</td>
+                <td>${formatDate(ad.date)}</td>
+                <td>
+                    <button class="btn view" onclick="openModal('${ad.id}')">Ko‘rish</button>
+                </td>
+            </tr>
         `;
-        adsTable.appendChild(tr);
     });
-
-    initButtons();
 }
 
+// Qidiruv
+window.searchAds = function () {
+    const q = document.getElementById("search").value.toLowerCase();
 
-// ====================================
-// 3) Tugmalarni ishga tushirish
-// ====================================
-function initButtons() {
-
-    document.querySelectorAll(".approve").forEach(btn => {
-        btn.onclick = async () => {
-            const id = btn.dataset.id;
-            await update(ref(db, "ads/" + id), { status: "approved" });
-            ADS_CACHE[id].status = "approved";
-            renderAds(ADS_CACHE);
-        };
-    });
-
-    document.querySelectorAll(".reject").forEach(btn => {
-        btn.onclick = async () => {
-            const id = btn.dataset.id;
-            await update(ref(db, "ads/" + id), { status: "rejected" });
-            ADS_CACHE[id].status = "rejected";
-            renderAds(ADS_CACHE);
-        };
-    });
-
-    document.querySelectorAll(".delete").forEach(btn => {
-        btn.onclick = async () => {
-            const id = btn.dataset.id;
-            await remove(ref(db, "ads/" + id));
-            delete ADS_CACHE[id];
-            renderAds(ADS_CACHE);
-        };
-    });
-
-}
-
-
-// ====================================
-// 4) Qidiruv (Firebasega emas, faqat CACHEga ishlaydi)
-// ====================================
-searchInput.oninput = () => {
-    const text = searchInput.value.toLowerCase();
-
-    const filtered = {};
-
-    for (let id in ADS_CACHE) {
-        const ad = ADS_CACHE[id];
-        const str = `${id} ${ad.title} ${ad.user} ${ad.status}`.toLowerCase();
-        if (str.includes(text)) filtered[id] = ad;
-    }
+    const filtered = adsCache.filter(ad =>
+        ad.from.toLowerCase().includes(q) ||
+        ad.to.toLowerCase().includes(q)
+    );
 
     renderAds(filtered);
 };
 
+// Sana formatlash
+function formatDate(ts) {
+    if (!ts) return "-";
+    const d = new Date(ts);
+    return d.toLocaleDateString();
+}
 
-// ====================================
-// START
-// ====================================
+// === MODAL ===
+window.openModal = function (id) {
+    const ad = adsCache.find(a => a.id === id);
+    const user = usersMap[ad.userId] ?? {};
+
+    document.getElementById("m_route").textContent = ad.from + " → " + ad.to;
+    document.getElementById("m_price").textContent = ad.price + " so‘m";
+    document.getElementById("m_date").textContent = formatDate(ad.date);
+    document.getElementById("m_seats").textContent = ad.seats ?? "-";
+
+    document.getElementById("m_userName").textContent = user.fullName ?? "Noma'lum";
+    document.getElementById("m_userPhone").textContent = user.phone ?? "-";
+
+    document.getElementById("deleteBtn").onclick = () => deleteAd(id);
+    document.getElementById("modal").style.display = "flex";
+};
+
+window.closeModal = function () {
+    document.getElementById("modal").style.display = "none";
+};
+
+// DELETE
+async function deleteAd(id) {
+    if (!confirm("E’lonni o‘chirishni tasdiqlaysizmi?")) return;
+
+    await remove(ref(db, "ads/" + id));
+
+    closeModal();
+    loadAds();
+}
+
 loadAds();
