@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <title>Foydalanuvchilar</title>
     <link rel="stylesheet" href="./users.css">
+
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -12,8 +15,33 @@
 
     <h2>Foydalanuvchilar</h2>
 
-    <input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." oninput="searchUsers()">
+    <!-- FILTER PANEL -->
+    <div class="filters">
+        <input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." oninput="searchUsers()">
 
+        <select id="filterRole" onchange="applyFilters()">
+            <option value="">Role (hammasi)</option>
+            <option value="driver">Driver</option>
+            <option value="user">User</option>
+        </select>
+
+        <select id="filterVerify" onchange="applyFilters()">
+            <option value="">Verify holati</option>
+            <option value="verified">Tasdiqlangan</option>
+            <option value="pending">Kutilmoqda</option>
+            <option value="rejected">Rad etilgan</option>
+        </select>
+
+        <select id="filterBlocked" onchange="applyFilters()">
+            <option value="">Block holati</option>
+            <option value="blocked">Blocked</option>
+            <option value="active">Active</option>
+        </select>
+
+        <button class="btn export" onclick="exportExcel()">Export Excel</button>
+    </div>
+
+    <!-- TABLE -->
     <table>
         <thead>
             <tr>
@@ -27,6 +55,14 @@
         </thead>
         <tbody id="usersTable"></tbody>
     </table>
+
+    <!-- PAGINATION -->
+    <div class="pagination">
+        <button id="prevPage" onclick="prevPage()">⬅ Oldingi</button>
+        <span id="pageInfo">1 / 1</span>
+        <button id="nextPage" onclick="nextPage()">Keyingi ➡</button>
+    </div>
+
 </div>
 
 <!-- MODAL -->
@@ -44,7 +80,7 @@
         <h4 style="margin-top:20px;">Mashina ma’lumotlari</h4>
         <p><b>Model:</b> <span id="m_car"></span></p>
         <p><b>Rangi:</b> <span id="m_color"></span></p>
-        <p><b>Raqam:</b> <span id="m_number"></span></p>
+        <p><b>Raqami:</b> <span id="m_number"></span></p>
 
         <p><b>Holati:</b> <span id="m_status"></span></p>
         <p><b>Balans:</b> <span id="m_balance"></span></p>
