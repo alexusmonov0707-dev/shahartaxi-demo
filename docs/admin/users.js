@@ -1,99 +1,106 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { db, ref, get, update, remove } from "../libs/lib.js";
 
-const firebaseConfig = {
-    apiKey: "...",
-    authDomain: "...",
-    databaseURL: "...",
-    projectId: "...",
-    storageBucket: "...",
-    messagingSenderId: "...",
-    appId: "..."
-};
+let usersCache = [];
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+// LOAD USERS
+async function loadUsers() {
+    const tbody = document.getElementById("usersTable");
+    tbody.innerHTML = "<tr><td colspan='6'>Yuklanmoqda...</td></tr>";
 
-const usersRef = ref(db, "users");
-let allUsers = {};
+    const snap = await get(ref(db, "users"));
 
-// ==== LOAD USERS ====
-onValue(usersRef, snapshot => {
-    allUsers = snapshot.val() || {};
-    renderUsers(allUsers);
-});
+    if (!snap.exists()) {
+        tbody.innerHTML = "<tr><td colspan='6'>Userlar topilmadi</td></tr>";
+        return;
+    }
 
-// ==== RENDER USERS ====
-function renderUsers(data) {
-    const table = document.getElementById("usersTable");
-    table.innerHTML = "";
+    usersCache = Object.entries(snap.val()).map(([id, u]) => ({
+        id,
+        ...u
+    }));
 
-    Object.entries(data).forEach(([id, user]) => {
-        let tr = document.createElement("tr");
+    renderUsers(usersCache);
+}
 
-        tr.innerHTML = `
-            <td>${user.fullName || "Noma'lum"}</td>
-            <td>${user.phone || "-"}</td>
-            <td>${user.region || "/"}</td>
-            <td>${user.role || "-"}</td>
-            <td>${user.blocked ? "❌ Bloklangan" : "✓ Aktiv"}</td>
-            <td>
-                <button class="btn block" onclick="toggleBlock('${id}', ${user.blocked})">
-                    ${user.blocked ? "Unblock" : "Block"}
-                </button>
-                <button class="btn delete" onclick="deleteUser('${id}')">Delete</button>
-                <button class="btn unblock" onclick="openModal('${id}')">Info</button>
-            </td>
+// RENDER TABLE
+function renderUsers(list) {
+    const tbody = document.getElementById("usersTable");
+    tbody.innerHTML = "";
+
+    list.forEach(u => {
+        const region = u.region ?? "-";
+        const district = u.district ?? "-";
+        const phone = u.phone ?? "-";
+
+        const roleBadge =
+            `<span class="badge ${u.role === 'driver' ? 'driver' : 'user'}">${u.role}</span>`;
+
+        let status = "Foydalanuvchi";
+        if (u.role === "driver") {
+            if (u.verified === true) status = `<span class="badge verified">Tasdiqlangan</span>`;
+            else if (u.verified === false) status = `<span class="badge pending">Kutilmoqda</span>`;
+            else if (u.verified === "rejected") status = `<span class="badge rejected">Rad etilgan</span>`;
+        }
+
+        tbody.innerHTML += `
+            <tr onclick="openModal('${u.id}')">
+                <td>${u.fullName ?? "-"}</td>
+                <td>${phone}</td>
+                <td>${region} / ${district}</td>
+                <td>${roleBadge}</td>
+                <td>${status}</td>
+
+                <td>
+                    ${
+                        u.blocked
+                        ? `<button class="btn unblock" onclick="event.stopPropagation(); unblockUser('${u.id}')">Unblock</button>`
+                        : `<button class="btn block" onclick="event.stopPropagation(); blockUser('${u.id}')">Block</button>`
+                    }
+                    <button class="btn delete" onclick="event.stopPropagation(); deleteUser('${u.id}')">Delete</button>
+                </td>
+            </tr>
         `;
-
-        table.appendChild(tr);
     });
 }
 
-// ==== SEARCH ====
+// SEARCH
 window.searchUsers = function () {
-    let q = document.getElementById("search").value.toLowerCase().trim();
+    const q = document.getElementById("search").value.toLowerCase();
 
-    let filtered = {};
-    Object.entries(allUsers).forEach(([id, u]) => {
-        if (
-            (u.fullName || "").toLowerCase().includes(q) ||
-            (u.phone || "").toLowerCase().includes(q) ||
-            (u.carModel || "").toLowerCase().includes(q)
-        ) {
-            filtered[id] = u;
-        }
-    });
+    const filtered = usersCache.filter(u =>
+        (u.fullName ?? "").toLowerCase().includes(q) ||
+        (u.phone ?? "").includes(q) ||
+        (u.carModel ?? "").toLowerCase().includes(q)
+    );
 
     renderUsers(filtered);
 };
 
-// ==== BLOCK/UNBLOCK ====
-window.toggleBlock = function (id, state) {
-    update(ref(db, "users/" + id), { blocked: !state });
-};
-
-// ==== DELETE ====
-window.deleteUser = function (id) {
-    update(ref(db, "users/" + id), null);
-};
-
-// ==== MODAL ====
+// MODAL OPEN
 window.openModal = function (id) {
-    const user = allUsers[id];
-    if (!user) return;
+    const u = usersCache.find(x => x.id === id);
 
-    document.getElementById("m_fullName").innerText = user.fullName;
-    document.getElementById("m_phone").innerText = user.phone;
-    document.getElementById("m_region").innerText = user.region || "/";
-    document.getElementById("m_district").innerText = user.district || "/";
-    document.getElementById("m_car").innerText = user.carModel || "/";
-    document.getElementById("m_color").innerText = user.carColor || "/";
-    document.getElementById("m_number").innerText = user.carNumber || "/";
-    document.getElementById("m_status").innerText = user.blocked ? "Bloklangan" : "Aktiv";
-    document.getElementById("m_balance").innerText = user.balance || 0;
+    document.getElementById("m_fullName").textContent = u.fullName ?? "";
+    document.getElementById("m_phone").textContent = u.phone ?? "-";
 
-    document.getElementById("m_avatar").src = user.avatar || "./avatar-default.png";
+    document.getElementById("m_region").textContent = u.region ?? "-";
+    document.getElementById("m_district").textContent = u.district ?? "-";
+
+    document.getElementById("m_avatar").src = u.avatar ?? "/assets/default.png";
+
+    document.getElementById("m_car").textContent = u.carModel ?? "-";
+    document.getElementById("m_color").textContent = u.carColor ?? "-";
+    document.getElementById("m_number").textContent = u.carNumber ?? "-";
+
+    let status = "Foydalanuvchi";
+    if (u.role === "driver") {
+        if (u.verified === true) status = "Tasdiqlangan";
+        else if (u.verified === false) status = "Kutilmoqda";
+        else if (u.verified === "rejected") status = "Rad etilgan";
+    }
+    document.getElementById("m_status").textContent = status;
+
+    document.getElementById("m_balance").textContent = (u.balance ?? 0) + " so‘m";
 
     document.getElementById("modal").style.display = "flex";
 };
@@ -101,3 +108,26 @@ window.openModal = function (id) {
 window.closeModal = function () {
     document.getElementById("modal").style.display = "none";
 };
+
+// BLOCK / UNBLOCK
+window.blockUser = async function (id) {
+    await update(ref(db, "users/" + id), { blocked: true });
+    loadUsers();
+};
+
+window.unblockUser = async function (id) {
+    await update(ref(db, "users/" + id), { blocked: false });
+    loadUsers();
+};
+
+// DELETE USER + ADS
+window.deleteUser = async function (id) {
+    if (!confirm("Userni o‘chirishni tasdiqlaysizmi?")) return;
+
+    await remove(ref(db, "ads_by_user/" + id));
+    await remove(ref(db, "users/" + id));
+
+    loadUsers();
+};
+
+loadUsers();
