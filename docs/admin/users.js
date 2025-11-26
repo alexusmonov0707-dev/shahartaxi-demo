@@ -7,14 +7,18 @@ onValue(ref(db, "users"), snapshot => {
 
     snapshot.forEach(child => {
         let user = child.val();
-        let uid = child.key;               // ← MUHIM! user ID shu
+        let uid = child.key;
 
         let row = `
         <tr onclick="showDetails('${uid}')">
             <td>${user.fullName || ""}</td>
             <td>${user.phone || ""}</td>
-            <td>${user.region || "/"}</td>
+
+            <!-- ⭐ TO‘G‘RILANGAN QATOR ⭐ -->
+            <td>${(user.regionName || "/")} / ${(user.districtName || "")}</td>
+
             <td>${user.active ? "✔ Aktiv" : "❌ Bloklangan"}</td>
+
             <td>
                 <button class="btn-warning" onclick="event.stopPropagation(); blockUser('${uid}')">
                     ${user.active ? "Block" : "Unblock"}
@@ -30,26 +34,17 @@ onValue(ref(db, "users"), snapshot => {
     });
 });
 
-// =========================
-//    BLOCK USER
-// =========================
 window.blockUser = async function (uid) {
     await update(ref(db, `users/${uid}`), {
         active: false
     });
 };
 
-// =========================
-//    DELETE USER
-// =========================
 window.deleteUser = async function (uid) {
     if (!confirm("O‘chirishni xohlaysizmi?")) return;
     await remove(ref(db, `users/${uid}`));
 };
 
-// =========================
-//    SHOW DETAILS MODAL
-// =========================
 window.showDetails = function (uid) {
     onValue(ref(db, `users/${uid}`), snap => {
         let user = snap.val();
@@ -60,7 +55,6 @@ window.showDetails = function (uid) {
         document.getElementById("modalColor").innerText = user.color;
         document.getElementById("modalPlate").innerText = user.plate;
         document.getElementById("modalBalance").innerText = user.balance;
-
         document.getElementById("modalAvatar").src = user.avatar || "../img/avatar-default.png";
 
         document.getElementById("modal").classList.remove("hidden");
