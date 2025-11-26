@@ -17,9 +17,9 @@ async function loadAds() {
         return;
     }
 
-    adsCache = Object.entries(adsSnap.val()).map(([id, a]) => ({
+    adsCache = Object.entries(adsSnap.val()).map(([id, ad]) => ({
         id,
-        ...a
+        ...ad
     }));
 
     renderAds(adsCache);
@@ -30,24 +30,17 @@ function renderAds(list) {
     tbody.innerHTML = "";
 
     list.forEach(ad => {
-        const userId = ad.delivery;    // <-- TO‘G‘RI FIELD
+        const userId = ad["delivery-eYs8ytEJv"];  // <-- TO‘G‘RI
         const user = usersMap[userId] ?? {};
 
         const route = `${ad.fromRegion ?? '-'} / ${ad.fromDistrict ?? '-'} → ${ad.toRegion ?? '-'} / ${ad.toDistrict ?? '-'}`;
 
         tbody.innerHTML += `
             <tr>
-                <td>
-                    ${user.fullName ?? "Noma'lum"} <br>
-                    ${user.phone ?? ""}
-                </td>
-
+                <td>${user.fullName ?? "Noma'lum"}<br>${user.phone ?? "-"}</td>
                 <td>${route}</td>
-
-                <td>${ad.price ?? '-'} so‘m</td>
-
+                <td>${ad.price ?? "-"} so‘m</td>
                 <td>${formatDate(ad.createdAt)}</td>
-
                 <td>
                     <button class="btn view" onclick="openModal('${ad.id}')">Ko‘rish</button>
                     <button class="btn delete" onclick="deleteAd('${ad.id}')">Delete</button>
@@ -57,19 +50,6 @@ function renderAds(list) {
     });
 }
 
-window.searchAds = function () {
-    const q = document.getElementById("search").value.toLowerCase();
-
-    const filtered = adsCache.filter(ad =>
-        (ad.fromRegion ?? "").toLowerCase().includes(q) ||
-        (ad.fromDistrict ?? "").toLowerCase().includes(q) ||
-        (ad.toRegion ?? "").toLowerCase().includes(q) ||
-        (ad.toDistrict ?? "").toLowerCase().includes(q)
-    );
-
-    renderAds(filtered);
-};
-
 function formatDate(ts) {
     if (!ts) return "-";
     return new Date(ts).toLocaleString();
@@ -77,14 +57,14 @@ function formatDate(ts) {
 
 window.openModal = function (id) {
     const ad = adsCache.find(a => a.id === id);
-    const user = usersMap[ad.delivery] ?? {};
+    const user = usersMap[ad["delivery-eYs8ytEJv"]] ?? {};
 
     const route = `${ad.fromRegion} / ${ad.fromDistrict} → ${ad.toRegion} / ${ad.toDistrict}`;
 
     document.getElementById("m_route").innerText = route;
-    document.getElementById("m_price").innerText = ad.price + " so‘m";
+    document.getElementById("m_price").innerText = (ad.price ?? "-") + " so‘m";
     document.getElementById("m_date").innerText = formatDate(ad.createdAt);
-    document.getElementById("m_seats").innerText = ad.seats;
+    document.getElementById("m_seats").innerText = ad.seats ?? "-";
 
     document.getElementById("m_userName").innerText = user.fullName ?? "Noma'lum";
     document.getElementById("m_userPhone").innerText = user.phone ?? "-";
@@ -92,7 +72,7 @@ window.openModal = function (id) {
     document.getElementById("deleteBtn").onclick = () => deleteAd(id);
 
     document.getElementById("modal").style.display = "flex";
-}
+};
 
 window.closeModal = function () {
     document.getElementById("modal").style.display = "none";
