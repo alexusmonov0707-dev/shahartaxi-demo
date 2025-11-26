@@ -1,51 +1,86 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>Foydalanuvchilar</title>
-    <link rel="stylesheet" href="../assets/admin.css">
-</head>
-<body>
+<meta charset="UTF-8">
+<title>Foydalanuvchilar</title>
 
+<!-- TABLE STYLE -->
+<style>
+table { width: 100%; border-collapse: collapse; }
+td, th { border:1px solid #ccc; padding:10px; }
+th { background:#f4f4f4; }
+
+.btn { padding:4px 10px; cursor:pointer; border-radius:4px; }
+.btn-delete { background:#e74c3c; color:#fff; border:none; }
+.btn-block { background:#95a5a6; color:#fff; border:none; }
+</style>
+
+<!-- MODAL STYLE -->
+<style>
+.modal {
+    position: fixed;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4);
+    display: none; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+.modal-content {
+    background:white;
+    padding:20px;
+    width:350px;
+    border-radius:10px;
+}
+.modal img {
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    display:block;
+    margin:10px auto;
+}
+.close {
+    float:right;
+    cursor:pointer;
+    font-size:22px;
+}
+</style>
+</head>
+
+<body>
 <h2>Foydalanuvchilar</h2>
 
-<input type="text" id="search" placeholder="Qidiruv: ism, telefon, mashina...">
+<input type="text" id="search" placeholder="Qidiruv: ism, telefon..." style="width:260px; padding:6px;"><br><br>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Avatar</th>
-            <th>Ismi</th>
-            <th>Telefon</th>
-            <th>Mintaqa</th>
-            <th>Holati</th>
-            <th>Amallar</th>
-        </tr>
-    </thead>
-    <tbody id="usersList"></tbody>
+<table>
+<thead>
+<tr>
+    <th>Ismi</th>
+    <th>Telefon</th>
+    <th>Mintaqa</th>
+    <th>Holati</th>
+    <th>Amallar</th>
+</tr>
+</thead>
+<tbody id="usersTable"></tbody>
 </table>
 
 <!-- MODAL -->
 <div id="userModal" class="modal">
     <div class="modal-content">
-        <span id="closeModal" class="close">&times;</span>
+        <span class="close" onclick="closeModal()">&times;</span>
 
         <h3 id="m_name"></h3>
-        <img id="m_avatar" src="" class="avatar-lg">
+        <img id="m_avatar">
 
-        <p><strong>Telefon:</strong> <span id="m_phone"></span></p>
-        <p><strong>Hudud:</strong> <span id="m_region"></span></p>
-        <p><strong>Tuman:</strong> <span id="m_district"></span></p>
-        <p><strong>Mashina:</strong> <span id="m_car"></span></p>
-        <p><strong>Rangi:</strong> <span id="m_color"></span></p>
-        <p><strong>Raqami:</strong> <span id="m_number"></span></p>
-        <p><strong>Balans:</strong> <span id="m_balance"></span></p>
+        <p><b>Telefon:</b> <span id="m_phone"></span></p>
+        <p><b>Hudud:</b> <span id="m_region"></span></p>
+        <p><b>Tuman:</b> <span id="m_district"></span></p>
+        <p><b>Holati:</b> <span id="m_status"></span></p>
 
-        <button id="closeBtn">Yopish</button>
+        <button class="btn" onclick="closeModal()">Yopish</button>
     </div>
 </div>
 
 <script type="module" src="users.js"></script>
-
 </body>
 </html>
