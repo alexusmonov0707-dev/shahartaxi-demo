@@ -1,11 +1,11 @@
-// ==================== FIREBASE ====================
+// Firebase init
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
   getDatabase,
   ref,
+  get,
   onValue,
   remove,
-  get
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-database.js";
 
 const firebaseConfig = {
@@ -21,8 +21,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-
-// ==================== HMTL ELEMENTS ====================
 const adsTable = document.getElementById("adsTable");
 const searchInput = document.getElementById("searchInput");
 
@@ -30,28 +28,26 @@ const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modal-content");
 
 
-// ==================== LOAD ADS ====================
+// =============== LOAD ADS ===================
 async function loadAds() {
-  const adsRef = ref(db, "ads");
-  const usersRef = ref(db, "users");
+  const adsSnap = await get(ref(db, "ads"));
+  const userSnap = await get(ref(db, "users"));
 
-  const [adsSnap, usersSnap] = await Promise.all([get(adsRef), get(usersRef)]);
-
-  const adsData = adsSnap.val() || {};
-  const usersData = usersSnap.val() || {};
+  const ads = adsSnap.val() || {};
+  const users = userSnap.val() || {};
 
   adsTable.innerHTML = "";
 
-  Object.entries(adsData).forEach(([userId, userAds]) => {
+  Object.entries(ads).forEach(([userId, userAds]) => {
     Object.entries(userAds).forEach(([adId, ad]) => {
-      const user = usersData[userId] || {};
+      
+      const user = users[userId] || {};
+
       const tr = document.createElement("tr");
-
       tr.innerHTML = `
-        <td>${user.fullName || "Noma'lum"}<br><small>${user.phone || ""}</small></td>
+        <td>${user.fullName || "Noma'lum"}<br><small>${user.phone || "-"}</small></td>
 
-        <td>${ad.fromRegion || "-"} / ${ad.fromDistrict || "-"} → 
-            ${ad.toRegion || "-"} / ${ad.toDistrict || "-"}</td>
+        <td>${ad.fromRegion} / ${ad.fromDistrict} → ${ad.toRegion} / ${ad.toDistrict}</td>
 
         <td>${ad.price ? ad.price + " so‘m" : "-"}</td>
 
@@ -71,7 +67,7 @@ async function loadAds() {
 loadAds();
 
 
-// ==================== SEARCH ====================
+// =============== SEARCH ===================
 searchInput.addEventListener("keyup", () => {
   const q = searchInput.value.toLowerCase();
   Array.from(adsTable.children).forEach(row => {
@@ -80,47 +76,56 @@ searchInput.addEventListener("keyup", () => {
 });
 
 
-// ==================== MODAL OPEN (GLOBAL) ====================
-window.openModal = function (userId, adId) {
-  get(ref(db, `ads/${userId}/${adId}`)).then((snap) => {
-    const ad = snap.val();
-    modalContent.innerHTML = `
-      <h3>E'lon tafsilotlari</h3>
-      <p><b>Izoh:</b> ${ad.comment || "-"}</p>
+// =============== MODAL OPEN (GLOBAL) ===================
+window.openModal = async function (userId, adId) {
+  const ad = (await get(ref(db, `ads/${userId}/${adId}`))).val();
+  const user = (await get(ref(db, `users/${userId}`))).val();
 
-      <p><b>Yo'nalish:</b> 
-      ${ad.fromRegion || "-"} / ${ad.fromDistrict || "-"} →
-      ${ad.toRegion || "-"} / ${ad.toDistrict || "-"}</p>
+  modalContent.innerHTML = `
+    <h3>E'lon tafsilotlari</h3>
 
-      <p><b>Narx:</b> ${ad.price ? ad.price + " so‘m" : "-"}</p>
+    <p><b>Izoh:</b> ${ad.comment || "-"}</p>
 
-      <p><b>Ketish vaqti:</b> ${ad.departureTime || "-"}</p>
-      <p><b>Joylar:</b> ${ad.seats || "-"}</p>
+    <p><b>Yo'nalish:</b> 
+    ${ad.fromRegion} / ${ad.fromDistrict} →
+    ${ad.toRegion} / ${ad.toDistrict}</p>
 
-      <hr>
+    <p><b>Narx:</b> ${ad.price} so‘m</p>
 
-      <button class="btn btn-danger" onclick="deleteAd('${userId}', '${adId}')">E'lonni o‘chirish</button>
-      <button class="btn btn-secondary" onclick="closeModal()">Yopish</button>
-    `;
+    <p><b>Ketish vaqti:</b> ${ad.departureTime || "-"}</p>
 
-    modal.style.display = "flex";
-  });
+    <p><b>Joylar:</b> ${ad.seats || "-"}</p>
+
+    <hr>
+
+    <h4>E'lon egasi</h4>
+    <p><b>Ismi:</b> ${user.fullName || "Noma'lum"}</p>
+    <p><b>Telefon:</b> ${user.phone || "-"}</p>
+
+    <hr>
+
+    <button class="btn btn-danger" onclick="deleteAd('${userId}', '${adId}')">E'lonni o‘chirish</button>
+    <button class="btn btn-secondary" onclick="closeModal()">Yopish</button>
+  `;
+
+  modal.style.display = "flex";
 };
 
 
-// ==================== MODAL CLOSE (GLOBAL) ====================
+// =============== MODAL CLOSE ===================
 window.closeModal = function () {
   modal.style.display = "none";
 };
 
 
-// ==================== DELETE AD (GLOBAL) ====================
+// =============== DELETE AD (GLOBAL! WORKS ANYWHERE) ===============
 window.deleteAd = async function (userId, adId) {
-  const ok = confirm("E'lonni o‘chirasizmi?");
+
+  const ok = confirm("E'lonni o‘chirishni tasdiqlaysizmi?");
   if (!ok) return;
 
   await remove(ref(db, `ads/${userId}/${adId}`));
 
-  closeModal();
-  await loadAds();
+  closeModal(); // modal ochiq bo‘lsa yopiladi
+  await loadAds(); // jadval yangilanadi
 };
