@@ -3,113 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <title>Foydalanuvchilar</title>
-    <style>
-        body { font-family: Arial; padding: 20px; background: #f7f7f7; }
-
-        h2 { margin-bottom: 20px; }
-
-        #search {
-            width: 300px;
-            padding: 8px;
-            margin-bottom: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background: #eee;
-            text-align: left;
-        }
-
-        tr:hover {
-            background: #f2f2f2;
-        }
-
-        .btn {
-            padding: 6px 10px;
-            cursor: pointer;
-            border: none;
-            color: white;
-            border-radius: 4px;
-        }
-
-        .block { background: #ff9800; }
-        .unblock { background: #4caf50; }
-        .delete { background: #f44336; }
-
-        /* MODAL */
-        #modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
-            justify-content: center;
-            align-items: center;
-        }
-
-        #modalContent {
-            background: white;
-            padding: 20px;
-            width: 400px;
-            border-radius: 8px;
-        }
-
-        #modal img {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            display: block;
-            margin: auto;
-        }
-    </style>
+    <link rel="stylesheet" href="../assets/admin.css">
 </head>
+
 <body>
 
-    <h2>Foydalanuvchilar</h2>
+<h2>Foydalanuvchilar</h2>
 
-    <input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." onkeyup="searchUsers()">
+<input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." style="width:300px; margin-bottom:20px;">
 
-    <table>
-        <thead>
-            <tr>
-                <th>Ismi</th>
-                <th>Telefon</th>
-                <th>Mintaqa</th>
-                <th>Holati</th>
-                <th>Amallar</th>
-            </tr>
-        </thead>
-        <tbody id="usersTable"></tbody>
-    </table>
+<table>
+    <thead>
+        <tr>
+            <th>Ismi</th>
+            <th>Telefon</th>
+            <th>Mintaqa</th>
+            <th>Holati</th>
+            <th>Amallar</th>
+        </tr>
+    </thead>
 
-    <!-- MODAL -->
-    <div id="modal">
-        <div id="modalContent">
-            <h3 id="m_fullName"></h3>
-            <img id="m_avatar" src="">
-            <p><b>Telefon:</b> <span id="m_phone"></span></p>
-            <p><b>Hudud:</b> <span id="m_region"></span></p>
-            <p><b>Tuman:</b> <span id="m_district"></span></p>
-            <p><b>Mashina:</b> <span id="m_car"></span></p>
-            <p><b>Rangi:</b> <span id="m_color"></span></p>
-            <p><b>Raqami:</b> <span id="m_number"></span></p>
-            <p><b>Balans:</b> <span id="m_balance"></span></p>
-            <button onclick="closeModal()" class="btn unblock">Yopish</button>
-        </div>
+    <!-- 🔥 MUHIM: JS shu yerga ma'lumot yozadi -->
+    <tbody id="usersTable"></tbody>
+</table>
+
+<!-- 🔥 MUHIM: Modal oynasi -->
+<div id="userModal" class="modal" style="display:none;">
+    <div class="modal-content">
+        <span id="closeModal" class="close">&times;</span>
+
+        <!-- JS shu divga foydalanuvchi ma'lumotlarini joylaydi -->
+        <div id="modalBody"></div>
     </div>
+</div>
 
-    <script type="module" src="./users.js"></script>
-
+<script type="module" src="./users.js"></script>
 </body>
 </html>
-
