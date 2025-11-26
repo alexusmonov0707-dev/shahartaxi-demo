@@ -79,6 +79,8 @@ window.openModal = function (userId, adId) {
     document.getElementById("m_date").innerText = formatDate(ad.createdAt);
     document.getElementById("m_seats").innerText = ad.seats ?? "-";
 
+    document.getElementById("m_comment").innerText = ad.comment ?? "-";  // <-- YANGI QATOR
+
     document.getElementById("m_userName").innerText = user.fullName ?? "Noma'lum";
     document.getElementById("m_userPhone").innerText = user.phone ?? "-";
 
