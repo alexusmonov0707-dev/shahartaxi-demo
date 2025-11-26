@@ -1,108 +1,122 @@
-import { db, ref, get, update, onValue } from "../libs/lib.js";
+import { db, ref, get, update, remove } from "./firebase.js";
 
-// DOM
-const searchInput = document.getElementById("searchInput");
-const roleFilter = document.getElementById("roleFilter");
-const statusFilter = document.getElementById("statusFilter");
-const usersTable = document.getElementById("usersTable");
+let usersCache = [];
 
-let usersData = {};
+async function loadUsers() {
+    const tbody = document.getElementById("usersTable");
+    tbody.innerHTML = "<tr><td colspan='6'>Yuklanmoqda...</td></tr>";
 
-// --- LOAD USERS REALTIME ---
-onValue(ref(db, "users"), snap => {
-    usersData = snap.exists() ? snap.val() : {};
-    renderUsers();
-});
+    const snap = await get(ref(db, "users"));
+    if (!snap.exists()) {
+        tbody.innerHTML = "<tr><td colspan='6'>Userlar topilmadi</td></tr>";
+        return;
+    }
 
-// --- RENDER TABLE ---
-function renderUsers() {
-    usersTable.innerHTML = "";
+    usersCache = Object.entries(snap.val()).map(([id, user]) => ({ id, ...user }));
+    renderTable(usersCache);
+}
 
-    const search = searchInput.value.toLowerCase();
-    const role = roleFilter.value;
-    const status = statusFilter.value;
+function renderTable(list) {
+    const tbody = document.getElementById("usersTable");
+    tbody.innerHTML = "";
 
-    Object.entries(usersData).forEach(([uid, user]) => {
-        if (!user.fullName) return;
+    list.forEach(u => {
+        const roleBadge = `
+            <span class="badge ${u.role === 'driver' ? 'driver' : 'user'}">
+                ${u.role}
+            </span>`;
 
-        // SEARCH
-        if (
-            user.fullName.toLowerCase().includes(search) === false &&
-            user.phone?.includes(search) === false
-        ) return;
-
-        // ROLE FILTER
-        if (role !== "all" && user.role !== role) return;
-
-        // STATUS FILTER
-        if (status !== "all") {
-            if (status === "verified" && user.verified !== true) return;
-            if (status === "pending" && user.verified !== false) return;
-            if (status === "rejected" && user.verified !== "rejected") return;
-        }
-
-        // ROW
-        const tr = document.createElement("tr");
-        tr.className = "border-b hover:bg-gray-50";
-
-        // STATUS BADGE
         let statusBadge = "";
-        if (user.role === "driver") {
-            if (user.verified === true)
-                statusBadge = `<span class="text-green-600 font-semibold">Tasdiqlangan</span>`;
-            else if (user.verified === false)
-                statusBadge = `<span class="text-yellow-600 font-semibold">Kutilmoqda</span>`;
-            else if (user.verified === "rejected")
-                statusBadge = `<span class="text-red-600 font-semibold">Rad etilgan</span>`;
+        if (u.role === "driver") {
+            if (u.verified === true) statusBadge = `<span class="badge verified">Tasdiqlangan</span>`;
+            else if (u.verified === false) statusBadge = `<span class="badge pending">Kutilmoqda</span>`;
+            else if (u.verified === "rejected") statusBadge = `<span class="badge rejected">Rad etilgan</span>`;
         } else {
-            statusBadge = `<span class="text-blue-600">Yo‘lovchi</span>`;
+            statusBadge = `<span class="badge user">Foydalanuvchi</span>`;
         }
 
-        // ROLE BADGE
-        let roleBadge =
-            user.role === "driver"
-                ? `<span class="text-purple-600 font-semibold">Haydovchi</span>`
-                : `<span class="text-gray-700">Yo‘lovchi</span>`;
+        tbody.innerHTML += `
+            <tr onclick="openModal('${u.id}')">
+                <td>${u.fullName}</td>
+                <td>${u.phone}</td>
+                <td>${u.region} / ${u.district}</td>
+                <td>${roleBadge}</td>
+                <td>${statusBadge}</td>
 
-        // ACTION BUTTON (BLOCK)
-        const blockBtn = `
-            <button data-block="${uid}"
-                    class="px-2 py-1 rounded text-white 
-                     ${user.blocked ? "bg-green-600" : "bg-red-600"}">
-                ${user.blocked ? "Aktivlash" : "Bloklash"}
-            </button>
+                <td>
+                    ${u.blocked
+                        ? `<button class="btn unblock" onclick="event.stopPropagation(); unblockUser('${u.id}')">Unblock</button>`
+                        : `<button class="btn block" onclick="event.stopPropagation(); blockUser('${u.id}')">Block</button>`
+                    }
+                    <button class="btn delete" onclick="event.stopPropagation(); deleteUser('${u.id}')">Delete</button>
+                </td>
+            </tr>
         `;
-
-        tr.innerHTML = `
-            <td class="p-3">${user.fullName}</td>
-            <td class="p-3">${user.phone || "-"}</td>
-            <td class="p-3">${roleBadge}</td>
-            <td class="p-3">${statusBadge}</td>
-            <td class="p-3">${user.balance || 0} so‘m</td>
-            <td class="p-3">${blockBtn}</td>
-        `;
-
-        usersTable.appendChild(tr);
-    });
-
-    attachActions();
-}
-
-// --- ACTION HANDLERS ---
-function attachActions() {
-    document.querySelectorAll("[data-block]").forEach(btn => {
-        btn.onclick = async () => {
-            const uid = btn.dataset.block;
-            const user = usersData[uid];
-
-            await update(ref(db, "users/" + uid), {
-                blocked: !user.blocked
-            });
-        };
     });
 }
 
-// --- LIVE FILTER / SEARCH ---
-searchInput.oninput = renderUsers;
-roleFilter.onchange = renderUsers;
-statusFilter.onchange = renderUsers;
+window.searchUsers = function () {
+    const q = document.getElementById("search").value.toLowerCase();
+
+    const filtered = usersCache.filter(u =>
+        (u.fullName || "").toLowerCase().includes(q) ||
+        (u.phone || "").toLowerCase().includes(q) ||
+        (u.carModel || "").toLowerCase().includes(q)
+    );
+
+    renderTable(filtered);
+};
+
+window.openModal = function (id) {
+    const u = usersCache.find(x => x.id === id);
+
+    document.getElementById("m_fullName").textContent = u.fullName;
+    document.getElementById("m_phone").textContent = u.phone;
+    document.getElementById("m_region").textContent = u.region;
+    document.getElementById("m_district").textContent = u.district;
+    document.getElementById("m_avatar").src = u.avatar;
+    document.getElementById("m_color").textContent = u.carColor;
+    document.getElementById("m_car").textContent = u.carModel;
+    document.getElementById("m_number").textContent = u.carNumber;
+
+    // DRIVER STATUS
+    if (u.role === "driver") {
+        if (u.verified === true) document.getElementById("m_status").textContent = "Tasdiqlangan";
+        else if (u.verified === false) document.getElementById("m_status").textContent = "Tasdiq kutmoqda";
+        else document.getElementById("m_status").textContent = "Rad etilgan";
+    } else {
+        document.getElementById("m_status").textContent = "Foydalanuvchi";
+    }
+
+    document.getElementById("m_balance").textContent = u.balance + " so‘m";
+
+    document.getElementById("modal").style.display = "flex";
+};
+
+window.closeModal = function () {
+    document.getElementById("modal").style.display = "none";
+};
+
+window.blockUser = async function (id) {
+    await update(ref(db, "users/" + id), { blocked: true });
+    loadUsers();
+};
+
+window.unblockUser = async function (id) {
+    await update(ref(db, "users/" + id), { blocked: false });
+    loadUsers();
+};
+
+window.deleteUser = async function (id) {
+    if (!confirm("Userni o‘chirmoqchimisiz?")) return;
+
+    // BIRINCHI ADS NI O‘CHIRAMIZ
+    await remove(ref(db, "ads_by_user/" + id));
+
+    // SO‘NG USERNI O‘CHIRAMIZ
+    await remove(ref(db, "users/" + id));
+
+    loadUsers();
+};
+
+loadUsers();
