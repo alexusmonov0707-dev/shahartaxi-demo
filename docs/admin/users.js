@@ -1,6 +1,6 @@
-import { db, ref, get, update, remove } from "./firebase.js";
+import { db, ref, get, update, remove } from "../libs/lib.js"; 
 
-let usersCache = []; // BARCHA USERLAR 1 MARTA OLINADI
+let usersCache = []; // Barcha userlar bir marta yuklanadi
 
 async function loadUsers() {
     const tbody = document.getElementById("usersTable");
@@ -14,7 +14,13 @@ async function loadUsers() {
 
     usersCache = Object.entries(snap.val()).map(([id, user]) => ({
         id,
-        ...user
+        ...user,
+        region: user.region || "-",
+        district: user.district || "-",
+        fullName: user.fullName || "No name",
+        phone: user.phone || "No phone",
+        avatar: user.avatar || "/docs/assets/img/avatar-default.png",
+        blocked: user.blocked || false,
     }));
 
     renderTable(usersCache);
@@ -47,9 +53,10 @@ window.searchUsers = function () {
     const q = document.getElementById("search").value.toLowerCase();
 
     const filtered = usersCache.filter(u =>
-        (u.fullName || "").toLowerCase().includes(q) ||
-        (u.phone || "").toLowerCase().includes(q) ||
-        (u.carModel || "").toLowerCase().includes(q)
+        u.fullName.toLowerCase().includes(q) ||
+        u.phone.toLowerCase().includes(q) ||
+        (u.carModel || "").toLowerCase().includes(q) ||
+        (u.region || "").toLowerCase().includes(q)
     );
 
     renderTable(filtered);
@@ -63,10 +70,11 @@ window.openModal = function (id) {
     document.getElementById("m_region").textContent = u.region;
     document.getElementById("m_district").textContent = u.district;
     document.getElementById("m_avatar").src = u.avatar;
-    document.getElementById("m_color").textContent = u.carColor;
-    document.getElementById("m_car").textContent = u.carModel;
-    document.getElementById("m_number").textContent = u.carNumber;
-    document.getElementById("m_balance").textContent = u.balance;
+
+    document.getElementById("m_color").textContent = u.carColor || "-";
+    document.getElementById("m_car").textContent = u.carModel || "-";
+    document.getElementById("m_number").textContent = u.carNumber || "-";
+    document.getElementById("m_balance").textContent = u.balance ?? 0;
 
     document.getElementById("modal").style.display = "flex";
 };
