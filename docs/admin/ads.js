@@ -168,7 +168,7 @@ document.getElementById("modal").addEventListener("click", (e) => {
 });
 
 // --- DELETE ---
-async function deleteAd(userId, adId) {
+window.deleteAd = async function (userId, adId) {
   if (!confirm("E'lonni o'chirishni tasdiqlaysizmi?")) return;
 
   await remove(ref(db, `ads/${userId}/${adId}`));
