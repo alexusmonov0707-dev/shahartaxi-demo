@@ -1,7 +1,7 @@
 import { db, ref, get, remove } from "../libs/lib.js";
 
 let adsCache = [];
-let usersMap = {}; 
+let usersMap = {};
 
 async function loadAds() {
     const tbody = document.getElementById("adsTable");
@@ -10,11 +10,10 @@ async function loadAds() {
     const adsSnap = await get(ref(db, "ads"));
     const usersSnap = await get(ref(db, "users"));
 
-    if (usersSnap.exists())
-        usersMap = usersSnap.val();
+    if (usersSnap.exists()) usersMap = usersSnap.val();
 
     if (!adsSnap.exists()) {
-        tbody.innerHTML = "<tr><td colspan='5'>E’lonlar mavjud emas</td></tr>";
+        tbody.innerHTML = "<tr><td colspan='5'>E’lonlar yo‘q</td></tr>";
         return;
     }
 
@@ -31,7 +30,8 @@ function renderAds(list) {
     tbody.innerHTML = "";
 
     list.forEach(ad => {
-        const user = usersMap[ad.delivery_eYs8ytEJv] ?? {}; // e’lon egasi ID
+        const userId = ad.delivery;    // <-- TO‘G‘RI FIELD
+        const user = usersMap[userId] ?? {};
 
         const route = `${ad.fromRegion ?? '-'} / ${ad.fromDistrict ?? '-'} → ${ad.toRegion ?? '-'} / ${ad.toDistrict ?? '-'}`;
 
@@ -77,7 +77,7 @@ function formatDate(ts) {
 
 window.openModal = function (id) {
     const ad = adsCache.find(a => a.id === id);
-    const user = usersMap[ad.delivery_eYs8ytEJv] ?? {};
+    const user = usersMap[ad.delivery] ?? {};
 
     const route = `${ad.fromRegion} / ${ad.fromDistrict} → ${ad.toRegion} / ${ad.toDistrict}`;
 
@@ -100,7 +100,7 @@ window.closeModal = function () {
 
 async function deleteAd(id) {
     if (!confirm("E’lonni o‘chirilsinmi?")) return;
-    
+
     await remove(ref(db, "ads/" + id));
 
     closeModal();
