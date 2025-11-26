@@ -1,102 +1,72 @@
-import { db, ref, get, update, remove } from "../libs/lib.js"; 
+import { db, ref, onValue, update, remove } from "../libs/lib.js";
 
-let usersCache = []; // Barcha userlar bir marta yuklanadi
+const tbody = document.getElementById("userTable");
 
-async function loadUsers() {
-    const tbody = document.getElementById("usersTable");
-    tbody.innerHTML = "<tr><td colspan='5'>Yuklanmoqda...</td></tr>";
-
-    const snap = await get(ref(db, "users"));
-    if (!snap.exists()) {
-        tbody.innerHTML = "<tr><td colspan='5'>Userlar topilmadi</td></tr>";
-        return;
-    }
-
-    usersCache = Object.entries(snap.val()).map(([id, user]) => ({
-        id,
-        ...user,
-        region: user.region || "-",
-        district: user.district || "-",
-        fullName: user.fullName || "No name",
-        phone: user.phone || "No phone",
-        avatar: user.avatar || "/docs/assets/img/avatar-default.png",
-        blocked: user.blocked || false,
-    }));
-
-    renderTable(usersCache);
-}
-
-function renderTable(list) {
-    const tbody = document.getElementById("usersTable");
+onValue(ref(db, "users"), snapshot => {
     tbody.innerHTML = "";
 
-    list.forEach(u => {
-        tbody.innerHTML += `
-            <tr onclick="openModal('${u.id}')">
-                <td>${u.fullName}</td>
-                <td>${u.phone}</td>
-                <td>${u.region} / ${u.district}</td>
-                <td>${u.blocked ? "🚫 Bloklangan" : "✔ Aktiv"}</td>
-                <td>
-                    ${u.blocked
-                        ? `<button class="btn unblock" onclick="event.stopPropagation(); unblockUser('${u.id}')">Unblock</button>`
-                        : `<button class="btn block" onclick="event.stopPropagation(); blockUser('${u.id}')">Block</button>`
-                    }
-                    <button class="btn delete" onclick="event.stopPropagation(); deleteUser('${u.id}')">Delete</button>
-                </td>
-            </tr>
+    snapshot.forEach(child => {
+        let user = child.val();
+        let uid = child.key;               // ← MUHIM! user ID shu
+
+        let row = `
+        <tr onclick="showDetails('${uid}')">
+            <td>${user.fullName || ""}</td>
+            <td>${user.phone || ""}</td>
+            <td>${user.region || "/"}</td>
+            <td>${user.active ? "✔ Aktiv" : "❌ Bloklangan"}</td>
+            <td>
+                <button class="btn-warning" onclick="event.stopPropagation(); blockUser('${uid}')">
+                    ${user.active ? "Block" : "Unblock"}
+                </button>
+                <button class="btn-danger" onclick="event.stopPropagation(); deleteUser('${uid}')">
+                    Delete
+                </button>
+            </td>
+        </tr>
         `;
+
+        tbody.innerHTML += row;
     });
-}
+});
 
-window.searchUsers = function () {
-    const q = document.getElementById("search").value.toLowerCase();
-
-    const filtered = usersCache.filter(u =>
-        u.fullName.toLowerCase().includes(q) ||
-        u.phone.toLowerCase().includes(q) ||
-        (u.carModel || "").toLowerCase().includes(q) ||
-        (u.region || "").toLowerCase().includes(q)
-    );
-
-    renderTable(filtered);
+// =========================
+//    BLOCK USER
+// =========================
+window.blockUser = async function (uid) {
+    await update(ref(db, `users/${uid}`), {
+        active: false
+    });
 };
 
-window.openModal = function (id) {
-    const u = usersCache.find(u => u.id === id);
-
-    document.getElementById("m_fullName").textContent = u.fullName;
-    document.getElementById("m_phone").textContent = u.phone;
-    document.getElementById("m_region").textContent = u.region;
-    document.getElementById("m_district").textContent = u.district;
-    document.getElementById("m_avatar").src = u.avatar;
-
-    document.getElementById("m_color").textContent = u.carColor || "-";
-    document.getElementById("m_car").textContent = u.carModel || "-";
-    document.getElementById("m_number").textContent = u.carNumber || "-";
-    document.getElementById("m_balance").textContent = u.balance ?? 0;
-
-    document.getElementById("modal").style.display = "flex";
+// =========================
+//    DELETE USER
+// =========================
+window.deleteUser = async function (uid) {
+    if (!confirm("O‘chirishni xohlaysizmi?")) return;
+    await remove(ref(db, `users/${uid}`));
 };
 
-window.closeModal = function () {
-    document.getElementById("modal").style.display = "none";
+// =========================
+//    SHOW DETAILS MODAL
+// =========================
+window.showDetails = function (uid) {
+    onValue(ref(db, `users/${uid}`), snap => {
+        let user = snap.val();
+        
+        document.getElementById("modalName").innerText = user.fullName;
+        document.getElementById("modalPhone").innerText = user.phone;
+        document.getElementById("modalCar").innerText = user.carName;
+        document.getElementById("modalColor").innerText = user.color;
+        document.getElementById("modalPlate").innerText = user.plate;
+        document.getElementById("modalBalance").innerText = user.balance;
+
+        document.getElementById("modalAvatar").src = user.avatar || "../img/avatar-default.png";
+
+        document.getElementById("modal").classList.remove("hidden");
+    });
 };
 
-window.blockUser = async function (id) {
-    await update(ref(db, "users/" + id), { blocked: true });
-    loadUsers();
+window.hideModal = function () {
+    document.getElementById("modal").classList.add("hidden");
 };
-
-window.unblockUser = async function (id) {
-    await update(ref(db, "users/" + id), { blocked: false });
-    loadUsers();
-};
-
-window.deleteUser = async function (id) {
-    if (!confirm("Userni o‘chirmoqchimisiz?")) return;
-    await remove(ref(db, "users/" + id));
-    loadUsers();
-};
-
-loadUsers();
