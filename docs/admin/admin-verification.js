@@ -1,17 +1,25 @@
-// admin-verification.js
-import { auth, db, ref, get, update, remove, onValue } from "/shahartaxi-demo/docs/libs/lib.js";
+// admin-verification.js (super-app version)
+import { auth, db, ref, get, update, remove, onValue } from "../libs/lib.js";
 
 // DOM
 const verificationList = document.getElementById("verificationList");
 
-// Utility: render single driver card
+// --- CARD RENDER ---
 function renderDriverCard(uid, user) {
   const card = document.createElement("div");
   card.className = "driver-card";
-  card.style = "border:1px solid #ddd;padding:12px;margin-bottom:8px;border-radius:6px;display:flex;gap:12px;align-items:flex-start;";
+  card.style = `
+    border:1px solid #ddd;
+    padding:12px;
+    margin-bottom:8px;
+    border-radius:6px;
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+  `;
 
   const img = document.createElement("img");
-  img.src = user.avatar || "../../assets/img/avatar-default.png";
+  img.src = user.avatar || "/assets/default-avatar.png";
   img.width = 80;
   img.height = 80;
   img.style = "object-fit:cover;border-radius:8px;";
@@ -20,73 +28,78 @@ function renderDriverCard(uid, user) {
   info.style = "flex:1";
 
   const name = document.createElement("div");
-  name.innerHTML = `<strong>${user.fullName || "Noma'lum"}</strong> <span style="color:#666">(${user.phone})</span>`;
+  name.innerHTML = `<strong>${user.fullName || "Noma'lum"}</strong>
+    <span style="color:#666">(${user.phone})</span>`;
+
   const car = document.createElement("div");
-  const d = user.driverInfo || {};
-  car.innerHTML = `Mashina: ${d.carModel || "-"} | Raqam: ${d.carNumber || "-"} | Rang: ${d.carColor || "-"}`;
+  car.innerHTML = `
+    Mashina: ${user.carModel || "-"}
+    | Raqam: ${user.carNumber || "-"}
+    | Rang: ${user.carColor || "-"}
+  `;
 
   const passport = document.createElement("div");
-  passport.innerHTML = `Tex pasport: ${d.techPassportUrl ? `<a href="${d.techPassportUrl}" target="_blank">Ko'rish</a>` : "yo'q"}`;
+  passport.innerHTML = `
+    Tex pasport:
+    ${
+      user.techPassportUrl
+        ? `<a href="${user.techPassportUrl}" target="_blank">Ko'rish</a>`
+        : "yo'q"
+    }
+  `;
+
+  const license = document.createElement("div");
+  license.innerHTML = `
+    Haydovchilik guvohnomasi:
+    ${
+      user.license
+        ? `<a href="${user.license}" target="_blank">Ko'rish</a>`
+        : "yo'q"
+    }
+  `;
 
   const created = document.createElement("div");
   created.style = "font-size:12px;color:#888;margin-top:6px;";
-  created.textContent = "Ro‘yxatdan: " + (new Date(user.createdAt || Date.now())).toLocaleString();
+  created.textContent =
+    "Ro‘yxatdan o'tgan sanasi: " +
+    new Date(user.createdAt || Date.now()).toLocaleString();
 
-  // buttons
+  // BUTTONS
   const actions = document.createElement("div");
-  actions.style = "display:flex;gap:8px;margin-top:8px";
+  actions.style = "display:flex;gap:8px;margin-top:10px;";
 
+  // TASDIQLASH
   const approveBtn = document.createElement("button");
   approveBtn.textContent = "Tasdiqlash";
-  approveBtn.className = "btn btn-success";
+  approveBtn.style = "padding:6px 12px;background:#4caf50;color:#fff;border:none;border-radius:4px;";
   approveBtn.onclick = async () => {
     approveBtn.disabled = true;
-    try {
-      await update(ref(db, `users/${uid}`), { verified: true });
-      card.style.opacity = 0.6;
-      approveBtn.textContent = "Tasdiqlangan";
-      rejectBtn.disabled = true;
-    } catch (e) {
-      console.error(e);
-      alert("Tasdiqlashda xato. Console-ni tekshiring.");
-      approveBtn.disabled = false;
-    }
+    await update(ref(db, `users/${uid}`), { verified: true });
+    card.style.opacity = 0.6;
+    approveBtn.textContent = "Tasdiqlandi";
+    rejectBtn.disabled = true;
+    blockBtn.disabled = true;
   };
 
+  // RAD ETISH
   const rejectBtn = document.createElement("button");
   rejectBtn.textContent = "Rad etish";
-  rejectBtn.className = "btn btn-danger";
+  rejectBtn.style = "padding:6px 12px;background:#f44336;color:#fff;border:none;border-radius:4px;";
   rejectBtn.onclick = async () => {
-    if (!confirm("Bu haydovchini rad etmoqchimisiz? Profil va uning e'lonlari o'chiriladi.")) return;
+    if (!confirm("Haydovchini rad qilmoqchimisiz?")) return;
     rejectBtn.disabled = true;
-    try {
-      // o'chirish: users/uid ni o'chiramiz va kerak bo'lsa uning e'lonlarini ham o'chirish
-      await remove(ref(db, `users/${uid}`));
-      // opcional: ads ni ham o'chirish
-      // await remove(ref(db, `ads_by_user/${uid}`)); // Agar shunday tuzilma bo'lsa
-      card.remove();
-    } catch (e) {
-      console.error(e);
-      alert("O'chirishda xato.");
-      rejectBtn.disabled = false;
-    }
+    await update(ref(db, `users/${uid}`), { verified: "rejected" });
+    card.remove();
   };
 
+  // BLOKLASH
   const blockBtn = document.createElement("button");
-  blockBtn.textContent = user.blocked ? "Blokdan chiqar" : "Bloklash";
-  blockBtn.className = "btn btn-warning";
+  blockBtn.textContent = user.blocked ? "Blokdan chiqarish" : "Bloklash";
+  blockBtn.style = "padding:6px 12px;background:#ff9800;color:#fff;border:none;border-radius:4px;";
   blockBtn.onclick = async () => {
-    blockBtn.disabled = true;
-    try {
-      await update(ref(db, `users/${uid}`), { blocked: !user.blocked });
-      blockBtn.textContent = !user.blocked ? "Blokdan chiqar" : "Bloklash";
-      user.blocked = !user.blocked;
-      blockBtn.disabled = false;
-    } catch (e) {
-      console.error(e);
-      alert("Xato.");
-      blockBtn.disabled = false;
-    }
+    await update(ref(db, `users/${uid}`), { blocked: !user.blocked });
+    blockBtn.textContent = user.blocked ? "Bloklash" : "Blokdan chiqarish";
+    user.blocked = !user.blocked;
   };
 
   actions.appendChild(approveBtn);
@@ -96,6 +109,7 @@ function renderDriverCard(uid, user) {
   info.appendChild(name);
   info.appendChild(car);
   info.appendChild(passport);
+  info.appendChild(license);
   info.appendChild(created);
   info.appendChild(actions);
 
@@ -104,62 +118,57 @@ function renderDriverCard(uid, user) {
   return card;
 }
 
-// Load unverified drivers
+// --- LOAD DRIVERS ---
 async function loadPendingDrivers() {
   verificationList.innerHTML = "<p>Yuklanmoqda…</p>";
+
   try {
-    // Yechim: biz users node ichidan role==='driver' && verified!==true bo‘lganlarni olamiz
-    // RealtimeDB-da filtr qiyin bo‘lsa, olamiz hammasini va filtr qilamiz
     const snap = await get(ref(db, "users"));
     verificationList.innerHTML = "";
+
     if (!snap.exists()) {
-      verificationList.innerHTML = "<p>Hech qanday foydalanuvchi yo‘q.</p>";
+      verificationList.innerHTML = "<p>Hech qanday foydalanuvchi yo‘q</p>";
       return;
     }
+
     const users = snap.val();
-    let found = false;
+    let counter = 0;
+
     Object.entries(users).forEach(([uid, user]) => {
       if (user.role === "driver" && user.verified !== true) {
-        const card = renderDriverCard(uid, user);
-        verificationList.appendChild(card);
-        found = true;
+        verificationList.appendChild(renderDriverCard(uid, user));
+        counter++;
       }
     });
-    if (!found) verificationList.innerHTML = "<p>Tasdiqlanmas haydovchi topilmadi.</p>";
-  } catch (e) {
-    console.error(e);
-    verificationList.innerHTML = "<p>Xatolik yuz berdi. Console-ni tekshiring.</p>";
+
+    if (counter === 0) {
+      verificationList.innerHTML = "<p>Tasdiqlanmagan haydovchi topilmadi.</p>";
+    }
+  } catch (err) {
+    console.error(err);
+    verificationList.innerHTML = "<p>Xato yuz berdi. Console-ni tekshiring.</p>";
   }
 }
 
-// init: require admin auth
-import { onAuthStateChanged } from "/shahartaxi-demo/docs/libs/lib.js";
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    location.href = "/shahartaxi-demo/app/auth/login.html";
-    return;
-  }
-  // check role in DB
-  const s = await get(ref(db, `users/${user.uid}`));
-  if (!s.exists()) {
-    alert("Siz admin emassiz yoki profilingiz topilmadi.");
-    await auth.signOut();
-    location.href = "/shahartaxi-demo/app/auth/login.html";
-    return;
-  }
-  const me = s.val();
-  if (me.role !== "admin") {
-    alert("Siz admin emassiz.");
-    await auth.signOut();
-    location.href = "/shahartaxi-demo/app/auth/login.html";
+// --- AUTH CHECK (sizning hozirgi admin tizimingizga mos) ---
+import { onAuthStateChanged } from "../libs/lib.js";
+
+onAuthStateChanged(auth, async (u) => {
+  if (!u) {
+    location.href = "./login.html";
     return;
   }
 
-  // load pending drivers
+  const snap = await get(ref(db, `admins/${u.uid}`));
+  if (!snap.exists()) {
+    alert("Siz admin emassiz!");
+    auth.signOut();
+    location.href = "./login.html";
+    return;
+  }
+
   loadPendingDrivers();
 
-  // optional: subscribe to users changes to auto-refresh
-  onValue(ref(db, "users"), (snap) => {
-    loadPendingDrivers();
-  });
+  // LIVE UPDATE
+  onValue(ref(db, "users"), () => loadPendingDrivers());
 });
