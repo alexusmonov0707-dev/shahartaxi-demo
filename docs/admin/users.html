@@ -8,23 +8,26 @@
 
 <body>
 
-<h2>Foydalanuvchilar</h2>
+<div class="container">
 
-<input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." oninput="searchUsers()">
+    <h2>Foydalanuvchilar</h2>
 
-<table>
-<thead>
-<tr>
-    <th>Ismi</th>
-    <th>Telefon</th>
-    <th>Mintaqa</th>
-    <th>Role</th>
-    <th>Holati</th>
-    <th>Amallar</th>
-</tr>
-</thead>
-<tbody id="usersTable"></tbody>
-</table>
+    <input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." oninput="searchUsers()">
+
+    <table>
+        <thead>
+            <tr>
+                <th>Ismi</th>
+                <th>Telefon</th>
+                <th>Hudud</th>
+                <th>Role</th>
+                <th>Holati</th>
+                <th>Amallar</th>
+            </tr>
+        </thead>
+        <tbody id="usersTable"></tbody>
+    </table>
+</div>
 
 <!-- MODAL -->
 <div id="modal">
@@ -35,12 +38,13 @@
         <img id="m_avatar">
 
         <p><b>Telefon:</b> <span id="m_phone"></span></p>
-        <p><b>Hudud:</b> <span id="m_region"></span></p>
+        <p><b>Mintaqa:</b> <span id="m_region"></span></p>
         <p><b>Tuman:</b> <span id="m_district"></span></p>
 
-        <p><b>Mashina:</b> <span id="m_car"></span></p>
+        <h4 style="margin-top:20px;">Mashina ma’lumotlari</h4>
+        <p><b>Model:</b> <span id="m_car"></span></p>
         <p><b>Rangi:</b> <span id="m_color"></span></p>
-        <p><b>Raqami:</b> <span id="m_number"></span></p>
+        <p><b>Raqam:</b> <span id="m_number"></span></p>
 
         <p><b>Holati:</b> <span id="m_status"></span></p>
         <p><b>Balans:</b> <span id="m_balance"></span></p>
