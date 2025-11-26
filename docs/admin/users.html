@@ -2,55 +2,54 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Foydalanuvchilar</title>
-    <link rel="stylesheet" href="users.css">
+    <link rel="stylesheet" href="./users.css">
 </head>
+
 <body>
 
-<h2 class="title">Foydalanuvchilar</h2>
+<h2>Foydalanuvchilar</h2>
 
-<input type="text" id="searchInput" class="search" placeholder="Qidiruv: ism, telefon...">
+<input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." oninput="searchUsers()">
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Ismi</th>
-            <th>Telefon</th>
-            <th>Mintaqa</th>
-            <th>Holati</th>
-            <th>Amallar</th>
-        </tr>
-    </thead>
-    <tbody id="usersList">
-        <!-- JS orqali to‘ladi -->
-    </tbody>
+<table>
+<thead>
+<tr>
+    <th>Ismi</th>
+    <th>Telefon</th>
+    <th>Mintaqa</th>
+    <th>Role</th>
+    <th>Holati</th>
+    <th>Amallar</th>
+</tr>
+</thead>
+<tbody id="usersTable"></tbody>
 </table>
 
-
 <!-- MODAL -->
-<div id="userModal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal()">&times;</span>
+<div id="modal">
+    <div id="modalContent">
 
-        <h3 id="modalName">Foydalanuvchi</h3>
+        <h3 id="m_fullName"></h3>
 
-        <img id="modalAvatar" class="avatar">
+        <img id="m_avatar">
 
-        <p><b>Telefon:</b> <span id="modalPhone"></span></p>
-        <p><b>Hudud:</b> <span id="modalRegion"></span></p>
-        <p><b>Tuman:</b> <span id="modalDistrict"></span></p>
-        <p><b>Holati:</b> <span id="modalStatus"></span></p>
+        <p><b>Telefon:</b> <span id="m_phone"></span></p>
+        <p><b>Hudud:</b> <span id="m_region"></span></p>
+        <p><b>Tuman:</b> <span id="m_district"></span></p>
 
-        <button onclick="closeModal()" class="closeBtn">Yopish</button>
+        <p><b>Mashina:</b> <span id="m_car"></span></p>
+        <p><b>Rangi:</b> <span id="m_color"></span></p>
+        <p><b>Raqami:</b> <span id="m_number"></span></p>
+
+        <p><b>Holati:</b> <span id="m_status"></span></p>
+        <p><b>Balans:</b> <span id="m_balance"></span></p>
+
+        <button onclick="closeModal()" class="btn unblock" style="margin-top:20px">Yopish</button>
     </div>
 </div>
 
-
-<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database.js"></script>
-
-<script src="users.js"></script>
+<script type="module" src="./users.js"></script>
 
 </body>
 </html>
