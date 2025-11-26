@@ -1,59 +1,71 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>E'lonlarni boshqarish</title>
-    <link rel="stylesheet" href="./ads.css">
+  <meta charset="utf-8" />
+  <title>E'lonlarni boshqarish — Admin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="./ads.css" />
 </head>
-
 <body>
 
-<h2>E'lonlar</h2>
+  <header style="margin-bottom:18px;">
+    <h1 style="margin:0 0 8px 0;">E'lonlar</h1>
+    <input id="search" type="text" placeholder="Qidiruv: qayerdan, qayerga, ism, telefon, izoh..." oninput="searchAds()" />
+  </header>
 
-<input id="search" type="text" placeholder="Qidiruv: qayerdan, qayerga, ism..." oninput="searchAds()">
+  <main>
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Yo'nalish</th>
+          <th>Narx</th>
+          <th>Sana</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody id="adsTable">
+        <!-- JS to'ldiradi -->
+      </tbody>
+    </table>
+  </main>
 
-<table>
-<thead>
-<tr>
-    <th>User</th>
-    <th>Yo'nalish</th>
-    <th>Narx</th>
-    <th>Sana</th>
-    <th>Amallar</th>
-</tr>
-</thead>
+  <!-- MODAL: TO'LIQ E'LON MA'LUMOTLARI -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h3 id="modalTitle">E'lon tafsilotlari</h3>
 
-<tbody id="adsTable"></tbody>
+      <section class="section">
+        <p><strong>Yo'nalish:</strong> <span id="m_route">-</span></p>
+        <p><strong>Jo'nash vaqti:</strong> <span id="m_depart">-</span></p>
+        <p><strong>Narx:</strong> <span id="m_price">-</span></p>
+        <p><strong>Joylar (user):</strong> <span id="m_seats">-</span></p>
+        <p><strong>Haydovchi o'rindiqlari:</strong> <span id="m_dseats">-</span></p>
+        <p><strong>Izoh:</strong> <span id="m_comment">-</span></p>
+        <p><strong>E'lon yaratilgan:</strong> <span id="m_created">-</span></p>
+      </section>
 
-</table>
+      <hr>
 
-<!-- MODAL -->
-<div id="modal">
-    <div id="modalContent">
-        <h3>E'lon tafsilotlari</h3>
-
-        <p><b>Yo'nalish:</b> <span id="m_route"></span></p>
-        <p><b>Narx:</b> <span id="m_price"></span></p>
-        <p><b>Sana:</b> <span id="m_date"></span></p>
-        <p><b>Joylar:</b> <span id="m_seats"></span></p>
-        <p><b>Izoh:</b> <span id="m_comment"></span></p>
-
-
-        <hr>
-
-        <h3>E'lon egasi</h3>
-
-        <p><b>Ismi:</b> <span id="m_userName"></span></p>
-        <p><b>Telefon:</b> <span id="m_userPhone"></span></p>
-
-        <div class="modal-buttons">
-            <button class="btn delete" id="deleteBtn">E’lonni o‘chirish</button>
-            <button class="btn close" onclick="closeModal()">Yopish</button>
+      <section class="section">
+        <h4>E'lon egasi</h4>
+        <div class="owner">
+          <img id="m_avatar" src="" alt="avatar" />
+          <div class="owner-info">
+            <p><strong>Ismi:</strong> <span id="m_userName">-</span></p>
+            <p><strong>Telefon:</strong> <span id="m_userPhone">-</span></p>
+            <p><strong>Role:</strong> <span id="m_userRole">-</span></p>
+          </div>
         </div>
+      </section>
+
+      <div class="modal-actions">
+        <button id="deleteBtn" class="btn delete">E'lonni o'chirish</button>
+        <button id="closeBtn" class="btn close">Yopish</button>
+      </div>
     </div>
-</div>
+  </div>
 
-<script type="module" src="./ads.js"></script>
-
+  <script type="module" src="./ads.js"></script>
 </body>
 </html>
