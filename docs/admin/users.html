@@ -20,16 +20,23 @@
 </table>
 
 <!-- Modal (oddiy) -->
-<div id="userModal" style="display:none;">
-  <button id="modalCloseBtn">X</button>
-  <h3 id="modalName">Noma'lum</h3>
-  <img id="modalAvatar" src="https://i.ibb.co/4nMfDymT/avatar-default-png.jpg" alt="Avatar" />
-  <p>Telefon: <span id="modalPhone"></span></p>
-  <p>Hudud: <span id="modalRegion"></span></p>
-  <p>Tuman: <span id="modalDistrict"></span></p>
-  <p>Holati: <span id="modalStatus"></span></p>
-  <button onclick="closeModal()">Yopish</button>
+<div id="adModal" class="modal">
+    <div class="modal-content">
+        <span class="close" id="closeModal">&times;</span>
+
+        <h2 id="modalTitle">Elon maʼlumotlari</h2>
+
+        <img id="modalAvatar" class="modal-avatar" src="" alt="avatar">
+
+        <p><strong>Haydovchi:</strong> <span id="modalDriver"></span></p>
+        <p><strong>Telefon:</strong> <span id="modalPhone"></span></p>
+        <p><strong>Yo‘nalish:</strong> <span id="modalRoute"></span></p>
+        <p><strong>Narxi:</strong> <span id="modalPrice"></span></p>
+
+        <button id="modalCloseBtn" class="btn">Yopish</button>
+    </div>
 </div>
+
 
 <script type="module" src="./users.js"></script>
 
