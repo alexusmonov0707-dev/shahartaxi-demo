@@ -72,10 +72,11 @@ function drawRow(ad, user, userId, adId) {
         <td>${route}</td>
         <td>${price}</td>
         <td>${date}</td>
-        <td>
-            <button class="btn viewBtn" data-open="${userId}|${adId}">Ko‘rish</button>
-            <button class="btn delete" data-del="${userId}|${adId}">Delete</button>
-        </td>
+    <td>
+    <button class="btn btn-view" data-open="${userId}|${adId}">Ko‘rish</button>
+    <button class="btn btn-delete" data-del="${userId}|${adId}">Delete</button>
+</td>
+
     `;
 
     // Ko‘rish tugmasini majburan aktiv qilamiz
