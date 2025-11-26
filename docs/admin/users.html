@@ -2,67 +2,72 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <title>Foydalanuvchilar</title>
+    <title>Foydalanuvchilar — Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-        body { font-family: Arial; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
-        th { background: #f2f2f2; }
-        button { padding: 5px 10px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f7f7f7; }
+        h2 { margin-bottom: 10px; }
+        #search { width: 320px; padding: 8px; margin-bottom: 14px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { padding: 12px 10px; border: 1px solid #ddd; vertical-align: middle; }
+        th { background: #f0f0f0; text-align: left; }
+        tr:hover { background: #fbfbfb; }
+        .btn { padding: 6px 10px; cursor: pointer; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
+        .block { background:#ff9800; color:#fff; }
+        .unblock { background:#4caf50; color:#fff; }
+        .delete { background:#f44336; color:#fff; }
 
-        /* Modal */
-        #userModal {
-            display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            justify-content: center; align-items: center;
-        }
-        .modal-content {
-            background: white; padding: 20px; width: 350px; border-radius: 8px;
-        }
-        .close-btn { float: right; cursor: pointer; font-size: 20px; }
-        .avatar {
-            width: 120px; height: 120px; border-radius: 50%;
-            display: block; margin: 0 auto 15px;
+        /* modal */
+        #modal { display:none; position:fixed; inset:0; background: rgba(0,0,0,0.55); justify-content:center; align-items:center; }
+        #modalContent { width:420px; max-width:90%; background:#fff; padding:20px; border-radius:10px; position:relative; }
+        #modalClose { position:absolute; right:12px; top:8px; cursor:pointer; font-size:18px; color:#666; }
+        #modal img { display:block; margin: 8px auto 12px; width:110px; height:110px; border-radius:50%; object-fit:cover; }
+
+        /* responsive smaller screens */
+        @media (max-width:600px){
+          th, td { font-size:14px; padding:8px; }
+          #search { width:100%; }
         }
     </style>
 </head>
 <body>
+    <h2>Foydalanuvchilar</h2>
+    <input id="search" placeholder="Qidiruv: ism, telefon, mashina..." onkeyup="searchUsers()" />
 
-<h2>Foydalanuvchilar</h2>
+    <table aria-describedby="usersTableCaption">
+        <thead>
+            <tr>
+                <th>Ismi</th>
+                <th>Telefon</th>
+                <th>Mintaqa</th>
+                <th>Holati</th>
+                <th>Amallar</th>
+            </tr>
+        </thead>
+        <tbody id="usersTable">
+            <!-- JS bilan to'ldiriladi -->
+        </tbody>
+    </table>
 
-<input type="text" id="searchInput" placeholder="Qidiruv: ism, telefon, mashina..." style="width:250px; padding:5px;">
-
-<table>
-    <thead>
-        <tr>
-            <th>Ismi</th>
-            <th>Telefon</th>
-            <th>Mintaqa</th>
-            <th>Holati</th>
-            <th>Amallar</th>
-        </tr>
-    </thead>
-    <tbody id="usersTable"></tbody>
-</table>
-
-<!-- Modal -->
-<div id="userModal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeModal()">×</span>
-
-        <h3 id="modalName"></h3>
-        <img id="modalAvatar" class="avatar" src="">
-        <p><b>Telefon:</b> <span id="modalPhone"></span></p>
-        <p><b>Hudud:</b> <span id="modalRegion"></span></p>
-        <p><b>Tuman:</b> <span id="modalDistrict"></span></p>
-        <p><b>Holati:</b> <span id="modalStatus"></span></p>
-
-        <button onclick="closeModal()">Yopish</button>
+    <!-- MODAL -->
+    <div id="modal" role="dialog" aria-modal="true" aria-hidden="true">
+        <div id="modalContent" role="document">
+            <div id="modalClose" onclick="closeModal()">✕</div>
+            <h3 id="m_fullName">Ism</h3>
+            <img id="m_avatar" src="https://i.ibb.co/0jKq0s3/avatar-default.png" alt="avatar" />
+            <p><strong>Telefon:</strong> <span id="m_phone">-</span></p>
+            <p><strong>Hudud:</strong> <span id="m_region">/</span></p>
+            <p><strong>Tuman:</strong> <span id="m_district">/</span></p>
+            <p><strong>Mashina:</strong> <span id="m_car">-</span></p>
+            <p><strong>Rangi:</strong> <span id="m_color">-</span></p>
+            <p><strong>Raqami:</strong> <span id="m_number">-</span></p>
+            <p><strong>Balans:</strong> <span id="m_balance">0</span></p>
+            <div style="text-align:right; margin-top:12px;">
+                <button class="btn unblock" onclick="closeModal()">Yopish</button>
+            </div>
+        </div>
     </div>
-</div>
 
-<script type="module" src="users.js"></script>
-
+    <script type="module" src="./users.js"></script>
 </body>
 </html>
