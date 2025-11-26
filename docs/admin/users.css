@@ -1,13 +1,20 @@
-/* === GENERAL === */
+/* === BASE === */
 body {
-    font-family: Arial;
-    padding: 20px;
-    background: #f5f5f5;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    padding: 30px;
+    max-width: 1200px;
+    margin: auto;
 }
 
 h2 {
     margin-bottom: 20px;
-    font-size: 26px;
+    font-size: 28px;
     font-weight: bold;
 }
 
@@ -26,27 +33,35 @@ table {
     width: 100%;
     border-collapse: collapse;
     background: white;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 th, td {
-    padding: 12px;
+    padding: 14px;
     border-bottom: 1px solid #eee;
+    font-size: 15px;
 }
 
 th {
-    background: #eee;
+    background: #e5e7eb;
+    font-weight: bold;
     text-align: left;
+}
+
+tr:hover {
+    background: #f9fafb;
+    cursor: pointer;
 }
 
 /* === BADGES === */
 .badge {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: bold;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 12px;
     color: white;
+    font-weight: bold;
 }
 
 .driver { background: purple; }
@@ -58,7 +73,7 @@ th {
 
 /* === BUTTONS === */
 .btn {
-    padding: 6px 10px;
+    padding: 6px 12px;
     cursor: pointer;
     border-radius: 4px;
     color: white;
@@ -83,10 +98,11 @@ th {
 }
 
 #modalContent {
-    width: 480px;
+    width: 450px;
     background: white;
     padding: 25px;
-    border-radius: 8px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
 #modal img {
@@ -97,4 +113,14 @@ th {
     display: block;
     margin: auto;
     margin-bottom: 15px;
+}
+
+p {
+    font-size: 15px;
+    margin: 5px 0;
+}
+
+h4 {
+    margin: 10px 0;
+    font-size: 18px;
 }
