@@ -1,94 +1,89 @@
 import { db, ref, get, update, remove } from "../libs/lib.js";
 
-const usersTable = document.getElementById("usersTableBody");
-
-// Fetch users
-async function loadUsers() {
-    const usersRef = ref(db, "users");
-    const snapshot = await get(usersRef);
-
-    usersTable.innerHTML = "";
-
-    if (!snapshot.exists()) return;
-
-    const users = snapshot.val();
-
-    Object.keys(users).forEach((uid) => {
-        const u = users[uid];
-
-        const fullName = u.fullName || "Noma'lum";
-        const phone = u.phone || "Noma'lum";
-        const region = u.region || "/";
-        const district = u.district || "/";
-        const blocked = u.blocked ? "Bloklangan" : "✓ Aktiv";
-
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${fullName}</td>
-            <td>${phone}</td>
-            <td>${region} / ${district}</td>
-            <td>${blocked}</td>
-            <td>
-                <button onclick="openModal('${uid}')" class="blockBtn">Block</button>
-                <button onclick="deleteUser('${uid}')" class="deleteBtn">Delete</button>
-            </td>
-        `;
-
-        usersTable.appendChild(tr);
-    });
-}
-
-loadUsers();
-
-
-// ====================== MODAL ======================
-
+const tableBody = document.querySelector("tbody");
 const modal = document.getElementById("userModal");
+const closeBtn = document.getElementById("closeModal");
 const modalName = document.getElementById("modalName");
 const modalPhone = document.getElementById("modalPhone");
 const modalRegion = document.getElementById("modalRegion");
 const modalDistrict = document.getElementById("modalDistrict");
+const modalCarModel = document.getElementById("modalCarModel");
+const modalCarNumber = document.getElementById("modalCarNumber");
 const modalStatus = document.getElementById("modalStatus");
 const modalAvatar = document.getElementById("modalAvatar");
 
-window.openModal = async function (uid) {
-    const userRef = ref(db, "users/" + uid);
-    const snapshot = await get(userRef);
+async function loadUsers() {
+    try {
+        const usersRef = ref(db, "users");
+        const snapshot = await get(usersRef);
+        const users = snapshot.val();
 
-    if (!snapshot.exists()) return;
+        tableBody.innerHTML = ""; // tozalaymiz
 
-    const u = snapshot.val();
+        Object.keys(users).forEach(uid => {
+            const u = users[uid];
 
-    modalName.innerText = u.fullName || "Noma'lum";
-    modalPhone.innerText = u.phone || "Noma'lum";
-    modalRegion.innerText = u.region || "/";
-    modalDistrict.innerText = u.district || "/";
-    modalStatus.innerText = u.blocked ? "Bloklangan" : "✓ Aktiv";
-    modalAvatar.src = u.techPassportUrl || "https://i.ibb.co/5BCc1cv/default-avatar.png";
+            // fallback values
+            const name = u.fullName || "Noma'lum";
+            const phone = u.phone || "Noma'lum";
+            const region = u.region || "/";
+            const district = u.district || "/";
+            const status = u.blocked ? "Bloklangan" : "✓ Aktiv";
 
-    modal.style.display = "flex";
-};
+            const row = document.createElement("tr");
 
-window.closeModal = function () {
+            row.innerHTML = `
+                <td>${name}</td>
+                <td>${phone}</td>
+                <td>${region}</td>
+                <td>${status}</td>
+                <td>
+                    <button class="blockBtn" data-id="${uid}">Blok</button>
+                    <button class="deleteBtn" data-id="${uid}">Delete</button>
+                    <button class="viewBtn" data-id="${uid}">Info</button>
+                </td>
+            `;
+
+            // VIEW (MODAL) tugmasi
+            row.querySelector(".viewBtn").addEventListener("click", () => {
+                modalName.textContent = name;
+                modalPhone.textContent = phone;
+                modalRegion.textContent = region;
+                modalDistrict.textContent = district;
+                modalCarModel.textContent = u.carModel || "/";
+                modalCarNumber.textContent = u.carNumber || "/";
+                modalStatus.textContent = status;
+
+                modalAvatar.src = u.techPassportUrl || "./img/avatar.png";
+
+                modal.style.display = "flex";
+            });
+
+            // BLOK
+            row.querySelector(".blockBtn").addEventListener("click", async () => {
+                await update(ref(db, "users/" + uid), {
+                    blocked: !u.blocked
+                });
+                loadUsers();
+            });
+
+            // DELETE
+            row.querySelector(".deleteBtn").addEventListener("click", async () => {
+                await remove(ref(db, "users/" + uid));
+                loadUsers();
+            });
+
+            tableBody.appendChild(row);
+        });
+
+    } catch (err) {
+        console.error("ERROR:", err);
+    }
+}
+
+// MODAL YOPISH
+closeBtn.addEventListener("click", () => {
     modal.style.display = "none";
-};
+});
 
-
-// ====================== BLOCK USER ======================
-
-window.blockUser = async function(uid){
-    const userRef = ref(db, "users/" + uid);
-    await update(userRef, { blocked: true });
-    loadUsers();
-    closeModal();
-};
-
-// ====================== DELETE USER ======================
-
-window.deleteUser = async function(uid){
-    if (!confirm("Rostdan o‘chirilsinmi?")) return;
-    const userRef = ref(db, "users/" + uid);
-    await remove(userRef);
-    loadUsers();
-};
-
+loadUsers();
