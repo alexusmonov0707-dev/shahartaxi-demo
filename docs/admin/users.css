@@ -1,70 +1,100 @@
+/* === GENERAL === */
 body {
-    font-family: Arial, sans-serif;
-    background: #f7f7f7;
+    font-family: Arial;
     padding: 20px;
+    background: #f5f5f5;
 }
 
 h2 {
     margin-bottom: 20px;
+    font-size: 26px;
+    font-weight: bold;
 }
 
-input {
+/* === SEARCH === */
+#search {
     width: 350px;
-    padding: 8px 12px;
+    padding: 10px;
+    font-size: 15px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
     margin-bottom: 20px;
-    outline: none;
 }
 
+/* === TABLE === */
 table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
-table th, table td {
+th, td {
     padding: 12px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #eee;
 }
 
-table th {
-    background: #f0f0f0;
+th {
+    background: #eee;
+    text-align: left;
 }
 
+/* === BADGES === */
+.badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+}
+
+.driver { background: purple; }
+.user { background: gray; }
+
+.verified { background: green; }
+.pending { background: orange; }
+.rejected { background: red; }
+
+/* === BUTTONS === */
 .btn {
-    padding: 5px 10px;
-    border: none;
+    padding: 6px 10px;
     cursor: pointer;
     border-radius: 4px;
+    color: white;
+    border: none;
+    font-size: 13px;
 }
 
-.block { background: #ff9800; color: white; }
-.unblock { background: #4caf50; color: white; }
-.delete { background: #f44336; color: white; }
+.block { background: #ff9800; }
+.unblock { background: #4caf50; }
+.delete { background: #f44336; }
 
-/* MODAL */
+/* === MODAL === */
 #modal {
     position: fixed;
-    inset: 0;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.65);
     display: none;
     justify-content: center;
     align-items: center;
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(3px);
-    z-index: 1000;
+    z-index: 9999;
 }
 
 #modalContent {
-    width: 360px;
-    padding: 20px;
-    border-radius: 10px;
+    width: 480px;
     background: white;
-    text-align: center;
+    padding: 25px;
+    border-radius: 8px;
 }
 
 #modal img {
-    width: 120px;
-    height: 120px;
-    object-fit: cover;
+    width: 130px;
+    height: 130px;
     border-radius: 50%;
-    margin: 12px 0;
+    object-fit: cover;
+    display: block;
+    margin: auto;
+    margin-bottom: 15px;
 }
