@@ -1,0 +1,92 @@
+body { 
+    font-family: Arial; 
+    padding: 20px; 
+    background: #f7f7f7; 
+}
+
+h2 { margin-bottom: 20px; }
+
+#search {
+    width: 320px;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    background: #f0f0f0;
+    text-align: left;
+}
+
+tr:hover {
+    background: #fafafa;
+}
+
+/* BADGES */
+.badge {
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: white;
+}
+
+.driver { background: purple; }
+.user { background: gray; }
+
+.verified { background: green; }
+.pending { background: orange; }
+.rejected { background: red; }
+
+/* BUTTONS */
+.btn {
+    padding: 6px 10px;
+    cursor: pointer;
+    border: none;
+    color: white;
+    border-radius: 4px;
+}
+
+.block { background: #ff9800; }
+.unblock { background: #4caf50; }
+.delete { background: #f44336; }
+
+/* MODAL */
+#modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    justify-content: center;
+    align-items: center;
+}
+
+#modalContent {
+    background: white;
+    padding: 20px;
+    width: 420px;
+    border-radius: 8px;
+}
+
+#modal img {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: block;
+    margin: auto;
+    object-fit: cover;
+}
