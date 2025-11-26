@@ -35,12 +35,15 @@ const closeBtn = document.getElementById("closeBtn");
 
 let CURRENT_USER_ID = null;
 let CURRENT_AD_ID = null;
+let ALL_ADS = [];  // qidiruv uchun
 
 // === ADS YUKLASH ===
 function loadAds() {
     adsTable.innerHTML = "";
 
     db.ref("ads").once("value", snapshot => {
+        ALL_ADS = [];
+
         snapshot.forEach(userSnap => {
             const userId = userSnap.key;
 
@@ -48,48 +51,74 @@ function loadAds() {
                 const adId = adSnap.key;
                 const ad = adSnap.val();
 
-                db.ref("users/" + userId).once("value", u => {
-                    const user = u.val() || { fullName: "Noma'lum", phone: "-", role: "-" };
-
-                    drawRow(ad, user, userId, adId);
-                });
+                ALL_ADS.push({ userId, adId, ad });
             });
         });
+
+        renderTable(ALL_ADS);
     });
 }
 
 loadAds();
 
+function renderTable(list) {
+    adsTable.innerHTML = "";
+
+    list.forEach(item => {
+        const { userId, adId, ad } = item;
+
+        db.ref("users/" + userId).once("value", u => {
+            const user = u.val() || {};
+
+            drawRow(ad, user, userId, adId);
+        });
+    });
+}
+
 function drawRow(ad, user, userId, adId) {
     const tr = document.createElement("tr");
 
-    const route = `${ad.fromRegion} / ${ad.fromDistrict} → ${ad.toRegion} / ${ad.toDistrict}`;
+    // eski va yangi taksi strukturalarini qo‘llab-quvvatlaymiz
+    const fromRegion  = ad.fromRegion  || ad.region  || "-";
+    const fromDistrict = ad.fromDistrict || ad.district || "-";
+    const toRegion  = ad.toRegion  || ad.regionTo  || "-";
+    const toDistrict = ad.toDistrict || ad.districtTo || "-";
+
+    const route = `${fromRegion} / ${fromDistrict} → ${toRegion} / ${toDistrict}`;
+
     const price = ad.price ? `${ad.price} so‘m` : "-";
     const date = ad.departureTime ? new Date(ad.departureTime).toLocaleString() : "-";
 
     tr.innerHTML = `
-        <td><strong>${user.fullName}</strong><br><small>${user.phone}</small></td>
+        <td><strong>${user.fullName || "Noma'lum"}</strong><br><small>${user.phone || "-"}</small></td>
         <td>${route}</td>
         <td>${price}</td>
         <td>${date}</td>
-    <td>
-    <button class="btn btn-view" data-open="${userId}|${adId}">Ko‘rish</button>
-    <button class="btn btn-delete" data-del="${userId}|${adId}">Delete</button>
-</td>
-
+        <td>
+            <button class="btn btn-view" data-open="${userId}|${adId}">Ko‘rish</button>
+            <button class="btn btn-delete" data-del="${userId}|${adId}">Delete</button>
+        </td>
     `;
-
-    // Ko‘rish tugmasini majburan aktiv qilamiz
-    const viewBtn = tr.querySelector(".viewBtn");
-    viewBtn.removeAttribute("disabled");
-    viewBtn.style.pointerEvents = "auto";
-    viewBtn.style.opacity = "1";
 
     adsTable.appendChild(tr);
 }
 
+// === SEARCH ===
+searchInput.addEventListener("keyup", () => {
+    const q = searchInput.value.toLowerCase();
 
-// === EVENT delegation (module bo‘lmaganda ishlaydi) ===
+    const filtered = ALL_ADS.filter(({ ad }) => {
+        return (
+            (ad.fromRegion || "").toLowerCase().includes(q) ||
+            (ad.toRegion || "").toLowerCase().includes(q) ||
+            (ad.comment || "").toLowerCase().includes(q)
+        );
+    });
+
+    renderTable(filtered);
+});
+
+// === EVENT delegation ===
 document.addEventListener("click", e => {
     if (e.target.dataset.open) {
         const [u, a] = e.target.dataset.open.split("|");
@@ -111,22 +140,26 @@ function openModal(userId, adId) {
         const ad = adSnap.val();
 
         db.ref(`users/${userId}`).once("value", uSnap => {
-            const user = uSnap.val();
+            const user = uSnap.val() || {};
 
-            m_route.innerText = `${ad.fromRegion} / ${ad.fromDistrict} → ${ad.toRegion} / ${ad.toDistrict}`;
-            m_depart.innerText = new Date(ad.departureTime).toLocaleString();
-            m_price.innerText = ad.price + " so‘m";
-            m_seats.innerText = ad.seats;
-            m_dseats.innerText = ad.driverSeats;
+            // fallback region formats
+            m_route.innerText =
+                `${ad.fromRegion || ad.region || "-"} / ${ad.fromDistrict || ad.district || "-"} → ` +
+                `${ad.toRegion || ad.regionTo || "-"} / ${ad.toDistrict || ad.districtTo || "-"}`;
+
+            m_depart.innerText = ad.departureTime ? new Date(ad.departureTime).toLocaleString() : "-";
+            m_price.innerText = ad.price ? ad.price + " so‘m" : "-";
+            m_seats.innerText = ad.seats || "-";
+            m_dseats.innerText = ad.driverSeats || "-";
             m_comment.innerText = ad.comment || "-";
-            m_created.innerText = new Date(ad.createdAt).toLocaleString();
+            m_created.innerText = ad.createdAt ? new Date(ad.createdAt).toLocaleString() : "-";
 
-            m_userName.innerText = user.fullName;
-            m_userPhone.innerText = user.phone;
-            m_userRole.innerText = user.role;
+            m_userName.innerText = user.fullName || "-";
+            m_userPhone.innerText = user.phone || "-";
+            m_userRole.innerText = user.role || "-";
             m_avatar.src = user.avatar || "default.png";
 
-            modal.style.display = "block";
+            modal.style.display = "flex";
         });
     });
 }
