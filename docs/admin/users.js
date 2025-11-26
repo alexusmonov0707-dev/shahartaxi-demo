@@ -1,75 +1,79 @@
-import { db, ref, onValue, update, remove } from "../libs/lib.js";
+import { db, ref, get, remove, update } from "../libs/lib.js";
 
-const usersTable = document.getElementById("usersTable");
-const searchInput = document.getElementById("search");
+const usersList = document.getElementById("usersList");
+
+// MODAL ELEMENTS
 const modal = document.getElementById("userModal");
+const closeModal = document.getElementById("closeModal");
+const closeBtn = document.getElementById("closeBtn");
 
-let allUsers = {};
+function openModal() { modal.style.display = "block"; }
+function hideModal() { modal.style.display = "none"; }
 
-onValue(ref(db, "users"), (snapshot) => {
-    usersTable.innerHTML = "";
-    allUsers = snapshot.val() || {};
+closeModal.onclick = hideModal;
+closeBtn.onclick = hideModal;
 
-    Object.entries(allUsers).forEach(([uid, u]) => {
-        let region = u.region || "/";
-        let district = u.district || "/";
+// USERS NI CHAQISH
+async function loadUsers() {
+    const usersRef = ref(db, "users");
+    const snap = await get(usersRef);
 
-        let row = `
-            <tr>
-                <td onclick="openModal('${uid}')" style="cursor:pointer">${u.name}</td>
-                <td>${u.phone}</td>
-                <td>${region}</td>
-                <td>${u.active === false ? "❌ Block" : "✓ Aktiv"}</td>
-                <td>
-                    <button onclick="blockUser('${uid}', ${u.active})">Block</button>
-                    <button onclick="deleteUser('${uid}')">Delete</button>
-                </td>
-            </tr>
-        `;
+    usersList.innerHTML = "";
 
-        usersTable.innerHTML += row;
+    if (!snap.exists()) return;
+
+    const users = snap.val();
+
+    Object.entries(users).forEach(([uid, user]) => {
+        const name = user.name ?? "No name";
+        const phone = user.phone ?? "---";
+        const region = user.region ?? "/";
+        const avatar = user.avatar ?? "../assets/default-avatar.png";
+        const status = user.status === "active" ? "✓ Aktiv" : "Block";
+
+        usersList.innerHTML += `
+        <tr>
+            <td><img src="${avatar}" class="avatar-sm"></td>
+            <td>${name}</td>
+            <td>${phone}</td>
+            <td>${region}</td>
+            <td>${status}</td>
+            <td>
+                <button onclick="showUser('${uid}')">Ko'rish</button>
+                <button onclick="blockUser('${uid}')">Block</button>
+                <button onclick="deleteUser('${uid}')">Delete</button>
+            </td>
+        </tr>`;
     });
-});
-
-/* 🔍 Qidiruv */
-searchInput.addEventListener("input", () => {
-    let v = searchInput.value.toLowerCase();
-
-    Array.from(usersTable.rows).forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(v) ? "" : "none";
-    });
-});
-
-/* 🟦 Modalni ochish */
-window.openModal = function (uid) {
-    const u = allUsers[uid];
-    if (!u) return;
-
-    document.getElementById("m_name").textContent = u.name;
-    document.getElementById("m_phone").textContent = u.phone;
-    document.getElementById("m_region").textContent = u.region || "/";
-    document.getElementById("m_district").textContent = u.district || "/";
-    document.getElementById("m_car").textContent = u.car || "/";
-    document.getElementById("m_color").textContent = u.color || "/";
-    document.getElementById("m_number").textContent = u.number || "/";
-    document.getElementById("m_balance").textContent = u.balance ?? 0;
-
-    modal.style.display = "flex";
 }
 
-/* ❌ Modalni yopish */
-window.closeModal = function () {
-    modal.style.display = "none";
+window.showUser = async function (uid) {
+    const snap = await get(ref(db, "users/" + uid));
+    if (!snap.exists()) return;
+
+    const user = snap.val();
+
+    document.getElementById("m_name").innerText = user.name ?? "No name";
+    document.getElementById("m_avatar").src = user.avatar ?? "../assets/default-avatar.png";
+    document.getElementById("m_phone").innerText = user.phone ?? "-";
+    document.getElementById("m_region").innerText = user.region ?? "-";
+    document.getElementById("m_district").innerText = user.district ?? "-";
+    document.getElementById("m_car").innerText = user.car ?? "-";
+    document.getElementById("m_color").innerText = user.carColor ?? "-";
+    document.getElementById("m_number").innerText = user.carNumber ?? "-";
+    document.getElementById("m_balance").innerText = user.balance ?? "0";
+
+    openModal();
 };
 
-/* 🟥 Foydalanuvchini Block qilish */
-window.blockUser = function (uid, status) {
-    update(ref(db, "users/" + uid), { active: !status });
+window.blockUser = async function (uid) {
+    await update(ref(db, "users/" + uid), { status: "blocked" });
+    loadUsers();
 };
 
-/* 🗑 Delete */
-window.deleteUser = function (uid) {
-    if (confirm("Rostan o‘chirilsinmi?")) {
-        remove(ref(db, "users/" + uid));
-    }
-}
+window.deleteUser = async function (uid) {
+    await remove(ref(db, "users/" + uid));
+    loadUsers();
+};
+
+loadUsers();
