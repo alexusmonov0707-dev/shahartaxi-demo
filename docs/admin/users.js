@@ -2,7 +2,7 @@ import { db, ref, get, update, remove } from "../libs/lib.js";
 
 let usersCache = [];
 
-// USERS LOAD
+// LOAD USERS
 async function loadUsers() {
     const tbody = document.getElementById("usersTable");
     tbody.innerHTML = "<tr><td colspan='6'>Yuklanmoqda...</td></tr>";
@@ -22,6 +22,7 @@ async function loadUsers() {
     renderUsers(usersCache);
 }
 
+// RENDER TABLE
 function renderUsers(list) {
     const tbody = document.getElementById("usersTable");
     tbody.innerHTML = "";
@@ -31,14 +32,10 @@ function renderUsers(list) {
         const district = u.district ?? "-";
         const phone = u.phone ?? "-";
 
-        const roleBadge = `
-            <span class="badge ${u.role === 'driver' ? 'driver' : 'user'}">
-                ${u.role}
-            </span>
-        `;
+        const roleBadge =
+            `<span class="badge ${u.role === 'driver' ? 'driver' : 'user'}">${u.role}</span>`;
 
         let status = "Foydalanuvchi";
-
         if (u.role === "driver") {
             if (u.verified === true) status = `<span class="badge verified">Tasdiqlangan</span>`;
             else if (u.verified === false) status = `<span class="badge pending">Kutilmoqda</span>`;
@@ -52,6 +49,7 @@ function renderUsers(list) {
                 <td>${region} / ${district}</td>
                 <td>${roleBadge}</td>
                 <td>${status}</td>
+
                 <td>
                     ${
                         u.blocked
@@ -78,12 +76,13 @@ window.searchUsers = function () {
     renderUsers(filtered);
 };
 
-// MODAL
+// MODAL OPEN
 window.openModal = function (id) {
     const u = usersCache.find(x => x.id === id);
 
     document.getElementById("m_fullName").textContent = u.fullName ?? "";
     document.getElementById("m_phone").textContent = u.phone ?? "-";
+
     document.getElementById("m_region").textContent = u.region ?? "-";
     document.getElementById("m_district").textContent = u.district ?? "-";
 
@@ -110,13 +109,12 @@ window.closeModal = function () {
     document.getElementById("modal").style.display = "none";
 };
 
-// BLOCK
+// BLOCK / UNBLOCK
 window.blockUser = async function (id) {
     await update(ref(db, "users/" + id), { blocked: true });
     loadUsers();
 };
 
-// UNBLOCK
 window.unblockUser = async function (id) {
     await update(ref(db, "users/" + id), { blocked: false });
     loadUsers();
