@@ -8,7 +8,7 @@ body {
 
 .container {
     padding: 30px;
-    max-width: 1200px;
+    max-width: 1300px;
     margin: auto;
 }
 
@@ -18,14 +18,24 @@ h2 {
     font-weight: bold;
 }
 
-/* === SEARCH === */
-#search {
-    width: 350px;
+/* === FILTER PANEL === */
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filters input,
+.filters select {
     padding: 10px;
-    font-size: 15px;
     border-radius: 6px;
     border: 1px solid #ccc;
-    margin-bottom: 20px;
+    font-size: 15px;
+}
+
+.export {
+    background: #1e88e5;
 }
 
 /* === TABLE === */
@@ -84,6 +94,29 @@ tr:hover {
 .block { background: #ff9800; }
 .unblock { background: #4caf50; }
 .delete { background: #f44336; }
+
+/* === PAGINATION === */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.pagination button {
+    background: #1e88e5;
+    padding: 8px 15px;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+}
+
+#pageInfo {
+    font-size: 16px;
+    font-weight: bold;
+}
 
 /* === MODAL === */
 #modal {
