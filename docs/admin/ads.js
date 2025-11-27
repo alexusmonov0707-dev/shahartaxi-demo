@@ -403,10 +403,16 @@ function applyFilters(resetPage = true) {
     }
 
     // STRICT matching for region/district (exact match)
-    if (fr && ((d.fromRegion || '').toLowerCase() !== fr)) return false;
-    if (tr && ((d.toRegion || '').toLowerCase() !== tr)) return false;
-    if (fd && ((d.fromDistrict || '').toLowerCase() !== fd)) return false;
-    if (td && ((d.toDistrict || '').toLowerCase() !== td)) return false;
+    function norm(v) {
+  if (!v) return '';
+  return String(v).trim().toLowerCase();
+}
+
+if (fr && norm(d.fromRegion) !== fr) return false;
+if (tr && norm(d.toRegion) !== tr) return false;
+if (fd && norm(d.fromDistrict) !== fd) return false;
+if (td && norm(d.toDistrict) !== td) return false;
+
 
     // category strict (use d.type as fallback)
     const thisCat = (d.category || d.type || 'taxi').toLowerCase();
