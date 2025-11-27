@@ -1,106 +1,79 @@
-// GLOBAL admins.js
-// GitHub pages uchun module emas format
+// ===============
+// Adminlar ro'yxati
+// ===============
 
-// Firebase import (sen ishlatayotgan uslub asosida)
-import { db } from "./firebase.js";
-import {
-  ref,
-  get,
-  set,
-  remove,
-  update,
-  push
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-// =========================
-// ADMINLARNI YUKLASH
-// =========================
-async function loadAdmins() {
+function loadAdmins() {
   const tbody = document.getElementById("adminsTable");
   tbody.innerHTML = "<tr><td colspan='4'>Yuklanmoqda...</td></tr>";
 
-  try {
-    const snap = await get(ref(db, "admins"));
-    if (!snap.exists()) {
-      tbody.innerHTML = "<tr><td colspan='4'>Adminlar topilmadi</td></tr>";
-      return;
-    }
+  db.ref("admins").once("value")
+    .then(snap => {
+      if (!snap.exists()) {
+        tbody.innerHTML = "<tr><td colspan='4'>Hech narsa yo'q</td></tr>";
+        return;
+      }
 
-    const data = snap.val();
-    tbody.innerHTML = "";
+      const data = snap.val();
+      tbody.innerHTML = "";
 
-    Object.keys(data).forEach(key => {
-      const a = data[key];
+      Object.keys(data).forEach(id => {
+        const a = data[id];
 
-      tbody.innerHTML += `
-      <tr>
-        <td>${escapeHtml(a.fullName || a.email || "-")}</td>
-        <td>${escapeHtml(a.username)}</td>
-        <td><span class="badge ${a.role}">${a.role}</span></td>
-        <td>
-          <button class="btn" onclick="editAdmin('${key}')">Tahrirlash</button>
-          <button class="btn delete" onclick="deleteAdmin('${key}')">O'chirish</button>
-        </td>
-      </tr>`;
+        tbody.innerHTML += `
+        <tr>
+          <td>${a.fullName || '-'}</td>
+          <td>${a.username}</td>
+          <td>${a.role}</td>
+          <td>
+            <button onclick="editAdmin('${id}')">Tahrirlash</button>
+            <button onclick="deleteAdmin('${id}')">O'chirish</button>
+          </td>
+        </tr>`;
+      });
     });
-
-  } catch (err) {
-    console.error("loadAdmins error:", err);
-    tbody.innerHTML = `<tr><td colspan='4'>Xato: ${err.message}</td></tr>`;
-  }
 }
 
-// Escape
-function escapeHtml(str) {
-  if (!str) return "";
-  return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// ===============
+// O‘CHIRISH
+// ===============
+function deleteAdmin(id) {
+  if (!confirm("O‘chirishni tasdiqlaysizmi?")) return;
+
+  db.ref("admins/" + id).remove()
+    .then(() => {
+      alert("O‘chirildi!");
+      loadAdmins();
+    });
 }
 
-// =========================
-// ADMINNI O'CHIRISH
-// =========================
-async function deleteAdmin(id) {
-  if (!confirm("Adminni o'chirishni tasdiqlaysizmi?")) return;
+// ===============
+// TAHRIRLASH
+// ===============
+function editAdmin(id) {
+  db.ref("admins/" + id).once("value").then(s => {
+    if (!s.exists()) return;
 
-  try {
-    await remove(ref(db, "admins/" + id));
-    alert("O'chirildi!");
-    loadAdmins();
-  } catch (err) {
-    alert("Xato: " + err.message);
-  }
-}
+    const a = s.val();
+    const newName = prompt("Yangi ism:", a.fullName || "");
+    if (newName === null) return;
 
-// =========================
-// ADMIN TAHRIRLASH
-// =========================
-async function editAdmin(id) {
-  const snap = await get(ref(db, "admins/" + id));
-  if (!snap.exists()) return alert("Admin topilmadi!");
+    const newRole = prompt("Role:", a.role);
+    if (newRole === null) return;
 
-  const a = snap.val();
-
-  const newName = prompt("Yangi ism:", a.fullName || "");
-  if (newName === null) return;
-
-  const newRole = prompt("Role (superadmin/admin/moderator):", a.role);
-  if (newRole === null) return;
-
-  await update(ref(db, "admins/" + id), {
-    fullName: newName,
-    role: newRole
+    db.ref("admins/" + id).update({
+      fullName: newName,
+      role: newRole
+    }).then(() => {
+      alert("Yangilandi!");
+      loadAdmins();
+    });
   });
-
-  alert("Yangilandi!");
-  loadAdmins();
 }
 
-// ==========================
-// GLOBALLASHTIRAMIZ
-// ==========================
+// Ishga tushirish
+window.addEventListener("load", loadAdmins);
+
+// Globalga chiqaramiz
 window.loadAdmins = loadAdmins;
 window.deleteAdmin = deleteAdmin;
 window.editAdmin = editAdmin;
-
-// Sahifa yuklanganda avtomatik yuklash
-window.addEventListener("load", loadAdmins);
