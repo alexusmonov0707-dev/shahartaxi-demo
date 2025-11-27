@@ -295,7 +295,8 @@ window.openModal = function (id) {
     openTab("profile");
 
     // logs
-    loadLogs(id);
+   // loadLogs(id);   // TEMPORARILY DISABLED
+
 };
 
 
