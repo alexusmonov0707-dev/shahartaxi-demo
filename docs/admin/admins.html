@@ -1,52 +1,50 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <title>Adminlar ro'yxati</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./users.css" />
+    <meta charset="UTF-8">
+    <title>Adminlar ro'yxati</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="admins.css">
 </head>
 <body>
 
-  <div class="container">
-    <h2>Adminlar ro'yxati</h2>
+<div class="container">
+    <h2 class="title">Adminlar ro'yxati</h2>
 
-    <div class="filters" style="margin-bottom:18px;">
-      <button class="btn export" onclick="location.href='admin-add.html'">Yangi admin qo'shish</button>
-      <button class="btn refresh" id="refreshBtn">Yangilash</button>
+    <div class="top-actions">
+        <button onclick="location.href='admin-add.html'" class="btn btn-blue">+ Yangi admin</button>
+        <button id="refreshBtn" class="btn btn-green">Yangilash</button>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Ism / Email</th>
-          <th>Username</th>
-          <th>Role</th>
-          <th>Amallar</th>
-        </tr>
-      </thead>
-      <tbody id="adminsTable"></tbody>
-    </table>
-  </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Ism / Email</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th>Amallar</th>
+                </tr>
+            </thead>
+            <tbody id="adminsTable"></tbody>
+        </table>
+    </div>
 
-  <!-- Admin guard (module import) - mavjud admin.js ga mos -->
-  <script type="module">
+</div>
+
+
+<!-- MODULE -->
+<script type="module">
     import { adminGuard } from "./admin.js";
 
     (async () => {
-      // faqat superadmin kirishi kerak
-      const admin = await adminGuard("superadmin");
-      if (!admin) return;
+        const ok = await adminGuard("superadmin");
+        if (!ok) return;
 
-      // module sifatida admins.js yuklaymiz va ishga tushiramiz
-      const m = await import("./admins.js");
-      if (m && typeof m.initAdminsPage === "function") {
+        const m = await import("./admins.js");
         m.initAdminsPage();
-      } else {
-        console.error("admins module yuklanmadi yoki initAdminsPage mavjud emas");
-      }
     })();
-  </script>
+</script>
 
 </body>
 </html>
