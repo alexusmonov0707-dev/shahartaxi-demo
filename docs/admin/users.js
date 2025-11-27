@@ -260,14 +260,21 @@ async function loadLogs(userId) {
     }
 }
 
-window.openModal = function (id) {
+// MODAL FUNKSIYALARI
+
+window.openModal = function(id) {
     const u = usersCache.find(x => x.id === id);
     if (!u) return;
 
+    // Fill fields
     document.getElementById("m_fullName").textContent = u.fullName ?? "-";
     document.getElementById("m_phone").textContent = u.phone ?? "-";
-    document.getElementById("m_region").textContent = u.region ?? u.profile?.region ?? "-";
-    document.getElementById("m_district").textContent = u.district ?? u.profile?.district ?? "-";
+
+    document.getElementById("m_region").textContent =
+        u.region ?? u.profile?.region ?? "-";
+
+    document.getElementById("m_district").textContent =
+        u.district ?? u.profile?.district ?? "-";
 
     document.getElementById("m_avatar").src =
         u.avatar ?? "https://i.ibb.co/4nMfDym/avatar-default.png";
@@ -279,42 +286,41 @@ window.openModal = function (id) {
 
     document.getElementById("m_status").textContent =
         u.role === "driver"
-            ? u.verified === true
-                ? "Tasdiqlangan"
-                : u.verified === false
-                    ? "Kutilmoqda"
-                    : "Rad etilgan"
-            : "Foydalanuvchi";
+            ? u.verified === true ? "Tasdiqlangan"
+            : u.verified === false ? "Kutilmoqda"
+            : "Rad etilgan"
+        : "Foydalanuvchi";
 
-    document.getElementById("m_balance").textContent = (u.balance ?? 0) + " so'm";
+    document.getElementById("m_balance").textContent =
+        (u.balance ?? 0) + " so'm";
 
-    // show modal
-    document.getElementById("modal").style.display = "flex";
-
-    // tabs
+    // Always open profile tab
     openTab("profile");
 
-    // logs
-   // loadLogs(id);   // TEMPORARILY DISABLED
+    // Disable logs for now (permission denied)
+    // loadLogs(id);
 
+    // Show modal
+    document.getElementById("modal").style.display = "flex";
 };
 
-
-window.closeModal = function () {
+window.closeModal = function() {
     document.getElementById("modal").style.display = "none";
 };
 
-// Close modal when clicking outside content
-document.addEventListener("click", function (e) {
-    const modal = document.getElementById("modal");
-    if (!modal) return;
-    if (modal.style.display === "flex") {
-        const content = document.getElementById("modalContent");
-        if (!content.contains(e.target)) {
-            modal.style.display = "none";
-        }
+window.openTab = function(tab) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tabContent").forEach(c => c.classList.remove("active"));
+
+    if (tab === "profile") {
+        document.getElementById("tabProfile").classList.add("active");
+        document.getElementById("profileTab").classList.add("active");
+    } else {
+        document.getElementById("tabLogs").classList.add("active");
+        document.getElementById("logsTab").classList.add("active");
     }
-});
+};
+
 
 // ------------------ BLOCK / UNBLOCK ------------------
 window.blockUser = async function (id) {
