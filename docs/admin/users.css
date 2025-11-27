@@ -1,115 +1,4 @@
-/* === BASE === */
-body {
-    font-family: Arial, sans-serif;
-    background: #f3f4f6;
-    margin: 0;
-    padding: 0;
-}
-
-.container {
-    padding: 30px;
-    max-width: 1300px;
-    margin: auto;
-}
-
-h2 {
-    margin-bottom: 20px;
-    font-size: 28px;
-    font-weight: bold;
-}
-
-/* === FILTER PANEL === */
-.filters {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-}
-
-.filters input,
-.filters select {
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 15px;
-}
-
-.export { background: #1e88e5; }
-.refresh { background: #009688; }
-
-/* === TABLE === */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-th, td {
-    padding: 14px;
-    border-bottom: 1px solid #eee;
-    font-size: 15px;
-}
-
-th { background: #e5e7eb; font-weight: bold; text-align: left; }
-
-tr:hover { background: #f9fafb; cursor: pointer; }
-
-/* === BADGES === */
-.badge {
-    padding: 5px 8px;
-    border-radius: 5px;
-    font-size: 12px;
-    color: white;
-    font-weight: bold;
-}
-
-.driver { background: purple; }
-.user { background: gray; }
-.verified { background: green; }
-.pending { background: orange; }
-.rejected { background: red; }
-
-/* === BUTTONS === */
-.btn {
-    padding: 6px 12px;
-    cursor: pointer;
-    border-radius: 4px;
-    color: white;
-    border: none;
-    font-size: 13px;
-}
-
-.block { background: #ff9800; }
-.unblock { background: #4caf50; }
-.delete { background: #f44336; }
-
-/* === PAGINATION === */
-.pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    margin-top: 20px;
-}
-
-.pagination button {
-    background: #1e88e5;
-    padding: 8px 15px;
-    color: white;
-    border-radius: 6px;
-    cursor: pointer;
-    border: none;
-}
-
-#pageInfo {
-    font-size: 16px;
-    font-weight: bold;
-}
-
-/* === MODAL === */
+/* MODAL */
 .modal {
     position: fixed;
     top: 0;
@@ -125,11 +14,12 @@ tr:hover { background: #f9fafb; cursor: pointer; }
 
 .modalContent {
     width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
     background: #fff;
     padding: 25px;
     border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .modal-tabs {
@@ -140,9 +30,10 @@ tr:hover { background: #f9fafb; cursor: pointer; }
 
 .tab {
     background: #ccc;
-    padding: 10px 15px;
+    padding: 10px;
     border-radius: 6px;
     cursor: pointer;
+    border: none;
 }
 
 .tab.active {
@@ -159,30 +50,16 @@ tr:hover { background: #f9fafb; cursor: pointer; }
 }
 
 .modalClose {
-    margin-top: 15px;
+    margin-top: 20px;
     width: 100%;
 }
 
-
-#modal img {
-    width: 130px;
-    height: 130px;
+/* Avatar */
+#modal img, #m_avatar {
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
     object-fit: cover;
+    margin: 0 auto 15px auto;
     display: block;
-    margin: auto;
-    margin-bottom: 15px;
-}
-
-#logsList {
-    list-style: none;
-    padding-left: 0;
-}
-
-#logsList li {
-    background: #f1f1f1;
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin-bottom: 8px;
-    font-size: 14px;
 }
