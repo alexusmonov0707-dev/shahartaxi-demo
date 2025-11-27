@@ -1,1 +1,43 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <title>Admins - Boshqaruv</title>
+  <link rel="stylesheet" href="./users.css"> <!-- umumiy style yoki alohida style -->
+</head>
+<body>
+  <div class="container">
+    <h2>Adminlar ro'yxati</h2>
+
+    <div class="filters" style="margin-bottom:12px;">
+      <button class="btn export" onclick="location.href='admin-add.html'">Yangi admin qo'shish</button>
+      <button class="btn refresh" onclick="loadAdmins()">Yangilash</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Ism / Email</th>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody id="adminsTable"></tbody>
+    </table>
+
+  </div>
+
+  <script type="module">
+    import { adminGuard } from "./admin.js";
+    // faqat superadmin ko‘rishi kerak
+    (async () => {
+      const admin = await adminGuard("superadmin");
+      if (!admin) return;
+      // agar o'tsa — yuklashni boshlaymiz
+      import("./admins.js").then(m => m.initAdminsPage());
+    })();
+  </script>
+</body>
+</html>
 
