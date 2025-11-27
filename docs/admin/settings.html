@@ -1,1 +1,53 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <title>Sozlamalar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+
+<div class="container">
+  <h2 class="title">Umumiy sozlamalar</h2>
+
+  <div class="card">
+    <h3>Ilova sozlamalari</h3>
+
+    <label>Minimal narx (UZS)</label>
+    <input type="number" id="minPrice" placeholder="masalan: 5000">
+
+    <label>Maksimal narx (UZS)</label>
+    <input type="number" id="maxPrice" placeholder="masalan: 500000">
+
+    <label>Minimal joy (seat)</label>
+    <input type="number" id="minSeat" placeholder="masalan: 1">
+
+    <label>E’lon muddati (kun)</label>
+    <input type="number" id="adExpire" placeholder="masalan: 2">
+
+    <label>Maintenance Mode</label>
+    <select id="maintenance">
+      <option value="off">O‘chirilgan</option>
+      <option value="on">Yoqilgan (app yopiladi)</option>
+    </select>
+
+    <button id="saveBtn" class="btn btn-primary">Saqlash</button>
+  </div>
+
+</div>
+
+
+<script type="module">
+  import { adminGuard } from "./admin.js";
+
+  (async () => {
+    await adminGuard("superadmin");
+    const m = await import("./settings.js");
+    m.initSettings();
+  })();
+</script>
+
+</body>
+</html>
 
