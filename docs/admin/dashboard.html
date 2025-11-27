@@ -4,50 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
+
     <link rel="stylesheet" href="dashboard.css">
 
-    <!-- Firebase -->
+    <!-- Firebase 8.x -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-    <!-- Senda ishlaydigan config -->
+    <!-- Sening firebase.js -->
     <script src="./firebase.js"></script>
 </head>
 
 <body>
 
-    <header class="topbar">
-        <h1>Admin Dashboard</h1>
-        <button onclick="logout()" class="logout-btn">Chiqish</button>
-    </header>
+<h1>Admin Dashboard</h1>
+<button onclick="logout()">Chiqish</button>
 
-    <div class="container">
+<h3>Jami e’lonlar</h3>
+<p id="totalAds">0</p>
 
-        <div class="stats">
-            <div class="card">
-                <h3>Jami e’lonlar</h3>
-                <p id="totalAds">0</p>
-            </div>
+<h3>Jami foydalanuvchilar</h3>
+<p id="totalUsers">0</p>
 
-            <div class="card">
-                <h3>Jami foydalanuvchilar</h3>
-                <p id="totalUsers">0</p>
-            </div>
+<h3>Haydovchilar</h3>
+<p id="totalDrivers">0</p>
 
-            <div class="card">
-                <h3>Haydovchilar</h3>
-                <p id="totalDrivers">0</p>
-            </div>
-        </div>
+<h3>So‘nggi 5 e’lon</h3>
+<ul id="latestAds"></ul>
 
-        <h3>So‘nggi 5 e’lon</h3>
-        <ul id="latestAds"></ul>
+<h3>So‘nggi 5 foydalanuvchi</h3>
+<ul id="latestUsers"></ul>
 
-        <h3>So‘nggi 5 foydalanuvchi</h3>
-        <ul id="latestUsers"></ul>
+<!-- Ishlaydigan JS -->
+<script src="dashboard.js"></script>
 
-    </div>
-
-    <script src="dashboard.js"></script>
 </body>
 </html>
