@@ -1,6 +1,6 @@
 import { db, ref, get, onValue } from "./firebase.js";
 
-// ADMIN SESSION
+// ADMIN
 const adminSession = sessionStorage.getItem("admin");
 if (!adminSession) location.href = "./login.html";
 document.getElementById("adminName").textContent = adminSession;
@@ -9,21 +9,33 @@ document.getElementById("adminName").textContent = adminSession;
 let adsChart = null;
 let popularChart = null;
 
+// ADS STRUCTURE FIX (your DB is 2 levels)
+async function loadAllAds() {
+    const snap = await get(ref(db, "ads"));
+    if (!snap.exists()) return [];
+
+    const categories = Object.values(snap.val());
+    let ads = [];
+
+    categories.forEach(cat => {
+        if (typeof cat === "object") {
+            Object.values(cat).forEach(ad => ads.push(ad));
+        }
+    });
+
+    return ads;
+}
+
+// TIMESTAMP FIX
 function normalizeTimestamp(ts) {
-    // Agar timestamp kelajak bo'lsa → uni hozirga tenglash
     const now = Date.now();
-    if (ts > now) {
-        return now - 1000; // 1 sekund avval qilib qo'yamiz
-    }
+    if (ts > now) return now - 1000;
     return ts;
 }
 
-// LOAD STATS
+// LOAD STATISTICS
 async function loadAdvancedStats() {
-    const snap = await get(ref(db, "ads"));
-    if (!snap.exists()) return;
-
-    const ads = Object.values(snap.val());
+    const ads = await loadAllAds();
     const now = Date.now();
     const dayMS = 24 * 60 * 60 * 1000;
 
@@ -35,14 +47,15 @@ async function loadAdvancedStats() {
 
         const created = normalizeTimestamp(ad.createdAt);
         const diff = now - created;
-
-        if (diff < 0) return; // noto'g'ri kelajak sanalar
+        if (diff < 0) return;
 
         const dayIndex = Math.floor(diff / dayMS);
 
         if (dayIndex === 0) today++;
-        if (dayIndex < 7) weeklyData[6 - dayIndex] += 1;
-        if (dayIndex < 7) week++;
+        if (dayIndex < 7) {
+            weeklyData[6 - dayIndex] += 1;
+            week++;
+        }
         if (dayIndex < 30) month++;
     });
 
@@ -60,6 +73,7 @@ function extractPopularRoutes(ads) {
 
     ads.forEach(ad => {
         if (!ad.fromRegion || !ad.toRegion) return;
+
         const key = `${ad.fromRegion} → ${ad.toRegion}`;
         map[key] = (map[key] || 0) + 1;
     });
@@ -68,7 +82,7 @@ function extractPopularRoutes(ads) {
         .sort((a,b) => b[1]-a[1])
         .slice(0, 7);
 
-    drawPopularChart(sorted.map(v => v[0]), sorted.map(v => v[1]));
+    drawPopularChart(sorted.map(x => x[0]), sorted.map(x => x[1]));
 }
 
 // REAL-TIME ONLINE DRIVERS
@@ -83,10 +97,11 @@ function realTimeMonitoring() {
 function drawAdsChart(data) {
     const ctx = document.getElementById("adsChart");
     if (adsChart) adsChart.destroy();
+
     adsChart = new Chart(ctx, {
         type: "line",
         data: {
-            labels: ["6 kun", "5", "4", "3", "2", "1", "Bugun"],
+            labels: ["6 kun","5","4","3","2","1","Bugun"],
             datasets: [{
                 label: "7 kunlik e’lonlar",
                 data,
@@ -100,6 +115,7 @@ function drawAdsChart(data) {
 function drawPopularChart(labels, values) {
     const ctx = document.getElementById("popularChart");
     if (popularChart) popularChart.destroy();
+
     popularChart = new Chart(ctx, {
         type: "bar",
         data: {
@@ -113,6 +129,7 @@ function drawPopularChart(labels, values) {
     });
 }
 
+// INIT
 async function init() {
     await loadAdvancedStats();
     realTimeMonitoring();
