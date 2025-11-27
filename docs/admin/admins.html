@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>Adminlar ro'yxati</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="admins.css">
+  <meta charset="UTF-8">
+  <title>Adminlar ro'yxati</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="admins.css">
 </head>
 <body>
 
@@ -12,8 +12,8 @@
     <h2 class="title">Adminlar ro'yxati</h2>
 
     <div class="top-actions">
-        <button onclick="location.href='admin-add.html'" class="btn btn-blue">+ Yangi admin</button>
-        <button id="refreshBtn" class="btn btn-green">Yangilash</button>
+        <button class="btn btn-blue" onclick="location.href='admin-add.html'">+ Yangi admin</button>
+        <button class="btn btn-green" id="refreshBtn">Yangilash</button>
     </div>
 
     <div class="table-wrapper">
@@ -29,17 +29,15 @@
             <tbody id="adminsTable"></tbody>
         </table>
     </div>
-
 </div>
 
 
-<!-- MODULE -->
+<!-- TO‘G‘RI MODULE IMPORTLAR -->
 <script type="module">
     import { adminGuard } from "./admin.js";
 
     (async () => {
-        const ok = await adminGuard("superadmin");
-        if (!ok) return;
+        await adminGuard("superadmin");
 
         const m = await import("./admins.js");
         m.initAdminsPage();
