@@ -154,3 +154,27 @@ button:disabled,
   .modal-content { padding: 16px; }
   #search { width: 100%; }
 }
+
+/* ads.css - optional additions if you want custom CSS (not required if using Tailwind) */
+
+/* table small screens */
+@media (max-width: 640px) {
+  table thead { display: none; }
+  table tbody td { display: block; width: 100%; }
+  table tbody tr { margin-bottom: 0.5rem; display: block; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
+  #tableWrap { padding: 0 1rem; }
+}
+
+/* make action buttons look consistent */
+.btn {
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.35rem;
+  font-size: 0.9rem;
+}
+.btn-approve { background: #10B981; color: #fff; }
+.btn-delete { background: #EF4444; color: #fff; }
+.btn-view { background: #3B82F6; color: #fff; }
+
+/* CSV export button spacing */
+#btnExportCsv { margin-right: 0.5rem; }
+
