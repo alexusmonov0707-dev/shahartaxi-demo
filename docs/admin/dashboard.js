@@ -1,101 +1,68 @@
-// Firebase global o'zgaruvchilari:
-// window.db
-// window.ref
-// window.child
-// window.get
-
-// ChiQish
-window.logout = function () {
-    window.location.href = "login.html";
+// Logout
+document.getElementById("logoutBtn").onclick = () => {
+    sessionStorage.removeItem("admin");
+    location.href = "login.html";
 };
 
-// Jami e'lonlar
-function loadTotalAds() {
-    const adsRef = window.child(window.ref(window.db), "ads");
+// Firebase DB
+const db = firebase.database();
 
-    window.get(adsRef).then(snapshot => {
-        if (snapshot.exists()) {
-            document.getElementById("totalAds").textContent =
-                Object.keys(snapshot.val()).length;
-        }
-    });
-}
+// ADS count + last 5 ads
+function loadAds() {
+    db.ref("ads").once("value", snap => {
+        let ads = snap.exists() ? Object.entries(snap.val()) : [];
+        document.getElementById("statAds").textContent = ads.length;
 
-// Jami foydalanuvchilar
-function loadTotalUsers() {
-    const usersRef = window.child(window.ref(window.db), "users");
+        // So'nggi 5 ta
+        ads = ads
+            .map(([id, data]) => ({ id, ...data }))
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .slice(0, 5);
 
-    window.get(usersRef).then(snapshot => {
-        if (snapshot.exists()) {
-            document.getElementById("totalUsers").textContent =
-                Object.keys(snapshot.val()).length;
-        }
-    });
-}
-
-// Jami haydovchilar
-function loadTotalDrivers() {
-    const driversRef = window.child(window.ref(window.db), "drivers");
-
-    window.get(driversRef).then(snapshot => {
-        if (snapshot.exists()) {
-            document.getElementById("totalDrivers").textContent =
-                Object.keys(snapshot.val()).length;
-        }
-    });
-}
-
-// So'nggi 5 e’lon
-function loadLatestAds() {
-    const adsRef = window.child(window.ref(window.db), "ads");
-
-    window.get(adsRef).then(snapshot => {
-        if (!snapshot.exists()) return;
-
-        const ads = Object.entries(snapshot.val());
-
-        ads.sort((a, b) => b[1].createdAt - a[1].createdAt);
-
-        const latest = ads.slice(0, 5);
-
-        const container = document.getElementById("latestAds");
-        container.innerHTML = "";
-
-        latest.forEach(([id, ad]) => {
-            const li = document.createElement("li");
-            li.textContent = `${ad.fromRegion} → ${ad.toRegion} (${ad.price} so'm)`;
-            container.appendChild(li);
+        let html = "";
+        ads.forEach(a => {
+            html += `
+                <div class="border-b py-2">
+                    <strong>${a.fromRegion} → ${a.toRegion}</strong>
+                    <div class="text-sm text-gray-600">${a.comment || ""}</div>
+                </div>
+            `;
         });
+
+        document.getElementById("lastAds").innerHTML = html;
     });
 }
 
-// So'nggi 5 foydalanuvchi
-function loadLatestUsers() {
-    const usersRef = window.child(window.ref(window.db), "users");
+// USERS count + drivers + last 5 users
+function loadUsers() {
+    db.ref("users").once("value", snap => {
+        if (!snap.exists()) return;
 
-    window.get(usersRef).then(snapshot => {
-        if (!snapshot.exists()) return;
+        const users = Object.entries(snap.val()).map(([id, u]) => ({ id, ...u }));
 
-        const users = Object.entries(snapshot.val());
+        document.getElementById("statUsers").textContent = users.length;
+        document.getElementById("statDrivers").textContent =
+            users.filter(u => u.role === "driver").length;
 
-        users.sort((a, b) => b[1].createdAt - a[1].createdAt);
+        // Last 5
+        const lastUsers = users
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+            .slice(0, 5);
 
-        const latest = users.slice(0, 5);
-
-        const container = document.getElementById("latestUsers");
-        container.innerHTML = "";
-
-        latest.forEach(([id, u]) => {
-            const li = document.createElement("li");
-            li.textContent = `${u.fullName || "Noma’lum"} — ${u.phone || ""}`;
-            container.appendChild(li);
+        let html = "";
+        lastUsers.forEach(u => {
+            html += `
+                <div class="border-b py-2">
+                    <strong>${u.fullName}</strong>
+                    <div class="text-sm text-gray-600">${u.phone}</div>
+                </div>
+            `;
         });
+
+        document.getElementById("lastUsers").innerHTML = html;
     });
 }
 
-// Dastlab yuklash
-loadTotalAds();
-loadTotalUsers();
-loadTotalDrivers();
-loadLatestAds();
-loadLatestUsers();
+// LOAD ALL
+loadAds();
+loadUsers();
