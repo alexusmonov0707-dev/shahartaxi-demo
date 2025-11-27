@@ -1,39 +1,35 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <title>Admin qo'shish</title>
-  <link rel="stylesheet" href="./login.css">
+  <meta charset="UTF-8">
+  <title>Yangi Admin qo'shish</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="./users.css">
 </head>
 <body>
-  <div class="login-box" style="max-width:700px; margin-top:40px;">
-    <h2>Yangi Admin qo'shish</h2>
 
-    <input id="fullName" placeholder="To'liq ism (masalan: Super Admin)" />
-    <input id="username" placeholder="Username (unikal)" />
-    <input id="email" placeholder="Email (ixtiyoriy)" />
-    <input id="password" placeholder="Parol" />
-    <select id="role">
-      <option value="admin">admin</option>
-      <option value="moderator">moderator</option>
-      <option value="superadmin">superadmin</option>
-    </select>
+<div class="form-container">
+  <h2>Yangi Admin qo‘shish</h2>
 
-    <p id="msg" class="error"></p>
+  <input type="text" id="fullName" placeholder="To‘liq ism" />
+  <input type="text" id="username" placeholder="Username" />
+  <input type="email" id="email" placeholder="Email" />
+  <input type="text" id="password" placeholder="Parol" />
 
-    <button onclick="addAdmin()" style="margin-top:10px;">Qo'shish</button>
-    <button onclick="location.href='admins.html'" style="margin-top:8px;">Orqaga</button>
-  </div>
+  <select id="role">
+    <option value="admin">admin</option>
+    <option value="superadmin">superadmin</option>
+  </select>
 
-  <script type="module">
-    import { adminGuard } from "./admin.js";
-    (async () => {
-      const admin = await adminGuard("superadmin");
-      if (!admin) return;
-      // load script
-      import("./admins.js");
-    })();
-  </script>
+  <button id="addBtn" class="btn export">Qo‘shish</button>
+  <button onclick="location.href='admins.html'" class="btn back">Orqaga</button>
+</div>
+
+<script type="module">
+  import { addAdmin } from "./admin-add.js";
+
+  document.getElementById("addBtn").addEventListener("click", addAdmin);
+</script>
+
 </body>
 </html>
-
