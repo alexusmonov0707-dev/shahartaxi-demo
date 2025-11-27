@@ -2,7 +2,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const db = firebase.database();
 
-    // --- Elementlar ---
     const totalAdsEl = document.getElementById("totalAds");
     const totalUsersEl = document.getElementById("totalUsers");
     const totalDriversEl = document.getElementById("totalDrivers");
@@ -11,83 +10,84 @@ document.addEventListener("DOMContentLoaded", () => {
     const lastUsersList = document.getElementById("lastUsers");
 
 
-    // 1. JAMMI E'LONLAR
+    // 1. Jami e'lonlar
     function loadTotalAds() {
-        firebase.database().ref("ads").once("value", snapshot => {
-            totalAdsEl.innerText = snapshot.numChildren();
+        db.ref("ads").once("value", snap => {
+            totalAdsEl.innerText = snap.numChildren();
         });
     }
 
-    // 2. JAMMI FOYDALANUVCHILAR
+    // 2. Jami foydalanuvchilar
     function loadTotalUsers() {
-        firebase.database().ref("users").once("value", snapshot => {
-            totalUsersEl.innerText = snapshot.numChildren();
+        db.ref("users").once("value", snap => {
+            totalUsersEl.innerText = snap.numChildren();
         });
     }
 
-    // 3. JAMMI HAYDOVCHILAR 
-    // (users ichida role = "driver")
+    // 3. Jami haydovchilar
     function loadTotalDrivers() {
-        firebase.database().ref("users").once("value", snapshot => {
+        db.ref("users").once("value", snap => {
             let count = 0;
-            snapshot.forEach(child => {
+            snap.forEach(child => {
                 if (child.val().role === "driver") count++;
             });
             totalDriversEl.innerText = count;
         });
     }
 
-
-    // 4. SO‘NGGI 5 E’LON
+    // 4. Oxirgi 5 e'lon
     function loadLastAds() {
-        firebase.database()
-            .ref("ads")
-            .orderByChild("createdAt")
-            .limitToLast(5)
-            .once("value", snapshot => {
+        db.ref("ads")
+          .orderByChild("createdAt")
+          .limitToLast(5)
+          .once("value", snap => {
 
-                lastAdsList.innerHTML = "";
+            lastAdsList.innerHTML = "";
+            const arr = [];
 
-                const items = [];
-                snapshot.forEach(s => items.push(s.val()));
+            snap.forEach(s => arr.push(s.val()));
+            arr.reverse();
 
-                items.reverse(); // oxirgilari yuqoriga
-
-                items.forEach(ad => {
-                    const li = document.createElement("div");
-                    li.className = "list-item";
-                    li.innerText = `${ad.fromRegion} ➝ ${ad.toRegion} | ${ad.price}`;
-                    lastAdsList.appendChild(li);
-                });
+            arr.forEach(ad => {
+                const div = document.createElement("div");
+                div.className = "py-2";
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <span>${ad.fromRegion} → ${ad.toRegion}</span>
+                        <span class="font-bold">${ad.price} so’m</span>
+                    </div>`;
+                lastAdsList.appendChild(div);
             });
+        });
     }
 
-    // 5. SO‘NGGI 5 FOYDALANUVCHI
+    // 5. Oxirgi 5 foydalanuvchi
     function loadLastUsers() {
-        firebase.database()
-            .ref("users")
-            .orderByChild("createdAt")
-            .limitToLast(5)
-            .once("value", snapshot => {
+        db.ref("users")
+          .orderByChild("createdAt")
+          .limitToLast(5)
+          .once("value", snap => {
 
-                lastUsersList.innerHTML = "";
+            lastUsersList.innerHTML = "";
+            const arr = [];
 
-                const items = [];
-                snapshot.forEach(s => items.push(s.val()));
+            snap.forEach(s => arr.push(s.val()));
+            arr.reverse();
 
-                items.reverse();
-
-                items.forEach(u => {
-                    const li = document.createElement("div");
-                    li.className = "list-item";
-                    li.innerText = `${u.fullName || "Noma’lum"} — ${u.phone}`;
-                    lastUsersList.appendChild(li);
-                });
+            arr.forEach(u => {
+                const div = document.createElement("div");
+                div.className = "py-2";
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <span>${u.fullName || "Noma’lum"}</span>
+                        <span>${u.phone || ""}</span>
+                    </div>`;
+                lastUsersList.appendChild(div);
             });
+        });
     }
 
-
-    // BOSHLASH
+    // Run all
     loadTotalAds();
     loadTotalUsers();
     loadTotalDrivers();
@@ -95,3 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadLastUsers();
 
 });
+
+function logout() {
+    window.location.href = "../login.html";
+}
