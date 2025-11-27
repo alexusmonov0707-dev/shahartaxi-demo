@@ -1,4 +1,8 @@
-import { db, ref, child, get } from "../firebase.js";
+// Firebase global o'zgaruvchilari:
+// window.db
+// window.ref
+// window.child
+// window.get
 
 // ChiQish
 window.logout = function () {
@@ -7,8 +11,9 @@ window.logout = function () {
 
 // Jami e'lonlar
 function loadTotalAds() {
-    const adsRef = child(ref(db), "ads");
-    get(adsRef).then(snapshot => {
+    const adsRef = window.child(window.ref(window.db), "ads");
+
+    window.get(adsRef).then(snapshot => {
         if (snapshot.exists()) {
             document.getElementById("totalAds").textContent =
                 Object.keys(snapshot.val()).length;
@@ -18,8 +23,9 @@ function loadTotalAds() {
 
 // Jami foydalanuvchilar
 function loadTotalUsers() {
-    const usersRef = child(ref(db), "users");
-    get(usersRef).then(snapshot => {
+    const usersRef = window.child(window.ref(window.db), "users");
+
+    window.get(usersRef).then(snapshot => {
         if (snapshot.exists()) {
             document.getElementById("totalUsers").textContent =
                 Object.keys(snapshot.val()).length;
@@ -29,8 +35,9 @@ function loadTotalUsers() {
 
 // Jami haydovchilar
 function loadTotalDrivers() {
-    const driversRef = child(ref(db), "drivers");
-    get(driversRef).then(snapshot => {
+    const driversRef = window.child(window.ref(window.db), "drivers");
+
+    window.get(driversRef).then(snapshot => {
         if (snapshot.exists()) {
             document.getElementById("totalDrivers").textContent =
                 Object.keys(snapshot.val()).length;
@@ -38,11 +45,11 @@ function loadTotalDrivers() {
     });
 }
 
-// So‘nggi 5 e’lon
+// So'nggi 5 e’lon
 function loadLatestAds() {
-    const adsRef = child(ref(db), "ads");
+    const adsRef = window.child(window.ref(window.db), "ads");
 
-    get(adsRef).then(snapshot => {
+    window.get(adsRef).then(snapshot => {
         if (!snapshot.exists()) return;
 
         const ads = Object.entries(snapshot.val());
@@ -62,11 +69,11 @@ function loadLatestAds() {
     });
 }
 
-// So‘nggi 5 foydalanuvchi
+// So'nggi 5 foydalanuvchi
 function loadLatestUsers() {
-    const usersRef = child(ref(db), "users");
+    const usersRef = window.child(window.ref(window.db), "users");
 
-    get(usersRef).then(snapshot => {
+    window.get(usersRef).then(snapshot => {
         if (!snapshot.exists()) return;
 
         const users = Object.entries(snapshot.val());
@@ -80,7 +87,7 @@ function loadLatestUsers() {
 
         latest.forEach(([id, u]) => {
             const li = document.createElement("li");
-            li.textContent = `${u.fullName || 'Noma’lum'} — ${u.phone || ''}`;
+            li.textContent = `${u.fullName || "Noma’lum"} — ${u.phone || ""}`;
             container.appendChild(li);
         });
     });
