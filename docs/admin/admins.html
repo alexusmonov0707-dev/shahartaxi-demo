@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
-  <title>Adminlar ro'yxati</title>
+  <title>Adminlar</title>
   <link rel="stylesheet" href="./users.css">
 </head>
 
@@ -29,13 +29,20 @@
   </table>
 </div>
 
-<!-- 1) Guard -->
+<!-- FIREBASE GLOBAL -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<!-- FIREBASE CONFIG -->
+<script src="./firebase.js"></script>
+
+<!-- GUARD (module qoladi) -->
 <script type="module">
-import { adminGuard } from "./admin.js";
-adminGuard("superadmin"); // superadmin bo'lmasa kirolmaydi
+  import { adminGuard } from "./admin.js";
+  adminGuard("superadmin");
 </script>
 
-<!-- 2) admins.js -> GLOBAL, MODUL EMAS -->
+<!-- GLOBAL ADMINS -->
 <script src="./admins.js"></script>
 
 </body>
