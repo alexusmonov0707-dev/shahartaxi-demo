@@ -1,3 +1,114 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f6fa;
+    padding: 20px;
+    margin: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+h2 {
+    font-size: 28px;
+    margin-bottom: 20px;
+}
+
+/* FILTERS */
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+#search, select, button {
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+/* BUTTONS */
+.btn {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.refresh {
+    background: #009688;
+    color: white;
+}
+
+.export {
+    background: #1e88e5;
+    color: white;
+}
+
+/* TABLE */
+table {
+    width: 100%;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    border-collapse: collapse;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    background: #f0f0f0;
+}
+
+/* BADGES */
+.badge {
+    padding: 5px 10px;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.driver { background: purple; }
+.user { background: gray; }
+
+.verified { background: green; }
+.pending { background: orange; }
+.rejected { background: red; }
+
+/* ACTION BUTTONS */
+.block {
+    background: #ff9800;
+    color: white;
+}
+
+.unblock {
+    background: #4caf50;
+    color: white;
+}
+
+.delete {
+    background: #f44336;
+    color: white;
+}
+
+/* PAGINATION */
+.pagination {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
+}
+
+.pagination button {
+    padding: 10px 16px;
+}
+
 /* MODAL */
 .modal {
     position: fixed;
@@ -14,10 +125,9 @@
 
 .modalContent {
     width: 500px;
-    background: #fff;
+    background: white;
     padding: 25px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     max-height: 90vh;
     overflow-y: auto;
 }
@@ -49,17 +159,16 @@
     display: block;
 }
 
-.modalClose {
-    margin-top: 20px;
-    width: 100%;
-}
-
-/* Avatar */
-#modal img, #m_avatar {
-    width: 120px;
-    height: 120px;
+#modal img {
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     object-fit: cover;
-    margin: 0 auto 15px auto;
     display: block;
+    margin: 0 auto 20px auto;
+}
+
+.modalClose {
+    width: 100%;
+    margin-top: 20px;
 }
