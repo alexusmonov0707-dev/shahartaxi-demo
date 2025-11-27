@@ -172,3 +172,27 @@ th {
     width: 100%;
     margin-top: 20px;
 }
+.badge {
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.badge.admin {
+  background: #007bff;
+}
+
+.badge.superadmin {
+  background: #28a745;
+}
+
+.badge.moderator {
+  background: #6f42c1;
+}
+
+.badge.- {
+  background: #999;
+}
+
