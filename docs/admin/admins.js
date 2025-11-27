@@ -49,19 +49,19 @@ async function loadAdmins() {
       const a = data[id] || {};
       const full = escapeHtml(a.fullName || a.email || "-");
       const username = escapeHtml(a.username || "-");
-      const role = escapeHtml(a.role || "-");
+      const role = a.role ? escapeHtml(a.role) : "-";
+<tbody>.insertAdjacentHTML("beforeend", `
+  <tr>
+    <td>${full}</td>
+    <td>${username}</td>
+    <td><span class="badge ${role}">${role}</span></td>
+    <td>
+      <button data-id="${id}" data-action="edit" class="btn">Tahrirlash</button>
+      <button data-id="${id}" data-action="delete" class="btn delete">O'chirish</button>
+    </td>
+  </tr>
+`);
 
-      tbody.insertAdjacentHTML("beforeend", `
-        <tr>
-          <td>${full}</td>
-          <td>${username}</td>
-          <td><span class="badge ${role}">${role}</span></td>
-          <td>
-            <button data-id="${id}" data-action="edit" class="btn">Tahrirlash</button>
-            <button data-id="${id}" data-action="delete" class="btn delete">O'chirish</button>
-          </td>
-        </tr>
-      `);
     });
 
     // event delegation (bitta listener)
