@@ -129,53 +129,43 @@ function flattenAdsSnapshot(snapshot) {
   const results = [];
   if (!snapshot) return results;
 
-  // If snapshot is a DataSnapshot (Firebase), we can iterate .forEach
-  try {
-    snapshot.forEach(child => {
-      const childVal = child.val ? child.val() : child; // if child is object
-      const childKey = child.key || null;
+  // Agar snapshot DataSnapshot bo'lsa → snapshot.val()
+  const root = snapshot.val ? snapshot.val() : snapshot;
 
-      // if child's value looks like an ad (has createdAt or fromRegion), treat as ad
-      if (childVal && (childVal.createdAt || childVal.fromRegion || childVal.toRegion || childVal.price)) {
-        results.push({ id: childKey, data: childVal });
-      } else {
-        // Otherwise, treat child as category/group and iterate its children
-        // (supports 2-level structure)
-        if (child.forEach) {
-          child.forEach(inner => {
-            const innerVal = inner.val ? inner.val() : inner;
-            const innerKey = inner.key || null;
-            if (innerVal) {
-              results.push({ id: innerKey, data: innerVal });
-            }
-          });
-        } else if (typeof childVal === 'object') {
-          // fallback: iterate object keys
-          Object.entries(childVal).forEach(([k, v]) => {
-            results.push({ id: k, data: v });
-          });
-        }
-      }
-    });
-  } catch (e) {
-    // If snapshot is plain object (not DataSnapshot)
-    const obj = snapshot.val ? snapshot.val() : snapshot;
-    if (obj && typeof obj === 'object') {
-      Object.entries(obj).forEach(([k, v]) => {
-        // if v looks like nested map, flatten further
-        if (v && typeof v === 'object' && (v.createdAt || v.fromRegion || v.toRegion || v.price)) {
-          results.push({ id: k, data: v });
-        } else if (v && typeof v === 'object') {
-          Object.entries(v).forEach(([k2, v2]) => {
-            results.push({ id: k2, data: v2 });
-          });
+  if (!root || typeof root !== 'object') return results;
+
+  /*
+    Ushbu funksiya 3 xil tuzilmani qo'llab-quvvatlaydi:
+
+    1) ads / adId → data
+    2) ads / category / adId → data
+    3) aralash / nested object
+  */
+
+  Object.entries(root).forEach(([key, val]) => {
+    // 1-level (ads/adId)
+    if (val && typeof val === 'object' &&
+       (val.createdAt || val.fromRegion || val.toRegion || val.price)) {
+
+      results.push({ id: key, data: val });
+      return;
+    }
+
+    // 2-level (ads/category/adId)
+    if (val && typeof val === 'object') {
+      Object.entries(val).forEach(([k2, v2]) => {
+        if (v2 && typeof v2 === 'object' &&
+           (v2.createdAt || v2.fromRegion || v2.toRegion || v2.price)) {
+
+          results.push({ id: k2, data: v2 });
         }
       });
     }
-  }
+  });
 
   return results;
 }
+
 
 // -------------------------------
 // Init UI interactions & load data
