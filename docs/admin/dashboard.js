@@ -1,132 +1,143 @@
-// ============================
-// Firebase tayyor bo'lishini kutamiz
-// ============================
-function waitForFirebase(timeout = 6000) {
-    return new Promise((resolve, reject) => {
-        const start = Date.now();
+const adminSession = sessionStorage.getItem("admin");
+if (!adminSession) location.href = "./login.html";
 
-        function check() {
-            if (window.firebase && window.firebase.database) {
-                return resolve(window.firebase.database());
-            }
-            if (Date.now() - start >= timeout) {
-                return reject("Firebase load timeout!");
-            }
-            setTimeout(check, 100);
+import { db, ref, get, onValue } from "../libs/lib.js";
+
+document.getElementById("adminName").textContent = adminSession;
+
+// CHART JS INSTANCELARI
+let adsChart = null;
+let popularChart = null;
+
+// ===========================
+//       7 KUNLIK STATISTIKA
+// ===========================
+async function loadAdvancedStats() {
+    const snap = await get(ref(db, "ads"));
+    if (!snap.exists()) return;
+
+    const ads = Object.values(snap.val());
+
+    const now = Date.now();
+    const dayMS = 24 * 60 * 60 * 1000;
+
+    let today = 0;
+    let week = 0;
+    let month = 0;
+
+    let weeklyData = [0,0,0,0,0,0,0];
+
+    ads.forEach(ad => {
+        if (!ad.createdAt) return;
+        const diff = now - ad.createdAt;
+        const dayIndex = Math.floor(diff / dayMS);
+
+        if (dayIndex === 0) today++;
+        if (dayIndex < 7) {
+            week++;
+            weeklyData[6 - dayIndex] += 1;
         }
+        if (dayIndex < 30) month++;
+    });
 
-        check();
+    document.getElementById("statToday").textContent = today;
+    document.getElementById("statWeek").textContent = week;
+    document.getElementById("statMonth").textContent = month;
+
+    drawAdsChart(weeklyData);
+    extractPopularRoutes(ads);
+}
+
+// ===========================
+//       MASHHUR YO‘NALISHLAR
+// ===========================
+function extractPopularRoutes(ads) {
+    const map = {};
+
+    ads.forEach(ad => {
+        if (!ad.fromRegion || !ad.toRegion) return;
+
+        const key = `${ad.fromRegion} → ${ad.toRegion}`;
+        map[key] = (map[key] || 0) + 1;
+    });
+
+    const sorted = Object.entries(map)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 7);
+
+    const labels = sorted.map(v => v[0]);
+    const values = sorted.map(v => v[1]);
+
+    drawPopularChart(labels, values);
+}
+
+// ===========================
+//      REAL-TIME ONLINE
+// ===========================
+function realTimeMonitoring() {
+    onValue(ref(db, "online/drivers"), snap => {
+        const count = snap.exists() ? Object.keys(snap.val()).length : 0;
+        document.getElementById("statOnlineDrivers").textContent = count;
     });
 }
 
-// ============================
-// Dashboardni ishga tushirish
-// ============================
-waitForFirebase()
-    .then(db => {
-        loadTotalAds(db);
-        loadTotalUsers(db);
-        loadTotalDrivers(db);
-        loadLastAds(db);
-        loadLastUsers(db);
-    })
-    .catch(err => {
-        console.error("Firebase error:", err);
-        alert("Firebase ulanmadi!");
-    });
+// ===========================
+//         CHART.JS — ADS
+// ===========================
+function drawAdsChart(data) {
+    const ctx = document.getElementById("adsChart");
 
-// ============================
-// 1) Jami e'lonlar
-// ============================
-function loadTotalAds(db) {
-    db.ref("ads").once("value").then(snap => {
-        document.getElementById("totalAds").innerText = snap.numChildren();
+    if (adsChart) adsChart.destroy();
+
+    adsChart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: ["6 kun oldin","5","4","3","2","1","Bugun"],
+            datasets: [{
+                label: "7 kunlik e’lonlar",
+                data: data,
+                borderWidth: 2,
+                tension: 0.3
+            }]
+        }
     });
 }
 
-// ============================
-// 2) Jami foydalanuvchilar
-// ============================
-function loadTotalUsers(db) {
-    db.ref("users").once("value").then(snap => {
-        document.getElementById("totalUsers").innerText = snap.numChildren();
+// ===========================
+//     CHART.JS — YO‘NALISH
+// ===========================
+function drawPopularChart(labels, values) {
+    const ctx = document.getElementById("popularChart");
+
+    if (popularChart) popularChart.destroy();
+
+    popularChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Mashhur yo‘nalishlar",
+                data: values,
+                borderWidth: 1
+            }]
+        }
     });
 }
 
-// ============================
-// 3) Haydovchilar soni
-// ============================
-function loadTotalDrivers(db) {
-    db.ref("users").once("value").then(snap => {
-        let count = 0;
-        snap.forEach(child => {
-            if (child.val().role === "driver") count++;
-        });
-        document.getElementById("totalDrivers").innerText = count;
-    });
+// ===========================
+//           INIT
+// ===========================
+async function initDashboard() {
+    await loadAdvancedStats();
+    realTimeMonitoring();
 }
 
-// ============================
-// 4) So‘nggi 5 e’lon
-// ============================
-function loadLastAds(db) {
-    db.ref("ads")
-        .orderByChild("createdAt")
-        .limitToLast(5)
-        .once("value")
-        .then(snap => {
-            const box = document.getElementById("lastAds");
-            box.innerHTML = "";
+initDashboard();
 
-            let arr = [];
-            snap.forEach(s => arr.push(s.val()));
-            arr.reverse();
-
-            arr.forEach(ad => {
-                const div = document.createElement("div");
-                div.className = "p-2 border-b";
-                div.innerHTML = `
-                    <div class="flex justify-between">
-                        <span>${ad.fromRegion} → ${ad.toRegion}</span>
-                        <span class="font-bold">${ad.price} so'm</span>
-                    </div>`;
-                box.appendChild(div);
-            });
-        });
-}
-
-// ============================
-// 5) So‘nggi 5 foydalanuvchi
-// ============================
-function loadLastUsers(db) {
-    db.ref("users")
-        .orderByChild("createdAt")
-        .limitToLast(5)
-        .once("value")
-        .then(snap => {
-            const box = document.getElementById("lastUsers");
-            box.innerHTML = "";
-
-            let arr = [];
-            snap.forEach(s => arr.push(s.val()));
-            arr.reverse();
-
-            arr.forEach(u => {
-                const div = document.createElement("div");
-                div.className = "p-2 border-b";
-                div.innerHTML = `
-                    <div class="flex justify-between">
-                        <span>${u.fullName || "Noma'lum"}</span>
-                        <span>${u.phone || ""}</span>
-                    </div>`;
-                box.appendChild(div);
-            });
-        });
-}
-
-// ============================
-// Logout
-// ============================
-function logout() {
-    window.location.href = "../login.html";
-}
+// ===========================
+//          LOGOUT
+// ===========================
+document.getElementById("logoutBtn").onclick = () => {
+    sessionStorage.removeItem("admin");
+    location.href = "./login.html";
+};
