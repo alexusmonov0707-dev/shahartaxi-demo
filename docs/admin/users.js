@@ -266,32 +266,38 @@ window.openModal = function (id) {
 
     document.getElementById("m_fullName").textContent = u.fullName ?? "-";
     document.getElementById("m_phone").textContent = u.phone ?? "-";
+    document.getElementById("m_region").textContent = u.region ?? u.profile?.region ?? "-";
+    document.getElementById("m_district").textContent = u.district ?? u.profile?.district ?? "-";
 
-    document.getElementById("m_region").textContent = u.region ?? (u.profile?.region ?? "-");
-    document.getElementById("m_district").textContent = u.district ?? (u.profile?.district ?? "-");
-
-    document.getElementById("m_avatar").src = u.avatar ?? "/assets/default.png";
+    document.getElementById("m_avatar").src =
+        u.avatar ?? "https://i.ibb.co/4nMfDym/avatar-default.png";
 
     const d = u.driverInfo ?? {};
     document.getElementById("m_car").textContent = d.carModel ?? "-";
     document.getElementById("m_color").textContent = d.carColor ?? "-";
     document.getElementById("m_number").textContent = d.carNumber ?? "-";
 
-    let status = "Foydalanuvchi";
-    if (u.role === "driver") {
-        if (u.verified === true) status = "Tasdiqlangan";
-        else if (u.verified === false) status = "Kutilmoqda";
-        else status = "Rad etilgan";
-    }
-    document.getElementById("m_status").textContent = status;
+    document.getElementById("m_status").textContent =
+        u.role === "driver"
+            ? u.verified === true
+                ? "Tasdiqlangan"
+                : u.verified === false
+                    ? "Kutilmoqda"
+                    : "Rad etilgan"
+            : "Foydalanuvchi";
 
-    document.getElementById("m_balance").textContent = (u.balance ?? 0) + " so‘m";
+    document.getElementById("m_balance").textContent = (u.balance ?? 0) + " so'm";
 
-    // Show modal, open profile tab and load logs
+    // show modal
     document.getElementById("modal").style.display = "flex";
+
+    // tabs
     openTab("profile");
+
+    // logs
     loadLogs(id);
 };
+
 
 window.closeModal = function () {
     document.getElementById("modal").style.display = "none";
