@@ -1,17 +1,17 @@
 const adminSession = sessionStorage.getItem("admin");
 if (!adminSession) location.href = "./login.html";
 
-import { db, ref, get, onValue } from "../libs/lib.js";
+import { db, ref, get, onValue } from "./firebase.js";
+
+const adminSession = sessionStorage.getItem("admin");
+if (!adminSession) location.href = "./login.html";
 
 document.getElementById("adminName").textContent = adminSession;
 
-// CHART JS INSTANCELARI
 let adsChart = null;
 let popularChart = null;
 
-// ===========================
-//       7 KUNLIK STATISTIKA
-// ===========================
+// ADVANCED STATS
 async function loadAdvancedStats() {
     const snap = await get(ref(db, "ads"));
     if (!snap.exists()) return;
@@ -24,7 +24,6 @@ async function loadAdvancedStats() {
     let today = 0;
     let week = 0;
     let month = 0;
-
     let weeklyData = [0,0,0,0,0,0,0];
 
     ads.forEach(ad => {
@@ -48,15 +47,12 @@ async function loadAdvancedStats() {
     extractPopularRoutes(ads);
 }
 
-// ===========================
-//       MASHHUR YO‘NALISHLAR
-// ===========================
+// POPULAR ROUTES
 function extractPopularRoutes(ads) {
     const map = {};
 
     ads.forEach(ad => {
         if (!ad.fromRegion || !ad.toRegion) return;
-
         const key = `${ad.fromRegion} → ${ad.toRegion}`;
         map[key] = (map[key] || 0) + 1;
     });
@@ -65,15 +61,10 @@ function extractPopularRoutes(ads) {
         .sort((a, b) => b[1] - a[1])
         .slice(0, 7);
 
-    const labels = sorted.map(v => v[0]);
-    const values = sorted.map(v => v[1]);
-
-    drawPopularChart(labels, values);
+    drawPopularChart(sorted.map(v => v[0]), sorted.map(v => v[1]));
 }
 
-// ===========================
-//      REAL-TIME ONLINE
-// ===========================
+// REAL-TIME ONLINE DRIVERS
 function realTimeMonitoring() {
     onValue(ref(db, "online/drivers"), snap => {
         const count = snap.exists() ? Object.keys(snap.val()).length : 0;
@@ -81,21 +72,17 @@ function realTimeMonitoring() {
     });
 }
 
-// ===========================
-//         CHART.JS — ADS
-// ===========================
+// CHART: 7 DAY ADS
 function drawAdsChart(data) {
     const ctx = document.getElementById("adsChart");
-
-    if (adsChart) adsChart.destroy();
-
+    adsChart?.destroy();
     adsChart = new Chart(ctx, {
         type: "line",
         data: {
-            labels: ["6 kun oldin","5","4","3","2","1","Bugun"],
+            labels: ["6 kun", "5", "4", "3", "2", "1", "Bugun"],
             datasets: [{
                 label: "7 kunlik e’lonlar",
-                data: data,
+                data,
                 borderWidth: 2,
                 tension: 0.3
             }]
@@ -103,18 +90,14 @@ function drawAdsChart(data) {
     });
 }
 
-// ===========================
-//     CHART.JS — YO‘NALISH
-// ===========================
+// CHART: POPULAR ROUTES
 function drawPopularChart(labels, values) {
     const ctx = document.getElementById("popularChart");
-
-    if (popularChart) popularChart.destroy();
-
+    popularChart?.destroy();
     popularChart = new Chart(ctx, {
         type: "bar",
         data: {
-            labels: labels,
+            labels,
             datasets: [{
                 label: "Mashhur yo‘nalishlar",
                 data: values,
@@ -124,15 +107,12 @@ function drawPopularChart(labels, values) {
     });
 }
 
-// ===========================
-//           INIT
-// ===========================
 async function initDashboard() {
     await loadAdvancedStats();
     realTimeMonitoring();
 }
-
 initDashboard();
+
 
 // ===========================
 //          LOGOUT
