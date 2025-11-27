@@ -1,5 +1,6 @@
 import { db, ref, get, onValue } from "./firebase.js";
 
+// ADMIN SESSION
 const adminSession = sessionStorage.getItem("admin");
 if (!adminSession) location.href = "./login.html";
 
@@ -71,7 +72,7 @@ function realTimeMonitoring() {
 // CHARTS
 function drawAdsChart(data) {
     const ctx = document.getElementById("adsChart");
-    adsChart?.destroy();
+    if (adsChart) adsChart.destroy();
     adsChart = new Chart(ctx, {
         type: "line",
         data: {
@@ -88,11 +89,11 @@ function drawAdsChart(data) {
 
 function drawPopularChart(labels, values) {
     const ctx = document.getElementById("popularChart");
-    popularChart?.destroy();
+    if (popularChart) popularChart.destroy();
     popularChart = new Chart(ctx, {
         type: "bar",
         data: {
-            labels: labels,
+            labels,
             datasets: [{
                 label: "Mashhur yo‘nalishlar",
                 data: values,
