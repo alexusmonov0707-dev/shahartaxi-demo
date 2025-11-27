@@ -6,18 +6,19 @@
   <title>Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 min-h-screen">
 
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- ADMIN GUARD -->
   <script>
     const admin = sessionStorage.getItem("admin");
-    if (!admin) {
-       location.href = "./login.html";
-    }
+    if (!admin) location.href = "./login.html";
   </script>
 
+  <!-- HEADER -->
   <header class="bg-white shadow">
-    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Admin dashboard</h1>
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <h1 class="text-2xl font-semibold">Admin Dashboard</h1>
       <div class="flex items-center gap-3">
         <div id="adminName" class="text-sm text-gray-700"></div>
         <button id="logoutBtn" class="px-3 py-2 rounded bg-red-600 text-white text-sm">Chiqish</button>
@@ -25,12 +26,42 @@
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto p-6">
+  <!-- MAIN CONTENT -->
+  <main class="max-w-6xl mx-auto p-6">
 
-    <section class="grid grid-cols-3 gap-4 mb-6">
-      <div class="bg-white p-4 rounded shadow">Ads: <span id="statAds">—</span></div>
-      <div class="bg-white p-4 rounded shadow">Users: <span id="statUsers">—</span></div>
-      <div class="bg-white p-4 rounded shadow">Drivers: <span id="statDrivers">—</span></div>
+    <!-- STAT CARDS -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white rounded-xl shadow p-6 text-center">
+        <h3 class="text-gray-600 text-sm">Jami e’lonlar</h3>
+        <p id="statAds" class="text-3xl font-bold mt-2">—</p>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-6 text-center">
+        <h3 class="text-gray-600 text-sm">Jami foydalanuvchilar</h3>
+        <p id="statUsers" class="text-3xl font-bold mt-2">—</p>
+      </div>
+
+      <div class="bg-white rounded-xl shadow p-6 text-center">
+        <h3 class="text-gray-600 text-sm">Haydovchilar</h3>
+        <p id="statDrivers" class="text-3xl font-bold mt-2">—</p>
+      </div>
+    </section>
+
+    <!-- RECENT DATA -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- RECENT ADS -->
+      <div class="bg-white rounded-xl shadow p-6">
+        <h3 class="font-semibold mb-3">So‘nggi e’lonlar (5)</h3>
+        <ul id="recentAds" class="space-y-2 text-sm text-gray-700"></ul>
+      </div>
+
+      <!-- RECENT USERS -->
+      <div class="bg-white rounded-xl shadow p-6">
+        <h3 class="font-semibold mb-3">Yangi foydalanuvchilar (5)</h3>
+        <ul id="recentUsers" class="space-y-2 text-sm text-gray-700"></ul>
+      </div>
+
     </section>
 
   </main>
