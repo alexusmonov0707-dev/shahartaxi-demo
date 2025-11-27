@@ -68,8 +68,8 @@
 </div>
 
 <!-- MODAL -->
-<div id="modal">
-    <div id="modalContent">
+<div id="modal" class="modal">
+    <div id="modalContent" class="modalContent">
 
         <div class="modal-tabs">
             <button id="tabProfile" class="tab active" onclick="openTab('profile')">Profil</button>
@@ -78,7 +78,6 @@
 
         <!-- PROFILE TAB -->
         <div id="profileTab" class="tabContent active">
-
             <h3 id="m_fullName"></h3>
 
             <img id="m_avatar">
@@ -87,14 +86,13 @@
             <p><b>Mintaqa:</b> <span id="m_region"></span></p>
             <p><b>Tuman:</b> <span id="m_district"></span></p>
 
-            <h4 style="margin-top:20px;">Mashina ma’lumotlari</h4>
+            <h4>Mashina ma’lumotlari</h4>
             <p><b>Model:</b> <span id="m_car"></span></p>
             <p><b>Rangi:</b> <span id="m_color"></span></p>
             <p><b>Raqami:</b> <span id="m_number"></span></p>
 
             <p><b>Holati:</b> <span id="m_status"></span></p>
             <p><b>Balans:</b> <span id="m_balance"></span></p>
-
         </div>
 
         <!-- LOGS TAB -->
@@ -103,9 +101,10 @@
             <ul id="logsList"></ul>
         </div>
 
-        <button onclick="closeModal()" class="btn unblock" style="margin-top:20px">Yopish</button>
+        <button onclick="closeModal()" class="btn unblock modalClose">Yopish</button>
     </div>
 </div>
+
 
 <script type="module" src="./users.js"></script>
 
