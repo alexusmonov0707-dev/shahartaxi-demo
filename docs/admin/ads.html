@@ -190,11 +190,8 @@
   </main>
 
   <!-- Execute firebase.js as a module so it runs even if it contains imports -->
-  <script type="module">
-    import "./firebase.js";
-  </script>
+<script src="../firebase.js"></script>
+<script src="./ads.js"></script>
 
-  <!-- Main ads script (non-module; waits for firebase global) -->
-  <script src="ads.js"></script>
 </body>
 </html>
