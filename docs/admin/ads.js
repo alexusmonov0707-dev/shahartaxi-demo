@@ -369,7 +369,11 @@ function applyFilters(resetPage = true) {
 
   const minP = safeNum(minPrice && minPrice.value, 0);
   const maxP = safeNum(maxPrice && maxPrice.value, Number.MAX_SAFE_INTEGER);
-  const seats = seatsFilter && seatsFilter.value ? Number(seatsFilter.value) : 0;
+ let seats = 0;
+if (seatsFilter && seatsFilter.value) {
+   seats = Number(seatsFilter.value.replace('+',''));
+}
+
 
   let dateStart = null, dateEnd = null;
   if (dateFrom && dateFrom.value) dateStart = new Date(dateFrom.value + 'T00:00:00').getTime();
