@@ -2,74 +2,199 @@
 <html lang="uz">
 <head>
   <meta charset="utf-8" />
-  <title>E'lonlarni boshqarish — Admin</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./ads.css" />
+  <title>Admin — Ads</title>
+
+  <!-- Tailwind for quick styling (CDN ok for admin panel) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Optional small icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pk6H...==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    /* fallback minor custom styles */
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+  </style>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen">
 
-  <header style="margin-bottom:18px;">
-    <h1 style="margin:0 0 8px 0;">E'lonlar</h1>
-    <input id="search" type="text" placeholder="Qidiruv: qayerdan, qayerga, ism, telefon, izoh..." />
-  </header>
-
-  <main>
-    <table>
-      <thead>
-        <tr>
-          <th>User</th>
-          <th>Yo'nalish</th>
-          <th>Narx</th>
-          <th>Sana</th>
-          <th>Amallar</th>
-        </tr>
-      </thead>
-      <tbody id="adsTable"></tbody>
-    </table>
-  </main>
-
-  <!-- MODAL -->
-  <div id="modal" class="modal">
-    <div class="modal-content">
-      <h3>E'lon tafsilotlari</h3>
-
-      <section class="section">
-        <p><strong>Yo'nalish:</strong> <span id="m_route"></span></p>
-        <p><strong>Jo'nash vaqti:</strong> <span id="m_depart"></span></p>
-        <p><strong>Narx:</strong> <span id="m_price"></span></p>
-        <p><strong>Joylar:</strong> <span id="m_seats"></span></p>
-        <p><strong>Haydovchi o‘rindiqlari:</strong> <span id="m_dseats"></span></p>
-        <p><strong>Izoh:</strong> <span id="m_comment"></span></p>
-        <p><strong>Yaratilgan:</strong> <span id="m_created"></span></p>
-      </section>
-
-      <hr>
-
-      <section class="section">
-        <h4>E'lon egasi</h4>
-        <div class="owner">
-          <img id="m_avatar" src="" />
-          <div class="owner-info">
-            <p><strong>Ismi:</strong> <span id="m_userName"></span></p>
-            <p><strong>Telefon:</strong> <span id="m_userPhone"></span></p>
-            <p><strong>Role:</strong> <span id="m_userRole"></span></p>
-          </div>
-        </div>
-      </section>
-
-      <div class="modal-actions">
-        <button id="deleteBtn" class="btn delete">E'lonni o'chirish</button>
-        <button id="closeBtn" class="btn close">Yopish</button>
+  <header class="bg-white shadow p-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <h1 class="text-2xl font-bold">Ads boshqaruv</h1>
+      <div class="flex items-center gap-3">
+        <button id="btnExportCsv" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"><i class="fa fa-file-csv mr-2"></i>Export CSV</button>
+        <label class="inline-flex items-center gap-2">
+          <input id="realtimeToggle" type="checkbox" class="form-checkbox h-5 w-5" checked>
+          <span class="text-sm text-gray-700">Real-time</span>
+        </label>
+        <a href="./dashboard.html" class="px-3 py-2 bg-gray-100 rounded">Dashboard</a>
       </div>
     </div>
-  </div>
+  </header>
 
-  <!-- FIREBASE SCRIPTS (v8) -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <main class="max-w-7xl mx-auto p-4">
 
-  <!-- JS -->
-  <script src="./ads.js"></script>
+    <!-- Filters block -->
+    <section class="bg-white p-4 rounded shadow mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
+        <div class="space-y-2">
+          <label class="text-sm font-medium">Qidiruv</label>
+          <input id="searchInput" type="search" placeholder="Qidirish: comment, region, district, userId..." class="w-full border rounded px-3 py-2">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-sm font-medium">From Region</label>
+            <select id="fromRegionFilter" class="w-full border rounded px-2 py-2">
+              <option value="">Hammasi</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium">To Region</label>
+            <select id="toRegionFilter" class="w-full border rounded px-2 py-2">
+              <option value="">Hammasi</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium">From District</label>
+            <select id="fromDistrictFilter" class="w-full border rounded px-2 py-2">
+              <option value="">Hammasi</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium">To District</label>
+            <select id="toDistrictFilter" class="w-full border rounded px-2 py-2">
+              <option value="">Hammasi</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-sm font-medium">Min Price</label>
+            <input id="minPrice" type="number" placeholder="0" class="w-full border rounded px-2 py-2">
+          </div>
+          <div>
+            <label class="text-sm font-medium">Max Price</label>
+            <input id="maxPrice" type="number" placeholder="99999999" class="w-full border rounded px-2 py-2">
+          </div>
+
+          <div>
+            <label class="text-sm font-medium">Seats ≥</label>
+            <select id="seatsFilter" class="w-full border rounded px-2 py-2">
+              <option value="">Hammasi</option>
+              <option value="1">1+</option>
+              <option value="2">2+</option>
+              <option value="3">3+</option>
+              <option value="4">4+</option>
+              <option value="5">5+</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium">Kategoriya</label>
+            <select id="categoryFilter" class="w-full border rounded px-2 py-2">
+              <option value="">Hammasi</option>
+              <option value="taxi">Taxi</option>
+              <option value="cargo">Cargo</option>
+              <option value="delivery">Delivery</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-sm font-medium">Sana boshlanish</label>
+            <input id="dateFrom" type="date" class="w-full border rounded px-2 py-2">
+          </div>
+          <div>
+            <label class="text-sm font-medium">Sana tugash</label>
+            <input id="dateTo" type="date" class="w-full border rounded px-2 py-2">
+          </div>
+
+          <div>
+            <label class="text-sm font-medium">User ID</label>
+            <input id="userIdFilter" type="text" placeholder="userId" class="w-full border rounded px-2 py-2">
+          </div>
+
+          <div class="flex items-end gap-2">
+            <button id="applyFiltersBtn" class="px-3 py-2 bg-green-600 text-white rounded w-full">Filtrlash</button>
+            <button id="resetFiltersBtn" class="px-3 py-2 bg-gray-200 rounded w-full">Tozalash</button>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Controls: sort, page size -->
+    <section class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-3">
+        <label class="text-sm">Sort by:</label>
+        <select id="sortBy" class="border rounded px-2 py-2">
+          <option value="createdAt_desc">Date desc</option>
+          <option value="createdAt_asc">Date asc</option>
+          <option value="price_desc">Price desc</option>
+          <option value="price_asc">Price asc</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <label class="text-sm">Page size:</label>
+        <select id="pageSize" class="border rounded px-2 py-2">
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="bg-white p-4 rounded shadow">
+      <div id="loadingSkeleton" class="space-y-2">
+        <div class="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+        <div class="h-8 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+        <div class="h-8 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+      </div>
+
+      <div id="tableWrap" class="overflow-x-auto hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-3 py-2 text-left text-sm font-medium">#</th>
+              <th class="px-3 py-2 text-left text-sm font-medium">From</th>
+              <th class="px-3 py-2 text-left text-sm font-medium">To</th>
+              <th class="px-3 py-2 text-left text-sm font-medium">Seats</th>
+              <th class="px-3 py-2 text-left text-sm font-medium">Price</th>
+              <th class="px-3 py-2 text-left text-sm font-medium">Category</th>
+              <th class="px-3 py-2 text-left text-sm font-medium">Created</th>
+              <th class="px-3 py-2 text-left text-sm font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adsTableBody" class="bg-white divide-y divide-gray-200"></tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="mt-4 flex items-center justify-between">
+        <div>
+          <button id="prevPageBtn" class="px-3 py-1 bg-gray-200 rounded">← Oldingi</button>
+          <button id="nextPageBtn" class="px-3 py-1 bg-gray-200 rounded ml-2">Keyingi →</button>
+        </div>
+        <div class="text-sm text-gray-600">
+          <span id="paginationInfo">0 / 0 sahifa</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Execute firebase.js as a module so it runs even if it contains imports -->
+  <script type="module">
+    import "../firebase.js";
+  </script>
+
+  <!-- Main ads script (non-module; waits for firebase global) -->
+  <script src="ads.js"></script>
 </body>
 </html>
