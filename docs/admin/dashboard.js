@@ -1,82 +1,132 @@
-document.addEventListener("DOMContentLoaded", function () {
+// ============================
+// Firebase tayyor bo'lishini kutamiz
+// ============================
+function waitForFirebase(timeout = 6000) {
+    return new Promise((resolve, reject) => {
+        const start = Date.now();
 
-    const totalAdsEl = document.getElementById("totalAds");
-    const totalUsersEl = document.getElementById("totalUsers");
-    const totalDriversEl = document.getElementById("totalDrivers");
+        function check() {
+            if (window.firebase && window.firebase.database) {
+                return resolve(window.firebase.database());
+            }
+            if (Date.now() - start >= timeout) {
+                return reject("Firebase load timeout!");
+            }
+            setTimeout(check, 100);
+        }
 
-    const lastAdsList = document.getElementById("lastAds");
-    const lastUsersList = document.getElementById("lastUsers");
+        check();
+    });
+}
 
-    const adsRef = db.ref("ads");
-    const usersRef = db.ref("users");
-
-    // 1) Jami e'lonlar
-    adsRef.on("value", (snap) => {
-        totalAdsEl.innerText = snap.numChildren();
+// ============================
+// Dashboardni ishga tushirish
+// ============================
+waitForFirebase()
+    .then(db => {
+        loadTotalAds(db);
+        loadTotalUsers(db);
+        loadTotalDrivers(db);
+        loadLastAds(db);
+        loadLastUsers(db);
+    })
+    .catch(err => {
+        console.error("Firebase error:", err);
+        alert("Firebase ulanmadi!");
     });
 
-    // 2) Jami foydalanuvchilar
-    usersRef.on("value", (snap) => {
-        totalUsersEl.innerText = snap.numChildren();
+// ============================
+// 1) Jami e'lonlar
+// ============================
+function loadTotalAds(db) {
+    db.ref("ads").once("value").then(snap => {
+        document.getElementById("totalAds").innerText = snap.numChildren();
     });
+}
 
-    // 3) Haydovchilar soni
-    usersRef.on("value", (snap) => {
+// ============================
+// 2) Jami foydalanuvchilar
+// ============================
+function loadTotalUsers(db) {
+    db.ref("users").once("value").then(snap => {
+        document.getElementById("totalUsers").innerText = snap.numChildren();
+    });
+}
+
+// ============================
+// 3) Haydovchilar soni
+// ============================
+function loadTotalDrivers(db) {
+    db.ref("users").once("value").then(snap => {
         let count = 0;
         snap.forEach(child => {
             if (child.val().role === "driver") count++;
         });
-        totalDriversEl.innerText = count;
+        document.getElementById("totalDrivers").innerText = count;
     });
+}
 
-    // 4) Oxirgi 5 ta e'lon
-    adsRef.orderByChild("createdAt").limitToLast(5).on("value", (snap) => {
+// ============================
+// 4) So‘nggi 5 e’lon
+// ============================
+function loadLastAds(db) {
+    db.ref("ads")
+        .orderByChild("createdAt")
+        .limitToLast(5)
+        .once("value")
+        .then(snap => {
+            const box = document.getElementById("lastAds");
+            box.innerHTML = "";
 
-        lastAdsList.innerHTML = "";
-        let arr = [];
+            let arr = [];
+            snap.forEach(s => arr.push(s.val()));
+            arr.reverse();
 
-        snap.forEach(s => arr.push(s.val()));
-        arr.reverse(); // eng oxirgi tepada bo‘lishi uchun
-
-        arr.forEach(ad => {
-            let div = document.createElement("div");
-            div.className = "py-2 border-b";
-            div.innerHTML = `
-                <div class="flex justify-between">
-                    <span>${ad.fromRegion} → ${ad.toRegion}</span>
-                    <span class="font-bold">${ad.price} soʻm</span>
-                </div>
-            `;
-            lastAdsList.appendChild(div);
+            arr.forEach(ad => {
+                const div = document.createElement("div");
+                div.className = "p-2 border-b";
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <span>${ad.fromRegion} → ${ad.toRegion}</span>
+                        <span class="font-bold">${ad.price} so'm</span>
+                    </div>`;
+                box.appendChild(div);
+            });
         });
+}
 
-    });
+// ============================
+// 5) So‘nggi 5 foydalanuvchi
+// ============================
+function loadLastUsers(db) {
+    db.ref("users")
+        .orderByChild("createdAt")
+        .limitToLast(5)
+        .once("value")
+        .then(snap => {
+            const box = document.getElementById("lastUsers");
+            box.innerHTML = "";
 
-    // 5) Oxirgi 5 foydalanuvchi
-    usersRef.orderByChild("createdAt").limitToLast(5).on("value", (snap) => {
+            let arr = [];
+            snap.forEach(s => arr.push(s.val()));
+            arr.reverse();
 
-        lastUsersList.innerHTML = "";
-        let arr = [];
-
-        snap.forEach(s => arr.push(s.val()));
-        arr.reverse();
-
-        arr.forEach(u => {
-            let div = document.createElement("div");
-            div.className = "py-2 border-b";
-            div.innerHTML = `
-                <div class="flex justify-between">
-                    <span>${u.fullName || "Noma’lum"}</span>
-                    <span>${u.phone || ""}</span>
-                </div>
-            `;
-            lastUsersList.appendChild(div);
+            arr.forEach(u => {
+                const div = document.createElement("div");
+                div.className = "p-2 border-b";
+                div.innerHTML = `
+                    <div class="flex justify-between">
+                        <span>${u.fullName || "Noma'lum"}</span>
+                        <span>${u.phone || ""}</span>
+                    </div>`;
+                box.appendChild(div);
+            });
         });
+}
 
-    });
-
-});
-
+// ============================
+// Logout
+// ============================
 function logout() {
     window.location.href = "../login.html";
 }
