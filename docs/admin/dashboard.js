@@ -1,68 +1,97 @@
-// Logout
-document.getElementById("logoutBtn").onclick = () => {
-    sessionStorage.removeItem("admin");
-    location.href = "login.html";
-};
+document.addEventListener("DOMContentLoaded", () => {
 
-// Firebase DB
-const db = firebase.database();
+    const db = firebase.database();
 
-// ADS count + last 5 ads
-function loadAds() {
-    db.ref("ads").once("value", snap => {
-        let ads = snap.exists() ? Object.entries(snap.val()) : [];
-        document.getElementById("statAds").textContent = ads.length;
+    // --- Elementlar ---
+    const totalAdsEl = document.getElementById("totalAds");
+    const totalUsersEl = document.getElementById("totalUsers");
+    const totalDriversEl = document.getElementById("totalDrivers");
 
-        // So'nggi 5 ta
-        ads = ads
-            .map(([id, data]) => ({ id, ...data }))
-            .sort((a, b) => b.createdAt - a.createdAt)
-            .slice(0, 5);
+    const lastAdsList = document.getElementById("lastAds");
+    const lastUsersList = document.getElementById("lastUsers");
 
-        let html = "";
-        ads.forEach(a => {
-            html += `
-                <div class="border-b py-2">
-                    <strong>${a.fromRegion} → ${a.toRegion}</strong>
-                    <div class="text-sm text-gray-600">${a.comment || ""}</div>
-                </div>
-            `;
+
+    // 1. JAMMI E'LONLAR
+    function loadTotalAds() {
+        firebase.database().ref("ads").once("value", snapshot => {
+            totalAdsEl.innerText = snapshot.numChildren();
         });
+    }
 
-        document.getElementById("lastAds").innerHTML = html;
-    });
-}
-
-// USERS count + drivers + last 5 users
-function loadUsers() {
-    db.ref("users").once("value", snap => {
-        if (!snap.exists()) return;
-
-        const users = Object.entries(snap.val()).map(([id, u]) => ({ id, ...u }));
-
-        document.getElementById("statUsers").textContent = users.length;
-        document.getElementById("statDrivers").textContent =
-            users.filter(u => u.role === "driver").length;
-
-        // Last 5
-        const lastUsers = users
-            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-            .slice(0, 5);
-
-        let html = "";
-        lastUsers.forEach(u => {
-            html += `
-                <div class="border-b py-2">
-                    <strong>${u.fullName}</strong>
-                    <div class="text-sm text-gray-600">${u.phone}</div>
-                </div>
-            `;
+    // 2. JAMMI FOYDALANUVCHILAR
+    function loadTotalUsers() {
+        firebase.database().ref("users").once("value", snapshot => {
+            totalUsersEl.innerText = snapshot.numChildren();
         });
+    }
 
-        document.getElementById("lastUsers").innerHTML = html;
-    });
-}
+    // 3. JAMMI HAYDOVCHILAR 
+    // (users ichida role = "driver")
+    function loadTotalDrivers() {
+        firebase.database().ref("users").once("value", snapshot => {
+            let count = 0;
+            snapshot.forEach(child => {
+                if (child.val().role === "driver") count++;
+            });
+            totalDriversEl.innerText = count;
+        });
+    }
 
-// LOAD ALL
-loadAds();
-loadUsers();
+
+    // 4. SO‘NGGI 5 E’LON
+    function loadLastAds() {
+        firebase.database()
+            .ref("ads")
+            .orderByChild("createdAt")
+            .limitToLast(5)
+            .once("value", snapshot => {
+
+                lastAdsList.innerHTML = "";
+
+                const items = [];
+                snapshot.forEach(s => items.push(s.val()));
+
+                items.reverse(); // oxirgilari yuqoriga
+
+                items.forEach(ad => {
+                    const li = document.createElement("div");
+                    li.className = "list-item";
+                    li.innerText = `${ad.fromRegion} ➝ ${ad.toRegion} | ${ad.price}`;
+                    lastAdsList.appendChild(li);
+                });
+            });
+    }
+
+    // 5. SO‘NGGI 5 FOYDALANUVCHI
+    function loadLastUsers() {
+        firebase.database()
+            .ref("users")
+            .orderByChild("createdAt")
+            .limitToLast(5)
+            .once("value", snapshot => {
+
+                lastUsersList.innerHTML = "";
+
+                const items = [];
+                snapshot.forEach(s => items.push(s.val()));
+
+                items.reverse();
+
+                items.forEach(u => {
+                    const li = document.createElement("div");
+                    li.className = "list-item";
+                    li.innerText = `${u.fullName || "Noma’lum"} — ${u.phone}`;
+                    lastUsersList.appendChild(li);
+                });
+            });
+    }
+
+
+    // BOSHLASH
+    loadTotalAds();
+    loadTotalUsers();
+    loadTotalDrivers();
+    loadLastAds();
+    loadLastUsers();
+
+});
