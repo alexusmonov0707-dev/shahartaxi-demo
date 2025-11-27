@@ -454,3 +454,10 @@ startAutoRefresh();
 window.reloadUsers = loadUsers;
 window.startAutoRefresh = startAutoRefresh;
 window.stopAutoRefresh = stopAutoRefresh;
+window.exportCSV = exportCSV;
+window.exportExcel = exportExcel;
+window.reloadUsers = loadUsers;
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.openTab = openTab;
+
