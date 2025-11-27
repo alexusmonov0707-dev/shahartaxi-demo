@@ -1,61 +1,56 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-100">
 
-  <script>
-    if (!sessionStorage.getItem("admin")) {
-        location.href = "login.html";
-    }
-  </script>
-
-  <header class="bg-white shadow">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Admin Dashboard</h1>
-      <button id="logoutBtn"
-              class="px-3 py-2 bg-red-600 text-white rounded">
-        Chiqish
-      </button>
+    <div class="flex items-center justify-between p-5 bg-white shadow">
+        <h1 class="text-2xl font-bold">Admin Dashboard</h1>
+        <button onclick="logout()"
+            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+            Chiqish
+        </button>
     </div>
-  </header>
 
-  <main class="max-w-6xl mx-auto p-6">
+    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <!-- Statistikalar -->
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-      <div class="bg-white p-6 rounded shadow text-center">
-        <h3 class="text-gray-600">Jami e’lonlar</h3>
-        <p id="statAds" class="text-4xl font-bold mt-2">0</p>
-      </div>
+        <!-- Jami e'lonlar -->
+        <div class="bg-white p-6 rounded shadow text-center">
+            <h2 class="text-lg font-semibold">Jami e’lonlar</h2>
+            <div id="totalAds" class="text-4xl font-bold mt-3">0</div>
+        </div>
 
-      <div class="bg-white p-6 rounded shadow text-center">
-        <h3 class="text-gray-600">Jami foydalanuvchilar</h3>
-        <p id="statUsers" class="text-4xl font-bold mt-2">0</p>
-      </div>
+        <!-- Jami foydalanuvchilar -->
+        <div class="bg-white p-6 rounded shadow text-center">
+            <h2 class="text-lg font-semibold">Jami foydalanuvchilar</h2>
+            <div id="totalUsers" class="text-4xl font-bold mt-3">0</div>
+        </div>
 
-      <div class="bg-white p-6 rounded shadow text-center">
-        <h3 class="text-gray-600">Haydovchilar</h3>
-        <p id="statDrivers" class="text-4xl font-bold mt-2">0</p>
-      </div>
-    </section>
+        <!-- Haydovchilar -->
+        <div class="bg-white p-6 rounded shadow text-center">
+            <h2 class="text-lg font-semibold">Haydovchilar</h2>
+            <div id="totalDrivers" class="text-4xl font-bold mt-3">0</div>
+        </div>
 
-    <!-- So'nggi elonlar -->
-    <h2 class="text-xl font-semibold mb-2">So‘nggi 5 e’lon</h2>
-    <div id="lastAds" class="bg-white p-4 rounded shadow mb-8"></div>
+    </div>
+
+    <!-- So'nggi 5 e’lon -->
+    <div class="p-6">
+        <h2 class="text-xl font-semibold mb-3">So‘nggi 5 e’lon</h2>
+        <div id="lastAds" class="bg-white p-4 rounded shadow divide-y"></div>
+    </div>
 
     <!-- So'nggi foydalanuvchilar -->
-    <h2 class="text-xl font-semibold mb-2">So‘nggi 5 foydalanuvchi</h2>
-    <div id="lastUsers" class="bg-white p-4 rounded shadow"></div>
+    <div class="p-6">
+        <h2 class="text-xl font-semibold mb-3">So‘nggi 5 foydalanuvchi</h2>
+        <div id="lastUsers" class="bg-white p-4 rounded shadow divide-y"></div>
+    </div>
 
-  </main>
-
-  <script src="firebase.js"></script>
-  <script src="dashboard.js"></script>
+    <script src="../firebase.js"></script>
+    <script src="dashboard.js"></script>
 
 </body>
 </html>
