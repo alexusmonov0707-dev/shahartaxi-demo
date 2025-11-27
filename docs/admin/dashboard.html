@@ -1,72 +1,53 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="dashboard.css">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <!-- Senda ishlaydigan config -->
+    <script src="./firebase.js"></script>
 </head>
 
-<body class="bg-gray-100 min-h-screen">
+<body>
 
-  <!-- ADMIN GUARD -->
-  <script>
-    const admin = sessionStorage.getItem("admin");
-    if (!admin) location.href = "./login.html";
-  </script>
+    <header class="topbar">
+        <h1>Admin Dashboard</h1>
+        <button onclick="logout()" class="logout-btn">Chiqish</button>
+    </header>
 
-  <!-- HEADER -->
-  <header class="bg-white shadow">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-      <h1 class="text-2xl font-semibold">Admin Dashboard</h1>
-      <div class="flex items-center gap-3">
-        <div id="adminName" class="text-sm text-gray-700"></div>
-        <button id="logoutBtn" class="px-3 py-2 rounded bg-red-600 text-white text-sm">Chiqish</button>
-      </div>
+    <div class="container">
+
+        <div class="stats">
+            <div class="card">
+                <h3>Jami e’lonlar</h3>
+                <p id="totalAds">0</p>
+            </div>
+
+            <div class="card">
+                <h3>Jami foydalanuvchilar</h3>
+                <p id="totalUsers">0</p>
+            </div>
+
+            <div class="card">
+                <h3>Haydovchilar</h3>
+                <p id="totalDrivers">0</p>
+            </div>
+        </div>
+
+        <h3>So‘nggi 5 e’lon</h3>
+        <ul id="latestAds"></ul>
+
+        <h3>So‘nggi 5 foydalanuvchi</h3>
+        <ul id="latestUsers"></ul>
+
     </div>
-  </header>
 
-  <!-- MAIN CONTENT -->
-  <main class="max-w-6xl mx-auto p-6">
-
-    <!-- STAT CARDS -->
-    <section class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-      <div class="bg-white rounded-xl shadow p-6 text-center">
-        <h3 class="text-gray-600 text-sm">Jami e’lonlar</h3>
-        <p id="statAds" class="text-3xl font-bold mt-2">—</p>
-      </div>
-
-      <div class="bg-white rounded-xl shadow p-6 text-center">
-        <h3 class="text-gray-600 text-sm">Jami foydalanuvchilar</h3>
-        <p id="statUsers" class="text-3xl font-bold mt-2">—</p>
-      </div>
-
-      <div class="bg-white rounded-xl shadow p-6 text-center">
-        <h3 class="text-gray-600 text-sm">Haydovchilar</h3>
-        <p id="statDrivers" class="text-3xl font-bold mt-2">—</p>
-      </div>
-    </section>
-
-    <!-- RECENT DATA -->
-    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-      <!-- RECENT ADS -->
-      <div class="bg-white rounded-xl shadow p-6">
-        <h3 class="font-semibold mb-3">So‘nggi e’lonlar (5)</h3>
-        <ul id="recentAds" class="space-y-2 text-sm text-gray-700"></ul>
-      </div>
-
-      <!-- RECENT USERS -->
-      <div class="bg-white rounded-xl shadow p-6">
-        <h3 class="font-semibold mb-3">Yangi foydalanuvchilar (5)</h3>
-        <ul id="recentUsers" class="space-y-2 text-sm text-gray-700"></ul>
-      </div>
-
-    </section>
-
-  </main>
-
-  <script type="module" src="./dashboard.js"></script>
-
+    <script src="dashboard.js"></script>
 </body>
 </html>
