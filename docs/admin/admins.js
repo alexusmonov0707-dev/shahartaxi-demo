@@ -1,14 +1,17 @@
 // admins.js — adminlarni ko'rish, qo'shish, o'chirish, role o'zgartirish
-// Joylashuv: /docs/admin/admins.js
 
-import { db, ref, get, set, remove, update, push } from "../libs/lib.js"; // agar loyihada libs boshqa nom bo'lsa pathni moslang
+import { db, ref, get, set, remove, update, push } from "../libs/lib.js";
 
-// (1) Inits page, chaqiriladi from admins.html
+// (1) Sahifa ishga tushganda chaqiriladi
 export function initAdminsPage() {
   loadAdmins();
+
+  // loadAdmins funksiyasini globalga chiqaramiz
+  // ShUNGA KO‘RA YANGILASH TUGMASI ISHLAYDI
+  window.loadAdmins = loadAdmins;
 }
 
-// (2) Load admins and render
+// (2) Adminlarni yuklash
 export async function loadAdmins() {
   const tbody = document.getElementById("adminsTable");
   tbody.innerHTML = "<tr><td colspan='4'>Yuklanmoqda...</td></tr>";
@@ -20,7 +23,7 @@ export async function loadAdmins() {
       return;
     }
 
-    const data = snap.val(); // object
+    const data = snap.val();
     tbody.innerHTML = "";
 
     for (const key of Object.keys(data)) {
@@ -52,7 +55,7 @@ function escapeHtml(str) {
   return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-// (3) Add admin — bu funksiya global bo'lishi kerak (admin-add.html chaqiradi)
+// (3) Admin qo'shish
 window.addAdmin = async function () {
   const msg = document.getElementById("msg");
   msg.textContent = "";
@@ -69,64 +72,62 @@ window.addAdmin = async function () {
   }
 
   try {
-    // check unique username
     const allSnap = await get(ref(db, "admins"));
     const all = allSnap.exists() ? allSnap.val() : {};
 
-    // ensure username is unique (username field or key)
     for (const k of Object.keys(all)) {
       const a = all[k];
       if ((a.username && a.username === username) || k === username) {
-        msg.textContent = "Bu username allaqachon mavjud. Boshqasini tanlang.";
+        msg.textContent = "Bu username allaqachon mavjud!";
         return;
       }
     }
 
-    // create new admin with push (key generated)
     const newKeyRef = push(ref(db, "admins"));
     const adminId = newKeyRef.key;
 
-    const adminObj = {
+    await set(ref(db, "admins/" + adminId), {
       username,
       fullName: fullName || username,
       email: email || "",
-      password: password,
+      password,
       role: role || "admin"
-    };
+    });
 
-    await set(ref(db, "admins/" + adminId), adminObj);
-
-    // muvaffaqiyat
-    alert("Admin qo'shildi.");
+    alert("Admin muvaffaqiyatli qo‘shildi.");
     location.href = "admins.html";
+
   } catch (err) {
     console.error("addAdmin error:", err);
     msg.textContent = "Xatolik: " + err.message;
   }
 };
 
-// (4) Delete admin
+// (4) Adminni o'chirish
 window.deleteAdmin = async function (id) {
-  if (!confirm("Adminni o'chirishni tasdiqlaysizmi?")) return;
+  if (!confirm("Adminni o‘chirishni tasdiqlaysizmi?")) return;
+
   try {
     await remove(ref(db, "admins/" + id));
-    alert("O'chirildi.");
-    loadAdmins();
+    alert("O‘chirildi.");
+    loadAdmins(); // qayta yuklaymiz
   } catch (err) {
     console.error("deleteAdmin error:", err);
-    alert("O'chirishda xato: " + err.message);
+    alert("Xato: " + err.message);
   }
 };
 
-// (5) Edit admin — oddiy prompt orqali tahrirlash (soddalashtirilgan)
+// (5) Admin tahrirlash
 window.editAdmin = async function (id) {
   try {
     const snap = await get(ref(db, "admins/" + id));
     if (!snap.exists()) return alert("Admin topilmadi.");
 
     const a = snap.val();
-    const newFull = prompt("To'liq ism:", a.fullName || "");
+
+    const newFull = prompt("To‘liq ism:", a.fullName || "");
     if (newFull === null) return;
+
     const newRole = prompt("Role (superadmin/admin/moderator):", a.role || "admin");
     if (newRole === null) return;
 
@@ -137,8 +138,9 @@ window.editAdmin = async function (id) {
 
     alert("Yangilandi.");
     loadAdmins();
+
   } catch (err) {
     console.error("editAdmin error:", err);
-    alert("Tahrirlashda xato: " + err.message);
+    alert("Xato: " + err.message);
   }
 };
