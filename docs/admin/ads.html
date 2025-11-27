@@ -189,13 +189,21 @@
 
   </main>
 
-  <!-- Execute firebase.js as a module so it runs even if it contains imports -->
-<script type="module">
-  import * as FB from "./firebase.js";
-  window.db = FB.db;   // 🔥 GLOBALGA BERAMIZ
-  window.firebase = {
-    database: () => ({ ref: FB.ref }) // minimal shim (yetarli)
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.appspot.com",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
   };
+
+  firebase.initializeApp(firebaseConfig);
 </script>
 
 
