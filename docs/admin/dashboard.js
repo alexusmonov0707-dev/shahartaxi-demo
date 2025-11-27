@@ -3,12 +3,20 @@ import { db, ref, get, onValue } from "./firebase.js";
 // ADMIN SESSION
 const adminSession = sessionStorage.getItem("admin");
 if (!adminSession) location.href = "./login.html";
-
 document.getElementById("adminName").textContent = adminSession;
 
 // CHART VARIABLES
 let adsChart = null;
 let popularChart = null;
+
+function normalizeTimestamp(ts) {
+    // Agar timestamp kelajak bo'lsa → uni hozirga tenglash
+    const now = Date.now();
+    if (ts > now) {
+        return now - 1000; // 1 sekund avval qilib qo'yamiz
+    }
+    return ts;
+}
 
 // LOAD STATS
 async function loadAdvancedStats() {
@@ -25,14 +33,16 @@ async function loadAdvancedStats() {
     ads.forEach(ad => {
         if (!ad.createdAt) return;
 
-        const diff = now - ad.createdAt;
+        const created = normalizeTimestamp(ad.createdAt);
+        const diff = now - created;
+
+        if (diff < 0) return; // noto'g'ri kelajak sanalar
+
         const dayIndex = Math.floor(diff / dayMS);
 
         if (dayIndex === 0) today++;
-        if (dayIndex < 7) {
-            week++;
-            weeklyData[6 - dayIndex] += 1;
-        }
+        if (dayIndex < 7) weeklyData[6 - dayIndex] += 1;
+        if (dayIndex < 7) week++;
         if (dayIndex < 30) month++;
     });
 
@@ -79,7 +89,7 @@ function drawAdsChart(data) {
             labels: ["6 kun", "5", "4", "3", "2", "1", "Bugun"],
             datasets: [{
                 label: "7 kunlik e’lonlar",
-                data: data,
+                data,
                 borderWidth: 2,
                 tension: 0.3
             }]
@@ -103,7 +113,6 @@ function drawPopularChart(labels, values) {
     });
 }
 
-// INIT
 async function init() {
     await loadAdvancedStats();
     realTimeMonitoring();
