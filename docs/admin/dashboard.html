@@ -1,50 +1,58 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="../dashboard.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="p-6">
+<body class="bg-gray-50 min-h-screen">
 
-    <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold">Admin Dashboard</h1>
-        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
-            Chiqish
-        </button>
+  <script>
+    const admin = sessionStorage.getItem("admin");
+    if (!admin) {
+       location.href = "./login.html";
+    }
+  </script>
+
+  <header class="bg-white shadow mb-6">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <h1 class="text-2xl font-semibold">Admin Dashboard</h1>
+      <div class="flex items-center gap-3">
+        <div id="adminName" class="text-sm text-gray-700"></div>
+        <button id="logoutBtn" class="px-3 py-2 rounded bg-red-600 text-white text-sm">Chiqish</button>
+      </div>
     </div>
+  </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <div class="bg-gray-100 p-6 rounded shadow text-center">
-            <h3 class="text-lg">Jami e’lonlar</h3>
-            <p id="totalAds" class="text-4xl font-bold mt-2">0</p>
-        </div>
+  <main class="max-w-6xl mx-auto p-4">
 
-        <div class="bg-gray-100 p-6 rounded shadow text-center">
-            <h3 class="text-lg">Jami foydalanuvchilar</h3>
-            <p id="totalUsers" class="text-4xl font-bold mt-2">0</p>
-        </div>
+    <!-- STATISTIKA -->
+    <section class="grid grid-cols-4 gap-4 mb-6">
+      <div class="bg-white p-4 rounded shadow">Bugun: <span id="statToday">—</span></div>
+      <div class="bg-white p-4 rounded shadow">7 kun: <span id="statWeek">—</span></div>
+      <div class="bg-white p-4 rounded shadow">1 oy: <span id="statMonth">—</span></div>
+      <div class="bg-white p-4 rounded shadow">Onlayn driv.: <span id="statOnlineDrivers">—</span></div>
+    </section>
 
-        <div class="bg-gray-100 p-6 rounded shadow text-center">
-            <h3 class="text-lg">Haydovchilar</h3>
-            <p id="totalDrivers" class="text-4xl font-bold mt-2">0</p>
-        </div>
-    </div>
+    <!-- ADS 7 KUNLIK GRAFIK -->
+    <section class="bg-white p-6 rounded shadow mb-6">
+      <h2 class="text-lg font-semibold mb-3">Oxirgi 7 kunlik e’lonlar statistikasi</h2>
+      <canvas id="adsChart" height="120"></canvas>
+    </section>
 
-    <h2 class="text-xl font-bold mb-2">So‘nggi 5 e’lon</h2>
-    <div id="lastAds" class="bg-gray-100 p-4 rounded mb-10"></div>
+    <!-- MASHHUR YO’NALISHLAR -->
+    <section class="bg-white p-6 rounded shadow mb-6">
+      <h2 class="text-lg font-semibold mb-3">Mashhur yo‘nalishlar</h2>
+      <canvas id="popularChart" height="120"></canvas>
+    </section>
 
-    <h2 class="text-xl font-bold mb-2">So‘nggi 5 foydalanuvchi</h2>
-    <div id="lastUsers" class="bg-gray-100 p-4 rounded"></div>
+  </main>
 
-    <!-- FIREBASE MODULE MODE → faqat yuklash uchun -->
-    <script type="module">
-        import "../firebase.js"; 
-        // firebase.js bajariladi → initializeApp → firebase.database() globalga tushadi
-    </script>
-
-    <!-- Dashboard js (oddiy script) -->
-    <script src="dashboard.js"></script>
+  <script type="module" src="./dashboard.js"></script>
 
 </body>
 </html>
