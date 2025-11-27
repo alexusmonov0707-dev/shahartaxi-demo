@@ -2,48 +2,44 @@
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
-  <title>Adminlar</title>
+  <title>Adminlar ro'yxati</title>
   <link rel="stylesheet" href="./users.css">
 </head>
 
 <body>
 
-<div class="container">
-  <h2>Adminlar ro'yxati</h2>
+  <div class="container">
+    <h2>Adminlar ro'yxati</h2>
 
-  <div class="filters">
-    <button class="btn export" onclick="location.href='admin-add.html'">Yangi admin qo'shish</button>
-    <button class="btn refresh" onclick="loadAdmins()">Yangilash</button>
+    <div class="filters">
+      <button class="btn export" onclick="location.href='admin-add.html'">Yangi admin qo'shish</button>
+      <button class="btn refresh" id="refreshBtn">Yangilash</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Ism / Email</th>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Amallar</th>
+        </tr>
+      </thead>
+      <tbody id="adminsTable"></tbody>
+    </table>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Ism / Email</th>
-        <th>Username</th>
-        <th>Role</th>
-        <th>Amallar</th>
-      </tr>
-    </thead>
-    <tbody id="adminsTable"></tbody>
-  </table>
-</div>
+  <script type="module">
+    import { adminGuard } from "./admin.js";
 
-<!-- FIREBASE GLOBAL -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    (async () => {
+      const admin = await adminGuard("superadmin");
+      if (!admin) return;
 
-<!-- FIREBASE CONFIG -->
-<script src="./firebase.js"></script>
-
-<!-- GUARD (module qoladi) -->
-<script type="module">
-  import { adminGuard } from "./admin.js";
-  adminGuard("superadmin");
-</script>
-
-<!-- GLOBAL ADMINS -->
-<script src="./admins.js"></script>
+      const m = await import("./admins.js");
+      m.initAdminsPage();
+    })();
+  </script>
 
 </body>
 </html>
