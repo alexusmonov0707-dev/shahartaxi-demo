@@ -1,12 +1,15 @@
-// users.js
-// To'liq: search + filters + client-side pagination (50/page) + export (SheetJS) + loader + modal + block/unblock/delete
-import { db, ref, get, update, remove } from "../libs/lib.js";
+// users.js (FINAL)
+// All-in-one: search + filters + client-side pagination (50/page) + export (SheetJS) + CSV + loader
+// + modal with Profile & Logs tabs + block/unblock/delete + admin_logs + manual + auto refresh
+
+import { db, ref, get, update, remove, push } from "../libs/lib.js";
 
 let usersCache = [];       // All users loaded from Firebase
 let filteredCache = [];    // After applying search & filters
 let currentPage = 1;
 const perPage = 50;        // As requested
 let totalPages = 1;
+let autoRefreshIntervalId = null;
 
 // ------------------ UTIL / UI ------------------
 function setTableLoading(text = "Yuklanmoqda...") {
@@ -21,6 +24,30 @@ function updatePageInfo() {
 function clampPage() {
     if (currentPage < 1) currentPage = 1;
     if (currentPage > totalPages) currentPage = totalPages;
+}
+
+function escapeHtml(str) {
+    if (typeof str !== "string") return str ?? "";
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// ------------------ ADMIN LOG (write) ------------------
+async function logAction(userId, action) {
+    try {
+        const logRef = ref(db, "admin_logs/" + userId);
+        await push(logRef, {
+            action,
+            time: Date.now(),
+            admin: "admin-panel" // replace with real admin id if available
+        });
+    } catch (err) {
+        console.error("logAction error:", err);
+    }
 }
 
 // ------------------ LOAD USERS ------------------
@@ -44,6 +71,7 @@ export async function loadUsers() {
             id,
             ...u,
             driverInfo: u.driverInfo ?? {},
+            profile: u.profile ?? {}
         }));
 
         // Default sort: newest first if createdAt exists, else by fullName
@@ -55,6 +83,7 @@ export async function loadUsers() {
         });
 
         // Initialize filters/search
+        currentPage = 1;
         applyFilters();
     } catch (err) {
         console.error("loadUsers error:", err);
@@ -87,7 +116,6 @@ function renderUsersPage() {
     for (const u of pageSlice) {
         const phone = u.phone ?? "-";
         const role = u.role ?? "user";
-        // region/district may be stored in profile or root; try both
         const region = u.region ?? (u.profile?.region ?? "-");
         const district = u.district ?? (u.profile?.district ?? "-");
 
@@ -105,7 +133,7 @@ function renderUsersPage() {
                 <td>${escapeHtml(u.fullName ?? "-")}</td>
                 <td>${escapeHtml(phone)}</td>
                 <td>${escapeHtml(region)} / ${escapeHtml(district)}</td>
-                <td><span class="badge ${role}">${escapeHtml(role)}</span></td>
+                <td><span class="badge ${escapeHtml(role)}">${escapeHtml(role)}</span></td>
                 <td>${status}</td>
                 <td>
                     ${
@@ -120,20 +148,8 @@ function renderUsersPage() {
     }
 }
 
-// Simple escape to avoid injecting HTML from DB fields
-function escapeHtml(str) {
-    if (typeof str !== "string") return str;
-    return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
 // ------------------ SEARCH & FILTERS ------------------
 window.searchUsers = function () {
-    // trigger filters pipeline
     currentPage = 1;
     applyFilters();
 };
@@ -183,7 +199,9 @@ window.applyFilters = function () {
         return true;
     });
 
-    // After filtering, render
+    // Reset page if needed
+    if (currentPage > Math.max(1, Math.ceil(filteredCache.length / perPage))) currentPage = 1;
+
     renderUsersPage();
 };
 
@@ -200,7 +218,48 @@ window.nextPage = function () {
     renderUsersPage();
 };
 
-// ------------------ MODAL ------------------
+// ------------------ MODAL + TABS ------------------
+window.openTab = function(tab) {
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".tabContent").forEach(c => c.classList.remove("active"));
+
+    if (tab === "profile") {
+        document.getElementById("tabProfile").classList.add("active");
+        document.getElementById("profileTab").classList.add("active");
+    } else {
+        document.getElementById("tabLogs").classList.add("active");
+        document.getElementById("logsTab").classList.add("active");
+    }
+};
+
+async function loadLogs(userId) {
+    const list = document.getElementById("logsList");
+    list.innerHTML = "<li>Yuklanmoqda...</li>";
+
+    try {
+        const snap = await get(ref(db, "admin_logs/" + userId));
+
+        if (!snap.exists()) {
+            list.innerHTML = "<li>Loglar yo‘q</li>";
+            return;
+        }
+
+        const logsObj = snap.val();
+        // convert to array and sort desc by time
+        const logs = Object.values(logsObj).sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
+
+        list.innerHTML = "";
+        logs.forEach(l => {
+            const date = l.time ? (new Date(l.time)).toLocaleString() : "";
+            const actor = l.admin ?? "admin";
+            list.innerHTML += `<li>${escapeHtml(date)} — ${escapeHtml(l.action)} (${escapeHtml(actor)})</li>`;
+        });
+    } catch (err) {
+        console.error("loadLogs error:", err);
+        list.innerHTML = "<li>Loglarni yuklashda xato</li>";
+    }
+}
+
 window.openModal = function (id) {
     const u = usersCache.find(x => x.id === id);
     if (!u) return;
@@ -228,8 +287,10 @@ window.openModal = function (id) {
 
     document.getElementById("m_balance").textContent = (u.balance ?? 0) + " so‘m";
 
-    // Show modal
+    // Show modal, open profile tab and load logs
     document.getElementById("modal").style.display = "flex";
+    openTab("profile");
+    loadLogs(id);
 };
 
 window.closeModal = function () {
@@ -253,9 +314,9 @@ window.blockUser = async function (id) {
     if (!confirm("Userni block qilamizmi?")) return;
     try {
         await update(ref(db, "users/" + id), { blocked: true });
-        // Update cache locally for snappy UI
         const u = usersCache.find(x => x.id === id);
         if (u) u.blocked = true;
+        await logAction(id, "blocked");
         applyFilters();
     } catch (err) {
         console.error("blockUser error:", err);
@@ -269,6 +330,7 @@ window.unblockUser = async function (id) {
         await update(ref(db, "users/" + id), { blocked: false });
         const u = usersCache.find(x => x.id === id);
         if (u) u.blocked = false;
+        await logAction(id, "unblocked");
         applyFilters();
     } catch (err) {
         console.error("unblockUser error:", err);
@@ -282,8 +344,8 @@ window.deleteUser = async function (id) {
     try {
         await remove(ref(db, "ads_by_user/" + id));
         await remove(ref(db, "users/" + id));
-        // Remove from local cache
         usersCache = usersCache.filter(x => x.id !== id);
+        await logAction(id, "deleted");
         applyFilters();
     } catch (err) {
         console.error("deleteUser error:", err);
@@ -298,7 +360,6 @@ window.exportExcel = function () {
         return;
     }
 
-    // Export currently filtered users (all pages)
     const rows = filteredCache.map(u => {
         const region = u.region ?? (u.profile?.region ?? "");
         const district = u.district ?? (u.profile?.district ?? "");
@@ -327,9 +388,69 @@ window.exportExcel = function () {
     XLSX.writeFile(workbook, `users-export-${now}.xlsx`);
 };
 
-// ------------------ INIT ------------------
-// Load users on script load
-loadUsers();
+// ------------------ EXPORT CSV ------------------
+window.exportCSV = function () {
+    if (!filteredCache.length) {
+        alert("Export uchun user topilmadi.");
+        return;
+    }
 
-// Expose loadUsers for potential manual refresh button in future
+    const rows = filteredCache.map(u => {
+        const region = u.region ?? (u.profile?.region ?? "");
+        const district = u.district ?? (u.profile?.district ?? "");
+        return [
+            u.id,
+            (u.fullName ?? "").replaceAll(",", " "),
+            (u.phone ?? "").replaceAll(",", " "),
+            (region ?? "").replaceAll(",", " "),
+            (district ?? "").replaceAll(",", " "),
+            u.role ?? "user",
+            (u.verified === true ? "yes" : (u.verified === "rejected" ? "rejected" : "no")),
+            u.balance ?? 0
+        ];
+    });
+
+    let csv = "id,fullName,phone,region,district,role,verified,balance\n";
+    rows.forEach(r => csv += r.join(",") + "\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "users-export.csv";
+    a.click();
+
+    URL.revokeObjectURL(url);
+};
+
+// ------------------ REFRESH (manual + auto) ------------------
+window.reloadUsers = function () {
+    loadUsers();
+};
+
+// start auto-refresh (60s) when script loads
+function startAutoRefresh() {
+    if (autoRefreshIntervalId) clearInterval(autoRefreshIntervalId);
+    autoRefreshIntervalId = setInterval(() => {
+        loadUsers();
+    }, 60000);
+}
+
+// stop auto-refresh if needed
+function stopAutoRefresh() {
+    if (autoRefreshIntervalId) {
+        clearInterval(autoRefreshIntervalId);
+        autoRefreshIntervalId = null;
+    }
+}
+
+// ------------------ INIT ------------------
+// Load users on script load and start auto-refresh
+loadUsers();
+startAutoRefresh();
+
+// Expose for debug / manual use
 window.reloadUsers = loadUsers;
+window.startAutoRefresh = startAutoRefresh;
+window.stopAutoRefresh = stopAutoRefresh;
