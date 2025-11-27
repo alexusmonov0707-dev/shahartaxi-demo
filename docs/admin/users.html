@@ -4,21 +4,16 @@
     <meta charset="UTF-8">
     <title>Foydalanuvchilar</title>
     <link rel="stylesheet" href="./users.css">
-
-    <!-- SheetJS for Excel Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
-
 <body>
 
 <div class="container">
 
     <h2>Foydalanuvchilar</h2>
 
-    <!-- FILTER PANEL -->
     <div class="filters">
         <input id="search" type="text" placeholder="Qidiruv..." oninput="searchUsers()">
-
         <select id="filterRole" onchange="applyFilters()">
             <option value="">Role (hammasi)</option>
             <option value="driver">Driver</option>
@@ -43,7 +38,6 @@
         <button class="btn export" onclick="exportCSV()">Export CSV</button>
     </div>
 
-    <!-- TABLE -->
     <table>
         <thead>
             <tr>
@@ -58,18 +52,18 @@
         <tbody id="usersTable"></tbody>
     </table>
 
-    <!-- PAGINATION -->
     <div class="pagination">
-        <button id="prevPage" onclick="prevPage()">⬅ Oldingi</button>
+        <button onclick="prevPage()">⬅ Oldingi</button>
         <span id="pageInfo">1 / 1</span>
-        <button id="nextPage" onclick="nextPage()">Keyingi ➡</button>
+        <button onclick="nextPage()">Keyingi ➡</button>
     </div>
 
 </div>
 
-<!-- MODAL -->
+<!-- ======================= MODAL ========================= -->
+
 <div id="modal" class="modal">
-    <div id="modalContent" class="modalContent">
+    <div class="modalContent" id="modalContent">
 
         <div class="modal-tabs">
             <button id="tabProfile" class="tab active" onclick="openTab('profile')">Profil</button>
@@ -78,8 +72,8 @@
 
         <!-- PROFILE TAB -->
         <div id="profileTab" class="tabContent active">
-            <h3 id="m_fullName"></h3>
 
+            <h3 id="m_fullName"></h3>
             <img id="m_avatar">
 
             <p><b>Telefon:</b> <span id="m_phone"></span></p>
@@ -93,20 +87,20 @@
 
             <p><b>Holati:</b> <span id="m_status"></span></p>
             <p><b>Balans:</b> <span id="m_balance"></span></p>
+
         </div>
 
-        <!-- LOGS TAB -->
+        <!-- LOGS TAB (hozircha bo‘sh, chunki permission error) -->
         <div id="logsTab" class="tabContent">
             <h3>User Logs</h3>
             <ul id="logsList"></ul>
         </div>
 
-        <button onclick="closeModal()" class="btn unblock modalClose">Yopish</button>
+        <button class="btn unblock modalClose" onclick="closeModal()">Yopish</button>
     </div>
 </div>
 
-
-<script type="module" src="./users.js"></script>
+<script src="./users.js" type="module"></script>
 
 </body>
 </html>
