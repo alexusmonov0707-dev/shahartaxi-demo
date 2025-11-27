@@ -1,13 +1,8 @@
-/* ads.js
-   Full-featured Ads admin script
-   - Works with global firebase (firebase.database())
-   - Real-time toggle (on/off)
-   - Filters: fromRegion, toRegion, fromDistrict, toDistrict, min/max price, seats, category, date range, userId
-   - Search (comment, region, district, userId)
-   - Pagination (pageSize selection)
-   - Sorting (date, price)
-   - CSV Export
-   - Loading skeleton
+/* ads.js — fixed & robust version
+   - Works with window.firebase (v8 compat), window.db, or global exported db
+   - Flattens both 1-level and 2-level ads structures
+   - Robust waitForFirebaseReady + better error handling
+   - Retains original features: realtime toggle, filters, sort, pagination, CSV export
 */
 
 // -------------------------------
@@ -23,8 +18,7 @@ function fmtDate(ts) {
 function safeNum(v, def = 0) { const n = Number(v); return isNaN(n) ? def : n; }
 
 // -------------------------------
-// DOM refs
-// -------------------------------
+// DOM refs (defensive: ensure elements exist)
 const searchInput = el('searchInput');
 const fromRegionFilter = el('fromRegionFilter');
 const toRegionFilter = el('toRegionFilter');
@@ -54,29 +48,55 @@ const loadingSkeleton = el('loadingSkeleton');
 const realtimeToggle = el('realtimeToggle');
 const btnExportCsv = el('btnExportCsv');
 
+// check DOM essentials
+if (!adsTableBody || !loadingSkeleton || !tableWrap) {
+  console.warn('ads.js: required DOM elements not found. Make sure ads.html contains expected IDs.');
+}
+
 // -------------------------------
 // State
 // -------------------------------
-let DB = null;                // firebase.database() instance
+let DB = null;                // firebase.database() instance (compat) or wrapper
 let ALL_ADS = [];             // array of { id, data }
 let FILTERED = [];            // after filter/search
 let currentPage = 1;
-let currentPageSize = Number(pageSize.value || 50);
+let currentPageSize = Number((pageSize && pageSize.value) || 50);
 let realtimeListenerAttached = false;
 let adsRef = null;
-let realtimeEnabled = realtimeToggle.checked;
+let realtimeEnabled = realtimeToggle ? realtimeToggle.checked : false;
 
 // -------------------------------
 // Wait for firebase global to be available
+// - supports: window.firebase (compat), window.db, global db
 // -------------------------------
 function waitForFirebaseReady(timeout = 7000) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     (function check() {
+      // 1) v8 compat: window.firebase && firebase.database is a function
       if (window.firebase && typeof window.firebase.database === 'function') {
+        try {
+          return resolve(window.firebase.database());
+        } catch (e) {
+          // continue to other options
+        }
+      }
+
+      // 2) window.db exported by other firebase wrapper
+      if (window.db && (typeof window.db.ref === 'function' || typeof window.db === 'object')) {
+        return resolve(window.db);
+      }
+
+      // 3) modular `db` exported to global (some setups may attach "db" variable)
+      if (window.hasOwnProperty('db') && window.db) {
+        return resolve(window.db);
+      }
+
+      // 4) try to detect firebase-app-compat namespace (some bundles expose firebase.default)
+      if (window.firebase && window.firebase.apps && window.firebase.apps.length && typeof window.firebase.database === 'function') {
         return resolve(window.firebase.database());
       }
-      if (window.db) { return resolve(window.db); } // if some wrapper exists
+
       if (Date.now() - start > timeout) {
         return reject(new Error('Firebase not ready'));
       }
@@ -93,18 +113,79 @@ waitForFirebaseReady().then(db => {
   init();
 }).catch(err => {
   console.error('Firebase not ready:', err);
-  loadingSkeleton.style.display = 'block';
-  tableWrap.classList.add('hidden');
-  alert('Firebase ulanmagan. Console da batafsil nosozlikni ko‘ring.');
+  if (loadingSkeleton) loadingSkeleton.style.display = 'block';
+  if (tableWrap) tableWrap.classList.add('hidden');
+  // Do not spam user with alert in production; keep console log visible.
 });
+
+// -------------------------------
+// Helper: flatten snapshot into array of { id, data } supporting 1- or 2-level
+// If snapshot is at /ads and structure is either:
+// - ads -> adId -> adData
+// - ads -> categoryId -> adId -> adData
+// This will return a flat array of entries ({id, data})
+// -------------------------------
+function flattenAdsSnapshot(snapshot) {
+  const results = [];
+  if (!snapshot) return results;
+
+  // If snapshot is a DataSnapshot (Firebase), we can iterate .forEach
+  try {
+    snapshot.forEach(child => {
+      const childVal = child.val ? child.val() : child; // if child is object
+      const childKey = child.key || null;
+
+      // if child's value looks like an ad (has createdAt or fromRegion), treat as ad
+      if (childVal && (childVal.createdAt || childVal.fromRegion || childVal.toRegion || childVal.price)) {
+        results.push({ id: childKey, data: childVal });
+      } else {
+        // Otherwise, treat child as category/group and iterate its children
+        // (supports 2-level structure)
+        if (child.forEach) {
+          child.forEach(inner => {
+            const innerVal = inner.val ? inner.val() : inner;
+            const innerKey = inner.key || null;
+            if (innerVal) {
+              results.push({ id: innerKey, data: innerVal });
+            }
+          });
+        } else if (typeof childVal === 'object') {
+          // fallback: iterate object keys
+          Object.entries(childVal).forEach(([k, v]) => {
+            results.push({ id: k, data: v });
+          });
+        }
+      }
+    });
+  } catch (e) {
+    // If snapshot is plain object (not DataSnapshot)
+    const obj = snapshot.val ? snapshot.val() : snapshot;
+    if (obj && typeof obj === 'object') {
+      Object.entries(obj).forEach(([k, v]) => {
+        // if v looks like nested map, flatten further
+        if (v && typeof v === 'object' && (v.createdAt || v.fromRegion || v.toRegion || v.price)) {
+          results.push({ id: k, data: v });
+        } else if (v && typeof v === 'object') {
+          Object.entries(v).forEach(([k2, v2]) => {
+            results.push({ id: k2, data: v2 });
+          });
+        }
+      });
+    }
+  }
+
+  return results;
+}
 
 // -------------------------------
 // Init UI interactions & load data
 // -------------------------------
 function init() {
-  // hide skeleton, show table when data arrives
-  loadingSkeleton.style.display = 'block';
-  tableWrap.classList.add('hidden');
+  if (loadingSkeleton) { loadingSkeleton.style.display = 'block'; }
+  if (tableWrap) { tableWrap.classList.add('hidden'); }
+
+  // default page size
+  currentPageSize = Number((pageSize && pageSize.value) || currentPageSize);
 
   // Live listeners
   if (realtimeEnabled) {
@@ -113,47 +194,20 @@ function init() {
     loadOnce();
   }
 
-  // events
-  applyFiltersBtn.addEventListener('click', () => {
-    applyFilters();
-  });
-
-  resetFiltersBtn.addEventListener('click', () => {
-    resetFilters();
-  });
-
-  searchInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') applyFilters();
-  });
-
-  pageSize.addEventListener('change', () => {
-    currentPageSize = Number(pageSize.value);
-    currentPage = 1;
-    renderTable();
-  });
-
-  prevPageBtn.addEventListener('click', () => {
-    if (currentPage > 1) { currentPage--; renderTable(); }
-  });
-
-  nextPageBtn.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(FILTERED.length / currentPageSize));
-    if (currentPage < totalPages) { currentPage++; renderTable(); }
-  });
-
-  sortBy.addEventListener('change', () => {
-    applyFilters(); // re-sort after filter
-  });
-
-  realtimeToggle.addEventListener('change', (e) => {
+  // events (safe attach)
+  if (applyFiltersBtn) applyFiltersBtn.addEventListener('click', () => applyFilters());
+  if (resetFiltersBtn) resetFiltersBtn.addEventListener('click', () => resetFilters());
+  if (searchInput) searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyFilters(); });
+  if (pageSize) pageSize.addEventListener('change', () => { currentPageSize = Number(pageSize.value); currentPage = 1; renderTable(); });
+  if (prevPageBtn) prevPageBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderTable(); }});
+  if (nextPageBtn) nextPageBtn.addEventListener('click', () => { const totalPages = Math.max(1, Math.ceil(FILTERED.length / currentPageSize)); if (currentPage < totalPages) { currentPage++; renderTable(); }});
+  if (sortBy) sortBy.addEventListener('change', () => applyFilters());
+  if (realtimeToggle) realtimeToggle.addEventListener('change', (e) => {
     realtimeEnabled = e.target.checked;
     if (realtimeEnabled) attachRealtime();
     else detachRealtimeAndLoadOnce();
   });
-
-  btnExportCsv.addEventListener('click', exportCSV);
-
-  // initial UI population will be done after first data load
+  if (btnExportCsv) btnExportCsv.addEventListener('click', exportCSV);
 }
 
 // -------------------------------
@@ -162,28 +216,40 @@ function init() {
 function attachRealtime() {
   if (!DB) return;
   if (realtimeListenerAttached) return;
-  // reference to 'ads' root
-  adsRef = DB.ref('ads');
-  // on value will give entire snapshot (since structure is adId -> data)
+
+  // DB might be firebase.database() (compat) or a wrapper with ref()
+  try {
+    adsRef = (typeof DB.ref === 'function') ? DB.ref('ads') : DB.ref && DB.ref('ads');
+  } catch (e) {
+    // some wrappers provide DB as object but usage differs; try window.firebase
+    if (window.firebase && typeof window.firebase.database === 'function') {
+      adsRef = window.firebase.database().ref('ads');
+    }
+  }
+
+  if (!adsRef || typeof adsRef.on !== 'function') {
+    console.error('attachRealtime: adsRef not available or .on not function', adsRef);
+    // fallback to loadOnce
+    loadOnce();
+    return;
+  }
+
   adsRef.on('value', snapshot => {
-    ALL_ADS = [];
-    snapshot.forEach(child => {
-      const id = child.key;
-      const data = child.val();
-      // normalize category default
-      if (!data.category) data.category = data.type || 'taxi';
-      ALL_ADS.push({ id, data });
+    ALL_ADS = flattenAdsSnapshot(snapshot);
+    // normalize category default
+    ALL_ADS.forEach(item => {
+      if (!item.data.category) item.data.category = item.data.type || 'taxi';
     });
-    // after update, hide skeleton
-    loadingSkeleton.style.display = 'none';
-    tableWrap.classList.remove('hidden');
-    // fill filter selects dynamically
+
+    if (loadingSkeleton) loadingSkeleton.style.display = 'none';
+    if (tableWrap) tableWrap.classList.remove('hidden');
+
     fillFilterOptions();
-    // apply current filters (keeps pagination)
     applyFilters(false);
   }, err => {
     console.error('adsRef.on error', err);
   });
+
   realtimeListenerAttached = true;
 }
 
@@ -192,11 +258,7 @@ function attachRealtime() {
 // -------------------------------
 function detachRealtimeAndLoadOnce() {
   if (adsRef && realtimeListenerAttached) {
-    try {
-      adsRef.off();
-    } catch (e) {
-      console.warn('adsRef.off error', e);
-    }
+    try { adsRef.off(); } catch (e) { console.warn('adsRef.off error', e); }
   }
   realtimeListenerAttached = false;
   loadOnce();
@@ -207,23 +269,37 @@ function detachRealtimeAndLoadOnce() {
 // -------------------------------
 function loadOnce() {
   if (!DB) return;
-  loadingSkeleton.style.display = 'block';
-  tableWrap.classList.add('hidden');
-  DB.ref('ads').once('value').then(snapshot => {
-    ALL_ADS = [];
-    snapshot.forEach(child => {
-      const id = child.key;
-      const data = child.val();
-      if (!data.category) data.category = data.type || 'taxi';
-      ALL_ADS.push({ id, data });
-    });
-    loadingSkeleton.style.display = 'none';
-    tableWrap.classList.remove('hidden');
+  if (loadingSkeleton) loadingSkeleton.style.display = 'block';
+  if (tableWrap) tableWrap.classList.add('hidden');
+
+  // DB.ref('ads').once('value') style
+  let onceRef;
+  try {
+    onceRef = (typeof DB.ref === 'function') ? DB.ref('ads') : DB.ref && DB.ref('ads');
+  } catch (e) {
+    if (window.firebase && typeof window.firebase.database === 'function') {
+      onceRef = window.firebase.database().ref('ads');
+    }
+  }
+
+  if (!onceRef || typeof onceRef.once !== 'function') {
+    console.error('loadOnce: cannot read DB.ref("ads")');
+    if (loadingSkeleton) loadingSkeleton.style.display = 'none';
+    return;
+  }
+
+  onceRef.once('value').then(snapshot => {
+    ALL_ADS = flattenAdsSnapshot(snapshot);
+    ALL_ADS.forEach(item => { if (!item.data.category) item.data.category = item.data.type || 'taxi'; });
+
+    if (loadingSkeleton) loadingSkeleton.style.display = 'none';
+    if (tableWrap) tableWrap.classList.remove('hidden');
+
     fillFilterOptions();
     applyFilters(false);
   }).catch(err => {
     console.error('loadOnce error', err);
-    loadingSkeleton.style.display = 'none';
+    if (loadingSkeleton) loadingSkeleton.style.display = 'none';
   });
 }
 
@@ -231,7 +307,8 @@ function loadOnce() {
 // Fill filter select options dynamically from ALL_ADS
 // -------------------------------
 function fillFilterOptions() {
-  // sets
+  if (!fromRegionFilter || !toRegionFilter || !fromDistrictFilter || !toDistrictFilter || !categoryFilter) return;
+
   const fromRegSet = new Set();
   const toRegSet = new Set();
   const fromDistSet = new Set();
@@ -239,6 +316,7 @@ function fillFilterOptions() {
   const catSet = new Set();
 
   ALL_ADS.forEach(({ id, data }) => {
+    if (!data) return;
     if (data.fromRegion) fromRegSet.add(data.fromRegion);
     if (data.toRegion) toRegSet.add(data.toRegion);
     if (data.fromDistrict) fromDistSet.add(data.fromDistrict);
@@ -246,10 +324,9 @@ function fillFilterOptions() {
     if (data.category) catSet.add(data.category);
   });
 
-  // helper to add options if not already
   function populate(selectEl, set) {
+    if (!selectEl) return;
     const cur = selectEl.value || '';
-    // clear and re-add default
     selectEl.innerHTML = '<option value="">Hammasi</option>';
     Array.from(set).sort().forEach(v => {
       const opt = document.createElement('option');
@@ -257,7 +334,6 @@ function fillFilterOptions() {
       opt.innerText = v;
       selectEl.appendChild(opt);
     });
-    // try restore selection
     selectEl.value = cur;
   }
 
@@ -276,7 +352,6 @@ function fillFilterOptions() {
     o.innerText = c.charAt(0).toUpperCase() + c.slice(1);
     categoryFilter.appendChild(o);
   });
-  // add discovered categories
   Array.from(catSet).sort().forEach(c => {
     if (!defaultCats.includes(c)) {
       const o = document.createElement('option');
@@ -285,41 +360,34 @@ function fillFilterOptions() {
       categoryFilter.appendChild(o);
     }
   });
-  categoryFilter.value = curCat;
+  try { categoryFilter.value = curCat; } catch(e){}
 }
 
 // -------------------------------
 // Apply filters & search
-// if resetPage true -> set page to 1
 // -------------------------------
 function applyFilters(resetPage = true) {
-  // pull filter values
-  const q = (searchInput.value || '').trim().toLowerCase();
-  const fr = (fromRegionFilter.value || '').trim().toLowerCase();
-  const tr = (toRegionFilter.value || '').trim().toLowerCase();
-  const fd = (fromDistrictFilter.value || '').trim().toLowerCase();
-  const td = (toDistrictFilter.value || '').trim().toLowerCase();
-  const cat = (categoryFilter.value || '').trim().toLowerCase();
-  const userIdVal = (userIdFilter.value || '').trim().toLowerCase();
+  if (!ALL_ADS) ALL_ADS = [];
 
-  const minP = safeNum(minPrice.value, 0);
-  const maxP = safeNum(maxPrice.value, Number.MAX_SAFE_INTEGER);
-  const seats = seatsFilter.value ? Number(seatsFilter.value) : 0;
+  const q = (searchInput && searchInput.value || '').trim().toLowerCase();
+  const fr = (fromRegionFilter && fromRegionFilter.value || '').trim().toLowerCase();
+  const tr = (toRegionFilter && toRegionFilter.value || '').trim().toLowerCase();
+  const fd = (fromDistrictFilter && fromDistrictFilter.value || '').trim().toLowerCase();
+  const td = (toDistrictFilter && toDistrictFilter.value || '').trim().toLowerCase();
+  const cat = (categoryFilter && categoryFilter.value || '').trim().toLowerCase();
+  const userIdVal = (userIdFilter && userIdFilter.value || '').trim().toLowerCase();
 
-  // date range handling
+  const minP = safeNum(minPrice && minPrice.value, 0);
+  const maxP = safeNum(maxPrice && maxPrice.value, Number.MAX_SAFE_INTEGER);
+  const seats = seatsFilter && seatsFilter.value ? Number(seatsFilter.value) : 0;
+
   let dateStart = null, dateEnd = null;
-  if (dateFrom.value) {
-    dateStart = new Date(dateFrom.value + 'T00:00:00').getTime();
-  }
-  if (dateTo.value) {
-    dateEnd = new Date(dateTo.value + 'T23:59:59').getTime();
-  }
+  if (dateFrom && dateFrom.value) dateStart = new Date(dateFrom.value + 'T00:00:00').getTime();
+  if (dateTo && dateTo.value) dateEnd = new Date(dateTo.value + 'T23:59:59').getTime();
 
-  // Filter
   FILTERED = ALL_ADS.filter(item => {
     const d = item.data || {};
 
-    // search across multiple fields
     if (q) {
       const qFields = [
         d.comment || '',
@@ -331,11 +399,11 @@ function applyFilters(resetPage = true) {
       if (!qFields.includes(q)) return false;
     }
 
-    if (fr && !( (d.fromRegion || '').toLowerCase().includes(fr) )) return false;
-    if (tr && !( (d.toRegion || '').toLowerCase().includes(tr) )) return false;
-    if (fd && !( (d.fromDistrict || '').toLowerCase().includes(fd) )) return false;
-    if (td && !( (d.toDistrict || '').toLowerCase().includes(td) )) return false;
-    if (cat && !( (d.category || d.type || 'taxi').toLowerCase() === cat )) return false;
+    if (fr && !((d.fromRegion || '').toLowerCase().includes(fr))) return false;
+    if (tr && !((d.toRegion || '').toLowerCase().includes(tr))) return false;
+    if (fd && !((d.fromDistrict || '').toLowerCase().includes(fd))) return false;
+    if (td && !((d.toDistrict || '').toLowerCase().includes(td))) return false;
+    if (cat && !(((d.category || d.type || 'taxi').toLowerCase()) === cat)) return false;
     if (userIdVal && !((d.userId || '').toLowerCase().includes(userIdVal))) return false;
 
     const priceVal = safeNum(d.price, 0);
@@ -354,7 +422,7 @@ function applyFilters(resetPage = true) {
     return true;
   });
 
-  // sort
+  // sort then render
   sortFiltered();
 
   if (resetPage) currentPage = 1;
@@ -362,11 +430,11 @@ function applyFilters(resetPage = true) {
 }
 
 // -------------------------------
-// Sort FILTERED by sortBy control
+// Sort FILTERED
 // -------------------------------
 function sortFiltered() {
-  const val = sortBy.value || 'createdAt_desc';
-  const [field, dir] = val.split('_'); // e.g., createdAt_desc
+  const val = (sortBy && sortBy.value) || 'createdAt_desc';
+  const [field, dir] = val.split('_');
   FILTERED.sort((a, b) => {
     const A = a.data[field];
     const B = b.data[field];
@@ -374,7 +442,6 @@ function sortFiltered() {
     const nb = safeNum(B, B ? 0 : 0);
 
     if (field === 'price' || field === 'seats' || field === 'createdAt') {
-      // numeric
       if (dir === 'asc') return na - nb;
       return nb - na;
     } else {
@@ -387,10 +454,10 @@ function sortFiltered() {
 }
 
 // -------------------------------
-// Render table using pagination
+// Render with pagination
 // -------------------------------
 function renderTable() {
-  currentPageSize = Number(pageSize.value || currentPageSize);
+  currentPageSize = Number((pageSize && pageSize.value) || currentPageSize);
   const total = FILTERED.length;
   const totalPages = Math.max(1, Math.ceil(total / currentPageSize));
   if (currentPage > totalPages) currentPage = totalPages;
@@ -399,7 +466,8 @@ function renderTable() {
   const end = start + currentPageSize;
   const pageSlice = FILTERED.slice(start, end);
 
-  // clear table
+  if (!adsTableBody) return;
+
   adsTableBody.innerHTML = '';
 
   if (pageSlice.length === 0) {
@@ -430,11 +498,10 @@ function renderTable() {
           <button class="btn btn-delete" data-id="${item.id}">O'chirish</button>
         </td>
       `;
-      // attach action listeners
       adsTableBody.appendChild(tr);
     });
 
-    // delegate actions
+    // attach actions (delegation safer but keep original style)
     adsTableBody.querySelectorAll('.btn-view').forEach(btn => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
@@ -449,16 +516,15 @@ function renderTable() {
     });
   }
 
-  // update pagination info
-  paginationInfo.innerText = `${currentPage} / ${totalPages} sahifa — ${total} e'lon`;
+  if (paginationInfo) paginationInfo.innerText = `${currentPage} / ${totalPages} sahifa — ${total} e'lon`;
 
-  // show table
-  loadingSkeleton.style.display = 'none';
-  tableWrap.classList.remove('hidden');
+  if (loadingSkeleton) loadingSkeleton.style.display = 'none';
+  if (tableWrap) tableWrap.classList.remove('hidden');
 }
 
 // -------------------------------
-// Escape HTML (very small)
+// Escape HTML
+// -------------------------------
 function escapeHtml(str) {
   if (!str && str !== 0) return '';
   return String(str)
@@ -470,7 +536,8 @@ function escapeHtml(str) {
 }
 
 // -------------------------------
-// View Ad - modal (simple alert for now; can be enhanced)
+// View Ad
+// -------------------------------
 function viewAd(id) {
   const item = ALL_ADS.find(a => a.id === id);
   if (!item) return alert('Ad topilmadi');
@@ -490,13 +557,43 @@ function viewAd(id) {
 }
 
 // -------------------------------
-// Delete Ad - confirm & remove from DB
+// Delete Ad
+// -------------------------------
 function deleteAd(id) {
   if (!confirm('Haqiqatan ham bu e\'lonni o\'chirmoqchimisiz?')) return;
   if (!DB) return alert('DB yo\'q');
-  DB.ref('ads').child(id).remove().then(() => {
-    // removed -> realtime will update list or we can remove locally
-    // remove locally just in case realtime is off
+
+  // remove: DB.ref('ads').child(id).remove()
+  let targetRef;
+  try {
+    if (typeof DB.ref === 'function') targetRef = DB.ref('ads').child(id);
+    else if (window.firebase && typeof window.firebase.database === 'function') targetRef = window.firebase.database().ref('ads').child(id);
+  } catch (e) { targetRef = null; }
+
+  if (!targetRef || typeof targetRef.remove !== 'function') {
+    // fallback: try to remove in nested categories (iterate)
+    // try to find and remove under correct parent
+    // This fallback uses once->iterate and remove child when found
+    try {
+      const rootRef = (typeof DB.ref === 'function') ? DB.ref('ads') : (window.firebase && window.firebase.database && window.firebase.database().ref('ads'));
+      if (!rootRef) throw new Error('No root ref for delete');
+      rootRef.once('value').then(snap => {
+        snap.forEach(cat => {
+          cat.forEach(adSnap => {
+            if (adSnap.key === id) {
+              adSnap.ref.remove().then(() => { ALL_ADS = ALL_ADS.filter(a => a.id !== id); applyFilters(); }).catch(err => { console.error('Delete nested error', err); alert('O\'chirishda xato'); });
+            }
+          });
+        });
+      });
+    } catch (e) {
+      console.error('Delete fallback error', e);
+      return alert('O\'chirishda xato: DB reference topilmadi');
+    }
+    return;
+  }
+
+  targetRef.remove().then(() => {
     ALL_ADS = ALL_ADS.filter(a => a.id !== id);
     applyFilters();
   }).catch(err => {
@@ -507,31 +604,29 @@ function deleteAd(id) {
 
 // -------------------------------
 // Reset filters
+// -------------------------------
 function resetFilters() {
-  searchInput.value = '';
-  fromRegionFilter.value = '';
-  toRegionFilter.value = '';
-  fromDistrictFilter.value = '';
-  toDistrictFilter.value = '';
-  minPrice.value = '';
-  maxPrice.value = '';
-  seatsFilter.value = '';
-  categoryFilter.value = '';
-  dateFrom.value = '';
-  dateTo.value = '';
-  userIdFilter.value = '';
+  if (searchInput) searchInput.value = '';
+  if (fromRegionFilter) fromRegionFilter.value = '';
+  if (toRegionFilter) toRegionFilter.value = '';
+  if (fromDistrictFilter) fromDistrictFilter.value = '';
+  if (toDistrictFilter) toDistrictFilter.value = '';
+  if (minPrice) minPrice.value = '';
+  if (maxPrice) maxPrice.value = '';
+  if (seatsFilter) seatsFilter.value = '';
+  if (categoryFilter) categoryFilter.value = '';
+  if (dateFrom) dateFrom.value = '';
+  if (dateTo) dateTo.value = '';
+  if (userIdFilter) userIdFilter.value = '';
   applyFilters();
 }
 
 // -------------------------------
-// CSV Export for current FILTERED (all pages or current page? we'll export ALL filtered items)
+// CSV Export
 // -------------------------------
 function exportCSV() {
-  if (!FILTERED || FILTERED.length === 0) {
-    return alert('Eksport uchun hech narsa topilmadi.');
-  }
+  if (!FILTERED || FILTERED.length === 0) { return alert('Eksport uchun hech narsa topilmadi.'); }
 
-  // Prepare CSV headers
   const rows = [];
   const header = ['id','userId','category','fromRegion','fromDistrict','toRegion','toDistrict','seats','price','departureTime','createdAt','comment'];
   rows.push(header.join(','));
@@ -576,10 +671,6 @@ function csvSafe(value) {
   }
   return s;
 }
-
-// -------------------------------
-// Utilities: detach listener and load once when toggling realtime off
-// Already handled in toggle event above via detachRealtimeAndLoadOnce()
 
 // -------------------------------
 // Final note: initial render will be triggered by loadOnce or real-time handler
