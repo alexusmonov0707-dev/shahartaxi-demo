@@ -1,52 +1,35 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <title>Adminlar ro'yxati</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="stylesheet" href="./users.css" />
+  <meta charset="UTF-8">
+  <title>Yangi Admin qo'shish</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="./users.css">
 </head>
 <body>
 
-  <div class="container">
-    <h2>Adminlar ro'yxati</h2>
+<div class="form-container">
+  <h2>Yangi Admin qo‘shish</h2>
 
-    <div class="filters" style="margin-bottom:18px;">
-      <button class="btn export" onclick="location.href='admin-add.html'">Yangi admin qo'shish</button>
-      <button class="btn refresh" id="refreshBtn">Yangilash</button>
-    </div>
+  <input type="text" id="fullName" placeholder="To‘liq ism" />
+  <input type="text" id="username" placeholder="Username" />
+  <input type="email" id="email" placeholder="Email" />
+  <input type="text" id="password" placeholder="Parol" />
 
-    <table>
-      <thead>
-        <tr>
-          <th>Ism / Email</th>
-          <th>Username</th>
-          <th>Role</th>
-          <th>Amallar</th>
-        </tr>
-      </thead>
-      <tbody id="adminsTable"></tbody>
-    </table>
-  </div>
+  <select id="role">
+    <option value="admin">admin</option>
+    <option value="superadmin">superadmin</option>
+  </select>
 
-  <!-- Admin guard (module import) - mavjud admin.js ga mos -->
-  <script type="module">
-    import { adminGuard } from "./admin.js";
+  <button id="addBtn" class="btn export">Qo‘shish</button>
+  <button onclick="location.href='admins.html'" class="btn back">Orqaga</button>
+</div>
 
-    (async () => {
-      // faqat superadmin kirishi kerak
-      const admin = await adminGuard("superadmin");
-      if (!admin) return;
+<script type="module">
+  import { addAdmin } from "./admin-add.js";
 
-      // module sifatida admins.js yuklaymiz va ishga tushiramiz
-      const m = await import("./admins.js");
-      if (m && typeof m.initAdminsPage === "function") {
-        m.initAdminsPage();
-      } else {
-        console.error("admins module yuklanmadi yoki initAdminsPage mavjud emas");
-      }
-    })();
-  </script>
+  document.getElementById("addBtn").addEventListener("click", addAdmin);
+</script>
 
 </body>
 </html>
