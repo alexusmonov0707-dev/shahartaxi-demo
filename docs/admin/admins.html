@@ -29,18 +29,14 @@
   </table>
 </div>
 
-<!-- 1) avval guard -->
+<!-- 1) Guard -->
 <script type="module">
 import { adminGuard } from "./admin.js";
-
-(async () => {
-  const admin = await adminGuard("superadmin");
-  if (!admin) return;
-})();
+adminGuard("superadmin"); // superadmin bo'lmasa kirolmaydi
 </script>
 
-<!-- 2) keyin admins.js TO‘G‘RIDAN yuklanadi -->
-<script src="./admins.js" type="module"></script>
+<!-- 2) admins.js -> GLOBAL, MODUL EMAS -->
+<script src="./admins.js"></script>
 
 </body>
 </html>
