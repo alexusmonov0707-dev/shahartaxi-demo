@@ -1,6 +1,3 @@
-const adminSession = sessionStorage.getItem("admin");
-if (!adminSession) location.href = "./login.html";
-
 import { db, ref, get, onValue } from "./firebase.js";
 
 const adminSession = sessionStorage.getItem("admin");
@@ -8,26 +5,25 @@ if (!adminSession) location.href = "./login.html";
 
 document.getElementById("adminName").textContent = adminSession;
 
+// CHART VARIABLES
 let adsChart = null;
 let popularChart = null;
 
-// ADVANCED STATS
+// LOAD STATS
 async function loadAdvancedStats() {
     const snap = await get(ref(db, "ads"));
     if (!snap.exists()) return;
 
     const ads = Object.values(snap.val());
-
     const now = Date.now();
     const dayMS = 24 * 60 * 60 * 1000;
 
-    let today = 0;
-    let week = 0;
-    let month = 0;
+    let today = 0, week = 0, month = 0;
     let weeklyData = [0,0,0,0,0,0,0];
 
     ads.forEach(ad => {
         if (!ad.createdAt) return;
+
         const diff = now - ad.createdAt;
         const dayIndex = Math.floor(diff / dayMS);
 
@@ -58,7 +54,7 @@ function extractPopularRoutes(ads) {
     });
 
     const sorted = Object.entries(map)
-        .sort((a, b) => b[1] - a[1])
+        .sort((a,b) => b[1]-a[1])
         .slice(0, 7);
 
     drawPopularChart(sorted.map(v => v[0]), sorted.map(v => v[1]));
@@ -67,12 +63,12 @@ function extractPopularRoutes(ads) {
 // REAL-TIME ONLINE DRIVERS
 function realTimeMonitoring() {
     onValue(ref(db, "online/drivers"), snap => {
-        const count = snap.exists() ? Object.keys(snap.val()).length : 0;
-        document.getElementById("statOnlineDrivers").textContent = count;
+        const val = snap.exists() ? Object.keys(snap.val()).length : 0;
+        document.getElementById("statOnlineDrivers").textContent = val;
     });
 }
 
-// CHART: 7 DAY ADS
+// CHARTS
 function drawAdsChart(data) {
     const ctx = document.getElementById("adsChart");
     adsChart?.destroy();
@@ -82,7 +78,7 @@ function drawAdsChart(data) {
             labels: ["6 kun", "5", "4", "3", "2", "1", "Bugun"],
             datasets: [{
                 label: "7 kunlik e’lonlar",
-                data,
+                data: data,
                 borderWidth: 2,
                 tension: 0.3
             }]
@@ -90,14 +86,13 @@ function drawAdsChart(data) {
     });
 }
 
-// CHART: POPULAR ROUTES
 function drawPopularChart(labels, values) {
     const ctx = document.getElementById("popularChart");
     popularChart?.destroy();
     popularChart = new Chart(ctx, {
         type: "bar",
         data: {
-            labels,
+            labels: labels,
             datasets: [{
                 label: "Mashhur yo‘nalishlar",
                 data: values,
@@ -107,16 +102,14 @@ function drawPopularChart(labels, values) {
     });
 }
 
-async function initDashboard() {
+// INIT
+async function init() {
     await loadAdvancedStats();
     realTimeMonitoring();
 }
-initDashboard();
+init();
 
-
-// ===========================
-//          LOGOUT
-// ===========================
+// LOGOUT
 document.getElementById("logoutBtn").onclick = () => {
     sessionStorage.removeItem("admin");
     location.href = "./login.html";
