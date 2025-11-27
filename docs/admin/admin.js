@@ -1,69 +1,106 @@
-// admin.js — yangilangan
-import { db, ref, get, child } from "../libs/lib.js"; // agar lib.js boshqa joyda bo'lsa pathni moslang
+// =====================
+//  ADMIN AUTH SYSTEM
+// =====================
 
-async function loginAdmin() {
-    const login = document.getElementById("login").value.trim();
-    const pass = document.getElementById("pass").value.trim();
-    const error = document.getElementById("error");
+import { db } from "./firebase.js";
+import {
+    ref,
+    get,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-    error.textContent = "";
 
-    if (!login || !pass) {
-        error.textContent = "Login va parolni kiriting!";
-        return;
-    }
-
+// ===========================================
+// LOGIN – username + password ni tekshiradi
+// ===========================================
+export async function loginAdmin(username, password) {
     try {
-        // 1) Avvalo to'g'ridan-to'g'ri node (admins/<login>) ga qaraymiz
-        const snap = await get(ref(db, "admins/" + login));
-        if (snap.exists()) {
-            const admin = snap.val();
-            // Password raqam yoki string bo'lishi mumkin — stringga aylantirib tekshir
-            if (String(admin.password) !== pass) {
-                error.textContent = "Login yoki parol noto‘g‘ri!";
-                console.warn("Admin node topildi, lekin parol mos emas:", admin);
-                return;
-            }
+        const adminsRef = ref(db, "admins");
+        const snap = await get(adminsRef);
 
-            // muvaffaqiyat
-            sessionStorage.setItem("admin", login);
-            location.href = "./dashboard.html";
-            return;
+        if (!snap.exists()) {
+            return { ok: false, error: "Adminlar mavjud emas!" };
         }
 
-        // 2) Agar admins/<login> topilmasa — barcha admins ichida username yoki email bilan qidiruv (fallback)
-        const allSnap = await get(ref(db, "admins"));
-        if (allSnap.exists()) {
-            const list = allSnap.val();
-            // list: { key1: { username: 'admin001', password: 123456, ... }, ... }
-            for (const key of Object.keys(list)) {
-                const a = list[key];
-                // qidiruvni kengaytiramiz: match username yoki email yoki kalit bilan
-                if ((a.username && a.username === login) ||
-                    (a.email && a.email === login) ||
-                    key === login) {
-                    // topildi — parolni tekshir
-                    if (String(a.password) === pass) {
-                        sessionStorage.setItem("admin", key);
-                        location.href = "./dashboard.html";
-                        return;
-                    } else {
-                        error.textContent = "Login yoki parol noto‘g‘ri!";
-                        console.warn("Admin topildi (fallback), lekin parol mos emas:", key, a);
-                        return;
-                    }
-                }
+        const admins = snap.val();
+
+        // ADMIN QIDIRISH
+        let foundAdmin = null;
+        for (let key in admins) {
+            if (
+                admins[key].username === username &&
+                admins[key].password === password
+            ) {
+                foundAdmin = { id: key, ...admins[key] };
+                break;
             }
         }
 
-        // hammasi sinab ko'rildi — topilmadi
-        error.textContent = "Bunday admin topilmadi!";
-        console.warn("Admin topilmadi. Kiritilgan login:", login);
+        if (!foundAdmin) {
+            return { ok: false, error: "Login yoki parol noto‘g‘ri!" };
+        }
 
-    } catch (err) {
-        console.error("Server xatosi:", err);
-        error.textContent = "Server xatosi!";
+        // SESSION SAQLAYMIZ
+        sessionStorage.setItem("admin", foundAdmin.id);
+
+        return { ok: true, admin: foundAdmin };
+    }
+    catch (err) {
+        return { ok: false, error: err.message };
     }
 }
 
-window.loginAdmin = loginAdmin;
+
+// ===========================================
+// ADMIN INFO – sessiondagi admin ID orqali
+// ===========================================
+export async function getCurrentAdmin() {
+    const adminId = sessionStorage.getItem("admin");
+    if (!adminId) return null;
+
+    const snap = await get(ref(db, "admins/" + adminId));
+    if (!snap.exists()) return null;
+
+    return { id: adminId, ...snap.val() };
+}
+
+
+// ===========================================
+// ADMIN GUARD — sahifaga kirishni himoyalash
+// ===========================================
+export async function adminGuard(requiredRole = null) {
+    const adminId = sessionStorage.getItem("admin");
+
+    // SESSION YO'Q → LOGIN GA TASHLAYMIZ
+    if (!adminId) {
+        window.location.href = "./login.html";
+        return false;
+    }
+
+    const snap = await get(ref(db, "admins/" + adminId));
+
+    if (!snap.exists()) {
+        sessionStorage.removeItem("admin");
+        window.location.href = "./login.html";
+        return false;
+    }
+
+    const admin = snap.val();
+
+    // ROLE CHECK
+    if (requiredRole && admin.role !== requiredRole) {
+        alert("Sizga bu sahifaga ruxsat yo‘q!");
+        window.location.href = "./dashboard.html";
+        return false;
+    }
+
+    return admin;
+}
+
+
+// ===========================================
+// LOGOUT
+// ===========================================
+export function logout() {
+    sessionStorage.removeItem("admin");
+    window.location.href = "./login.html";
+}
