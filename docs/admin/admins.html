@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Adminlar ro'yxati</title>
-  <link rel="stylesheet" href="./users.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="./users.css" />
 </head>
-
 <body>
 
   <div class="container">
     <h2>Adminlar ro'yxati</h2>
 
-    <div class="filters">
+    <div class="filters" style="margin-bottom:18px;">
       <button class="btn export" onclick="location.href='admin-add.html'">Yangi admin qo'shish</button>
       <button class="btn refresh" id="refreshBtn">Yangilash</button>
     </div>
@@ -29,15 +29,22 @@
     </table>
   </div>
 
+  <!-- Admin guard (module import) - mavjud admin.js ga mos -->
   <script type="module">
     import { adminGuard } from "./admin.js";
 
     (async () => {
+      // faqat superadmin kirishi kerak
       const admin = await adminGuard("superadmin");
       if (!admin) return;
 
+      // module sifatida admins.js yuklaymiz va ishga tushiramiz
       const m = await import("./admins.js");
-      m.initAdminsPage();
+      if (m && typeof m.initAdminsPage === "function") {
+        m.initAdminsPage();
+      } else {
+        console.error("admins module yuklanmadi yoki initAdminsPage mavjud emas");
+      }
     })();
   </script>
 
