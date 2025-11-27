@@ -1,18 +1,21 @@
-// admins.js — adminlarni ko'rish, qo'shish, o'chirish, role o'zgartirish
+// GLOBAL admins.js
+// GitHub pages uchun module emas format
 
-import { db, ref, get, set, remove, update, push } from "../libs/lib.js";
+// Firebase import (sen ishlatayotgan uslub asosida)
+import { db } from "./firebase.js";
+import {
+  ref,
+  get,
+  set,
+  remove,
+  update,
+  push
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// (1) Sahifa ishga tushganda chaqiriladi
-export function initAdminsPage() {
-  loadAdmins();
-
-  // loadAdmins funksiyasini globalga chiqaramiz
-  // ShUNGA KO‘RA YANGILASH TUGMASI ISHLAYDI
-  window.loadAdmins = loadAdmins;
-}
-
-// (2) Adminlarni yuklash
-export async function loadAdmins() {
+// =========================
+// ADMINLARNI YUKLASH
+// =========================
+async function loadAdmins() {
   const tbody = document.getElementById("adminsTable");
   tbody.innerHTML = "<tr><td colspan='4'>Yuklanmoqda...</td></tr>";
 
@@ -26,121 +29,78 @@ export async function loadAdmins() {
     const data = snap.val();
     tbody.innerHTML = "";
 
-    for (const key of Object.keys(data)) {
+    Object.keys(data).forEach(key => {
       const a = data[key];
-      const full = a.fullName ?? a.email ?? key;
-      const username = a.username ?? key;
-      const role = a.role ?? "admin";
 
       tbody.innerHTML += `
-        <tr>
-          <td>${escapeHtml(full)}</td>
-          <td>${escapeHtml(username)}</td>
-          <td><span class="badge ${escapeHtml(role)}">${escapeHtml(role)}</span></td>
-          <td>
-            <button onclick="event.stopPropagation(); editAdmin('${key}')" class="btn">Tahrirlash</button>
-            <button onclick="event.stopPropagation(); deleteAdmin('${key}')" class="btn delete">O'chirish</button>
-          </td>
-        </tr>
-      `;
-    }
-  } catch (err) {
-    console.error("loadAdmins error:", err);
-    tbody.innerHTML = `<tr><td colspan='4'>Xato: ${escapeHtml(err.message)}</td></tr>`;
-  }
-}
-
-function escapeHtml(str) {
-  if (typeof str !== "string") return str ?? "";
-  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-
-// (3) Admin qo'shish
-window.addAdmin = async function () {
-  const msg = document.getElementById("msg");
-  msg.textContent = "";
-
-  const fullName = document.getElementById("fullName").value.trim();
-  const username = document.getElementById("username").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const role = document.getElementById("role").value;
-
-  if (!username || !password) {
-    msg.textContent = "Username va parol kiritilishi lozim.";
-    return;
-  }
-
-  try {
-    const allSnap = await get(ref(db, "admins"));
-    const all = allSnap.exists() ? allSnap.val() : {};
-
-    for (const k of Object.keys(all)) {
-      const a = all[k];
-      if ((a.username && a.username === username) || k === username) {
-        msg.textContent = "Bu username allaqachon mavjud!";
-        return;
-      }
-    }
-
-    const newKeyRef = push(ref(db, "admins"));
-    const adminId = newKeyRef.key;
-
-    await set(ref(db, "admins/" + adminId), {
-      username,
-      fullName: fullName || username,
-      email: email || "",
-      password,
-      role: role || "admin"
+      <tr>
+        <td>${escapeHtml(a.fullName || a.email || "-")}</td>
+        <td>${escapeHtml(a.username)}</td>
+        <td><span class="badge ${a.role}">${a.role}</span></td>
+        <td>
+          <button class="btn" onclick="editAdmin('${key}')">Tahrirlash</button>
+          <button class="btn delete" onclick="deleteAdmin('${key}')">O'chirish</button>
+        </td>
+      </tr>`;
     });
 
-    alert("Admin muvaffaqiyatli qo‘shildi.");
-    location.href = "admins.html";
-
   } catch (err) {
-    console.error("addAdmin error:", err);
-    msg.textContent = "Xatolik: " + err.message;
+    console.error("loadAdmins error:", err);
+    tbody.innerHTML = `<tr><td colspan='4'>Xato: ${err.message}</td></tr>`;
   }
-};
+}
 
-// (4) Adminni o'chirish
-window.deleteAdmin = async function (id) {
-  if (!confirm("Adminni o‘chirishni tasdiqlaysizmi?")) return;
+// Escape
+function escapeHtml(str) {
+  if (!str) return "";
+  return str.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// =========================
+// ADMINNI O'CHIRISH
+// =========================
+async function deleteAdmin(id) {
+  if (!confirm("Adminni o'chirishni tasdiqlaysizmi?")) return;
 
   try {
     await remove(ref(db, "admins/" + id));
-    alert("O‘chirildi.");
-    loadAdmins(); // qayta yuklaymiz
-  } catch (err) {
-    console.error("deleteAdmin error:", err);
-    alert("Xato: " + err.message);
-  }
-};
-
-// (5) Admin tahrirlash
-window.editAdmin = async function (id) {
-  try {
-    const snap = await get(ref(db, "admins/" + id));
-    if (!snap.exists()) return alert("Admin topilmadi.");
-
-    const a = snap.val();
-
-    const newFull = prompt("To‘liq ism:", a.fullName || "");
-    if (newFull === null) return;
-
-    const newRole = prompt("Role (superadmin/admin/moderator):", a.role || "admin");
-    if (newRole === null) return;
-
-    await update(ref(db, "admins/" + id), {
-      fullName: newFull,
-      role: newRole
-    });
-
-    alert("Yangilandi.");
+    alert("O'chirildi!");
     loadAdmins();
-
   } catch (err) {
-    console.error("editAdmin error:", err);
     alert("Xato: " + err.message);
   }
-};
+}
+
+// =========================
+// ADMIN TAHRIRLASH
+// =========================
+async function editAdmin(id) {
+  const snap = await get(ref(db, "admins/" + id));
+  if (!snap.exists()) return alert("Admin topilmadi!");
+
+  const a = snap.val();
+
+  const newName = prompt("Yangi ism:", a.fullName || "");
+  if (newName === null) return;
+
+  const newRole = prompt("Role (superadmin/admin/moderator):", a.role);
+  if (newRole === null) return;
+
+  await update(ref(db, "admins/" + id), {
+    fullName: newName,
+    role: newRole
+  });
+
+  alert("Yangilandi!");
+  loadAdmins();
+}
+
+// ==========================
+// GLOBALLASHTIRAMIZ
+// ==========================
+window.loadAdmins = loadAdmins;
+window.deleteAdmin = deleteAdmin;
+window.editAdmin = editAdmin;
+
+// Sahifa yuklanganda avtomatik yuklash
+window.addEventListener("load", loadAdmins);
