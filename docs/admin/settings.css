@@ -1,0 +1,53 @@
+body {
+  background: #f1f4fa;
+  font-family: "Segoe UI", sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 600px;
+  margin: 40px auto;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+.card label {
+  font-weight: 600;
+  margin-top: 15px;
+  display: block;
+}
+
+.card input, .card select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d2d2d2;
+  border-radius: 8px;
+  margin-top: 5px;
+}
+
+.btn {
+  padding: 12px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  margin-top: 20px;
+  width: 100%;
+  font-size: 16px;
+  color: white;
+}
+
+.btn-primary {
+  background: #007bff;
+}
