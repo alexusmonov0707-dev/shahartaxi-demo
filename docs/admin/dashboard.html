@@ -3,53 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../dashboard.css">
 </head>
-<body class="bg-gray-100">
+<body class="p-6">
 
-    <div class="flex items-center justify-between p-5 bg-white shadow">
-        <h1 class="text-2xl font-bold">Admin Dashboard</h1>
-        <button onclick="logout()"
-            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold">Admin Dashboard</h1>
+        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
             Chiqish
         </button>
     </div>
 
-    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-
-        <!-- Jami e'lonlar -->
-        <div class="bg-white p-6 rounded shadow text-center">
-            <h2 class="text-lg font-semibold">Jami e’lonlar</h2>
-            <div id="totalAds" class="text-4xl font-bold mt-3">0</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div class="bg-gray-100 p-6 rounded shadow text-center">
+            <h3 class="text-lg">Jami e’lonlar</h3>
+            <p id="totalAds" class="text-4xl font-bold mt-2">0</p>
         </div>
 
-        <!-- Jami foydalanuvchilar -->
-        <div class="bg-white p-6 rounded shadow text-center">
-            <h2 class="text-lg font-semibold">Jami foydalanuvchilar</h2>
-            <div id="totalUsers" class="text-4xl font-bold mt-3">0</div>
+        <div class="bg-gray-100 p-6 rounded shadow text-center">
+            <h3 class="text-lg">Jami foydalanuvchilar</h3>
+            <p id="totalUsers" class="text-4xl font-bold mt-2">0</p>
         </div>
 
-        <!-- Haydovchilar -->
-        <div class="bg-white p-6 rounded shadow text-center">
-            <h2 class="text-lg font-semibold">Haydovchilar</h2>
-            <div id="totalDrivers" class="text-4xl font-bold mt-3">0</div>
+        <div class="bg-gray-100 p-6 rounded shadow text-center">
+            <h3 class="text-lg">Haydovchilar</h3>
+            <p id="totalDrivers" class="text-4xl font-bold mt-2">0</p>
         </div>
-
     </div>
 
-    <!-- So'nggi 5 e’lon -->
-    <div class="p-6">
-        <h2 class="text-xl font-semibold mb-3">So‘nggi 5 e’lon</h2>
-        <div id="lastAds" class="bg-white p-4 rounded shadow divide-y"></div>
-    </div>
+    <h2 class="text-xl font-bold mb-2">So‘nggi 5 e’lon</h2>
+    <div id="lastAds" class="bg-gray-100 p-4 rounded mb-10"></div>
 
-    <!-- So'nggi foydalanuvchilar -->
-    <div class="p-6">
-        <h2 class="text-xl font-semibold mb-3">So‘nggi 5 foydalanuvchi</h2>
-        <div id="lastUsers" class="bg-white p-4 rounded shadow divide-y"></div>
-    </div>
+    <h2 class="text-xl font-bold mb-2">So‘nggi 5 foydalanuvchi</h2>
+    <div id="lastUsers" class="bg-gray-100 p-4 rounded"></div>
 
-    <script src="./firebase.js"></script>
+    <!-- FIREBASE MODULE MODE → faqat yuklash uchun -->
+    <script type="module">
+        import "../firebase.js"; 
+        // firebase.js bajariladi → initializeApp → firebase.database() globalga tushadi
+    </script>
+
+    <!-- Dashboard js (oddiy script) -->
     <script src="dashboard.js"></script>
 
 </body>
