@@ -395,40 +395,40 @@ window.exportExcel = function () {
 };
 
 // ------------------ EXPORT CSV ------------------
-window.exportCSV = function () {
+function exportCSV() {
     if (!filteredCache.length) {
-        alert("Export uchun user topilmadi.");
+        alert("Userlar topilmadi");
         return;
     }
 
-    const rows = filteredCache.map(u => {
-        const region = u.region ?? (u.profile?.region ?? "");
-        const district = u.district ?? (u.profile?.district ?? "");
-        return [
-            u.id,
-            (u.fullName ?? "").replaceAll(",", " "),
-            (u.phone ?? "").replaceAll(",", " "),
-            (region ?? "").replaceAll(",", " "),
-            (district ?? "").replaceAll(",", " "),
-            u.role ?? "user",
-            (u.verified === true ? "yes" : (u.verified === "rejected" ? "rejected" : "no")),
-            u.balance ?? 0
-        ];
-    });
+    const rows = filteredCache.map(u => ({
+        id: u.id,
+        fullName: u.fullName ?? "",
+        phone: u.phone ?? "",
+        region: u.region ?? u.profile?.region ?? "",
+        district: u.district ?? u.profile?.district ?? "",
+        role: u.role ?? "user",
+        verified: u.verified ?? "no",
+        balance: u.balance ?? 0
+    }));
 
     let csv = "id,fullName,phone,region,district,role,verified,balance\n";
-    rows.forEach(r => csv += r.join(",") + "\n");
+
+    rows.forEach(r => {
+        csv += `${r.id},${r.fullName},${r.phone},${r.region},${r.district},${r.role},${r.verified},${r.balance}\n`;
+    });
 
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = "users-export.csv";
+    a.download = "users.csv";
     a.click();
 
     URL.revokeObjectURL(url);
-};
+}
+
 
 // ------------------ REFRESH (manual + auto) ------------------
 window.reloadUsers = function () {
