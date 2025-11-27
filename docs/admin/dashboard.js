@@ -1,73 +1,64 @@
-import { db, ref, get, child } from "./firebase.js";
+// --- Dashboard Stats --- //
 
-document.getElementById("adminName").textContent = sessionStorage.getItem("admin");
+const adsRef = firebase.database().ref("ads");
+const usersRef = firebase.database().ref("users");
 
-// LOAD ALL DASHBOARD DATA
-loadDashboard();
+// Jami e'lonlar
+adsRef.on("value", snap => {
+    const data = snap.val() || {};
+    const total = Object.keys(data).length;
+    document.getElementById("totalAds").textContent = total;
+});
 
-async function loadDashboard() {
-    try {
-        const adsSnap = await get(ref(db, "ads"));
-        const usersSnap = await get(ref(db, "users"));
+// Jami foydalanuvchilar
+usersRef.on("value", snap => {
+    const data = snap.val() || {};
+    const total = Object.keys(data).length;
+    document.getElementById("totalUsers").textContent = total;
 
-        let ads = 0;
-        let users = 0;
-        let drivers = 0;
+    // Haydovchilar soni
+    const drivers = Object.values(data).filter(u => u.role === "driver");
+    document.getElementById("totalDrivers").textContent = drivers.length;
+});
 
-        if (adsSnap.exists()) ads = Object.keys(adsSnap.val()).length;
-        if (usersSnap.exists()) {
-            const list = usersSnap.val();
-            users = Object.keys(list).length;
-            drivers = Object.values(list).filter(u => u.role === "driver").length;
-        }
+// So‘nggi 5 e’lon
+adsRef
+    .orderByChild("createdAt")
+    .limitToLast(5)
+    .on("value", snap => {
+        const list = document.getElementById("latestAds");
+        list.innerHTML = "";
 
-        document.getElementById("statAds").textContent = ads;
-        document.getElementById("statUsers").textContent = users;
-        document.getElementById("statDrivers").textContent = drivers;
+        const data = snap.val() || {};
+        const arr = Object.values(data).sort((a, b) => b.createdAt - a.createdAt);
 
-        loadRecentAds(adsSnap.val() || {});
-        loadRecentUsers(usersSnap.val() || {});
-
-    } catch (e) {
-        console.error("Dashboard error:", e);
-    }
-}
-
-// RECENT ADS
-function loadRecentAds(ads) {
-    const container = document.getElementById("recentAds");
-    container.innerHTML = "";
-
-    const last5 = Object.entries(ads)
-        .slice(-5)
-        .reverse();
-
-    last5.forEach(([id, ad]) => {
-        container.innerHTML += `
-            <li>🚕 <b>${ad.fromRegion}</b> → <b>${ad.toRegion}</b>
-                <span class="text-gray-500"> (${ad.date || "Noma'lum"})</span>
-            </li>`;
+        arr.slice(0, 5).forEach(ad => {
+            const li = document.createElement("li");
+            li.textContent = `${ad.fromRegion} → ${ad.toRegion} | ${ad.price} UZS`;
+            list.appendChild(li);
+        });
     });
-}
 
-// RECENT USERS
-function loadRecentUsers(users) {
-    const container = document.getElementById("recentUsers");
-    container.innerHTML = "";
+// So‘nggi 5 foydalanuvchi
+usersRef
+    .orderByChild("createdAt")
+    .limitToLast(5)
+    .on("value", snap => {
+        const list = document.getElementById("latestUsers");
+        list.innerHTML = "";
 
-    const last5 = Object.entries(users)
-        .slice(-5)
-        .reverse();
+        const data = snap.val() || {};
+        const arr = Object.values(data).sort((a, b) => b.createdAt - a.createdAt);
 
-    last5.forEach(([id, u]) => {
-        container.innerHTML += `
-            <li>👤 <b>${u.fullName || u.username || id}</b>
-            <span class="text-gray-500"> (${u.role})</span></li>`;
+        arr.slice(0, 5).forEach(user => {
+            const li = document.createElement("li");
+            li.textContent = `${user.fullName} (${user.phone})`;
+            list.appendChild(li);
+        });
     });
-}
 
-// LOGOUT
-document.getElementById("logoutBtn").onclick = () => {
-    sessionStorage.removeItem("admin");
-    location.href = "./login.html";
-};
+// Logout
+function logout() {
+    localStorage.removeItem("admin");
+    window.location.href = "./login.html";
+}
