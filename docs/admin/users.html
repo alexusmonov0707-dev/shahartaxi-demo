@@ -17,7 +17,7 @@
 
     <!-- FILTER PANEL -->
     <div class="filters">
-        <input id="search" type="text" placeholder="Qidiruv: ism, telefon, mashina..." oninput="searchUsers()">
+        <input id="search" type="text" placeholder="Qidiruv..." oninput="searchUsers()">
 
         <select id="filterRole" onchange="applyFilters()">
             <option value="">Role (hammasi)</option>
@@ -38,7 +38,9 @@
             <option value="active">Active</option>
         </select>
 
+        <button class="btn refresh" onclick="reloadUsers()">Yangilash</button>
         <button class="btn export" onclick="exportExcel()">Export Excel</button>
+        <button class="btn export" onclick="exportCSV()">Export CSV</button>
     </div>
 
     <!-- TABLE -->
@@ -69,21 +71,37 @@
 <div id="modal">
     <div id="modalContent">
 
-        <h3 id="m_fullName"></h3>
+        <div class="modal-tabs">
+            <button id="tabProfile" class="tab active" onclick="openTab('profile')">Profil</button>
+            <button id="tabLogs" class="tab" onclick="openTab('logs')">Logs</button>
+        </div>
 
-        <img id="m_avatar">
+        <!-- PROFILE TAB -->
+        <div id="profileTab" class="tabContent active">
 
-        <p><b>Telefon:</b> <span id="m_phone"></span></p>
-        <p><b>Mintaqa:</b> <span id="m_region"></span></p>
-        <p><b>Tuman:</b> <span id="m_district"></span></p>
+            <h3 id="m_fullName"></h3>
 
-        <h4 style="margin-top:20px;">Mashina ma’lumotlari</h4>
-        <p><b>Model:</b> <span id="m_car"></span></p>
-        <p><b>Rangi:</b> <span id="m_color"></span></p>
-        <p><b>Raqami:</b> <span id="m_number"></span></p>
+            <img id="m_avatar">
 
-        <p><b>Holati:</b> <span id="m_status"></span></p>
-        <p><b>Balans:</b> <span id="m_balance"></span></p>
+            <p><b>Telefon:</b> <span id="m_phone"></span></p>
+            <p><b>Mintaqa:</b> <span id="m_region"></span></p>
+            <p><b>Tuman:</b> <span id="m_district"></span></p>
+
+            <h4 style="margin-top:20px;">Mashina ma’lumotlari</h4>
+            <p><b>Model:</b> <span id="m_car"></span></p>
+            <p><b>Rangi:</b> <span id="m_color"></span></p>
+            <p><b>Raqami:</b> <span id="m_number"></span></p>
+
+            <p><b>Holati:</b> <span id="m_status"></span></p>
+            <p><b>Balans:</b> <span id="m_balance"></span></p>
+
+        </div>
+
+        <!-- LOGS TAB -->
+        <div id="logsTab" class="tabContent">
+            <h3>User Logs</h3>
+            <ul id="logsList"></ul>
+        </div>
 
         <button onclick="closeModal()" class="btn unblock" style="margin-top:20px">Yopish</button>
     </div>
