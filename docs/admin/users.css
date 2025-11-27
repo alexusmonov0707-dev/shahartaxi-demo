@@ -34,9 +34,8 @@ h2 {
     font-size: 15px;
 }
 
-.export {
-    background: #1e88e5;
-}
+.export { background: #1e88e5; }
+.refresh { background: #009688; }
 
 /* === TABLE === */
 table {
@@ -54,16 +53,9 @@ th, td {
     font-size: 15px;
 }
 
-th {
-    background: #e5e7eb;
-    font-weight: bold;
-    text-align: left;
-}
+th { background: #e5e7eb; font-weight: bold; text-align: left; }
 
-tr:hover {
-    background: #f9fafb;
-    cursor: pointer;
-}
+tr:hover { background: #f9fafb; cursor: pointer; }
 
 /* === BADGES === */
 .badge {
@@ -76,7 +68,6 @@ tr:hover {
 
 .driver { background: purple; }
 .user { background: gray; }
-
 .verified { background: green; }
 .pending { background: orange; }
 .rejected { background: red; }
@@ -131,12 +122,34 @@ tr:hover {
 }
 
 #modalContent {
-    width: 450px;
+    width: 540px;
     background: white;
     padding: 25px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
+
+.modal-tabs {
+    display: flex;
+    margin-bottom: 15px;
+    gap: 5px;
+}
+
+.tab {
+    padding: 10px 15px;
+    background: #ccc;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.tab.active {
+    background: #1e88e5;
+    color: white;
+}
+
+.tabContent { display: none; }
+.tabContent.active { display: block; }
 
 #modal img {
     width: 130px;
@@ -148,12 +161,15 @@ tr:hover {
     margin-bottom: 15px;
 }
 
-p {
-    font-size: 15px;
-    margin: 5px 0;
+#logsList {
+    list-style: none;
+    padding-left: 0;
 }
 
-h4 {
-    margin: 10px 0;
-    font-size: 18px;
+#logsList li {
+    background: #f1f1f1;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 14px;
 }
