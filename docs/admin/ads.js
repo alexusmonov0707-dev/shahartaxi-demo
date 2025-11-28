@@ -408,16 +408,18 @@ function applyFilters(resetPage = true) {
       if (!qFields.includes(q)) return false;
     }
 
-    // STRICT matching for region/district (exact match)
-    function norm(v) {
-  if (!v) return '';
-  return String(v).trim().toLowerCase();
+   // region/district matching - SOFT MODE
+function matchField(filterValue, dataValue) {
+  if (!filterValue) return true;          // Hammasi
+  if (!dataValue) return false;           // E’lon qiymati yo‘q → mos emas
+  return String(dataValue).toLowerCase() === filterValue.toLowerCase();
 }
 
-if (fr && norm(d.fromRegion) !== fr) return false;
-if (tr && norm(d.toRegion) !== tr) return false;
-if (fd && norm(d.fromDistrict) !== fd) return false;
-if (td && norm(d.toDistrict) !== td) return false;
+if (!matchField(fr, d.fromRegion)) return false;
+if (!matchField(tr, d.toRegion)) return false;
+if (!matchField(fd, d.fromDistrict)) return false;
+if (!matchField(td, d.toDistrict)) return false;
+
 
 
     // category strict (use d.type as fallback)
