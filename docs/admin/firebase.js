@@ -37,3 +37,27 @@ export {
   dbPush as push,
   dbOnValue as onValue
 };
+
+// ==========================
+// ADMIN LOG ACTION – qo‘shildi
+// ==========================
+
+/*
+   Har safar admin biror amal qilganda chaqirasan:
+   logAction("delete-user", "user:O34dLs3");
+   logAction("block", "user:72x1AA12");
+   logAction("delete-ad", "ad:-OfA72....");
+*/
+
+export async function logAction(action, target) {
+  try {
+    await dbPush(dbRef(db, "admin_logs"), {
+      action,
+      target,
+      admin: sessionStorage.getItem("admin") || "unknown",
+      timestamp: Date.now()
+    });
+  } catch (err) {
+    console.error("LOG ERROR:", err);
+  }
+}
