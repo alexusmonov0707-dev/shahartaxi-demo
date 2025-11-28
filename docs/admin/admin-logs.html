@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin Logs</title>
+    <link rel="stylesheet" href="settings.css" />
+    <link rel="stylesheet" href="users.css" />
+    <style>
+        body { background:#f6f6f6; }
+        .log-row:hover { background:#f0f0f0; }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1 class="page-title">Admin Loglari</h1>
+
+    <!-- Filter panel -->
+    <div class="card">
+        <h3>Filtr</h3>
+        <div class="filters">
+
+            <input id="searchInput" placeholder="Izlash: action, admin, target..." class="input" />
+
+            <input id="dateFrom" type="date" class="input" />
+            <input id="dateTo" type="date" class="input" />
+
+            <button id="filterBtn" class="btn-primary">Filtrlash</button>
+            <button id="resetBtn" class="btn-secondary">Tozalash</button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Action</th>
+                    <th>Target</th>
+                    <th>Admin</th>
+                    <th>Vaqt</th>
+                </tr>
+            </thead>
+            <tbody id="logsTableBody"></tbody>
+        </table>
+
+        <div class="pagination">
+            <button id="prevPageBtn">← Oldingi</button>
+            <span id="paginationInfo">0 / 0</span>
+            <button id="nextPageBtn">Keyingi →</button>
+        </div>
+    </div>
+
+</div>
+
+<script type="module" src="firebase_v10.js"></script>
+<script type="module" src="admin-logs.js"></script>
+
+</body>
+</html>
