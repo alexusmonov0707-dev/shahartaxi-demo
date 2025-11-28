@@ -1,269 +1,515 @@
 // ads.module.js
-import { db, ref, onValue, get } from './firebase.js';
+// Full admin ads module — Firebase v10 ESM compatible
+// Place this file in the same folder as firebase.js and ads.html
+// Usage: <script type="module" src="./firebase.js"></script> <script type="module" src="./ads.module.js"></script>
 
-// Globals (module-scoped)
-let ALL_ADS = [];
-let FILTERED = [];
-let lastFilterSnapshot = null;
-let debounceTimer = null;
+console.log('ADS MODULE LOADED');
 
-/* ----- Helpers ----- */
-const norm = (v) => (v == null ? '' : String(v).trim().toLowerCase());
-const unique = (arr) => Array.from(new Set(arr)).filter(Boolean);
+import { db, ref, get, onValue, remove as fbRemove } from './firebase.js';
 
-/**
- * Flatten different nested structures under /ads:
- * - either /ads/{userId}/{adId}: { ...data }
- * - or /ads/{adId}: { ...data }
- */
-function flattenSnapshot(snapshot) {
-  const out = [];
-  snapshot.forEach(userOrAdSnap => {
-    // If child has children that look like ad objects (id keys)
-    if (userOrAdSnap.hasChildren && Array.from(userOrAdSnap.val ? Object.keys(userOrAdSnap.val()) : []) .length > 0) {
-      // Could be either user->adId->data or adId->data (we handle generic)
-      userOrAdSnap.forEach(maybeAdSnap => {
-        const data = maybeAdSnap.val();
-        if (data && typeof data === 'object') {
-          const ad = {
-            _key: maybeAdSnap.key ?? '',
-            _parentKey: userOrAdSnap.key ?? '',
-            ...data
-          };
-          out.push(ad);
-        }
-      });
-    } else {
-      // leaf node — treat as ad
-      const data = userOrAdSnap.val();
-      if (data && typeof data === 'object') {
-        const ad = {
-          _key: userOrAdSnap.key ?? '',
-          _parentKey: null,
-          ...data
-        };
-        out.push(ad);
-      }
-    }
-  });
-  return out;
+// -------------------------------
+// Utilities
+// -------------------------------
+function el(id) { return document.getElementById(id); }
+
+function fmtDate(ts) {
+  if (ts === undefined || ts === null) return '—';
+  const d = new Date(Number(ts));
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleString();
 }
 
-/* ----- UI references (expect these IDs in HTML) ----- */
-const selectors = {
-  fromRegion: () => document.getElementById('fromRegionFilter'),
-  toRegion: () => document.getElementById('toRegionFilter'),
-  date: () => document.getElementById('dateFilter'),
-  priceFrom: () => document.getElementById('priceFrom'),
-  priceTo: () => document.getElementById('priceTo'),
-  seats: () => document.getElementById('seatsFilter'),
-  search: () => document.getElementById('searchInput'),
-  container: () => document.getElementById('adsContainer')
-};
-
-function safeEl(id) {
-  return document.getElementById(id) || null;
+function safeNum(v, def = 0) {
+  const n = Number(v);
+  return isNaN(n) ? def : n;
 }
 
-/* ----- Render ----- */
-function renderAds(list) {
-  const container = selectors.container();
-  if (!container) return;
-  container.innerHTML = '';
-
-  if (!list || list.length === 0) {
-    container.innerHTML = `<div class="no-ads">Elonlar topilmadi.</div>`;
-    return;
-  }
-
-  const frag = document.createDocumentFragment();
-  list.forEach(ad => {
-    const card = document.createElement('div');
-    card.className = 'ad-card';
-    const price = ad.price ?? ad.cost ?? '';
-    const from = ad.fromRegion ?? ad.fromRegionName ?? ad.fromDistrict ?? ad.from ?? '';
-    const to = ad.toRegion ?? ad.toRegionName ?? ad.toDistrict ?? ad.to ?? '';
-    const departure = ad.departureTime ? new Date(Number(ad.departureTime)).toLocaleString() : (ad.departureDate || '');
-    const seats = ad.seats ?? ad.driverSeats ?? '';
-
-    card.innerHTML = `
-      <div class="ad-head">
-        <div class="ad-fromto"><strong>${from}</strong> → <strong>${to}</strong></div>
-        <div class="ad-price">${price ? price + ' so\'m' : ''}</div>
-      </div>
-      <div class="ad-meta">
-        <span>Jo'nash: ${departure}</span>
-        <span>O'rinlar: ${seats}</span>
-      </div>
-      <div class="ad-comment">${ad.comment ? escapeHtml(ad.comment) : ''}</div>
-    `;
-    frag.appendChild(card);
-  });
-
-  container.appendChild(frag);
-}
-
-function escapeHtml(s) {
-  if (!s) return '';
-  return String(s)
+function escapeHtml(str) {
+  if (str === undefined || str === null) return '';
+  return String(str)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
-/* ----- Filters ----- */
-function populateFilterOptions(applyAfter = false) {
-  // Build sets
-  const fromRegions = [];
-  const toRegions = [];
-  const dates = [];
-  const seatsOptions = [];
+function csvSafe(value) {
+  if (value === null || value === undefined) return '';
+  const s = String(value).replace(/"/g, '""');
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s}"`;
+  }
+  return s;
+}
 
-  ALL_ADS.forEach(ad => {
-    if (ad.fromRegion) fromRegions.push(ad.fromRegion);
-    if (ad.toRegion) toRegions.push(ad.toRegion);
-    // try common keys
-    const d = ad.departureTime || ad.departureDate;
-    if (d) {
-      let dateStr = d;
-      if (!isNaN(Number(d))) dateStr = new Date(Number(d)).toLocaleDateString();
-      dates.push(dateStr);
+function normStr(v){
+  if (v === null || v === undefined) return '';
+  return String(v).trim().toLowerCase();
+}
+
+// -------------------------------
+// DOM refs (safe)
+const searchInput = el('searchInput');
+const fromRegionFilter = el('fromRegionFilter');
+const toRegionFilter = el('toRegionFilter');
+const fromDistrictFilter = el('fromDistrictFilter');
+const toDistrictFilter = el('toDistrictFilter');
+const minPrice = el('minPrice');
+const maxPrice = el('maxPrice');
+const seatsFilter = el('seatsFilter');
+const categoryFilter = el('categoryFilter');
+const dateFrom = el('dateFrom');
+const dateTo = el('dateTo');
+const userIdFilter = el('userIdFilter');
+
+const applyFiltersBtn = el('applyFiltersBtn');
+const resetFiltersBtn = el('resetFiltersBtn');
+
+const sortBy = el('sortBy');
+const pageSize = el('pageSize');
+const prevPageBtn = el('prevPageBtn');
+const nextPageBtn = el('nextPageBtn');
+const paginationInfo = el('paginationInfo');
+
+const tableWrap = el('tableWrap');
+const adsTableBody = el('adsTableBody');
+const loadingSkeleton = el('loadingSkeleton');
+
+const realtimeToggle = el('realtimeToggle');
+const btnExportCsv = el('btnExportCsv');
+
+if (!adsTableBody) {
+  console.warn('ads.module.js: #adsTableBody not found');
+}
+
+// -------------------------------
+// State
+let ALL_ADS = []; // array of { id, userId(optional), data }
+let FILTERED = [];
+let currentPage = 1;
+let currentPageSize = Number((pageSize && pageSize.value) || 50);
+let realtimeAttached = false;
+const ADS_REF = ref(db, 'ads');
+
+// -------------------------------
+// Detect ad-like object
+function isAdObject(o) {
+  return o && typeof o === 'object' && (o.createdAt !== undefined || o.fromRegion !== undefined || o.toRegion !== undefined || o.price !== undefined || o.seats !== undefined || o.driverSeats !== undefined);
+}
+
+// -------------------------------
+// Flatten function supports:
+// 1) ads / adId -> data
+// 2) ads / userId / adId -> data
+// 3) ads / category / adId -> data
+// 4) deeper nested variants (attempts)
+function flattenValue(root) {
+  const results = [];
+  if (!root || typeof root !== 'object') return results;
+
+  Object.entries(root).forEach(([k1, v1]) => {
+    // 1-level: ads/adId -> data
+    if (isAdObject(v1)) {
+      results.push({ id: k1, data: v1 });
+      return;
     }
-    if (ad.seats) seatsOptions.push(String(ad.seats));
-    if (ad.driverSeats) seatsOptions.push(String(ad.driverSeats));
+    // 2-level: ads/userId/adId or ads/category/adId
+    if (v1 && typeof v1 === 'object') {
+      Object.entries(v1).forEach(([k2, v2]) => {
+        if (isAdObject(v2)) {
+          // attach userId when possible
+          results.push({ id: k2, userId: (typeof k1 === 'string') ? k1 : undefined, data: v2 });
+          return;
+        }
+        // 3-level: ads/userId/category/adId
+        if (v2 && typeof v2 === 'object') {
+          Object.entries(v2).forEach(([k3, v3]) => {
+            if (isAdObject(v3)) {
+              results.push({ id: k3, userId: k1, data: v3 });
+            }
+          });
+        }
+      });
+    }
   });
 
-  const frEl = selectors.fromRegion();
-  const trEl = selectors.toRegion();
-  const dateEl = selectors.date();
-  const seatsEl = selectors.seats();
+  return results;
+}
 
-  // Save current values to restore
-  const cur = {
-    from: frEl ? frEl.value : '',
-    to: trEl ? trEl.value : '',
-    date: dateEl ? dateEl.value : '',
-    seats: seatsEl ? seatsEl.value : ''
-  };
+// -------------------------------
+// Load once
+async function loadOnce() {
+  try {
+    if (loadingSkeleton) loadingSkeleton.style.display = 'block';
+    if (tableWrap) tableWrap.classList.add && tableWrap.classList.add('hidden');
 
-  // helper to refill select
-  const refill = (el, items, placeholder) => {
-    if (!el) return;
-    // clear without triggering change events
-    const selectedValue = cur[el.id.replace('Filter','').replace('From','').replace('To','')] || '';
-    el.innerHTML = '';
-    const opt = document.createElement('option');
-    opt.value = '';
-    opt.textContent = placeholder || 'Hammasi';
-    el.appendChild(opt);
-    unique(items.map(i => i && String(i).trim())).sort().forEach(v => {
-      const o = document.createElement('option');
-      o.value = v;
-      o.textContent = v;
-      el.appendChild(o);
-    });
-    // restore selection if still available, else keep ''
-    if (selectedValue) {
-      const has = Array.from(el.options).some(o => o.value === selectedValue);
-      if (has) el.value = selectedValue;
-      else el.value = '';
+    const snap = await get(ADS_REF);
+    let root = {};
+    if (snap && typeof snap.val === 'function') {
+      root = snap.val() || {};
     } else {
-      el.value = '';
+      root = snap || {};
     }
-  };
 
-  refill(frEl, fromRegions, 'Hammasi (Joʻnash viloyati)');
-  refill(trEl, toRegions, 'Hammasi (Kelish viloyati)');
-  refill(dateEl, dates, 'Hammasi (Sana)');
-  refill(seatsEl, seatsOptions, 'Hammasi (Oʻrinlar)');
+    ALL_ADS = flattenValue(root);
+    ALL_ADS.forEach(it => { if (!it.data.category) it.data.category = it.data.type || 'taxi'; });
 
-  if (applyAfter) {
-    applyFilters();
+    fillFilterOptions();
+    applyFilters(false);
+  } catch (err) {
+    console.error('loadOnce error', err);
+  } finally {
+    if (loadingSkeleton) loadingSkeleton.style.display = 'none';
+    if (tableWrap) tableWrap.classList.remove && tableWrap.classList.remove('hidden');
   }
 }
 
-function applyFilters() {
-  // read filter inputs
-  const fromVal = norm(selectors.fromRegion()?.value);
-  const toVal = norm(selectors.toRegion()?.value);
-  const dateVal = norm(selectors.date()?.value);
-  const priceFrom = Number(selectors.priceFrom()?.value || 0);
-  const priceTo = Number(selectors.priceTo()?.value || 0);
-  const seatsVal = norm(selectors.seats()?.value);
-  const q = norm(selectors.search()?.value);
+// -------------------------------
+// Realtime attach
+function attachRealtime() {
+  if (realtimeAttached) return;
+  try {
+    onValue(ADS_REF, snapshot => {
+      let root = {};
+      if (snapshot && typeof snapshot.val === 'function') root = snapshot.val() || {};
+      else root = snapshot || {};
+      ALL_ADS = flattenValue(root);
+      ALL_ADS.forEach(it => { if (!it.data.category) it.data.category = it.data.type || 'taxi'; });
+      fillFilterOptions();
+      applyFilters(false);
+    }, err => {
+      console.error('onValue error', err);
+    });
+    realtimeAttached = true;
+  } catch (e) {
+    console.error('attachRealtime failed', e);
+  }
+}
 
-  FILTERED = ALL_ADS.filter(ad => {
-    // Normalized fields to compare
-    const aFrom = norm(ad.fromRegion ?? ad.from ?? ad.fromRegionName ?? '');
-    const aTo = norm(ad.toRegion ?? ad.to ?? ad.toRegionName ?? '');
-    const aDate = norm(ad.departureTime ? new Date(Number(ad.departureTime)).toLocaleDateString() : (ad.departureDate || ''));
-    const aPrice = Number(ad.price ?? ad.cost ?? 0);
-    const aSeats = norm(ad.seats ?? ad.driverSeats ?? '');
-    const text = norm([ad.comment, ad.description, ad.title, ad.fullName].join(' '));
+// -------------------------------
+// Fill filter selects
+function fillFilterOptions() {
+  if (!fromRegionFilter || !toRegionFilter || !fromDistrictFilter || !toDistrictFilter || !categoryFilter) return;
 
-    if (fromVal && aFrom !== fromVal) return false;
-    if (toVal && aTo !== toVal) return false;
-    if (dateVal && aDate !== dateVal) return false;
-    if (seatsVal && aSeats !== seatsVal) return false;
-    if (priceFrom && aPrice < priceFrom) return false;
-    if (priceTo && priceTo > 0 && aPrice > priceTo) return false;
-    if (q && !text.includes(q)) return false;
+  const fromSet = new Set();
+  const toSet = new Set();
+  const fdSet = new Set();
+  const tdSet = new Set();
+  const catSet = new Set();
+
+  ALL_ADS.forEach(it => {
+    const d = it.data || {};
+    if (d.fromRegion) fromSet.add(String(d.fromRegion).trim());
+    if (d.toRegion) toSet.add(String(d.toRegion).trim());
+    if (d.fromDistrict) fdSet.add(String(d.fromDistrict).trim());
+    if (d.toDistrict) tdSet.add(String(d.toDistrict).trim());
+    if (d.category) catSet.add(String(d.category).trim());
+  });
+
+  function populate(sel, set) {
+    if (!sel) return;
+    const cur = sel.value || '';
+    sel.innerHTML = '<option value="">Hammasi</option>';
+    Array.from(set).sort().forEach(v => {
+      const o = document.createElement('option');
+      o.value = v; o.innerText = v;
+      sel.appendChild(o);
+    });
+    try { sel.value = cur; } catch(e) {}
+  }
+
+  populate(fromRegionFilter, fromSet);
+  populate(toRegionFilter, toSet);
+  populate(fromDistrictFilter, fdSet);
+  populate(toDistrictFilter, tdSet);
+
+  // categories: defaults + discovered
+  const curCat = categoryFilter.value || '';
+  categoryFilter.innerHTML = '<option value="">Hammasi</option>';
+  const defaultCats = ['taxi','cargo','delivery'];
+  defaultCats.forEach(c => {
+    const o = document.createElement('option'); o.value = c; o.innerText = c.charAt(0).toUpperCase() + c.slice(1);
+    categoryFilter.appendChild(o);
+  });
+  Array.from(catSet).sort().forEach(c => {
+    if (!defaultCats.includes(c)) {
+      const o = document.createElement('option'); o.value = c; o.innerText = c;
+      categoryFilter.appendChild(o);
+    }
+  });
+  try { categoryFilter.value = curCat; } catch(e) {}
+}
+
+// -------------------------------
+// FILTERS Implementation
+function applyFilters(resetPage = true) {
+  const q = (searchInput && searchInput.value || '').trim().toLowerCase();
+  const fr = (fromRegionFilter && fromRegionFilter.value || '').trim().toLowerCase();
+  const tr = (toRegionFilter && toRegionFilter.value || '').trim().toLowerCase();
+  const fd = (fromDistrictFilter && fromDistrictFilter.value || '').trim().toLowerCase();
+  const td = (toDistrictFilter && toDistrictFilter.value || '').trim().toLowerCase();
+  const cat = (categoryFilter && categoryFilter.value || '').trim().toLowerCase();
+  const uid = (userIdFilter && userIdFilter.value || '').trim().toLowerCase();
+
+  const minP = safeNum(minPrice && minPrice.value, 0);
+  const maxP = safeNum(maxPrice && maxPrice.value, Number.MAX_SAFE_INTEGER);
+
+  let seats = 0;
+  if (seatsFilter && seatsFilter.value) {
+    const parsed = Number(String(seatsFilter.value).replace('+','').trim());
+    seats = isNaN(parsed) ? 0 : parsed;
+  }
+
+  let dateStart = null, dateEnd = null;
+  if (dateFrom && dateFrom.value) dateStart = new Date(dateFrom.value + 'T00:00:00').getTime();
+  if (dateTo && dateTo.value) dateEnd = new Date(dateTo.value + 'T23:59:59').getTime();
+
+  FILTERED = ALL_ADS.filter(item => {
+    const d = item.data || {};
+
+    if (q) {
+      const text = [
+        d.comment || '',
+        d.fromRegion || '',
+        d.fromDistrict || '',
+        d.toRegion || '',
+        d.toDistrict || '',
+        d.userId || '',
+        d.price || ''
+      ].join(' ').toLowerCase();
+      if (!text.includes(q)) return false;
+    }
+
+    if (fr && fr !== 'hammasi' && normStr(d.fromRegion) !== fr) return false;
+    if (tr && tr !== 'hammasi' && normStr(d.toRegion) !== tr) return false;
+    if (fd && fd !== 'hammasi' && normStr(d.fromDistrict) !== fd) return false;
+    if (td && td !== 'hammasi' && normStr(d.toDistrict) !== td) return false;
+
+    const thisCat = normStr(d.category || d.type || 'taxi');
+    if (cat && thisCat !== cat) return false;
+
+    if (uid && !((d.userId || '').toLowerCase().includes(uid))) return false;
+
+    const priceVal = safeNum(d.price, 0);
+    if (priceVal < minP) return false;
+    if (priceVal > maxP) return false;
+
+    const seatsVal = safeNum(d.seats || d.driverSeats, 0);
+    if (seats && seatsVal < seats) return false;
+
+    if (dateStart || dateEnd) {
+      const created = safeNum(d.createdAt, 0);
+      if (dateStart && created < dateStart) return false;
+      if (dateEnd && created > dateEnd) return false;
+    }
+
     return true;
   });
 
-  renderAds(FILTERED.length ? FILTERED : ALL_ADS);
+  sortFiltered();
+  if (resetPage) currentPage = 1;
+  renderTable();
 }
 
-/* Debounced apply (prevent flicker) */
-function scheduleApplyFilters() {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => applyFilters(), 120);
-}
-
-/* ----- Initialize: listen to /ads ----- */
-function startRealtimeListen() {
-  const adsRef = ref(db, 'ads');
-  onValue(adsRef, (snapshot) => {
-    const flattened = flattenSnapshot(snapshot);
-    ALL_ADS = flattened;
-    // populate options but do not immediately reset filters to default
-    populateFilterOptions(false);
-    // apply currently selected filters
-    applyFilters();
-  }, (err) => {
-    console.error('Realtime DB error (ads):', err);
-    // show empty
-    ALL_ADS = [];
-    renderAds([]);
+// -------------------------------
+// Sorting
+function sortFiltered() {
+  const val = (sortBy && sortBy.value) || 'createdAt_desc';
+  const [field, dir] = val.split('_');
+  FILTERED.sort((a,b) => {
+    const A = a.data[field];
+    const B = b.data[field];
+    if (field === 'price' || field === 'seats' || field === 'createdAt') {
+      const na = safeNum(A), nb = safeNum(B);
+      return dir === 'asc' ? na - nb : nb - na;
+    }
+    const sa = String(A || '').toLowerCase(), sb = String(B || '').toLowerCase();
+    return dir === 'asc' ? sa.localeCompare(sb) : sb.localeCompare(sa);
   });
 }
+// ===============================
+// RENDER TABLE
+// ===============================
+function renderTable() {
+  if (!adsTableBody) return;
 
-/* ----- Hook UI events ----- */
-function wireEvents() {
-  const ids = ['fromRegionFilter', 'toRegionFilter', 'dateFilter', 'seatsFilter', 'priceFrom', 'priceTo', 'searchInput'];
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    // use input/change with debounce
-    el.addEventListener('input', scheduleApplyFilters);
-    el.addEventListener('change', scheduleApplyFilters);
-  });
-}
+  currentPageSize = Number(pageSize && pageSize.value || 50);
+  const total = FILTERED.length;
+  const totalPages = Math.max(1, Math.ceil(total / currentPageSize));
+  if (currentPage > totalPages) currentPage = totalPages;
 
-/* ----- Boot ----- */
-function boot() {
-  // Wait DOM
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      wireEvents();
-      startRealtimeListen();
-    });
+  const start = (currentPage - 1) * currentPageSize;
+  const end = start + currentPageSize;
+  const pageItems = FILTERED.slice(start, end);
+
+  adsTableBody.innerHTML = '';
+
+  if (pageItems.length === 0) {
+    adsTableBody.innerHTML = `<tr><td colspan="8">Hech nima topilmadi</td></tr>`;
   } else {
-    wireEvents();
-    startRealtimeListen();
+    pageItems.forEach((item, idx) => {
+      const d = item.data || {};
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td>${start + idx + 1}</td>
+        <td>${escapeHtml(d.fromRegion || '')} – ${escapeHtml(d.fromDistrict || '')}</td>
+        <td>${escapeHtml(d.toRegion || '')} – ${escapeHtml(d.toDistrict || '')}</td>
+        <td>${escapeHtml(d.seats || d.driverSeats || '—')}</td>
+        <td>${escapeHtml(d.price || '—')}</td>
+        <td>${escapeHtml(d.category || d.type || 'taxi')}</td>
+        <td>${fmtDate(d.createdAt)}</td>
+        <td>
+          <button class="btn btn-danger" data-del="${item.userId || 'root'}:${item.id}">
+            O'chirish
+          </button>
+        </td>
+      `;
+
+      adsTableBody.appendChild(tr);
+    });
+  }
+
+  if (paginationInfo) {
+    paginationInfo.textContent = `${currentPage} / ${totalPages} sahifa — ${total} e'lon`;
   }
 }
 
-// Immediately boot
-boot();
+// ===============================
+// DELETE AD
+// ===============================
+async function handleDelete(pathKey) {
+  const [uid, adId] = pathKey.split(':');
+
+  let delPath;
+  if (uid === 'root') delPath = `ads/${adId}`;
+  else delPath = `ads/${uid}/${adId}`;
+
+  if (!confirm("Rostdan ham o'chirmoqchimisiz?")) return;
+
+  try {
+    await fbRemove(ref(db, delPath));
+    alert("O'chirildi");
+  } catch (err) {
+    console.error('Delete error:', err);
+    alert("Xatolik!");
+  }
+}
+
+// ===============================
+// CSV EXPORT
+// ===============================
+function exportCSV() {
+  if (!FILTERED.length) {
+    alert("Eksport uchun ma'lumot yo'q");
+    return;
+  }
+
+  let rows = [
+    [
+      "id", "userId", "fromRegion", "fromDistrict",
+      "toRegion", "toDistrict", "seats",
+      "price", "category", "comment", "createdAt"
+    ]
+  ];
+
+  FILTERED.forEach(it => {
+    const d = it.data || {};
+    rows.push([
+      csvSafe(it.id),
+      csvSafe(it.userId || ''),
+      csvSafe(d.fromRegion),
+      csvSafe(d.fromDistrict),
+      csvSafe(d.toRegion),
+      csvSafe(d.toDistrict),
+      csvSafe(d.seats || d.driverSeats),
+      csvSafe(d.price),
+      csvSafe(d.category || d.type),
+      csvSafe(d.comment),
+      csvSafe(fmtDate(d.createdAt))
+    ]);
+  });
+
+  let csv = rows.map(r => r.join(',')).join('\n');
+  let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  let url = URL.createObjectURL(blob);
+
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = "ads_export.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+// ===============================
+// INIT & EVENTS
+// ===============================
+function initEvents() {
+  if (applyFiltersBtn) applyFiltersBtn.onclick = () => applyFilters(true);
+  if (resetFiltersBtn)
+    resetFiltersBtn.onclick = () => {
+      searchInput.value = "";
+      [fromRegionFilter, toRegionFilter, fromDistrictFilter, toDistrictFilter,
+       seatsFilter, categoryFilter, userIdFilter].forEach(s => s.value = "");
+
+      minPrice.value = "0";
+      maxPrice.value = "99999999";
+      dateFrom.value = "";
+      dateTo.value = "";
+
+      applyFilters(true);
+    };
+
+  if (sortBy) sortBy.onchange = () => applyFilters(false);
+  if (pageSize) pageSize.onchange = () => { currentPage = 1; renderTable(); };
+
+  if (prevPageBtn) prevPageBtn.onclick = () => {
+    currentPage--;
+    if (currentPage < 1) currentPage = 1;
+    renderTable();
+  };
+
+  if (nextPageBtn) nextPageBtn.onclick = () => {
+    currentPage++;
+    renderTable();
+  };
+
+  // Delete handler
+  if (adsTableBody) {
+    adsTableBody.onclick = e => {
+      const btn = e.target.closest('button[data-del]');
+      if (!btn) return;
+      handleDelete(btn.dataset.del);
+    };
+  }
+
+  if (btnExportCsv) btnExportCsv.onclick = exportCSV;
+
+  if (realtimeToggle) {
+    realtimeToggle.onchange = () => {
+      if (realtimeToggle.checked) attachRealtime();
+      else loadOnce();
+    };
+  }
+}
+
+// ===============================
+// BOOTSTRAP
+// ===============================
+(async function start() {
+  try {
+    console.log("ADS MODULE INITIALIZED");
+
+    initEvents();
+
+    await loadOnce();
+
+    if (realtimeToggle && realtimeToggle.checked) {
+      attachRealtime();
+    }
+  } catch (err) {
+    console.error("INIT ERROR:", err);
+  }
+})();
