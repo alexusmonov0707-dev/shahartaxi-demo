@@ -351,20 +351,27 @@ window.unblockUser = async function (id) {
     }
 };
 
-// ------------------ DELETE USER + ADS ------------------
+// ---------------- DELETE USER + ADS ----------------
 window.deleteUser = async function (id) {
     if (!confirm("Userni o‘chirishni tasdiqlaysizmi? (Ads ham o‘chadi)")) return;
     try {
-        await remove(ref(db, "ads_by_user/" + id));
+        // Userga tegishli ads'larni o‘chiramiz
+        await remove(ref(db, "ads/" + id));
+
+        // Userning o‘zini o‘chiramiz
         await remove(ref(db, "users/" + id));
+
+        // Cache’dagi ro‘yxatdan ham o‘chiramiz
         usersCache = usersCache.filter(x => x.id !== id);
+
         await logAction(id, "deleted");
         applyFilters();
     } catch (err) {
         console.error("deleteUser error:", err);
-        alert("O'chirishda xato.");
+        alert("O‘chirishda xato.");
     }
 };
+
 
 // ------------------ EXPORT TO EXCEL (SheetJS) ------------------
 window.exportExcel = function () {
