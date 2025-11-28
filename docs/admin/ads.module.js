@@ -1,3 +1,5 @@
+console.log("ADS MODULE LOADED SUCCESSFULLY");
+
 // ads.module.js — Admin panel (ESM / Firebase v10)
 // Requires: ./firebase.js (your ESM wrapper) — must export: db, ref, get, onValue, remove, push, etc.
 // Source firebase wrapper: see your uploaded firebase (4).js. :contentReference[oaicite:4]{index=4}
