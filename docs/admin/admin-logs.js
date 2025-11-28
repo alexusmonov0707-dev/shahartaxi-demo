@@ -1,128 +1,177 @@
-import { db, ref, onValue, get } from "./firebase_v10.js";
+/* =====================================================================
+   ADMIN LOGS + FIREBASE (ALL-IN-ONE FILE)
+   Bitta fayl ichida Firebase v10 + loglarni yuklash + filtrlash + render
+   ===================================================================== */
 
-// DOM
-const logsTableBody = document.getElementById("logsTableBody");
+// ------------------- FIREBASE INIT -------------------
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getDatabase,
+  ref,
+  get,
+  onValue
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.appspot.com",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+console.log("FIREBASE INITIALIZED");
+
+
+// ------------------- DOM ELEMENTLAR -------------------
 const searchInput = document.getElementById("searchInput");
-const filterBtn = document.getElementById("filterBtn");
-const resetBtn = document.getElementById("resetBtn");
 const dateFrom = document.getElementById("dateFrom");
 const dateTo = document.getElementById("dateTo");
+
+const filterBtn = document.getElementById("filterBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const logsBody = document.getElementById("logsBody");
+const paginationInfo = document.getElementById("paginationInfo");
 const prevPageBtn = document.getElementById("prevPageBtn");
 const nextPageBtn = document.getElementById("nextPageBtn");
-const paginationInfo = document.getElementById("paginationInfo");
 
+
+// ------------------- STATE -------------------
 let ALL_LOGS = [];
 let FILTERED = [];
 
-let page = 1;
-let pageSize = 30;
+let currentPage = 1;
+const pageSize = 20;
 
-// Format
-function fmtDate(ts) {
-    const d = new Date(ts);
-    return d.toLocaleString("uz-UZ");
+
+// ------------------- LOGS YUKLASH -------------------
+async function loadLogs() {
+  try {
+    const logsRef = ref(db, "admin_logs");
+    const snapshot = await get(logsRef);
+
+    if (!snapshot.exists()) {
+      console.warn("Loglar yo‘q");
+      ALL_LOGS = [];
+      applyFilters();
+      return;
+    }
+
+    const data = snapshot.val();
+
+    ALL_LOGS = Object.entries(data).map(([id, log]) => ({
+      id,
+      ...log
+    }));
+
+    // sort desc
+    ALL_LOGS.sort((a, b) => b.time - a.time);
+
+    console.log("LOGS LOADED:", ALL_LOGS);
+
+    applyFilters();
+
+  } catch (err) {
+    console.error("loadLogs error:", err);
+  }
 }
 
-// Load Logs
-function loadLogs() {
-    onValue(ref(db, "admin_logs"), (snap) => {
-        const val = snap.val() || {};
 
-        ALL_LOGS = Object.entries(val).map(([id, log]) => ({
-            id,
-            ...log
-        })).sort((a, b) => b.timestamp - a.timestamp);
-
-        FILTERED = ALL_LOGS;
-        page = 1;
-        renderTable();
-    });
-}
-
-// Apply filters
+// ------------------- FILTRLASH -------------------
 function applyFilters() {
-    const q = searchInput.value.trim().toLowerCase();
-    const from = dateFrom.value ? new Date(dateFrom.value).getTime() : null;
-    const to = dateTo.value ? new Date(dateTo.value + " 23:59:59").getTime() : null;
+  const q = searchInput.value.trim().toLowerCase();
+  const from = dateFrom.value ? new Date(dateFrom.value).getTime() : null;
+  const to = dateTo.value ? new Date(dateTo.value).getTime() + 86399999 : null;
 
-    FILTERED = ALL_LOGS.filter(l => {
-        const matchText =
-            (l.action || "").toLowerCase().includes(q) ||
-            (l.admin || "").toLowerCase().includes(q) ||
-            (l.target || "").toLowerCase().includes(q);
+  FILTERED = ALL_LOGS.filter(log => {
+    let text = `${log.action} ${log.admin} ${log.target}`.toLowerCase();
+    if (q && !text.includes(q)) return false;
 
-        if (!matchText) return false;
+    if (from && log.time < from) return false;
+    if (to && log.time > to) return false;
 
-        if (from && l.timestamp < from) return false;
-        if (to && l.timestamp > to) return false;
+    return true;
+  });
 
-        return true;
-    });
-
-    page = 1;
-    renderTable();
+  currentPage = 1;
+  renderTable();
 }
 
-// Reset filters
-function resetFilters() {
-    searchInput.value = "";
-    dateFrom.value = "";
-    dateTo.value = "";
-    FILTERED = ALL_LOGS;
-    page = 1;
-    renderTable();
-}
 
-// Render table
+// ------------------- TABLE RENDER -------------------
 function renderTable() {
-    logsTableBody.innerHTML = "";
+  logsBody.innerHTML = "";
 
-    const total = FILTERED.length;
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
-    if (page > totalPages) page = totalPages;
+  if (FILTERED.length === 0) {
+    logsBody.innerHTML = `
+      <tr>
+        <td colspan="5" class="px-3 py-4 text-center text-gray-500">
+          Hech nima topilmadi
+        </td>
+      </tr>`;
+    paginationInfo.textContent = `0 / 0`;
+    return;
+  }
 
-    const start = (page - 1) * pageSize;
-    const rows = FILTERED.slice(start, start + pageSize);
+  const totalPages = Math.ceil(FILTERED.length / pageSize);
+  const start = (currentPage - 1) * pageSize;
+  const pageItems = FILTERED.slice(start, start + pageSize);
 
-    if (rows.length === 0) {
-        logsTableBody.innerHTML = `
-            <tr><td colspan="5" style="padding:10px;">Hech narsa topilmadi</td></tr>`;
-    } else {
-        rows.forEach((l, idx) => {
-            const tr = document.createElement("tr");
-            tr.className = "log-row";
-            tr.innerHTML = `
-                <td>${start + idx + 1}</td>
-                <td>${l.action}</td>
-                <td>${l.target}</td>
-                <td>${l.admin}</td>
-                <td>${fmtDate(l.timestamp)}</td>
-            `;
-            logsTableBody.appendChild(tr);
-        });
-    }
+  pageItems.forEach((log, idx) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="px-3 py-2">${start + idx + 1}</td>
+      <td class="px-3 py-2">${log.action}</td>
+      <td class="px-3 py-2">${log.target || "-"}</td>
+      <td class="px-3 py-2">${log.admin || "-"}</td>
+      <td class="px-3 py-2">${formatDate(log.time)}</td>
+    `;
+    logsBody.appendChild(tr);
+  });
 
-    paginationInfo.textContent = `${page} / ${totalPages}`;
+  paginationInfo.textContent = `${currentPage} / ${totalPages}`;
 }
 
-// Pagination
-prevPageBtn.onclick = () => {
-    if (page > 1) {
-        page--;
-        renderTable();
-    }
-};
-nextPageBtn.onclick = () => {
-    const totalPages = Math.ceil(FILTERED.length / pageSize);
-    if (page < totalPages) {
-        page++;
-        renderTable();
-    }
-};
 
-// Bind
-filterBtn.onclick = applyFilters;
-resetBtn.onclick = resetFilters;
+// ------------------- PAGINATION -------------------
+prevPageBtn.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderTable();
+  }
+});
 
-// Init
+nextPageBtn.addEventListener("click", () => {
+  const totalPages = Math.ceil(FILTERED.length / pageSize);
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderTable();
+  }
+});
+
+
+// ------------------- UTIL -------------------
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString();
+}
+
+
+// ------------------- EVENTS -------------------
+filterBtn.addEventListener("click", applyFilters);
+resetBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  dateFrom.value = "";
+  dateTo.value = "";
+  applyFilters();
+});
+
+
+// ------------------- START -------------------
 loadLogs();
