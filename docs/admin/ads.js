@@ -134,30 +134,35 @@ function flattenAdsSnapshot(snapshot) {
   const results = [];
   if (!snapshot) return results;
 
-  // If snapshot is Firebase DataSnapshot use .val()
-  const root = (typeof snapshot.val === 'function') ? snapshot.val() : snapshot;
-
+  const root = snapshot.val ? snapshot.val() : snapshot;
   if (!root || typeof root !== 'object') return results;
 
-  // recursion-lite: handle up to 3 levels safely (keeps performance)
-  Object.entries(root).forEach(([k1, v1]) => {
-    if (isAdObject(v1)) {
-      // level1: ads/adId
-      results.push({ id: k1, data: v1 });
+  Object.entries(root).forEach(([level1Key, level1Val]) => {
+
+    // 1-LEVEL: ads/adId → data
+    if (level1Val && typeof level1Val === 'object' &&
+        (level1Val.createdAt || level1Val.fromRegion || level1Val.toRegion || level1Val.price)) {
+      results.push({ id: level1Key, data: level1Val });
       return;
     }
-    if (v1 && typeof v1 === 'object') {
-      Object.entries(v1).forEach(([k2, v2]) => {
-        if (isAdObject(v2)) {
-          // level2: ads/category/adId OR ads/user/adId
-          results.push({ id: k2, data: v2 });
+
+    // 2-LEVEL: ads/category/adId → data
+    if (level1Val && typeof level1Val === 'object') {
+      Object.entries(level1Val).forEach(([level2Key, level2Val]) => {
+
+        // data darajasi
+        if (level2Val && typeof level2Val === 'object' &&
+            (level2Val.createdAt || level2Val.fromRegion || level2Val.toRegion || level2Val.price)) {
+          results.push({ id: level2Key, data: level2Val });
           return;
         }
-        if (v2 && typeof v2 === 'object') {
-          Object.entries(v2).forEach(([k3, v3]) => {
-            if (isAdObject(v3)) {
-              // level3: ads/userId/adId/data
-              results.push({ id: k3, data: v3 });
+
+        // 3-LEVEL: ads/userUid/randomAdId → data
+        if (level2Val && typeof level2Val === 'object') {
+          Object.entries(level2Val).forEach(([level3Key, level3Val]) => {
+            if (level3Val && typeof level3Val === 'object' &&
+                (level3Val.createdAt || level3Val.fromRegion || level3Val.toRegion || level3Val.price)) {
+              results.push({ id: level3Key, data: level3Val });
             }
           });
         }
@@ -167,6 +172,7 @@ function flattenAdsSnapshot(snapshot) {
 
   return results;
 }
+
 
 // -------------------------------
 // Init UI interactions & load data
