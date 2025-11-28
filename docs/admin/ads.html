@@ -1,136 +1,118 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin — Ads</title>
-
-  <!-- Tailwind for quick styling (CDN ok for admin panel) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Optional small icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pk6H...==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <title>Ads boshqaruv</title>
+  <!-- Sizning mavjud CSS fayllaringizni shu yerga qo'ying -->
+  <link rel="stylesheet" href="ads.css" />
   <style>
-    /* fallback minor custom styles */
-    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    /* kichik styling fallback agar css yo'q bo'lsa */
+    .hidden { display:none !important; }
+    .btn { padding:6px 10px; border-radius:6px; border:1px solid #ddd; background:#f5f5f5; cursor:pointer; }
+    .btn-green{ background:#1d9a4a; color:white; border:none; }
+    .btn-danger{ background:#e3342f; color:white; border:none; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px; border-bottom:1px solid #eee; text-align:left; }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body>
+  <main class="container mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-6">Ads boshqaruv</h1>
 
-  <header class="bg-white shadow p-4">
-    <div class="max-w-7xl mx-auto flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Ads boshqaruv</h1>
-      <div class="flex items-center gap-3">
-        <button id="btnExportCsv" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"><i class="fa fa-file-csv mr-2"></i>Export CSV</button>
-        <label class="inline-flex items-center gap-2">
-          <input id="realtimeToggle" type="checkbox" class="form-checkbox h-5 w-5" checked>
-          <span class="text-sm text-gray-700">Real-time</span>
-        </label>
-        <a href="./dashboard.html" class="px-3 py-2 bg-gray-100 rounded">Dashboard</a>
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto p-4">
-
-    <!-- Filters block -->
-    <section class="bg-white p-4 rounded shadow mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-        <div class="space-y-2">
-          <label class="text-sm font-medium">Qidiruv</label>
-          <input id="searchInput" type="search" placeholder="Qidirish: comment, region, district, userId..." class="w-full border rounded px-3 py-2">
+    <!-- Filters card -->
+    <section class="bg-white p-6 rounded shadow mb-6">
+      <div style="display:flex; gap:16px; flex-wrap:wrap;">
+        <div style="flex:1 1 40%;">
+          <label>Qidiruv</label>
+          <input id="searchInput" placeholder="Qidirish: comment, region, district, userId..." style="width:100%; padding:10px; border-radius:6px; border:1px solid #ddd;" />
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-sm font-medium">From Region</label>
-            <select id="fromRegionFilter" class="w-full border rounded px-2 py-2">
-              <option value="">Hammasi</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-sm font-medium">To Region</label>
-            <select id="toRegionFilter" class="w-full border rounded px-2 py-2">
-              <option value="">Hammasi</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">From District</label>
-            <select id="fromDistrictFilter" class="w-full border rounded px-2 py-2">
-              <option value="">Hammasi</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-sm font-medium">To District</label>
-            <select id="toDistrictFilter" class="w-full border rounded px-2 py-2">
-              <option value="">Hammasi</option>
-            </select>
-          </div>
+        <div style="flex:1 1 20%;">
+          <label>From Region</label>
+          <select id="fromRegionFilter" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            <option value="">Hammasi</option>
+          </select>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="text-sm font-medium">Min Price</label>
-            <input id="minPrice" type="number" placeholder="0" class="w-full border rounded px-2 py-2">
-          </div>
-          <div>
-            <label class="text-sm font-medium">Max Price</label>
-            <input id="maxPrice" type="number" placeholder="99999999" class="w-full border rounded px-2 py-2">
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">Seats ≥</label>
-            <select id="seatsFilter" class="w-full border rounded px-2 py-2">
-              <option value="">Hammasi</option>
-              <option value="1">1+</option>
-              <option value="2">2+</option>
-              <option value="3">3+</option>
-              <option value="4">4+</option>
-              <option value="5">5+</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">Kategoriya</label>
-            <select id="categoryFilter" class="w-full border rounded px-2 py-2">
-              <option value="">Hammasi</option>
-              <option value="taxi">Taxi</option>
-              <option value="cargo">Cargo</option>
-              <option value="delivery">Delivery</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">Sana boshlanish</label>
-            <input id="dateFrom" type="date" class="w-full border rounded px-2 py-2">
-          </div>
-          <div>
-            <label class="text-sm font-medium">Sana tugash</label>
-            <input id="dateTo" type="date" class="w-full border rounded px-2 py-2">
-          </div>
-
-          <div>
-            <label class="text-sm font-medium">User ID</label>
-            <input id="userIdFilter" type="text" placeholder="userId" class="w-full border rounded px-2 py-2">
-          </div>
-
-          <div class="flex items-end gap-2">
-            <button id="applyFiltersBtn" class="px-3 py-2 bg-green-600 text-white rounded w-full">Filtrlash</button>
-            <button id="resetFiltersBtn" class="px-3 py-2 bg-gray-200 rounded w-full">Tozalash</button>
-          </div>
-
+        <div style="flex:1 1 20%;">
+          <label>To Region</label>
+          <select id="toRegionFilter" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            <option value="">Hammasi</option>
+          </select>
         </div>
 
+        <div style="flex:1 1 10%;">
+          <label>Min Price</label>
+          <input id="minPrice" type="number" value="0" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" />
+        </div>
+
+        <div style="flex:1 1 10%;">
+          <label>Max Price</label>
+          <input id="maxPrice" type="number" value="99999999" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" />
+        </div>
+
+        <div style="flex:1 1 12%;">
+          <label>Seats ≥</label>
+          <select id="seatsFilter" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            <option value="">Hammasi</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+            <option value="4">4+</option>
+            <option value="5">5+</option>
+            <option value="6">6+</option>
+          </select>
+        </div>
+
+        <div style="flex:1 1 14%;">
+          <label>Kategoriya</label>
+          <select id="categoryFilter" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            <option value="">Hammasi</option>
+          </select>
+        </div>
+
+        <div style="flex:1 1 20%;">
+          <label>From District</label>
+          <select id="fromDistrictFilter" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            <option value="">Hammasi</option>
+          </select>
+        </div>
+
+        <div style="flex:1 1 20%;">
+          <label>To District</label>
+          <select id="toDistrictFilter" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;">
+            <option value="">Hammasi</option>
+          </select>
+        </div>
+
+        <div style="flex:1 1 16%;">
+          <label>Sana boshlanish</label>
+          <input id="dateFrom" type="date" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" />
+        </div>
+
+        <div style="flex:1 1 16%;">
+          <label>Sana tugash</label>
+          <input id="dateTo" type="date" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" />
+        </div>
+
+        <div style="flex:1 1 18%;">
+          <label>User ID</label>
+          <input id="userIdFilter" placeholder="userId" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ddd;" />
+        </div>
+
+        <div style="flex:1 1 100%; display:flex; gap:10px; justify-content:flex-end; margin-top:6px;">
+          <button id="applyFiltersBtn" class="btn btn-green">Filtrlash</button>
+          <button id="resetFiltersBtn" class="btn">Tozalash</button>
+        </div>
       </div>
     </section>
 
-    <!-- Controls: sort, page size -->
-    <section class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-3">
-        <label class="text-sm">Sort by:</label>
-        <select id="sortBy" class="border rounded px-2 py-2">
+    <!-- Controls -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div>
+        <label>Sort by:</label>
+        <select id="sortBy" style="padding:6px 10px; border-radius:6px; border:1px solid #ddd;">
           <option value="createdAt_desc">Date desc</option>
           <option value="createdAt_asc">Date asc</option>
           <option value="price_desc">Price desc</option>
@@ -138,63 +120,63 @@
         </select>
       </div>
 
-      <div class="flex items-center gap-3">
-        <label class="text-sm">Page size:</label>
-        <select id="pageSize" class="border rounded px-2 py-2">
-          <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50" selected>50</option>
-          <option value="100">100</option>
-        </select>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button id="btnExportCsv" class="btn">Export CSV</button>
+        <label style="display:flex; align-items:center; gap:6px;"><input id="realtimeToggle" type="checkbox" /> Real-time</label>
+        <a class="btn" href="/docs/admin/dashboard.html">Dashboard</a>
       </div>
-    </section>
+    </div>
 
     <!-- Table -->
-    <section class="bg-white p-4 rounded shadow">
-      <div id="loadingSkeleton" class="space-y-2">
-        <div class="h-8 bg-gray-200 rounded w-1/3 animate-pulse"></div>
-        <div class="h-8 bg-gray-200 rounded w-2/3 animate-pulse"></div>
-        <div class="h-8 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+    <section id="tableWrap" class="bg-white p-4 rounded shadow">
+      <div id="loadingSkeleton" style="padding:20px;">
+        <div style="height:16px; width:40%; background:#eee; border-radius:6px; margin-bottom:8px;"></div>
+        <div style="height:16px; width:80%; background:#eee; border-radius:6px; margin-bottom:8px;"></div>
+        <div style="height:16px; width:60%; background:#eee; border-radius:6px; margin-bottom:8px;"></div>
       </div>
 
-      <div id="tableWrap" class="overflow-x-auto hidden">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-3 py-2 text-left text-sm font-medium">#</th>
-              <th class="px-3 py-2 text-left text-sm font-medium">From</th>
-              <th class="px-3 py-2 text-left text-sm font-medium">To</th>
-              <th class="px-3 py-2 text-left text-sm font-medium">Seats</th>
-              <th class="px-3 py-2 text-left text-sm font-medium">Price</th>
-              <th class="px-3 py-2 text-left text-sm font-medium">Category</th>
-              <th class="px-3 py-2 text-left text-sm font-medium">Created</th>
-              <th class="px-3 py-2 text-left text-sm font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="adsTableBody" class="bg-white divide-y divide-gray-200"></tbody>
-        </table>
-      </div>
+      <table aria-describedby="ads table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Seats</th>
+            <th>Price</th>
+            <th>Category</th>
+            <th>Created</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="adsTableBody" class="bg-white divide-y divide-gray-200">
+          <!-- rows injected here -->
+        </tbody>
+      </table>
 
       <!-- Pagination -->
-      <div class="mt-4 flex items-center justify-between">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
         <div>
-          <button id="prevPageBtn" class="px-3 py-1 bg-gray-200 rounded">← Oldingi</button>
-          <button id="nextPageBtn" class="px-3 py-1 bg-gray-200 rounded ml-2">Keyingi →</button>
+          <button id="prevPageBtn" class="btn">← Oldingi</button>
+          <button id="nextPageBtn" class="btn">Keyingi →</button>
         </div>
-        <div class="text-sm text-gray-600">
-          <span id="paginationInfo">0 / 0 sahifa</span>
+        <div>
+          <label>Page size:</label>
+          <select id="pageSize" style="padding:6px 8px; border-radius:6px; border:1px solid #ddd;">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+          </select>
         </div>
+        <div class="text-sm text-gray-600" id="paginationInfo">0 / 0 sahifa — 0 e'lon</div>
       </div>
     </section>
-
   </main>
-<!-- o'rniga eski v8 skriptlarini o'chiring -->
-<!-- yuklash: firebase.js (ESM wrapper) va ads.module.js -->
-<script type="module" src="./firebase.js"></script>
-<script type="module" src="./ads.module.js"></script>
 
+  <!-- SCRIPTS: first firebase wrapper (you already have) -->
+  <script type="module" src="./firebase.js"></script>
 
-
-
+  <!-- main ads module (will import firebase.js) -->
+  <script type="module" src="./ads.module.js"></script>
 </body>
 </html>
