@@ -2,47 +2,56 @@
 <html lang="uz">
 <head>
   <meta charset="UTF-8">
-  <title>Adminlar ro'yxati</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="admins.css">
+  <title>Adminlar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./users.css">
+
+  <style>
+    .logout-box { width:100%; display:flex; justify-content:flex-end; padding:14px 20px; }
+    .logout-btn { background:#ef4444;color:#fff;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:15px; }
+  </style>
 </head>
+
 <body>
 
-<div class="container">
-    <h2 class="title">Adminlar ro'yxati</h2>
+  <!-- LOGOUT -->
+  <div class="logout-box">
+    <button class="logout-btn" id="logoutBtn">Chiqish</button>
+  </div>
 
-    <div class="top-actions">
-        <button class="btn btn-blue" onclick="location.href='admin-add.html'">+ Yangi admin</button>
-        <button class="btn btn-green" id="refreshBtn">Yangilash</button>
+  <main>
+    <h2>Adminlar</h2>
+
+    <div class="top-controls">
+      <button class="btn export" onclick="location.href='admin-add.html'">+ Yangi admin</button>
     </div>
 
     <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th>Ism / Email</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Amallar</th>
-                </tr>
-            </thead>
-            <tbody id="adminsTable"></tbody>
-        </table>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Ism</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Harakatlar</th>
+          </tr>
+        </thead>
+        <tbody id="adminsTableBody">
+          <tr><td colspan="5">Yuklanmoqda...</td></tr>
+        </tbody>
+      </table>
     </div>
-</div>
+  </main>
 
+  <script type="module" src="./admins.js"></script>
 
-<!-- TO‘G‘RI MODULE IMPORTLAR -->
-<script type="module">
-    import { adminGuard } from "./admin.js";
-
-    (async () => {
-        await adminGuard("superadmin");
-
-        const m = await import("./admins.js");
-        m.initAdminsPage();
-    })();
-</script>
+  <script>
+    document.getElementById("logoutBtn").onclick = () => {
+      localStorage.removeItem("admin");
+      location.href = "login.html";
+    };
+  </script>
 
 </body>
 </html>
