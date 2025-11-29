@@ -1,93 +1,98 @@
-// -------------------------------
-// IMPORT FIREBASE
-// -------------------------------
-import {
-  db,
-  ref,
-  get,
-  push,
-  set
-} from "./firebase.js";
+// admin-logs.js — to'liq, ESM module (joylashtirish: docs/admin/admin-logs.js)
+// Ushbu fayl firebase.js bilan bir papkada bo'lishi kerak.
 
+// Import firebase wrapper (sening firebase.js faylingga mos)
+import { db, ref, get, push, onValue, logAction as firebaseLogAction } from "./firebase.js";
 
-// -------------------------------
-// DOM ELEMENTLAR
-// -------------------------------
-const searchInput = document.getElementById("searchInput");
-const fromDate = document.getElementById("fromDate");
-const toDate = document.getElementById("toDate");
+// ----------------------- DOM refs (baribir mavjudligini tekshiramiz) -----------------------
+const $ = id => document.getElementById(id);
 
-const logsTableBody = document.getElementById("logsTableBody");
-const paginationInfo = document.getElementById("paginationInfo");
-const prevPageBtn = document.getElementById("prevPageBtn");
-const nextPageBtn = document.getElementById("nextPageBtn");
-const filterBtn = document.getElementById("filterBtn");
-const resetBtn = document.getElementById("resetBtn");
+const searchInput = $("searchInput");
+const fromDate = $("fromDate");
+const toDate = $("toDate");
+const filterBtn = $("filterBtn");
+const resetBtn = $("resetBtn");
+const testLogBtn = $("testLogBtn");
 
-// -------------------------------
-// GLOBAL STATE
-// -------------------------------
-let ALL_LOGS = [];
+const logsTableBody = $("logsTableBody");
+const prevPageBtn = $("prevPageBtn");
+const nextPageBtn = $("nextPageBtn");
+const paginationInfo = $("paginationInfo");
+
+// minimal safety
+if (!logsTableBody) {
+  console.error("admin-logs.js: #logsTableBody topilmadi");
+}
+
+// ----------------------- State -----------------------
+let ALL_LOGS = [];   // [{ id, action, target, admin, timestamp }]
 let FILTERED = [];
 let currentPage = 1;
-let pageSize = 20;
+const PAGE_SIZE = 20;
 
-
-// -------------------------------
-// FORMAT DATE
-// -------------------------------
-function fmt(ts) {
+// ----------------------- Utils -----------------------
+function fmtDate(ts) {
   if (!ts) return "-";
-  return new Date(ts).toLocaleString();
+  const d = new Date(Number(ts));
+  if (isNaN(d.getTime())) return "-";
+  return d.toLocaleString();
 }
 
+function safeStr(v) {
+  if (v === null || v === undefined) return "-";
+  return String(v);
+}
 
-// -------------------------------
-// LOAD ADMIN LOGS
-// -------------------------------
-async function loadLogs() {
-  try {
-    const snapshot = await get(ref(db, "admin_logs"));
+// ----------------------- Render -----------------------
+function renderTable() {
+  if (!logsTableBody) return;
 
-    const data = snapshot.val();
+  logsTableBody.innerHTML = "";
 
-    if (!data) {
-      ALL_LOGS = [];
-      renderTable();
-      return;
-    }
+  const total = FILTERED.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+  if (currentPage < 1) currentPage = 1;
 
-    // flatten → {id, data}
-    ALL_LOGS = Object.keys(data).map(id => ({
-      id,
-      ...data[id]
-    }));
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = FILTERED.slice(start, start + PAGE_SIZE);
 
-    applyFilters();
-
-  } catch (err) {
-    console.error("Loglarni olishda xato:", err);
+  if (page.length === 0) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="5" style="padding:18px;">Hech nima topilmadi</td>`;
+    logsTableBody.appendChild(tr);
+  } else {
+    page.forEach((log, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${start + i + 1}</td>
+        <td>${safeStr(log.action)}</td>
+        <td>${safeStr(log.target)}</td>
+        <td>${safeStr(log.admin)}</td>
+        <td>${fmtDate(log.timestamp || log.time || log.ts)}</td>
+      `;
+      logsTableBody.appendChild(tr);
+    });
   }
+
+  if (paginationInfo) paginationInfo.innerText = `${currentPage} / ${totalPages}`;
 }
 
-
-// -------------------------------
-// FILTER FUNKSIYASI
-// -------------------------------
+// ----------------------- Filtering -----------------------
 function applyFilters() {
-  let q = (searchInput.value || "").toLowerCase().trim();
-  let d1 = fromDate.value ? new Date(fromDate.value + " 00:00:00").getTime() : 0;
-  let d2 = toDate.value ? new Date(toDate.value + " 23:59:59").getTime() : Infinity;
+  // defensive: if inputs missing, treat as "no filter"
+  const q = (searchInput && searchInput.value || "").trim().toLowerCase();
+  const from = (fromDate && fromDate.value) ? new Date(fromDate.value + "T00:00:00").getTime() : null;
+  const to = (toDate && toDate.value) ? new Date(toDate.value + "T23:59:59").getTime() : null;
 
-  FILTERED = ALL_LOGS.filter(log => {
-    let haystack = `${log.action} ${log.target} ${log.admin}`.toLowerCase();
-
-    // text search
+  FILTERED = ALL_LOGS.filter(l => {
+    // search by action/admin/target
+    const haystack = `${l.action || ""} ${l.admin || ""} ${l.target || ""}`.toLowerCase();
     if (q && !haystack.includes(q)) return false;
 
-    // date filter
-    if (log.time < d1) return false;
-    if (log.time > d2) return false;
+    const ts = Number(l.timestamp || l.time || l.ts) || 0;
+    if (from && ts < from) return false;
+    if (to && ts > to) return false;
 
     return true;
   });
@@ -96,102 +101,129 @@ function applyFilters() {
   renderTable();
 }
 
-
-// -------------------------------
-// RESET FILTERS
-// -------------------------------
 function resetFilters() {
-  searchInput.value = "";
-  fromDate.value = "";
-  toDate.value = "";
+  if (searchInput) searchInput.value = "";
+  if (fromDate) fromDate.value = "";
+  if (toDate) toDate.value = "";
   applyFilters();
 }
 
-
-// -------------------------------
-// PAGINATION RENDER
-// -------------------------------
-function renderTable() {
-  logsTableBody.innerHTML = "";
-
-  let total = FILTERED.length;
-  let totalPages = Math.max(1, Math.ceil(total / pageSize));
-
-  if (currentPage > totalPages) currentPage = totalPages;
-
-  let start = (currentPage - 1) * pageSize;
-  let end = start + pageSize;
-
-  let pageSlice = FILTERED.slice(start, end);
-
-  if (pageSlice.length === 0) {
-    logsTableBody.innerHTML = `
-      <tr><td colspan="5" class="text-center py-4">Hech narsa topilmadi</td></tr>
-    `;
-  } else {
-    pageSlice.forEach((log, idx) => {
-      const tr = document.createElement("tr");
-
-      tr.innerHTML = `
-        <td>${start + idx + 1}</td>
-        <td>${log.action}</td>
-        <td>${log.target}</td>
-        <td>${log.admin}</td>
-        <td>${fmt(log.time)}</td>
-      `;
-
-      logsTableBody.appendChild(tr);
-    });
-  }
-
-  paginationInfo.textContent = `${currentPage} / ${totalPages}`;
-}
-
-
-// -------------------------------
-// PAGINATION EVENTS
-// -------------------------------
-prevPageBtn.addEventListener("click", () => {
-  if (currentPage > 1) {
-    currentPage--;
-    renderTable();
-  }
+// ----------------------- Pagination handlers -----------------------
+if (prevPageBtn) prevPageBtn.addEventListener("click", () => {
+  if (currentPage > 1) { currentPage--; renderTable(); }
+});
+if (nextPageBtn) nextPageBtn.addEventListener("click", () => {
+  const totalPages = Math.max(1, Math.ceil(FILTERED.length / PAGE_SIZE));
+  if (currentPage < totalPages) { currentPage++; renderTable(); }
 });
 
-nextPageBtn.addEventListener("click", () => {
-  const totalPages = Math.ceil(FILTERED.length / pageSize);
-  if (currentPage < totalPages) {
-    currentPage++;
-    renderTable();
-  }
-});
+// ----------------------- UI events -----------------------
+if (filterBtn) filterBtn.addEventListener("click", applyFilters);
+if (resetBtn) resetBtn.addEventListener("click", resetFilters);
 
-filterBtn.addEventListener("click", applyFilters);
-resetBtn.addEventListener("click", resetFilters);
-
-
-// -------------------------------
-// LOG YOZILISHI – universal funksiya
-// BUNI BOSHQA SAHIFALAR HAM CHAQIRA OLADI
-// -------------------------------
-export async function logAction(action, target = "-", admin = "admin") {
+// Test button — sahifada tugma bor: bosilsa test log yozadi.
+// (agar test tugmasi yo'q bo'lsa, hech narsa bo'lmaydi)
+if (testLogBtn) testLogBtn.addEventListener("click", async () => {
   try {
-    const id = push(ref(db, "admin_logs")).key;
-
-    await set(ref(db, "admin_logs/" + id), {
-      action,
-      target,
-      admin,
-      time: Date.now()
-    });
-
+    // bu function firebase.js ichida ham export qilingan logAction bilan bir xil nomli
+    if (typeof firebaseLogAction === "function") {
+      await firebaseLogAction("test-action", "test-target");
+      // qisqa xabar berish (vizual) — quyidagi chiziqni o'zgartirish mumkin
+      alert("Test log yozildi — sahifani yangilang (Ctrl+Shift+R)");
+    } else {
+      // fallback: push bevosita (agar firebase wrapperda push va ref eksport qilingan bo'lsa)
+      const { push, ref } = await import("./firebase.js");
+      await push(ref(db, "admin_logs"), { action: "test-action", target: "test-target", admin: "test", timestamp: Date.now() });
+      alert("Test log yozildi (fallback) — sahifani yangilang");
+    }
   } catch (err) {
-    console.error("Log yozishda xato:", err);
+    console.error("Test log yozishda xato:", err);
+    alert("Test log yozishda xato: konsolni tekshir");
+  }
+});
+
+// ----------------------- Subscribe realtime (preferable) / fallback load -----------------------
+function attachRealtime() {
+  try {
+    const logsRef = ref(db, "admin_logs");
+    // onValue imported from firebase wrapper
+    onValue(logsRef, snap => {
+      const val = snap.val();
+      if (!val) {
+        ALL_LOGS = [];
+        FILTERED = [];
+        renderTable();
+        return;
+      }
+      // flatten
+      ALL_LOGS = Object.entries(val).map(([id, data]) => {
+        // ensure timestamp field named consistently
+        if (!data.timestamp && data.time) data.timestamp = data.time;
+        if (!data.timestamp && data.ts) data.timestamp = data.ts;
+        return { id, ...data };
+      });
+
+      // sort newest first
+      ALL_LOGS.sort((a, b) => (Number(b.timestamp || 0) - Number(a.timestamp || 0)));
+
+      // initially show all
+      FILTERED = ALL_LOGS.slice();
+      currentPage = 1;
+      renderTable();
+    }, err => {
+      console.error("Realtime admin_logs xato:", err);
+      // fallback to one-time load
+      loadOnce();
+    });
+  } catch (err) {
+    console.error("attachRealtime error:", err);
+    loadOnce();
   }
 }
 
+async function loadOnce() {
+  try {
+    const snap = await get(ref(db, "admin_logs"));
+    const val = snap ? snap.val() : null;
+    if (!val) {
+      ALL_LOGS = [];
+      FILTERED = [];
+      renderTable();
+      return;
+    }
+    ALL_LOGS = Object.entries(val).map(([id, data]) => {
+      if (!data.timestamp && data.time) data.timestamp = data.time;
+      if (!data.timestamp && data.ts) data.timestamp = data.ts;
+      return { id, ...data };
+    });
+    ALL_LOGS.sort((a,b) => Number(b.timestamp||0) - Number(a.timestamp||0));
+    FILTERED = ALL_LOGS.slice();
+    renderTable();
+  } catch (err) {
+    console.error("loadOnce error:", err);
+    ALL_LOGS = [];
+    FILTERED = [];
+    renderTable();
+  }
+}
 
-// -------------------------------
-// INITIAL LOAD
-// -------------------------------
-loadLogs();
+// Start realtime subscription
+attachRealtime();
+
+// ----------------------- Export helper logAction (agar boshqa fayllar chaqirmoqchi bo'lsa) -----------------------
+// Ammo sening firebase.js ichida ham logAction mavjud (agar kerak fallback qilish)
+// Quyidagi funksiya boshqa modullardan import qilinishi mumkin
+export async function logAction(action, target, adminName = null) {
+  try {
+    // agar firebase.js da logAction eksport bo'lsa uni chaqiramiz
+    if (typeof firebaseLogAction === "function") {
+      await firebaseLogAction(action, target);
+      return;
+    }
+    // fallback: push bevosita
+    const { push, ref } = await import("./firebase.js");
+    await push(ref(db, "admin_logs"), { action, target, admin: adminName || "admin", timestamp: Date.now() });
+  } catch (err) {
+    console.error("logAction (fallback) error:", err);
+  }
+}
