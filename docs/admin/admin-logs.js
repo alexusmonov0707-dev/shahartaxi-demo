@@ -1,161 +1,93 @@
-/**
- * admin-logs.js
- * - self-contained module (imports Firebase v10 from CDN)
- * - reads /admin_logs (or /admin_logs) realtime
- * - supports search, date range, pagination
- * - tolerant to small differences in field names (timestamp vs time)
- *
- * Usage: put this file in the same folder as admin-logs.html and include:
- * <script type="module" src="./admin-logs.js"></script>
- */
-
-// ------------------------- FIREBASE (CDN ESM) -------------------------
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+// -------------------------------
+// IMPORT FIREBASE
+// -------------------------------
 import {
-  getDatabase,
-  ref as dbRef,
-  get as dbGet,
-  onValue as dbOnValue
-} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
+  db,
+  ref,
+  get,
+  push,
+  set
+} from "./firebase.js";
 
-// Replace with your project's config (kept same as you used earlier)
-const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.appspot.com",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
-};
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+// -------------------------------
+// DOM ELEMENTLAR
+// -------------------------------
+const searchInput = document.getElementById("searchInput");
+const fromDate = document.getElementById("fromDate");
+const toDate = document.getElementById("toDate");
 
-// ------------------------- DOM SELECTORS (tolerant) -------------------------
-const $ = id => document.getElementById(id);
+const logsTableBody = document.getElementById("logsTableBody");
+const paginationInfo = document.getElementById("paginationInfo");
+const prevPageBtn = document.getElementById("prevPageBtn");
+const nextPageBtn = document.getElementById("nextPageBtn");
+const filterBtn = document.getElementById("filterBtn");
+const resetBtn = document.getElementById("resetBtn");
 
-const searchInput = $("searchInput");
-const dateFromEl = $("dateFrom");
-const dateToEl = $("dateTo");
-const filterBtn = $("filterBtn") || $("applyFiltersBtn");
-const resetBtn = $("resetBtn") || $("resetFiltersBtn");
-
-// table body id may be logsTableBody or logsBody in different HTML versions
-const logsTbody = $("logsTableBody") || $("logsBody") || (function(){
-  // try to find the first tbody in page's main card (fallback)
-  const tb = document.querySelector("tbody");
-  return tb || null;
-})();
-
-const prevPageBtn = $("prevPageBtn");
-const nextPageBtn = $("nextPageBtn");
-const paginationInfo = $("paginationInfo") || $("paginationInfoSpan") || (function(){
-  const el = document.querySelector(".pagination span, #paginationInfo");
-  return el || null;
-})();
-
-// safety checks
-if (!logsTbody) {
-  console.warn("admin-logs.js: logs table body not found (expected id 'logsTableBody' or 'logsBody').");
-}
-if (!filterBtn) console.warn("admin-logs.js: filter button not found (id 'filterBtn' or 'applyFiltersBtn').");
-if (!resetBtn) console.warn("admin-logs.js: reset button not found (id 'resetBtn' or 'resetFiltersBtn').");
-if (!prevPageBtn || !nextPageBtn) console.warn("admin-logs.js: pagination buttons missing.");
-if (!paginationInfo) console.warn("admin-logs.js: pagination info element missing.");
-
-// ------------------------- STATE -------------------------
-let ALL_LOGS = [];   // full list from DB [{id, action, target, admin, timestamp|time, ...}]
-let FILTERED = [];   // after search/date filter
+// -------------------------------
+// GLOBAL STATE
+// -------------------------------
+let ALL_LOGS = [];
+let FILTERED = [];
 let currentPage = 1;
-const PAGE_SIZE = 20;
+let pageSize = 20;
 
-// helper: normalize log timestamp field
-function getLogTime(log) {
-  // supports log.timestamp, log.time, log.ts
-  const t = log && (log.timestamp || log.time || log.ts);
-  return Number(t) || 0;
-}
 
-// date formatting
-function fmtDate(ts) {
+// -------------------------------
+// FORMAT DATE
+// -------------------------------
+function fmt(ts) {
   if (!ts) return "-";
-  const d = new Date(Number(ts));
-  if (isNaN(d.getTime())) return "-";
-  return d.toLocaleString();
+  return new Date(ts).toLocaleString();
 }
 
-// escape html (very small)
-function esc(s) {
-  if (s === null || s === undefined) return "";
-  return String(s)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
 
-// ------------------------- RENDER TABLE -------------------------
-function renderTable() {
-  if (!logsTbody) return;
+// -------------------------------
+// LOAD ADMIN LOGS
+// -------------------------------
+async function loadLogs() {
+  try {
+    const snapshot = await get(ref(db, "admin_logs"));
 
-  logsTbody.innerHTML = "";
+    const data = snapshot.val();
 
-  const total = FILTERED.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  if (currentPage > totalPages) currentPage = totalPages;
-  if (currentPage < 1) currentPage = 1;
+    if (!data) {
+      ALL_LOGS = [];
+      renderTable();
+      return;
+    }
 
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const pageSlice = FILTERED.slice(start, start + PAGE_SIZE);
+    // flatten → {id, data}
+    ALL_LOGS = Object.keys(data).map(id => ({
+      id,
+      ...data[id]
+    }));
 
-  if (pageSlice.length === 0) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="5" style="padding:18px;">Hech nima topilmadi</td>`;
-    logsTbody.appendChild(tr);
-  } else {
-    pageSlice.forEach((log, idx) => {
-      const rowIndex = start + idx + 1;
-      const action = esc(log.action || log.type || "-");
-      const target = esc(log.target || log.ref || log.subject || "-");
-      const admin = esc(log.admin || "-");
-      const timestamp = getLogTime(log);
-      const dateStr = fmtDate(timestamp);
+    applyFilters();
 
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td class="px-3 py-2 text-sm">${rowIndex}</td>
-        <td class="px-3 py-2 text-sm">${action}</td>
-        <td class="px-3 py-2 text-sm">${target}</td>
-        <td class="px-3 py-2 text-sm">${admin}</td>
-        <td class="px-3 py-2 text-sm">${dateStr}</td>
-      `;
-      logsTbody.appendChild(tr);
-    });
-  }
-
-  // pagination info
-  if (paginationInfo) {
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    paginationInfo.innerText = `${currentPage} / ${totalPages}`;
+  } catch (err) {
+    console.error("Loglarni olishda xato:", err);
   }
 }
 
-// ------------------------- APPLY FILTERS -------------------------
+
+// -------------------------------
+// FILTER FUNKSIYASI
+// -------------------------------
 function applyFilters() {
-  const q = (searchInput && searchInput.value || "").trim().toLowerCase();
-  const fromVal = (dateFromEl && dateFromEl.value) ? new Date(dateFromEl.value + "T00:00:00").getTime() : null;
-  const toVal = (dateToEl && dateToEl.value) ? (new Date(dateToEl.value + "T23:59:59").getTime()) : null;
+  let q = (searchInput.value || "").toLowerCase().trim();
+  let d1 = fromDate.value ? new Date(fromDate.value + " 00:00:00").getTime() : 0;
+  let d2 = toDate.value ? new Date(toDate.value + " 23:59:59").getTime() : Infinity;
 
   FILTERED = ALL_LOGS.filter(log => {
-    // search in action, admin, target
-    const text = `${log.action || log.type || ""} ${log.admin || ""} ${log.target || log.ref || ""}`.toLowerCase();
-    if (q && !text.includes(q)) return false;
+    let haystack = `${log.action} ${log.target} ${log.admin}`.toLowerCase();
 
-    const t = getLogTime(log);
-    if (fromVal && t < fromVal) return false;
-    if (toVal && t > toVal) return false;
+    // text search
+    if (q && !haystack.includes(q)) return false;
+
+    // date filter
+    if (log.time < d1) return false;
+    if (log.time > d2) return false;
 
     return true;
   });
@@ -164,111 +96,102 @@ function applyFilters() {
   renderTable();
 }
 
-// ------------------------- RESET -------------------------
+
+// -------------------------------
+// RESET FILTERS
+// -------------------------------
 function resetFilters() {
-  if (searchInput) searchInput.value = "";
-  if (dateFromEl) dateFromEl.value = "";
-  if (dateToEl) dateToEl.value = "";
-  FILTERED = ALL_LOGS.slice();
-  currentPage = 1;
-  renderTable();
+  searchInput.value = "";
+  fromDate.value = "";
+  toDate.value = "";
+  applyFilters();
 }
 
-// ------------------------- PAGINATION HANDLERS -------------------------
-if (prevPageBtn) prevPageBtn.addEventListener("click", () => {
+
+// -------------------------------
+// PAGINATION RENDER
+// -------------------------------
+function renderTable() {
+  logsTableBody.innerHTML = "";
+
+  let total = FILTERED.length;
+  let totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  let start = (currentPage - 1) * pageSize;
+  let end = start + pageSize;
+
+  let pageSlice = FILTERED.slice(start, end);
+
+  if (pageSlice.length === 0) {
+    logsTableBody.innerHTML = `
+      <tr><td colspan="5" class="text-center py-4">Hech narsa topilmadi</td></tr>
+    `;
+  } else {
+    pageSlice.forEach((log, idx) => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${start + idx + 1}</td>
+        <td>${log.action}</td>
+        <td>${log.target}</td>
+        <td>${log.admin}</td>
+        <td>${fmt(log.time)}</td>
+      `;
+
+      logsTableBody.appendChild(tr);
+    });
+  }
+
+  paginationInfo.textContent = `${currentPage} / ${totalPages}`;
+}
+
+
+// -------------------------------
+// PAGINATION EVENTS
+// -------------------------------
+prevPageBtn.addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
     renderTable();
   }
 });
-if (nextPageBtn) nextPageBtn.addEventListener("click", () => {
-  const totalPages = Math.max(1, Math.ceil(FILTERED.length / PAGE_SIZE));
+
+nextPageBtn.addEventListener("click", () => {
+  const totalPages = Math.ceil(FILTERED.length / pageSize);
   if (currentPage < totalPages) {
     currentPage++;
     renderTable();
   }
 });
 
-// ------------------------- UI EVENTS -------------------------
-if (filterBtn) filterBtn.addEventListener("click", applyFilters);
-if (resetBtn) resetBtn.addEventListener("click", resetFilters);
-if (searchInput) {
-  // searchEnter
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") applyFilters();
-  });
-}
+filterBtn.addEventListener("click", applyFilters);
+resetBtn.addEventListener("click", resetFilters);
 
-// ------------------------- LOAD LOGS (REALTIME + ONE-TIME FALLBACK) -------------------------
-function subscribeLogsRealtime() {
+
+// -------------------------------
+// LOG YOZILISHI – universal funksiya
+// BUNI BOSHQA SAHIFALAR HAM CHAQIRA OLADI
+// -------------------------------
+export async function logAction(action, target = "-", admin = "admin") {
   try {
-    const logsRef = dbRef(db, "admin_logs");
-    dbOnValue(logsRef, snap => {
-      const val = snap.val() || {};
-      ALL_LOGS = Object.entries(val).map(([id, it]) => ({ id, ...it }));
-      // normalize time field names and ensure number
-      ALL_LOGS.forEach(l => {
-        // keep both for safety
-        if (!l.timestamp && l.time) l.timestamp = l.time;
-        if (!l.time && l.timestamp) l.time = l.timestamp;
-      });
-      // sort newest first (by timestamp or time)
-      ALL_LOGS.sort((a, b) => getLogTime(b) - getLogTime(a));
-      // initial filtered copy
-      FILTERED = ALL_LOGS.slice();
-      currentPage = 1;
-      renderTable();
-    }, err => {
-      console.error("Realtime admin_logs onValue error:", err);
-      // fallback to one-time load on error
-      loadLogsOnce();
-    });
-  } catch (err) {
-    console.error("subscribeLogsRealtime error:", err);
-    loadLogsOnce();
-  }
-}
+    const id = push(ref(db, "admin_logs")).key;
 
-async function loadLogsOnce() {
-  try {
-    const snap = await dbGet(dbRef(db, "admin_logs"));
-    const val = snap.exists() ? snap.val() : {};
-    ALL_LOGS = Object.entries(val || {}).map(([id, it]) => ({ id, ...it }));
-    ALL_LOGS.forEach(l => { if (!l.timestamp && l.time) l.timestamp = l.time; if (!l.time && l.timestamp) l.time = l.timestamp; });
-    ALL_LOGS.sort((a, b) => getLogTime(b) - getLogTime(a));
-    FILTERED = ALL_LOGS.slice();
-    currentPage = 1;
-    renderTable();
-  } catch (err) {
-    console.error("loadLogsOnce error:", err);
-    ALL_LOGS = [];
-    FILTERED = [];
-    renderTable();
-  }
-}
-
-// Start
-subscribeLogsRealtime();
-
-// ------------------------- OPTIONAL: expose a helper to add logs from other modules -------------------------
-export async function logAction(action, target, adminName) {
-  // helper to push a log from browser (only if used)
-  try {
-    const pushModule = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js");
-    const pushFn = pushModule.push;
-    const refFn = pushModule.ref;
-    const logsRef = refFn(db, "admin_logs");
-    await pushFn(logsRef, {
+    await set(ref(db, "admin_logs/" + id), {
       action,
       target,
-      admin: adminName || sessionStorage.getItem("admin") || "unknown",
-      timestamp: Date.now()
+      admin,
+      time: Date.now()
     });
+
   } catch (err) {
-    console.error("logAction error:", err);
+    console.error("Log yozishda xato:", err);
   }
 }
-// ---- TEST: Log ishlayotganini tekshirish ----
-(async () => {
-  await logAction("test-action", "test-target", "test-admin");
-})();
+
+
+// -------------------------------
+// INITIAL LOAD
+// -------------------------------
+loadLogs();
