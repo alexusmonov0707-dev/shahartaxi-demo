@@ -1,252 +1,227 @@
-// ================================================
-// IMPORTS
-// ================================================
-import {
-  db, ref, get, child, onValue,
-  auth, signOut
-} from "../../lib/lib.js";   // sizning lib yo‘li shu (kerak bo‘lsa almashtiramiz)
+// admin-logs.js — Admin logs manager (Firebase v10 ESM)
+// FAYL JOYI: admin/admin-logs.js
+// Bu fayl admin-logs.html bilan bir joyda bo'lishi kerak.
 
+// ---> IMPORT: firebase wrapper (sizning firebase init faylingiz)
+import { db, ref, get, push, onValue } from './firebase.js';
 
-// ================================================
-// HTML ELEMENTLAR
-// ================================================
-const searchInput = document.getElementById("search");
-const sortSelect = document.getElementById("sortBy");
-const dateFilter = document.getElementById("filterDate");
-const priceMin = document.getElementById("priceMin");
-const priceMax = document.getElementById("priceMax");
-const roleFilter = document.getElementById("filterRole");
+// ----------------------------
+// DOM
+// ----------------------------
+const qInput = document.getElementById('qInput');
+const dateFrom = document.getElementById('dateFrom');
+const dateTo = document.getElementById('dateTo');
+const filterBtn = document.getElementById('filterBtn');
+const clearBtn = document.getElementById('clearBtn');
+const testWriteBtn = document.getElementById('testWriteBtn');
 
-const fromRegion = document.getElementById("fromRegion");
-const toRegion = document.getElementById("toRegion");
-const fromDistrictBox = document.getElementById("fromDistrictBox");
-const toDistrictBox = document.getElementById("toDistrictBox");
+const logsTbody = document.getElementById('logsTbody');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const pageInfo = document.getElementById('pageInfo');
 
-const adsList = document.getElementById("adsList");
-const pagination = document.getElementById("pagination");
-
-const resetFiltersBtn = document.getElementById("resetFiltersBtn");
-
-
-// ================================================
-// GLOBAL VARIABLES
-// ================================================
-let ADS = [];
-let filteredADS = [];
-
+let ALL_LOGS = [];   // array of { id, data }
+let FILTERED = [];
 let perPage = 10;
 let currentPage = 1;
 
+// ----------------------------
+// helper: format date
+// ----------------------------
+function fmt(ts) {
+  if (!ts) return '-';
+  const d = new Date(Number(ts));
+  if (isNaN(d.getTime())) return '-';
+  // YYYY-MM-DD hh:mm:ss (local)
+  return d.toLocaleString();
+}
 
-// ================================================
-// LOGOUT
-// ================================================
-window.logout = () => {
-  signOut(auth).then(() => {
-    window.location.href = "../../admin/login.html";
-  });
-};
+// ----------------------------
+// flatten snapshot — supports admin_logs/{user}/{logId} structure
+// ----------------------------
+function flattenAdminLogs(snapshot) {
+  const results = [];
+  if (!snapshot) return results;
+  const root = snapshot.val ? snapshot.val() : snapshot;
+  if (!root || typeof root !== 'object') return results;
 
-
-// ================================================
-// LOAD REGIONS (from regions-helper.js)
-// ================================================
-window.loadRegions("fromRegion", "fromDistrictBox");
-window.loadRegions("toRegion", "toDistrictBox");
-
-
-// ================================================
-// FETCH ADS FROM FIREBASE
-// ================================================
-async function loadAds() {
-  adsList.innerHTML = "Yuklanmoqda...";
-
-  const adsRef = ref(db, "ads");
-  const snapshot = await get(adsRef);
-
-  ADS = [];
-  if (snapshot.exists()) {
-    snapshot.forEach(userBlock => {
-      userBlock.forEach(ad => {
-        ADS.push({
-          id: ad.key,
-          userId: userBlock.key,
-          ...ad.val()
-        });
+  // structure: admin_logs -> uid -> logId -> { action, admin, target, time }
+  Object.entries(root).forEach(([userKey, node]) => {
+    if (!node) return;
+    if (typeof node === 'object') {
+      Object.entries(node).forEach(([logId, logVal]) => {
+        if (logVal && (logVal.action || logVal.time || logVal.admin)) {
+          results.push({ id: logId, data: { ...logVal, userKey } });
+        }
       });
-    });
-  }
+    }
+  });
 
-  applyFilters();
+  // sort newest first by default
+  results.sort((a, b) => (Number(b.data.time || 0) - Number(a.data.time || 0)));
+  return results;
 }
 
-
-// ================================================
-// FILTER FUNCTION
-// ================================================
-function applyFilters() {
-  let items = [...ADS];
-
-  // 🔍 Qidiruv
-  const q = searchInput.value.toLowerCase();
-  if (q) {
-    items = items.filter(ad =>
-      (ad.fromRegion || "").toLowerCase().includes(q) ||
-      (ad.toRegion || "").toLowerCase().includes(q) ||
-      (ad.comment || "").toLowerCase().includes(q) ||
-      (String(ad.price) || "").includes(q)
-    );
+// ----------------------------
+// Load logs from Realtime DB once
+// ----------------------------
+async function loadLogsOnce() {
+  logsTbody.innerHTML = `<tr><td colspan="5" class="muted">Yuklanmoqda...</td></tr>`;
+  try {
+    const logsRef = ref(db, 'admin_logs');
+    const snap = await get(logsRef);
+    ALL_LOGS = flattenAdminLogs(snap);
+    applyFilters();
+  } catch (err) {
+    console.error('Loglarni yuklash xato:', err);
+    logsTbody.innerHTML = `<tr><td colspan="5" class="muted">Loglarni yuklashda xato.</td></tr>`;
   }
-
-  // ⚙️ Role filter
-  if (roleFilter.value) {
-    items = items.filter(ad => ad.role === roleFilter.value);
-  }
-
-  // 🎯 Narx
-  if (priceMin.value) items = items.filter(ad => ad.price >= Number(priceMin.value));
-  if (priceMax.value) items = items.filter(ad => ad.price <= Number(priceMax.value));
-
-  // 📅 Sana filter
-  const now = new Date();
-  if (dateFilter.value === "today") {
-    items = items.filter(ad => {
-      const adDate = new Date(ad.departureTime);
-      return adDate.toDateString() === now.toDateString();
-    });
-  }
-
-  if (dateFilter.value === "tomorrow") {
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    items = items.filter(ad => {
-      const d = new Date(ad.departureTime);
-      return d.toDateString() === tomorrow.toDateString();
-    });
-  }
-
-  if (dateFilter.value === "3days") {
-    const limit = new Date(now);
-    limit.setDate(limit.getDate() + 3);
-    items = items.filter(ad => {
-      const d = new Date(ad.departureTime);
-      return d >= now && d <= limit;
-    });
-  }
-
-  // 🌍 FROM
-  if (fromRegion.value) items = items.filter(ad => ad.fromRegion === fromRegion.value);
-  const selFromDistrict = document.querySelector("input[name='fromDistrict']:checked");
-  if (selFromDistrict) {
-    items = items.filter(ad => ad.fromDistrict === selFromDistrict.value);
-  }
-
-  // 🌍 TO
-  if (toRegion.value) items = items.filter(ad => ad.toRegion === toRegion.value);
-  const selToDistrict = document.querySelector("input[name='toDistrict']:checked");
-  if (selToDistrict) {
-    items = items.filter(ad => ad.toDistrict === selToDistrict.value);
-  }
-
-  // 🔄 Sort
-  if (sortSelect.value === "newest") {
-    items.sort((a, b) => b.createdAt - a.createdAt);
-  } else {
-    items.sort((a, b) => a.createdAt - b.createdAt);
-  }
-
-  filteredADS = items;
-  currentPage = 1;
-  renderPage();
 }
 
-
-// ================================================
-// RENDER PAGE
-// ================================================
-function renderPage() {
-  if (!filteredADS.length) {
-    adsList.innerHTML = "<div style='padding:20px;text-align:center;'>Hech narsa topilmadi</div>";
-    pagination.innerHTML = "";
-    return;
+// ----------------------------
+// Attach realtime listener (optional)
+// ----------------------------
+function attachRealtimeLogs() {
+  try {
+    const logsRef = ref(db, 'admin_logs');
+    onValue(logsRef, (snap) => {
+      ALL_LOGS = flattenAdminLogs(snap);
+      applyFilters();
+    }, (err) => {
+      console.error('Realtime admin_logs onValue error:', err);
+    });
+  } catch (e) {
+    console.warn('Realtime attach error:', e);
   }
+}
+
+// ----------------------------
+// Filtering
+// ----------------------------
+function applyFilters(resetPage = true) {
+  const q = (qInput.value || '').trim().toLowerCase();
+  const from = dateFrom.value ? new Date(dateFrom.value + 'T00:00:00').getTime() : null;
+  const to = dateTo.value ? new Date(dateTo.value + 'T23:59:59').getTime() : null;
+
+  FILTERED = ALL_LOGS.filter(item => {
+    const d = item.data || {};
+    if (q) {
+      const haystack = [
+        d.action || '',
+        d.admin || '',
+        d.target || '',
+        d.userKey || ''
+      ].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    const t = Number(d.time || 0);
+    if (from && t < from) return false;
+    if (to && t > to) return false;
+
+    return true;
+  });
+
+  if (resetPage) currentPage = 1;
+  renderTable();
+}
+
+// ----------------------------
+// Render paginated table
+// ----------------------------
+function renderTable() {
+  const total = FILTERED.length;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  if (currentPage > totalPages) currentPage = totalPages;
 
   const start = (currentPage - 1) * perPage;
-  const end = start + perPage;
+  const pageItems = FILTERED.slice(start, start + perPage);
 
-  const pageItems = filteredADS.slice(start, end);
+  if (!pageItems.length) {
+    logsTbody.innerHTML = `<tr><td colspan="5" class="muted">Hech nima topilmadi</td></tr>`;
+  } else {
+    logsTbody.innerHTML = pageItems.map((it, idx) => {
+      const d = it.data || {};
+      return `
+        <tr>
+          <td>${start + idx + 1}</td>
+          <td>${escapeHtml(d.action || '-')}</td>
+          <td>${escapeHtml(d.target || '-')}</td>
+          <td>${escapeHtml(d.admin || '-')}</td>
+          <td>${fmt(d.time)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
 
-  adsList.innerHTML = pageItems.map(ad => renderItem(ad)).join("");
-
-  renderPagination();
+  pageInfo.textContent = `${currentPage} / ${Math.max(1, Math.ceil(total / perPage))} — ${total} log`;
 }
 
-
-// ================================================
-// SINGLE AD CARD
-// ================================================
-function renderItem(ad) {
-  return `
-    <div class="ad-item">
-      <div><b>${ad.fromRegion} → ${ad.toRegion}</b></div>
-      <div>Joy: ${ad.seats}</div>
-      <div>Narx: <b>${ad.price}</b> UZS</div>
-      <div>Vaqt: ${new Date(ad.departureTime).toLocaleString()}</div>
-    </div>
-  `;
+// ----------------------------
+// helpers
+// ----------------------------
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 }
 
-
-// ================================================
-// PAGINATION
-// ================================================
-function renderPagination() {
-  const total = Math.ceil(filteredADS.length / perPage);
-
-  pagination.innerHTML = `
-    <button ${currentPage === 1 ? "disabled" : ""} onclick="prevPage()">Oldingi</button>
-    <span style="padding:0 10px">${currentPage} / ${total}</span>
-    <button ${currentPage === total ? "disabled" : ""} onclick="nextPage()">Keyingi</button>
-  `;
-}
-
-window.prevPage = () => {
+// ----------------------------
+// pagination controls
+// ----------------------------
+prevBtn.onclick = () => {
   if (currentPage > 1) {
     currentPage--;
-    renderPage();
+    renderTable();
   }
 };
-
-window.nextPage = () => {
-  const total = Math.ceil(filteredADS.length / perPage);
-  if (currentPage < total) {
+nextBtn.onclick = () => {
+  const totalPages = Math.max(1, Math.ceil(FILTERED.length / perPage));
+  if (currentPage < totalPages) {
     currentPage++;
-    renderPage();
+    renderTable();
   }
 };
 
-
-// ================================================
-// RESET FILTERS
-// ================================================
-resetFiltersBtn.onclick = () => {
-  searchInput.value = "";
-  sortSelect.value = "newest";
-  dateFilter.value = "";
-  priceMin.value = "";
-  priceMax.value = "";
-  roleFilter.value = "";
-  fromRegion.value = "";
-  toRegion.value = "";
-
-  fromDistrictBox.innerHTML = "";
-  toDistrictBox.innerHTML = "";
-
-  applyFilters();
+// ----------------------------
+// UI events
+// ----------------------------
+filterBtn.onclick = () => applyFilters(true);
+clearBtn.onclick = () => {
+  qInput.value = '';
+  dateFrom.value = '';
+  dateTo.value = '';
+  applyFilters(true);
 };
 
+// Test write: yozish — admin logs ga test yozadi
+testWriteBtn.onclick = async () => {
+  try {
+    const logsRef = ref(db, 'admin_logs');
+    // test uchun oddiy yozuv: server timestamp bo'lmasa Date.now()
+    const newLog = {
+      action: 'test-action',
+      target: 'test-target',
+      admin: 'unknown',
+      time: Date.now()
+    };
+    await push(logsRef, newLog);
+    alert('Test log yozildi');
+  } catch (err) {
+    console.error('Test log yozishda xato:', err);
+    alert('Yozishda xato: ' + (err && err.message));
+  }
+};
 
-// ================================================
+// ----------------------------
 // START
-// ================================================
-loadAds();
+// ----------------------------
+(function init() {
+  // avval realtime ga qo'shilamiz (agar kerak bo'lsa)
+  try {
+    attachRealtimeLogs();
+    // agar realtime ishlamasa, load once fallback:
+    // loadLogsOnce();
+  } catch (e) {
+    console.warn('Realtime attach failed, loading once', e);
+    loadLogsOnce();
+  }
+})();
