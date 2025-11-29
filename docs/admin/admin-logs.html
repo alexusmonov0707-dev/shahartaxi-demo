@@ -4,20 +4,34 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Admin Loglari</title>
-  <link rel="stylesheet" href="./users.css"> <!-- dizayn fayllaringga mos keltir -->
+  <link rel="stylesheet" href="./users.css">
+
   <style>
-    /* Minimal styling (agar mavjud css bo'lsa u bilan ishlaydi) */
-    .card { background:#fff; border-radius:10px; padding:20px; box-shadow:0 2px 6px rgba(0,0,0,.04); }
-    .controls { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    .controls input[type="text"], .controls input[type="date"] { padding:10px; border:1px solid #e2e8f0; border-radius:6px; min-width:220px; }
-    .controls button { padding:8px 14px; border-radius:6px; border:none; cursor:pointer; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:12px 10px; border-bottom:1px solid #f1f5f9; text-align:left; }
-    th { background:#f8fafc; }
-    .pagination { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:18px; }
+    .logout-box { 
+      width:100%; 
+      display:flex; 
+      justify-content:flex-end; 
+      padding:14px 20px;
+    }
+    .logout-btn {
+      background:#ef4444;
+      color:#fff;
+      padding:8px 16px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+      font-size:15px;
+    }
   </style>
 </head>
+
 <body>
+
+  <!-- LOGOUT BUTTON -->
+  <div class="logout-box">
+    <button class="logout-btn" id="logoutBtn">Chiqish</button>
+  </div>
+
   <main style="max-width:1100px;margin:28px auto;padding:0 16px;">
     <h1>Admin Loglari</h1>
 
@@ -29,8 +43,6 @@
         <input id="toDate" type="date" />
         <button id="filterBtn" style="background:#0ea5e9;color:#fff;">Filtrlash</button>
         <button id="clearBtn" style="background:#e2e8f0;">Tozalash</button>
-
-        <!-- Test log tugmasi — istasang o'chirib yubor -->
         <button id="testBtn" style="background:#34d399;color:#fff;margin-left:auto;">Test log yoz</button>
       </div>
     </section>
@@ -59,7 +71,14 @@
     </section>
   </main>
 
-  <!-- Bitta modul: admin-logs.js -->
   <script type="module" src="./admin-logs.js"></script>
+
+  <script>
+    document.getElementById("logoutBtn").onclick = () => {
+      localStorage.removeItem("admin");
+      location.href = "login.html";
+    };
+  </script>
+
 </body>
 </html>
