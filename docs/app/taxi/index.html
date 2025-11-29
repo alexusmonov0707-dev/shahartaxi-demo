@@ -3,68 +3,131 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin Loglari</title>
+  <title>ShaharTaxi — E'lonlar</title>
 
-  <!-- Sizning loyiha CSS faylingizni shu yerda ulaysiz -->
-  <link rel="stylesheet" href="users.css" />
+  <!-- Sizning CSS fayllaringizga moslang -->
+  <link rel="stylesheet" href="./styles.css" />
 
   <style>
-    /* Minimal styling — kerak bo'lsa o'zingiz css ga ko'chiring */
-    body { font-family: Inter, Arial, sans-serif; background:#f6f7fb; margin:0; padding:30px; }
-    .card { background:#fff; border-radius:10px; padding:20px; box-shadow:0 6px 20px rgba(20,20,40,0.06); margin-bottom:20px; }
-    .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .filters input, .filters select, .filters button { padding:10px; border-radius:6px; border:1px solid #e2e8f0; }
-    .filters .grow { flex:1 1 320px; }
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:14px 12px; text-align:left; border-bottom:1px solid #f0f2f6; }
-    th { background:#f7f9fb; color:#111827; }
-    .pagination { text-align:center; margin-top:14px; }
-    .muted { color:#9aa3b2; }
-    .btn { cursor:pointer; }
-    .btn-blue { background:#0ea5e9; color:#fff; border:none; padding:10px 14px; border-radius:6px; }
-    .btn-gray { background:#eef2f7; color:#111; border:none; padding:9px 12px; border-radius:6px; }
+    /* Minimal, neat styling so page is readable out-of-the-box */
+    :root { --bg:#f6f8fb; --card:#fff; --muted:#6b7280; --accent:#0ea5e9; }
+    body { margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#111827; }
+    .container { max-width:1100px; margin:22px auto; padding:16px; }
+    header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+    h1 { margin:0; font-size:20px; }
+    .card { background:var(--card); border-radius:10px; padding:14px; box-shadow:0 6px 20px rgba(16,24,40,0.04); margin-bottom:14px; }
+    .controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .controls input[type="text"], .controls select, .controls input[type="number"], .controls input[type="date"] {
+      padding:8px 10px; border-radius:8px; border:1px solid #e6edf3; min-width:160px;
+    }
+    .controls .grow { flex:1 1 240px; min-width:160px; }
+    button { cursor:pointer; border-radius:8px; padding:8px 12px; border: none; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-ghost { background:#eef2f7; color:#111; }
+    .grid { display:grid; grid-template-columns: 1fr 320px; gap:12px; align-items:start; }
+    #adsContainer { min-height:120px; }
+    .ad-card { background:#fff; border-radius:10px; padding:12px; margin-bottom:12px; box-shadow:0 2px 8px rgba(10,20,40,0.03); }
+    .helper { color:var(--muted); font-size:13px; }
+    .pagination { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:12px; }
+    .hidden { display:none !important; }
   </style>
 </head>
 <body>
+  <div class="container">
 
-  <h1>Admin Loglari</h1>
+    <header>
+      <h1>ShaharTaxi — E'lonlar</h1>
+      <div style="margin-left:auto" class="helper">Foydalanuvchi paneli</div>
+    </header>
 
-  <div class="card">
-    <h3>Filtr</h3>
-    <div class="filters">
-      <input id="qInput" class="grow" placeholder="Izlash: action, admin, target..." type="text" />
-      <input id="dateFrom" type="date" />
-      <input id="dateTo" type="date" />
-      <button id="filterBtn" class="btn btn-blue">Filtrlash</button>
-      <button id="clearBtn" class="btn btn-gray">Tozalash</button>
-      <button id="testWriteBtn" class="btn" style="background:#10b981;color:#fff;border:none;padding:8px 12px;border-radius:6px;">Test log yoz</button>
-    </div>
+    <!-- FILTERS -->
+    <section class="card">
+      <div class="controls">
+        <input id="searchInput" class="grow" type="text" placeholder="Izlash: region, comment, user..." />
+
+        <select id="regionFrom" title="From region">
+          <option value="">From (Barchasi)</option>
+        </select>
+
+        <select id="districtFrom" title="From district">
+          <option value="">From district</option>
+        </select>
+
+        <select id="regionTo" title="To region">
+          <option value="">To (Barchasi)</option>
+        </select>
+
+        <select id="districtTo" title="To district">
+          <option value="">To district</option>
+        </select>
+
+        <input id="minPrice" type="number" placeholder="Min narx" />
+        <input id="maxPrice" type="number" placeholder="Max narx" />
+
+        <select id="sortSelect" title="Tartib">
+          <option value="time_desc">Yangi → Eski</option>
+          <option value="time_asc">Eski → Yangi</option>
+          <option value="price_asc">Narx ↑</option>
+          <option value="price_desc">Narx ↓</option>
+        </select>
+
+        <select id="pageSizeSelect" title="Sahifa hajmi">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="50">50</option>
+        </select>
+
+        <button id="applyFiltersBtn" class="btn-primary">Filtrlash</button>
+        <button id="resetFiltersBtn" class="btn-ghost">Tozalash</button>
+      </div>
+    </section>
+
+    <!-- MAIN CONTENT -->
+    <section class="grid">
+      <div>
+        <div id="loadingBox" class="card helper">Yuklanmoqda...</div>
+        <div id="adsContainer" class="card" aria-live="polite"></div>
+        <div id="emptyBox" class="card helper hidden">Hech narsa topilmadi</div>
+
+        <!-- pagination controls -->
+        <div class="pagination">
+          <button id="prevPageBtn" class="btn-ghost">← Oldingi</button>
+          <div id="paginationInfo" class="helper">0 / 0</div>
+          <button id="nextPageBtn" class="btn-ghost">Keyingi →</button>
+        </div>
+      </div>
+
+      <!-- SIDE PANEL: quick filters / help -->
+      <aside>
+        <div class="card">
+          <h4>Tez filtrlash</h4>
+          <div class="controls" style="flex-direction:column; align-items:stretch;">
+            <label class="helper" style="margin-bottom:6px;"><input type="checkbox" id="onlyFreeSeats" /> Faqat bo'sh joylar</label>
+            <label class="helper" style="margin-bottom:6px;"><input type="checkbox" id="withPhone" /> Kontakt bilan</label>
+
+            <div style="margin-top:8px;">
+              <button id="resetQuick" class="btn-ghost" style="width:100%;">Qayta tiklash</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h4>Yordam</h4>
+          <div class="helper">Haydovchi uchun — yo‘lovchilar e'lonlari</div>
+          <div class="helper">Yo‘lovchi uchun — haydovchilar e'lonlari</div>
+        </div>
+      </aside>
+    </section>
+
+    <footer style="margin-top:18px;text-align:center" class="helper">© ShaharTaxi</footer>
   </div>
 
-  <div class="card">
-    <table id="logsTable" aria-describedby="log-list">
-      <thead>
-        <tr>
-          <th style="width:40px">#</th>
-          <th>Action</th>
-          <th>Target</th>
-          <th>Admin</th>
-          <th>Vaqt</th>
-        </tr>
-      </thead>
-      <tbody id="logsTbody">
-        <tr><td colspan="5" class="muted">Yuklanmoqda...</td></tr>
-      </tbody>
-    </table>
+  <!-- index.js (module) - main logic (will import functions from docs/libs/lib.js) -->
+  <script type="module">
+    // main bootstrap: import startApp from index.js (which uses ../libs/lib.js internally)
+    import { startApp } from "./index.js";
+    startApp();
+  </script>
 
-    <div class="pagination" id="paginationWrap">
-      <button id="prevBtn" class="btn btn-gray">← Oldingi</button>
-      <span id="pageInfo">0 / 0</span>
-      <button id="nextBtn" class="btn btn-gray">Keyingi →</button>
-    </div>
-  </div>
-
-  <!-- Module script -->
-  <script type="module" src="./admin-logs.js"></script>
 </body>
 </html>
