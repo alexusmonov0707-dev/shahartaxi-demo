@@ -1,46 +1,52 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Login</title>
-    <link rel="stylesheet" href="./login.css">
+  <meta charset="UTF-8">
+  <title>Umumiy sozlamalar</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="./settings.css">
+
+  <style>
+    .logout-box { width:100%; display:flex; justify-content:flex-end; padding:14px 20px; }
+    .logout-btn { background:#ef4444;color:#fff;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:15px; }
+  </style>
 </head>
 
 <body>
 
-<div class="login-box">
-    <h2>Admin Panelga Kirish</h2>
+  <!-- LOGOUT -->
+  <div class="logout-box">
+    <button class="logout-btn" id="logoutBtn">Chiqish</button>
+  </div>
 
-    <input type="text" id="username" placeholder="Login">
-    <input type="password" id="password" placeholder="Parol">
+  <main>
+    <h1>Umumiy sozlamalar</h1>
 
-    <button onclick="login()">Kirish</button>
+    <div class="card">
+      <h3>Ilova sozlamalari</h3>
 
-    <p id="error" class="error"></p>
-</div>
+      <input id="minPrice" type="number" placeholder="Minimal narx (UZS)">
+      <input id="maxPrice" type="number" placeholder="Maksimal narx (UZS)">
+      <input id="minSeat" type="number" placeholder="Minimal joy (seat)">
+      <input id="daysActive" type="number" placeholder="E'lon muddati (kun)">
 
+      <select id="maintenance">
+        <option value="off">O‘chirilgan</option>
+        <option value="on">Yoqilgan</option>
+      </select>
 
-<script type="module">
-import { loginAdmin } from "./admin.js";
+      <button id="saveBtn" class="save-btn">Saqlash</button>
+    </div>
+  </main>
 
-window.login = async function () {
-    const u = document.getElementById("username").value.trim();
-    const p = document.getElementById("password").value.trim();
-    const err = document.getElementById("error");
+  <script type="module" src="./settings.js"></script>
 
-    err.textContent = "";
-
-    const res = await loginAdmin(u, p);
-
-    if (!res.ok) {
-        err.textContent = res.error;
-        return;
-    }
-
-    // SUCCESS → dashboard ga kirish
-    window.location.href = "./dashboard.html";
-};
-</script>
+  <script>
+    document.getElementById("logoutBtn").onclick = () => {
+      localStorage.removeItem("admin");
+      location.href = "login.html";
+    };
+  </script>
 
 </body>
 </html>
