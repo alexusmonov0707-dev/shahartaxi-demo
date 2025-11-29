@@ -35,12 +35,17 @@ async function loadLogs() {
     logs = [];
 
     if (!snap.exists()) {
-      console.log("NO LOGS FOUND");
       renderTable([]);
       return;
     }
 
     snap.forEach(userSnap => {
+
+      // ❗ timestamp node-ni o'tkazib yuboramiz
+      if (typeof userSnap.val() !== "object") {
+        return;
+      }
+
       userSnap.forEach(logSnap => {
         const data = logSnap.val();
 
@@ -54,15 +59,14 @@ async function loadLogs() {
       });
     });
 
-    logs.sort((a, b) => b.time - a.time); // latest first
+    logs.sort((a, b) => b.time - a.time);
     applyFilters();
-
-    console.log("LOGS LOADED:", logs.length);
 
   } catch (err) {
     console.error("Loglarni olishda xato:", err);
   }
 }
+
 
 // ------------------ FILTERS ------------------
 function applyFilters() {
