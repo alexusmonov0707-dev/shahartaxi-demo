@@ -15,7 +15,7 @@ import {
     formatTimestamp,
     fetchUserById,
     fetchAdsByType,
-} from "../libs/lib.js";
+} from "../../libs/lib.js";
 
 // ------------------------------
 // Global variables
@@ -575,7 +575,7 @@ if (ALL_ADS && ALL_ADS.length > 0) {
 // PART 4 — REALTIME UPDATES (if supported in lib.js)
 // --------------------------------------------
 
-import { onAdsChanged } from "../libs/lib.js";  // may or may not exist
+import { onAdsChanged } from "../../libs/lib.js";  // may or may not exist
 
 let REALTIME_ENABLED = true;  // you can disable this if needed
 
