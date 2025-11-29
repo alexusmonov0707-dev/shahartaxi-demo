@@ -1,148 +1,167 @@
-// ------------------ IMPORT FIREBASE ------------------
+// =========================================================
+//  FIREBASE INIT (ESM v10)
+// =========================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  db,
+  getDatabase,
   ref,
   get,
   push,
   set
-} from "./firebase.js";
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js";
 
-// ------------------ ELEMENTS ------------------
+const firebaseConfig = {
+  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+  authDomain: "shahartaxi-demo.firebaseapp.com",
+  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+  projectId: "shahartaxi-demo",
+  storageBucket: "shahartaxi-demo.appspot.com",
+  messagingSenderId: "874241795701",
+  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+
+// =========================================================
+//  ELEMENTLARNI OLAMIZ
+// =========================================================
 const tbody = document.getElementById("logsTableBody");
+const paginationInfo = document.getElementById("paginationInfo");
+const prevPageBtn = document.getElementById("prevPageBtn");
+const nextPageBtn = document.getElementById("nextPageBtn");
+
 const searchInput = document.getElementById("searchInput");
-const startDateInput = document.getElementById("startDate");
-const endDateInput = document.getElementById("endDate");
-
-const prevBtn = document.getElementById("prevPageBtn");
-const nextBtn = document.getElementById("nextPageBtn");
-const pageInfo = document.getElementById("paginationInfo");
-
+const fromDate = document.getElementById("fromDate");
+const toDate = document.getElementById("toDate");
 const filterBtn = document.getElementById("filterBtn");
 const clearBtn = document.getElementById("clearBtn");
-const testBtn = document.getElementById("testLogBtn");
+const testBtn = document.getElementById("testBtn");
 
-// ------------------ DATA ------------------
-let logs = [];
+
+// =========================================================
+//  GLOBAL OZGARUVCHILAR
+// =========================================================
+let allLogs = [];
 let filteredLogs = [];
-
 let currentPage = 1;
-let pageSize = 30;
+const pageSize = 20;
 
-// ------------------ LOAD LOGS ------------------
+
+// =========================================================
+//  ADMIN LOG OLISH
+// =========================================================
 async function loadLogs() {
+  tbody.innerHTML = `<tr><td colspan="5">Yuklanmoqda...</td></tr>`;
+
   try {
-    const snap = await get(ref(db, "admin_logs"));
-    logs = [];
+    const logsRef = ref(db, "admin_logs");
+    const snap = await get(logsRef);
 
     if (!snap.exists()) {
-      renderTable([]);
+      tbody.innerHTML = `<tr><td colspan="5">Hech nima topilmadi</td></tr>`;
       return;
     }
 
-    snap.forEach(userSnap => {
+    allLogs = [];
 
-      // ❗ timestamp node-ni o'tkazib yuboramiz
-      if (typeof userSnap.val() !== "object") {
-        return;
-      }
+    snap.forEach(userNode => {
+      const userId = userNode.key;
 
-      userSnap.forEach(logSnap => {
-        const data = logSnap.val();
+      userNode.forEach(logNode => {
+        const logId = logNode.key;
+        const log = logNode.val();
 
-        logs.push({
-          id: logSnap.key,
-          action: data.action || "-",
-          admin: data.admin || "unknown",
-          target: data.target || "-",
-          time: data.time || 0
+        allLogs.push({
+          id: logId,
+          action: log.action || "-",
+          target: log.target || "-",
+          admin: log.admin || "-",
+          time: log.time || 0
         });
       });
     });
 
-    logs.sort((a, b) => b.time - a.time);
+    // Yangi loglarni oxirida emas → yuqorida chiqishi uchun
+    allLogs.sort((a, b) => b.time - a.time);
+
     applyFilters();
 
   } catch (err) {
-    console.error("Loglarni olishda xato:", err);
+    tbody.innerHTML = `<tr><td colspan="5">Xatolik: ${err}</td></tr>`;
   }
 }
 
 
-// ------------------ FILTERS ------------------
+// =========================================================
+//  FILTRLARNI QO‘LLASH
+// =========================================================
 function applyFilters() {
-  let search = searchInput.value.trim().toLowerCase();
-  let start = startDateInput.value ? new Date(startDateInput.value).getTime() : 0;
-  let end = endDateInput.value ? new Date(endDateInput.value).getTime() + 86400000 : Infinity;
+  const text = searchInput.value.toLowerCase();
+  const from = fromDate.value ? new Date(fromDate.value).getTime() : 0;
+  const to = toDate.value ? new Date(toDate.value).getTime() + 86400000 : Infinity;
 
-  filteredLogs = logs.filter(log => {
-    let matchText =
-      log.action.toLowerCase().includes(search) ||
-      log.admin.toLowerCase().includes(search) ||
-      log.target.toLowerCase().includes(search);
+  filteredLogs = allLogs.filter(log => {
+    const t = log.time || 0;
+    const textMatch =
+      log.action.toLowerCase().includes(text) ||
+      log.target.toLowerCase().includes(text) ||
+      log.admin.toLowerCase().includes(text);
 
-    let matchDate = log.time >= start && log.time <= end;
-    return matchText && matchDate;
+    return textMatch && t >= from && t <= to;
   });
 
   currentPage = 1;
   renderPage();
 }
 
-// ------------------ RENDER PAGE ------------------
+
+// =========================================================
+//  SAHIFA CHIZISH
+// =========================================================
 function renderPage() {
   const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
 
   if (currentPage > totalPages) currentPage = totalPages;
-  let start = (currentPage - 1) * pageSize;
-  let end = start + pageSize;
 
-  let pageItems = filteredLogs.slice(start, end);
+  const start = (currentPage - 1) * pageSize;
+  const items = filteredLogs.slice(start, start + pageSize);
 
-  renderTable(pageItems);
-  pageInfo.textContent = `${currentPage} / ${totalPages}`;
-}
-
-// ------------------ RENDER TABLE ------------------
-function renderTable(rows) {
   tbody.innerHTML = "";
 
-  if (!rows.length) {
-    tbody.innerHTML = `<tr>
-      <td colspan="5" style="text-align:center; padding:20px;">Hech narsa topilmadi</td>
-    </tr>`;
-    return;
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5">Hech nima topilmadi</td></tr>`;
+  } else {
+    items.forEach((log, index) => {
+      const date = new Date(log.time).toLocaleString("uz-UZ");
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${start + index + 1}</td>
+          <td>${log.action}</td>
+          <td>${log.target}</td>
+          <td>${log.admin}</td>
+          <td>${date}</td>
+        </tr>`;
+    });
   }
 
-  rows.forEach((log, index) => {
-    let tr = document.createElement("tr");
-
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td>${log.action}</td>
-      <td>${log.target}</td>
-      <td>${log.admin}</td>
-      <td>${formatTime(log.time)}</td>
-    `;
-
-    tbody.appendChild(tr);
-  });
+  paginationInfo.textContent = `${currentPage} / ${totalPages}`;
 }
 
-// ------------------ FORMAT DATE ------------------
-function formatTime(ts) {
-  if (!ts) return "-";
-  return new Date(ts).toLocaleString("uz-UZ");
-}
 
-// ------------------ PAGINATION ------------------
-prevBtn.onclick = () => {
+// =========================================================
+//  PAGINATSIYA
+// =========================================================
+prevPageBtn.onclick = () => {
   if (currentPage > 1) {
     currentPage--;
     renderPage();
   }
 };
 
-nextBtn.onclick = () => {
+nextPageBtn.onclick = () => {
   const totalPages = Math.ceil(filteredLogs.length / pageSize);
   if (currentPage < totalPages) {
     currentPage++;
@@ -150,36 +169,40 @@ nextBtn.onclick = () => {
   }
 };
 
-// ------------------ CLEAR FILTER ------------------
+
+// =========================================================
+//  FILTR TUGMALARI
+// =========================================================
+filterBtn.onclick = () => applyFilters();
+
 clearBtn.onclick = () => {
   searchInput.value = "";
-  startDateInput.value = "";
-  endDateInput.value = "";
+  fromDate.value = "";
+  toDate.value = "";
   applyFilters();
 };
 
-// ------------------ APPLY FILTER BUTTON ------------------
-filterBtn.onclick = () => applyFilters();
 
-// ------------------ TEST LOG ------------------
+// =========================================================
+//  TEST LOG YOZISH (tekshirish uchun)
+// =========================================================
 testBtn.onclick = async () => {
-  try {
-    const testRef = push(ref(db, "admin_logs/test_admin"));
-    await set(testRef, {
-      action: "test-action",
-      admin: "test-panel",
-      target: "test-target",
-      time: Date.now()
-    });
+  const testRef = ref(db, "admin_logs/testUser");
+  const newRef = push(testRef);
 
-    alert("Test log yozildi!");
-    loadLogs();
+  await set(newRef, {
+    action: "test-action",
+    target: "test-target",
+    admin: "test-admin",
+    time: Date.now()
+  });
 
-  } catch (e) {
-    console.error(e);
-    alert("Xatolik!");
-  }
+  alert("Test log yozildi!");
+  loadLogs();
 };
 
-// ------------------ INIT ------------------
+
+// =========================================================
+//  BOSHLASH
+// =========================================================
 loadLogs();
