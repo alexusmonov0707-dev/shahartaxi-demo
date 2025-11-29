@@ -596,3 +596,75 @@ if (typeof onAdsChanged === "function" && REALTIME_ENABLED) {
         applyFilters();
     });
 }
+// --------------------------------------------
+// CACHING — localStorage boost
+// Cache key is based on user role
+// --------------------------------------------
+
+function cacheAds() {
+    if (!ALL_ADS || ALL_ADS.length === 0) return;
+    const key = CURRENT_ROLE === "driver" ? "cache_passenger_ads" : "cache_driver_ads";
+    localStorage.setItem(key, JSON.stringify(ALL_ADS));
+}
+
+function loadCacheIfExists() {
+    const key = CURRENT_ROLE === "driver" ? "cache_passenger_ads" : "cache_driver_ads";
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return false;
+        const ads = JSON.parse(raw);
+        if (!Array.isArray(ads)) return false;
+
+        console.log("Loaded cached ads:", ads.length);
+        ALL_ADS = ads;
+        applyFilters();
+        return true;
+
+    } catch (e) {
+        console.warn("Cache load failed:", e);
+        return false;
+    }
+}
+// --------------------------------------------
+// FINAL INIT SEQUENCE
+// --------------------------------------------
+async function startApp() {
+    showLoading(true);
+
+    // 1) Load user
+    CURRENT_USER = await getCurrentUser();
+    CURRENT_ROLE = await getUserRole(CURRENT_USER?.uid);
+
+    if (!CURRENT_ROLE) {
+        console.warn("No role found. Default: passenger");
+        CURRENT_ROLE = "passenger";
+    }
+
+    console.log("User ROLE:", CURRENT_ROLE);
+
+    // 2) Try load cached data first
+    const cacheLoaded = loadCacheIfExists();
+
+    // 3) Load fresh data
+    let freshAds = [];
+    if (CURRENT_ROLE === "driver") freshAds = await getPassengerAds();
+    else if (CURRENT_ROLE === "passenger") freshAds = await getDriverAds();
+    else freshAds = await getAllAds();
+
+    ALL_ADS = freshAds;
+
+    // 4) Save to cache
+    cacheAds();
+
+    // 5) Render region dropdowns
+    fillRegionDropdowns();
+    ensureDistrictsSync();
+
+    // 6) Apply filtering
+    applyFilters();
+
+    showLoading(false);
+}
+
+// Export start function
+export { startApp };
