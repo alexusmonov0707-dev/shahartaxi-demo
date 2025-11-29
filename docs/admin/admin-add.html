@@ -5,31 +5,49 @@
   <title>Yangi Admin qo'shish</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="stylesheet" href="./users.css">
+
+  <style>
+    .logout-box { width:100%; display:flex; justify-content:flex-end; padding:14px 20px; }
+    .logout-btn { background:#ef4444;color:#fff;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:15px; }
+  </style>
 </head>
+
 <body>
 
-<div class="form-container">
-  <h2>Yangi Admin qo‘shish</h2>
+  <!-- LOGOUT -->
+  <div class="logout-box">
+    <button class="logout-btn" id="logoutBtn">Chiqish</button>
+  </div>
 
-  <input type="text" id="fullName" placeholder="To‘liq ism" />
-  <input type="text" id="username" placeholder="Username" />
-  <input type="email" id="email" placeholder="Email" />
-  <input type="text" id="password" placeholder="Parol" />
+  <div class="form-container">
+    <h2>Yangi Admin qo‘shish</h2>
 
-  <select id="role">
-    <option value="admin">admin</option>
-    <option value="superadmin">superadmin</option>
-  </select>
+    <input type="text" id="fullName" placeholder="To‘liq ism" />
+    <input type="text" id="username" placeholder="Username" />
+    <input type="email" id="email" placeholder="Email" />
+    <input type="text" id="password" placeholder="Parol" />
 
-  <button id="addBtn" class="btn export">Qo‘shish</button>
-  <button onclick="location.href='admins.html'" class="btn back">Orqaga</button>
-</div>
+    <select id="role">
+      <option value="admin">admin</option>
+      <option value="superadmin">superadmin</option>
+    </select>
 
-<script type="module">
-  import { addAdmin } from "./admin-add.js";
+    <button id="addBtn" class="btn export">Qo‘shish</button>
+    <button onclick="location.href='admins.html'" class="btn back">Orqaga</button>
+  </div>
 
-  document.getElementById("addBtn").addEventListener("click", addAdmin);
-</script>
+  <script type="module">
+    import { addAdmin } from "./admin-add.js";
+
+    document.getElementById("addBtn").addEventListener("click", addAdmin);
+  </script>
+
+  <script>
+    document.getElementById("logoutBtn").onclick = () => {
+      localStorage.removeItem("admin");
+      location.href = "login.html";
+    };
+  </script>
 
 </body>
 </html>
