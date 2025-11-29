@@ -268,3 +268,7 @@ export async function logAction(action, target, adminName) {
     console.error("logAction error:", err);
   }
 }
+// ---- TEST: Log ishlayotganini tekshirish ----
+(async () => {
+  await logAction("test-action", "test-target", "test-admin");
+})();
