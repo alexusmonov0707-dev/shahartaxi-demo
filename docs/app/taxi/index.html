@@ -1,96 +1,70 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ShaharTaxi — E’lonlar</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin Loglari</title>
 
-  <!-- style.css joylashuvi: root (shahartaxi-demo/style.css) -->
-  <link rel="stylesheet" href="../../style.css" />
+  <!-- Sizning loyiha CSS faylingizni shu yerda ulaysiz -->
+  <link rel="stylesheet" href="users.css" />
+
+  <style>
+    /* Minimal styling — kerak bo'lsa o'zingiz css ga ko'chiring */
+    body { font-family: Inter, Arial, sans-serif; background:#f6f7fb; margin:0; padding:30px; }
+    .card { background:#fff; border-radius:10px; padding:20px; box-shadow:0 6px 20px rgba(20,20,40,0.06); margin-bottom:20px; }
+    .filters { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .filters input, .filters select, .filters button { padding:10px; border-radius:6px; border:1px solid #e2e8f0; }
+    .filters .grow { flex:1 1 320px; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:14px 12px; text-align:left; border-bottom:1px solid #f0f2f6; }
+    th { background:#f7f9fb; color:#111827; }
+    .pagination { text-align:center; margin-top:14px; }
+    .muted { color:#9aa3b2; }
+    .btn { cursor:pointer; }
+    .btn-blue { background:#0ea5e9; color:#fff; border:none; padding:10px 14px; border-radius:6px; }
+    .btn-gray { background:#eef2f7; color:#111; border:none; padding:9px 12px; border-radius:6px; }
+  </style>
 </head>
-
 <body>
 
-<div class="topbar">
-  <div>ShaharTaxi — E’lonlar</div>
-  <button class="logout" onclick="logout()">Chiqish</button>
-</div>
+  <h1>Admin Loglari</h1>
 
-<div class="container">
   <div class="card">
-    <h2 style="text-align:center; color:var(--primary); margin:0 0 12px 0;">Barcha e’lonlar</h2>
-
+    <h3>Filtr</h3>
     <div class="filters">
-
-      <input id="search" placeholder="Qidiruv (manzil, izoh, narx)..." />
-
-      <select id="sortBy">
-        <option value="newest">Eng yangi</option>
-        <option value="oldest">Eng eski</option>
-      </select>
-
-      <select id="filterDate">
-        <option value="">Vaqt (hammasi)</option>
-        <option value="today">Bugun</option>
-        <option value="tomorrow">Ertaga</option>
-        <option value="3days">3 kun ichida</option>
-      </select>
-
-      <input id="priceMin" type="number" placeholder="Narx min" style="width:120px">
-      <input id="priceMax" type="number" placeholder="Narx max" style="width:120px">
-
-      <select id="filterRole">
-        <option value="">Hammasi</option>
-        <option value="Haydovchi">Haydovchi</option>
-        <option value="Yo‘lovchi">Yo‘lovchi</option>
-      </select>
-
-      <button id="resetFiltersBtn"
-        style="
-          padding:10px 16px;
-          border:none;
-          background:#ff4444;
-          color:white;
-          border-radius:8px;
-          font-size:14px;
-          cursor:pointer;
-          min-width:120px;">
-        Reset
-      </button>
-
+      <input id="qInput" class="grow" placeholder="Izlash: action, admin, target..." type="text" />
+      <input id="dateFrom" type="date" />
+      <input id="dateTo" type="date" />
+      <button id="filterBtn" class="btn btn-blue">Filtrlash</button>
+      <button id="clearBtn" class="btn btn-gray">Tozalash</button>
+      <button id="testWriteBtn" class="btn" style="background:#10b981;color:#fff;border:none;padding:8px 12px;border-radius:6px;">Test log yoz</button>
     </div>
-
-    <div class="filter-block">
-      <label><b>Qayerdan:</b></label><br>
-      <select id="fromRegion"><option value="">Viloyat</option></select>
-      <div id="fromDistrictBox" class="district-box"></div>
-    </div>
-
-    <div class="filter-block">
-      <label><b>Qayerga:</b></label><br>
-      <select id="toRegion"><option value="">Viloyat</option></select>
-      <div id="toDistrictBox" class="district-box"></div>
-    </div>
-
-    <div id="adsList">Yuklanmoqda...</div>
-
-    <div id="pagination" style="margin-top:20px; text-align:center"></div>
-
   </div>
-</div>
 
-<div id="adFullModal"></div>
+  <div class="card">
+    <table id="logsTable" aria-describedby="log-list">
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>Action</th>
+          <th>Target</th>
+          <th>Admin</th>
+          <th>Vaqt</th>
+        </tr>
+      </thead>
+      <tbody id="logsTbody">
+        <tr><td colspan="5" class="muted">Yuklanmoqda...</td></tr>
+      </tbody>
+    </table>
 
-<!-- REGIONS: assetsdagi fayl -->
-<script src="../../assets/regions-taxi.js"></script>
+    <div class="pagination" id="paginationWrap">
+      <button id="prevBtn" class="btn btn-gray">← Oldingi</button>
+      <span id="pageInfo">0 / 0</span>
+      <button id="nextBtn" class="btn btn-gray">Keyingi →</button>
+    </div>
+  </div>
 
-<!-- helper (shu papkada joylashgan bo'lsin) -->
-<script src="js/regions-helper.js"></script>
-
-<!-- MAIN INDEX JS (module) -->
-<script type="module" src="js/index.js?v=1"></script>
-
+  <!-- Module script -->
+  <script type="module" src="./admin-logs.js"></script>
 </body>
 </html>
-
