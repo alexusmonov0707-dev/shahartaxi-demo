@@ -14,7 +14,7 @@ import {
     regions,
     formatTimestamp,
     fetchUserById,
-    fetchAdsByType,
+  
 } from "../../libs/lib.js";
 
 // ------------------------------
