@@ -1,6 +1,3 @@
-// ===============================
-// IMPORT FIREBASE FROM LIB.JS
-// ===============================
 import {
   auth,
   db,
@@ -10,44 +7,30 @@ import {
   signOut
 } from "../../libs/lib.js";
 
-// ===============================
-// GLOBALS
-// ===============================
 let CURRENT_USER = null;
 let ALL_ADS = [];
 let ADS_MAP = new Map();
 let CURRENT_PAGE = 1;
 const PAGE_SIZE = 10;
 
-// REGIONS
 let REGIONS = window.regionsData || window.regions || {};
 
-
-// ===============================
-// GET USER INFO (SAFE VERSION)
-// ===============================
 async function getUserInfo(uid) {
-  if (!uid) {
-    return {
-      uid: null,
+  if (!uid) return {
+    fullName: "Foydalanuvchi",
+    phone: "-",
+    role: "",
+    avatar: "https://i.ibb.co/2W0z7Lx/user.png"
+  };
+
+  try {
+    const snap = await get(ref(db, "users/" + uid));
+    if (!snap.exists()) return {
       fullName: "Foydalanuvchi",
       phone: "-",
       role: "",
       avatar: "https://i.ibb.co/2W0z7Lx/user.png"
     };
-  }
-
-  try {
-    const snap = await get(ref(db, "users/" + uid));
-    if (!snap.exists()) {
-      return {
-        uid,
-        fullName: "Foydalanuvchi",
-        phone: "-",
-        role: "",
-        avatar: "https://i.ibb.co/2W0z7Lx/user.png"
-      };
-    }
 
     const u = snap.val();
     const info = u.driverInfo || {};
@@ -61,7 +44,6 @@ async function getUserInfo(uid) {
     };
 
   } catch (e) {
-    console.error("getUserInfo error", e);
     return {
       fullName: "Foydalanuvchi",
       phone: "-",
@@ -71,20 +53,12 @@ async function getUserInfo(uid) {
   }
 }
 
-
-// ===============================
-// DETECT AD TYPE
-// ===============================
 function detectAdType(ad) {
   if (ad.driverSeats || ad.seats) return "Haydovchi";
   if (ad.peopleCount || ad.passengerCount) return "Yo‘lovchi";
   return "";
 }
 
-
-// ===============================
-// AUTH
-// ===============================
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     window.location.href = "../login/index.html";
@@ -93,16 +67,11 @@ onAuthStateChanged(auth, async (user) => {
 
   CURRENT_USER = await getUserInfo(user.uid);
 
-  loadRegionsFilter();
   loadRouteFilters();
   await loadAds();
   attachRealtime();
 });
 
-
-// ===============================
-// REALTIME
-// ===============================
 function attachRealtime() {
   import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js")
     .then(({ onChildAdded, onChildChanged, onChildRemoved }) => {
@@ -132,10 +101,6 @@ function attachRealtime() {
     });
 }
 
-
-// ===============================
-// LOAD ADS
-// ===============================
 async function loadAds() {
   const snap = await get(ref(db, "ads"));
   if (!snap.exists()) {
@@ -158,20 +123,6 @@ async function loadAds() {
   scheduleRender();
 }
 
-
-// ===============================
-// REGION FILTERS
-// ===============================
-function loadRegionsFilter() {
-  const el = document.getElementById("filterRegion");
-  el.innerHTML = `<option value="">Viloyat</option>`;
-
-  for (const region in REGIONS) {
-    el.innerHTML += `<option value="${region}">${region}</option>`;
-  }
-}
-
-
 function loadRouteFilters() {
   const from = document.getElementById("fromRegion");
   const to = document.getElementById("toRegion");
@@ -191,7 +142,6 @@ function loadRouteFilters() {
   fillToDistricts();
 }
 
-
 function fillFromDistricts() {
   const region = document.getElementById("fromRegion").value;
   const box = document.getElementById("fromDistrictBox");
@@ -208,7 +158,6 @@ function fillFromDistricts() {
     `;
   });
 }
-
 
 function fillToDistricts() {
   const region = document.getElementById("toRegion").value;
@@ -227,10 +176,6 @@ function fillToDistricts() {
   });
 }
 
-
-// ===============================
-// FILTER ADS
-// ===============================
 function filterAds(list) {
   const q = (document.getElementById("search").value || "").toLowerCase();
   const priceMin = Number(document.getElementById("priceMin").value || 0);
@@ -242,11 +187,10 @@ function filterAds(list) {
   const fromDistricts = [...document.querySelectorAll(".fromDistrict:checked")].map(x => x.value);
   const toDistricts = [...document.querySelectorAll(".toDistrict:checked")].map(x => x.value);
 
-  const role = CURRENT_USER.role; // driver | passenger
+  const role = CURRENT_USER.role;
 
   return list.filter(ad => {
 
-    // role switching
     if (role === "driver" && ad.type !== "Yo‘lovchi") return false;
     if (role === "passenger" && ad.type !== "Haydovchi") return false;
 
@@ -266,10 +210,6 @@ function filterAds(list) {
   });
 }
 
-
-// ===============================
-// RENDER ADS
-// ===============================
 async function renderAds(list) {
   const container = document.getElementById("adsList");
   container.innerHTML = "";
@@ -296,10 +236,6 @@ async function renderAds(list) {
   renderPagination(totalPages, CURRENT_PAGE);
 }
 
-
-// ===============================
-// CARD
-// ===============================
 async function createCard(ad) {
   const u = await getUserInfo(ad.userId);
 
@@ -324,10 +260,6 @@ async function createCard(ad) {
   return div;
 }
 
-
-// ===============================
-// MODAL
-// ===============================
 function openModal(ad, u) {
   const m = document.getElementById("adFullModal");
   m.style.display = "flex";
@@ -351,10 +283,6 @@ window.closeModal = function () {
   document.getElementById("adFullModal").style.display = "none";
 };
 
-
-// ===============================
-// PAGINATION
-// ===============================
 function renderPagination(total, cur) {
   const p = document.getElementById("pagination");
   p.innerHTML = "";
@@ -386,10 +314,6 @@ function renderPagination(total, cur) {
   add("»", total);
 }
 
-
-// ===============================
-// RESET
-// ===============================
 document.getElementById("resetFiltersBtn").onclick = () => {
   document.getElementById("search").value = "";
   document.getElementById("priceMin").value = "";
@@ -399,14 +323,9 @@ document.getElementById("resetFiltersBtn").onclick = () => {
 
   fillFromDistricts();
   fillToDistricts();
-
   scheduleRender();
 };
 
-
-// ===============================
-// DEBOUNCED RENDER
-// ===============================
 let t = null;
 function scheduleRender() {
   clearTimeout(t);
@@ -415,11 +334,6 @@ function scheduleRender() {
   }, 120);
 }
 
-
-// ===============================
-// LOGOUT
-// ===============================
 window.logout = () => signOut(auth);
-
 
 console.log("Taxi index.js fully loaded.");
