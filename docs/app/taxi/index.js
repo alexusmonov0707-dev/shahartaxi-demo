@@ -1,77 +1,30 @@
-// app/user/js/index.js
-// ===============================
-//  FIREBASE INIT + IMPORTS
-// ===============================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+// index.js — ShaharTaxi user/admin index (FULL, non-shortened)
+// Designed to work with your exported lib.js (ES module that exports db, ref, get, onValue, onAuthStateChanged, signOut, etc.)
+// Make sure the import path below points to your actual lib.js location.
+
+const IMPORT_PATH = '../../lib.js'; // <-- If your lib.js is located elsewhere, change this path (relative to this file)
+
 import {
-  getAuth,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getDatabase,
+  auth,
+  db,
   ref,
   get,
-  onChildAdded,
-  onChildChanged,
-  onChildRemoved
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  onValue,
+  onAuthStateChanged,
+  signOut
+} from IMPORT_PATH;
 
-// firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
-  authDomain: "shahartaxi-demo.firebaseapp.com",
-  databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-  projectId: "shahartaxi-demo",
-  storageBucket: "shahartaxi-demo.firebasestorage.app",
-  messagingSenderId: "874241795701",
-  appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
-};
+/*
+ If your lib.js uses different exports or a different path, update IMPORT_PATH.
+ Example common alternatives:
+  - '../lib.js'
+  - '../../libs/lib.js'
+  - '/lib.js'
+*/
 
-// init
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getDatabase(app);
-
-// ===============================
-//  REGIONS — load from regions-taxi.js (assets) and regions-helper.js
-// ===============================
-let REGIONS = {};
-
-if (window.regionsData) {
-  REGIONS = window.regionsData;
-} else if (window.regions) {
-  REGIONS = window.regions;
-} else {
-  REGIONS = {};
-  console.warn("REGIONS not found — check assets/regions-taxi.js and regions-helper.js");
-}
-
-// ===============================
-// READ / NEW BADGE STORAGE
-// ===============================
-function markAsRead(adId) {
-  if (!adId) return;
-  let read = [];
-  try { read = JSON.parse(localStorage.getItem("readAds") || "[]"); } catch (e) {}
-  if (!read.includes(adId)) {
-    read.push(adId);
-    localStorage.setItem("readAds", JSON.stringify(read));
-  }
-}
-
-function isRead(adId) {
-  try {
-    const read = JSON.parse(localStorage.getItem("readAds") || "[]");
-    return read.includes(adId);
-  } catch (e) {
-    return false;
-  }
-}
-
-// ===============================
-// HELPERS
-// ===============================
+// ---------------------------
+// Helpers (copied + robustified)
+// ---------------------------
 function escapeHtml(str) {
   if (str === 0) return "0";
   if (!str && str !== 0) return "";
@@ -94,41 +47,89 @@ function normalizeType(t) {
 }
 
 function formatTime(val) {
-  if (!val) return "—";
-  if (typeof val === "number") {
-    return new Date(val).toLocaleString("uz-UZ", {
-      year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit"
-    });
-  }
-  if (typeof val === "string") {
-    const fixed = val.replace(" ", "T");
-    if (!isNaN(Date.parse(fixed))) {
-      return new Date(fixed).toLocaleString("uz-UZ", {
+  if (!val && val !== 0) return "—";
+  try {
+    if (typeof val === "number") {
+      return new Date(val).toLocaleString("uz-UZ", {
         year: "numeric", month: "2-digit", day: "2-digit",
         hour: "2-digit", minute: "2-digit"
       });
     }
+    if (typeof val === "string") {
+      const fixed = val.replace(" ", "T");
+      if (!isNaN(Date.parse(fixed))) {
+        return new Date(fixed).toLocaleString("uz-UZ", {
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit"
+        });
+      }
+    }
+    return String(val);
+  } catch (e) {
+    return String(val);
   }
-  return String(val);
 }
 
-function slugify(s) {
-  return String(s || "")
-    .toLowerCase()
-    .replace(/\s+/g, "_")
-    .replace(/[^\w\-]/g, "");
+function safeNum(v, def = 0) {
+  const n = Number(v);
+  return isNaN(n) ? def : n;
 }
 
-// ===============================
-// GET USER INFO
-// ===============================
+// ---------------------------
+// Globals & DOM refs
+// ---------------------------
+let REGIONS = (window.regionsData || window.regions || {});
+let ALL_ADS = [];
+let ADS_MAP = new Map();
+let CURRENT_USER = null;
+let CURRENT_PAGE = 1;
+const PAGE_SIZE = 10; // keep same as original
+
+const dom = {
+  adsList: document.getElementById("adsList"),
+  search: document.getElementById("search"),
+  sortBy: document.getElementById("sortBy"),
+  filterDate: document.getElementById("filterDate"),
+  priceMin: document.getElementById("priceMin"),
+  priceMax: document.getElementById("priceMax"),
+  filterRole: document.getElementById("filterRole"),
+  resetBtn: document.getElementById("resetFiltersBtn"),
+  fromRegion: document.getElementById("fromRegion"),
+  toRegion: document.getElementById("toRegion"),
+  fromDistrictBox: document.getElementById("fromDistrictBox"),
+  toDistrictBox: document.getElementById("toDistrictBox"),
+  pagination: document.getElementById("pagination"),
+  adFullModal: document.getElementById("adFullModal")
+};
+
+// defensive: if some DOM missing, warn (but continue)
+Object.entries(dom).forEach(([k,v]) => { if (!v) console.warn(`index.js: DOM element ${k} not found`); });
+
+// ---------------------------
+// Auth watcher
+// ---------------------------
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    // redirect to login in same folder
+    window.location.href = "login.html";
+    return;
+  }
+
+  CURRENT_USER = await getUserInfo(user.uid);
+  loadRegionsFilter();
+  loadRouteFilters();
+  await initialLoadAds();
+  attachRealtimeHandlers(); // real-time using onValue (stable)
+});
+
+// ---------------------------
+// getUserInfo — reuse original logic but adapt to modular db
+// ---------------------------
 async function getUserInfo(uid) {
   if (!uid) return {};
   try {
     const snap = await get(ref(db, "users/" + uid));
     if (!snap.exists()) return {};
-
     const u = snap.val();
     return {
       uid,
@@ -147,41 +148,13 @@ async function getUserInfo(uid) {
   }
 }
 
-// ===============================
-// GLOBALS
-// ===============================
-let ALL_ADS = [];
-let ADS_MAP = new Map();
-let CURRENT_USER = null;
-let CURRENT_PAGE = 1;
-const PAGE_SIZE = 10;
-
-// ===============================
-// AUTH CHECK
-// ===============================
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    // relative login page (assumed in same folder)
-    window.location.href = "login.html";
-    return;
-  }
-
-  CURRENT_USER = await getUserInfo(user.uid);
-  loadRegionsFilter();
-  loadRouteFilters();
-  await initialLoadAds();
-  attachRealtimeHandlers();
-});
-
-// ===============================
-// LOAD FILTER (TOP REGION)
-// ===============================
+// ---------------------------
+// Regions / route filters
+// ---------------------------
 function loadRegionsFilter() {
-  const el = document.getElementById("filterRegion");
+  const el = dom.filterRegion || document.getElementById("filterRegion");
   if (!el) return;
-
   el.innerHTML = '<option value="">Viloyat (filter)</option>';
-
   Object.keys(REGIONS).forEach(region => {
     const opt = document.createElement("option");
     opt.value = region;
@@ -190,210 +163,158 @@ function loadRegionsFilter() {
   });
 }
 
-// ===============================
-// ROUTE FILTERS (FROM / TO)
-// ===============================
 function loadRouteFilters() {
-  const fromRegion = document.getElementById("fromRegion");
-  const toRegion = document.getElementById("toRegion");
-
+  const fromRegion = dom.fromRegion;
+  const toRegion = dom.toRegion;
   if (!fromRegion || !toRegion) return;
 
   fromRegion.innerHTML = '<option value="">Viloyat</option>';
   toRegion.innerHTML = '<option value="">Viloyat</option>';
 
   Object.keys(REGIONS).forEach(region => {
-    fromRegion.insertAdjacentHTML("beforeend",
-      `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
-    toRegion.insertAdjacentHTML("beforeend",
-      `<option value="${escapeHtml(region)}">${escapeHtml(region)}</option>`);
+    const escaped = escapeHtml(region);
+    fromRegion.insertAdjacentHTML("beforeend", `<option value="${escaped}">${escaped}</option>`);
+    toRegion.insertAdjacentHTML("beforeend", `<option value="${escaped}">${escaped}</option>`);
   });
 
-  fromRegion.onchange = () => {
-    fillFromDistricts();
-    CURRENT_PAGE = 1;
-    scheduleRenderAds();
-  };
-
-  toRegion.onchange = () => {
-    fillToDistricts();
-    CURRENT_PAGE = 1;
-    scheduleRenderAds();
-  };
+  fromRegion.onchange = () => { fillFromDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
+  toRegion.onchange = () => { fillToDistricts(); CURRENT_PAGE = 1; scheduleRenderAds(); };
 
   fillFromDistricts();
   fillToDistricts();
 }
 
 function fillFromDistricts() {
-  const region = document.getElementById("fromRegion").value;
-  const box = document.getElementById("fromDistrictBox");
-
+  const region = dom.fromRegion?.value;
+  const box = dom.fromDistrictBox;
+  if (!box) return;
   box.innerHTML = "";
   if (!region || !REGIONS[region]) {
-    box.style.display = "none";
-    return;
+    box.style.display = "none"; return;
   }
-
   box.style.display = "";
   REGIONS[region].forEach(dist => {
-    const label = document.createElement("label");
-    label.className = "district-item";
-    label.innerHTML = `
-      <input type="checkbox" class="fromDistrict" value="${escapeHtml(dist)}"> 
-      ${escapeHtml(dist)}
-    `;
-    box.appendChild(label);
+    const lbl = document.createElement("label");
+    lbl.className = "district-item";
+    lbl.innerHTML = `<input type="checkbox" class="fromDistrict" value="${escapeHtml(dist)}"> ${escapeHtml(dist)}`;
+    box.appendChild(lbl);
   });
-
-  box.querySelectorAll("input").forEach(ch => {
-    ch.onchange = () => {
-      CURRENT_PAGE = 1;
-      scheduleRenderAds();
-    };
-  });
+  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
 function fillToDistricts() {
-  const region = document.getElementById("toRegion").value;
-  const box = document.getElementById("toDistrictBox");
-
+  const region = dom.toRegion?.value;
+  const box = dom.toDistrictBox;
+  if (!box) return;
   box.innerHTML = "";
   if (!region || !REGIONS[region]) {
-    box.style.display = "none";
-    return;
+    box.style.display = "none"; return;
   }
-
   box.style.display = "";
   REGIONS[region].forEach(dist => {
-    const label = document.createElement("label");
-    label.className = "district-item";
-    label.innerHTML = `
-      <input type="checkbox" class="toDistrict" value="${escapeHtml(dist)}"> 
-      ${escapeHtml(dist)}
-    `;
-    box.appendChild(label);
+    const lbl = document.createElement("label");
+    lbl.className = "district-item";
+    lbl.innerHTML = `<input type="checkbox" class="toDistrict" value="${escapeHtml(dist)}"> ${escapeHtml(dist)}`;
+    box.appendChild(lbl);
   });
-
-  box.querySelectorAll("input").forEach(ch => {
-    ch.onchange = () => {
-      CURRENT_PAGE = 1;
-      scheduleRenderAds();
-    };
-  });
+  box.querySelectorAll("input").forEach(ch => ch.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); });
 }
 
-// ===============================
-// INITIAL LOAD
-// ===============================
+// ---------------------------
+// initialLoadAds: use get(ref(db,'ads')) and normalize both 1-level and 2-level
+// ---------------------------
 async function initialLoadAds() {
   try {
     const snap = await get(ref(db, "ads"));
     if (!snap.exists()) {
       ADS_MAP.clear();
       ALL_ADS = [];
-      document.getElementById("adsList").innerHTML = "E’lon yo‘q.";
+      if (dom.adsList) dom.adsList.innerHTML = "E’lon yo‘q.";
       attachInputsOnce();
       renderPaginationControls(0, 0, 0);
       return;
     }
 
-    const list = [];
-    snap.forEach(ch => {
-      const v = ch.val();
-      list.push({
-        id: ch.key,
-        ...v,
-        typeNormalized: normalizeType(v.type)
-      });
+    const items = [];
+    // handle both 1-level and 2-level structure:
+    snap.forEach(child => {
+      const val = child.val();
+      // if child looks like ad (has createdAt/fromRegion) treat directly
+      if (val && (val.createdAt || val.fromRegion || val.toRegion || val.price)) {
+        items.push({ id: child.key, ...val, typeNormalized: normalizeType(val.type) });
+      } else {
+        // else treat as category map
+        child.forEach(inner => {
+          const v2 = inner.val();
+          items.push({ id: inner.key, ...v2, typeNormalized: normalizeType(v2.type) });
+        });
+      }
     });
 
     ADS_MAP.clear();
-    list.forEach(ad => ADS_MAP.set(ad.id, ad));
-
+    items.forEach(ad => ADS_MAP.set(ad.id, ad));
     ALL_ADS = Array.from(ADS_MAP.values());
 
     attachInputsOnce();
     scheduleRenderAds();
-
   } catch (e) {
     console.error("initialLoadAds error:", e);
   }
 }
 
-// ===============================
-// REALTIME UPDATE HANDLERS
-// ===============================
+// ---------------------------
+// realtime: use onValue on /ads and diff logic
+// ---------------------------
 function attachRealtimeHandlers() {
-  const adsRef = ref(db, "ads");
-
-  onChildAdded(adsRef, snap => {
-    const v = snap.val();
-    if (!v) return;
-    ADS_MAP.set(snap.key, {
-      id: snap.key,
-      ...v,
-      typeNormalized: normalizeType(v.type)
-    });
-    ALL_ADS = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
-
-  onChildChanged(adsRef, snap => {
-    const v = snap.val();
-    if (!v) return;
-    ADS_MAP.set(snap.key, {
-      id: snap.key,
-      ...v,
-      typeNormalized: normalizeType(v.type)
-    });
-    ALL_ADS = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
-
-  onChildRemoved(adsRef, snap => {
-    ADS_MAP.delete(snap.key);
-    ALL_ADS = Array.from(ADS_MAP.values());
-    scheduleRenderAds();
-  });
+  try {
+    const adsRef = ref(db, "ads");
+    onValue(adsRef, snap => {
+      const tmp = [];
+      snap.forEach(child => {
+        const val = child.val();
+        if (val && (val.createdAt || val.fromRegion || val.toRegion || val.price)) {
+          tmp.push({ id: child.key, ...val, typeNormalized: normalizeType(val.type) });
+        } else {
+          child.forEach(inner => {
+            tmp.push({ id: inner.key, ...inner.val(), typeNormalized: normalizeType(inner.val()?.type) });
+          });
+        }
+      });
+      ADS_MAP.clear();
+      tmp.forEach(a => ADS_MAP.set(a.id, a));
+      ALL_ADS = Array.from(ADS_MAP.values());
+      fillFromDistricts();
+      fillToDistricts();
+      scheduleRenderAds();
+    }, err => console.error("onValue ads error", err));
+  } catch (e) {
+    console.error("attachRealtimeHandlers error", e);
+  }
 }
 
-// ===============================
-// INPUT HANDLERS (ONCE)
-// ===============================
+// ---------------------------
+// inputs attach once
+// ---------------------------
 let inputBound = false;
-
 function attachInputsOnce() {
   if (inputBound) return;
   inputBound = true;
 
-  const search = document.getElementById("search");
-  const role = document.getElementById("filterRole");
-  const sort = document.getElementById("sortBy");
-  const date = document.getElementById("filterDate");
-  const priceMin = document.getElementById("priceMin");
-  const priceMax = document.getElementById("priceMax");
+  if (dom.search) dom.search.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (dom.filterRole) dom.filterRole.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (dom.sortBy) dom.sortBy.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (dom.filterDate) dom.filterDate.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (dom.priceMin) dom.priceMin.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (dom.priceMax) dom.priceMax.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
 
-  if (search) search.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (role) role.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (sort) sort.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (date) date.onchange = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (priceMin) priceMin.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
-  if (priceMax) priceMax.oninput = () => { CURRENT_PAGE = 1; scheduleRenderAds(); };
+  if (dom.resetBtn) dom.resetBtn.onclick = () => resetFilters();
 
-  const resetBtn = document.getElementById("resetFiltersBtn");
-  if (resetBtn) {
-    resetBtn.onclick = () => resetFilters();
-  }
-
-  // handle click outside for district boxes
   document.addEventListener("click", function (e) {
-    const fromBox = document.getElementById("fromDistrictBox");
-    const toBox = document.getElementById("toDistrictBox");
-    const fromSelect = document.getElementById("fromRegion");
-    const toSelect = document.getElementById("toRegion");
-
+    const fromBox = dom.fromDistrictBox;
+    const toBox = dom.toDistrictBox;
     if (!fromBox || !toBox) return;
+    const fromSelect = dom.fromRegion;
+    const toSelect = dom.toRegion;
 
     const clickedInsideFrom = fromBox.contains(e.target) || (fromSelect && fromSelect.contains(e.target));
     const clickedInsideTo = toBox.contains(e.target) || (toSelect && toSelect.contains(e.target));
@@ -401,29 +322,28 @@ function attachInputsOnce() {
     if (!clickedInsideFrom) fromBox.style.display = "none";
     if (!clickedInsideTo) toBox.style.display = "none";
   }, { capture: true });
-
 }
 
-// ===============================
-// 3-BO'LIM: RENDER, CARD, MODAL, CONTACT, RESET, PAGINATION
-// ===============================
+// ---------------------------
+// renderAds (preserve original filtering logic fully)
+// ---------------------------
 async function renderAds(adsArr) {
-  const list = document.getElementById("adsList");
+  const list = dom.adsList;
   if (!list) return;
   list.innerHTML = "";
 
-  const q = (document.getElementById("search")?.value || "").toLowerCase();
-  const roleFilter = normalizeType(document.getElementById("filterRole")?.value || "");
-  const regionFilter = document.getElementById("filterRegion")?.value || "";
-  const sortBy = document.getElementById("sortBy")?.value || "newest";
-  const filterDate = document.getElementById("filterDate")?.value || "";
+  const q = (dom.search?.value || "").toLowerCase();
+  const roleFilter = normalizeType(dom.filterRole?.value || "");
+  const regionFilter = (document.getElementById("filterRegion")?.value || "");
+  const sortVal = dom.sortBy?.value || "newest";
+  const filterDate = dom.filterDate?.value || "";
 
-  const priceMinInput = (document.getElementById("priceMin")?.value || "").toString().trim();
-  const priceMaxInput = (document.getElementById("priceMax")?.value || "").toString().trim();
+  const priceMinInput = (dom.priceMin?.value || "").toString().trim();
+  const priceMaxInput = (dom.priceMax?.value || "").toString().trim();
   const isPriceMinSet = priceMinInput !== "";
   const isPriceMaxSet = priceMaxInput !== "";
-  const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g,"")) : null;
-  const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g,"")) : null;
+  const priceMin = isPriceMinSet ? Number(priceMinInput.replace(/\s+/g, "")) : null;
+  const priceMax = isPriceMaxSet ? Number(priceMaxInput.replace(/\s+/g, "")) : null;
 
   const currentUserId = CURRENT_USER?.uid || null;
 
@@ -432,8 +352,8 @@ async function renderAds(adsArr) {
   if (currentRoleRaw.includes("driver") || currentRoleRaw.includes("haydov")) currentRole = "driver";
   else if (currentRoleRaw.includes("pass") || currentRoleRaw.includes("yo")) currentRole = "passenger";
 
-  const fromRegion = document.getElementById("fromRegion")?.value || "";
-  const toRegion = document.getElementById("toRegion")?.value || "";
+  const fromRegion = dom.fromRegion?.value || "";
+  const toRegion = dom.toRegion?.value || "";
   const fromDistricts = Array.from(document.querySelectorAll("#fromDistrictBox input.fromDistrict:checked")).map(x => x.value);
   const toDistricts = Array.from(document.querySelectorAll("#toDistrictBox input.toDistrict:checked")).map(x => x.value);
 
@@ -460,12 +380,13 @@ async function renderAds(adsArr) {
     if (toRegion && a.toRegion !== toRegion) return false;
     if (toDistricts.length > 0 && !toDistricts.includes(a.toDistrict)) return false;
 
-    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g,"")) : NaN;
+    const adPrice = (a.price !== undefined && a.price !== null && a.price !== "") ? Number(String(a.price).replace(/\s+/g, "")) : NaN;
     if (isPriceMinSet && isNaN(adPrice)) return false;
     if (isPriceMaxSet && isNaN(adPrice)) return false;
     if (isPriceMinSet && !isNaN(adPrice) && adPrice < priceMin) return false;
     if (isPriceMaxSet && !isNaN(adPrice) && adPrice > priceMax) return false;
 
+    // departure time parse & only future ads
     const departureRaw = a.departureTime || a.startTime || a.time || a.date || null;
     let departureTime = null;
     if (typeof departureRaw === "number") departureTime = new Date(departureRaw);
@@ -524,7 +445,7 @@ async function renderAds(adsArr) {
   filtered.sort((a,b) => {
     const ta = new Date(a.createdAt || a.created || a.postedAt || 0).getTime();
     const tb = new Date(b.createdAt || b.created || b.postedAt || 0).getTime();
-    return (document.getElementById("sortBy")?.value === "oldest") ? (ta - tb) : (tb - ta);
+    return (dom.sortBy?.value === "oldest") ? (ta - tb) : (tb - ta);
   });
 
   // pagination compute
@@ -545,9 +466,9 @@ async function renderAds(adsArr) {
   renderPaginationControls(totalPages, CURRENT_PAGE, totalItems);
 }
 
-// ===============================
-// CREATE CARD
-// ===============================
+// ---------------------------
+// createAdCard (copied and preserved)
+// ---------------------------
 async function createAdCard(ad) {
   const u = await getUserInfo(ad.userId);
 
@@ -577,23 +498,18 @@ async function createAdCard(ad) {
   const requestedRaw = ad.passengerCount || ad.requestedSeats || ad.requestSeats || ad.peopleCount || null;
   const requested = (requestedRaw !== null && requestedRaw !== undefined) ? Number(requestedRaw) : null;
 
-  // Modal oynada faqat haydovchi e’loni bo‘lsa mashina chiqaramiz
   let showCar = false;
   try {
       const ownerRole = (u.role || "").toLowerCase();
       if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
           showCar = true;
       }
-  } catch(e) {
-      showCar = false;
-  }
+  } catch(e) { showCar = false; }
 
-  // To‘liq mashina ma’lumoti
   const carFull = showCar
       ? `${u.carModel || ad.car || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`
       : "";
 
-  // show carModel on card only if owner is driver (so passengers won't see car from passenger ads)
   let carModel = "";
   try {
     const ownerRole = (u.role || "").toLowerCase();
@@ -634,15 +550,16 @@ async function createAdCard(ad) {
   return div;
 }
 
-// ===============================
-// OPEN / CLOSE MODAL, BADGE UPDATE, CONTACT
-// ===============================
+// ---------------------------
+// modal & helpers (preserved)
+// ---------------------------
 async function openAdModal(ad) {
-  let modal = document.getElementById("adFullModal");
+  let modal = dom.adFullModal;
   if (!modal) {
     modal = document.createElement("div");
     modal.id = "adFullModal";
     document.body.appendChild(modal);
+    dom.adFullModal = modal;
   }
 
   const u = await getUserInfo(ad.userId);
@@ -651,17 +568,12 @@ async function openAdModal(ad) {
   const depTime = formatTime(ad.departureTime || ad.startTime || ad.time || ad.date || "");
   const created = formatTime(ad.createdAt || ad.created || ad.postedAt || "");
   const fullname = u.fullName || ((u.firstname || u.lastname) ? `${u.firstname || ""} ${u.lastname || ""}`.trim() : "") || "Foydalanuvchi";
-// E’lon egasining haqiqiy roli
-const ownerRole = (u.role || "").toLowerCase();
 
-// Haydovchi bo‘lsa – mashina chiqariladi, yo‘lovchi bo‘lsa — yo‘q
-let carFull = "";
-if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
-    carFull =
-      `${u.carModel || ""}` +
-      `${u.carColor ? " • " + u.carColor : ""}` +
-      `${u.carNumber ? " • " + u.carNumber : ""}`;
-}
+  const ownerRole = (u.role || "").toLowerCase();
+  let carFull = "";
+  if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
+    carFull = `${u.carModel || ""}${u.carColor ? " • " + u.carColor : ""}${u.carNumber ? " • " + u.carNumber : ""}`;
+  }
 
   const totalSeatsRaw = ad.totalSeats || ad.seatCount || ad.seats || null;
   const totalSeats = (totalSeatsRaw !== null && totalSeatsRaw !== undefined) ? Number(totalSeatsRaw) : null;
@@ -672,7 +584,6 @@ if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
 
  modal.innerHTML = `
     <div class="ad-modal-box" role="dialog" aria-modal="true">
-
       <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px;">
         <img class="modal-avatar" src="${escapeHtml(u.avatar || "https://i.ibb.co/2W0z7Lx/user.png")}" alt="avatar">
         <div>
@@ -733,20 +644,17 @@ if (ownerRole.includes("haydov") || ownerRole.includes("driver")) {
   `;
 
   modal.style.display = "flex";
-
   const closeBtn = document.getElementById("modalCloseBtn");
   const callBtn = document.getElementById("modalCallBtn");
   if (closeBtn) closeBtn.onclick = closeAdModal;
   if (callBtn) callBtn.onclick = () => onContact(u.phone || "");
-
   try { markAsRead(ad.id); } catch(e){}
   updateBadgeForAd(ad.id);
-
   modal.onclick = (e) => { if (e.target === modal) closeAdModal(); };
 }
 
 function closeAdModal() {
-  const modal = document.getElementById("adFullModal");
+  const modal = dom.adFullModal || document.getElementById("adFullModal");
   if (!modal) return;
   modal.style.display = "none";
   modal.innerHTML = "";
@@ -765,58 +673,70 @@ function onContact(phone) {
 }
 window.onContact = onContact;
 
-// ===============================
-// RESET FILTERS
-// ===============================
+// ---------------------------
+// read/unread helpers (localStorage)
+// ---------------------------
+function markAsRead(adId) {
+  if (!adId) return;
+  let read = [];
+  try { read = JSON.parse(localStorage.getItem("readAds") || "[]"); } catch (e) {}
+  if (!read.includes(adId)) {
+    read.push(adId);
+    localStorage.setItem("readAds", JSON.stringify(read));
+  }
+}
+
+function isRead(adId) {
+  try {
+    const read = JSON.parse(localStorage.getItem("readAds") || "[]");
+    return read.includes(adId);
+  } catch (e) {
+    return false;
+  }
+}
+
+// ---------------------------
+// reset filters
+// ---------------------------
 function resetFilters() {
   const ids = [
     "search","filterRole","filterRegion","fromRegion","toRegion",
     "sortBy","filterDate","priceMin","priceMax"
   ];
-
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = "";
-  });
-
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
   document.querySelectorAll("#fromDistrictBox input.fromDistrict").forEach(i => i.checked = false);
   document.querySelectorAll("#toDistrictBox input.toDistrict").forEach(i => i.checked = false);
-
   fillFromDistricts();
   fillToDistricts();
-
   CURRENT_PAGE = 1;
   scheduleRenderAds();
 }
 window.resetFilters = resetFilters;
 
-// ===============================
-// DEBOUNCE RENDER — TEZLIK OPTIM
-// ===============================
+// ---------------------------
+// debounce render
+// ---------------------------
 let __render_timeout = null;
-
 function scheduleRenderAds() {
   if (__render_timeout) clearTimeout(__render_timeout);
-
   __render_timeout = setTimeout(() => {
     renderAds(Array.from(ADS_MAP.values()));
     __render_timeout = null;
   }, 140);
 }
 
-// ===============================
-// LOGOUT
-// ===============================
+// ---------------------------
+// logout
+// ---------------------------
 window.logout = () => signOut(auth);
 
-// ===============================
-// PAGINATION
-// ===============================
+// ---------------------------
+// pagination controls (copied)
+// ---------------------------
 function renderPaginationControls(totalPages, currentPage, totalItems) {
-  const container = document.getElementById("pagination");
+  const container = dom.pagination;
   if (!container) return;
   container.innerHTML = "";
-
   if (totalPages <= 1) {
     if (totalItems > 0) {
       const info = document.createElement("div");
@@ -826,7 +746,6 @@ function renderPaginationControls(totalPages, currentPage, totalItems) {
     }
     return;
   }
-
   const mkBtn = (txt, disabled, fn) => {
     const b = document.createElement("button");
     b.textContent = txt;
@@ -842,20 +761,15 @@ function renderPaginationControls(totalPages, currentPage, totalItems) {
     if (!disabled) b.onclick = fn;
     return b;
   };
-
   container.appendChild(mkBtn("« Birinchi", currentPage === 1, () => { CURRENT_PAGE = 1; scheduleRenderAds(); }));
   container.appendChild(mkBtn("‹ Oldingi", currentPage === 1, () => { CURRENT_PAGE = currentPage - 1; scheduleRenderAds(); }));
-
   const windowSize = 5;
   let start = Math.max(1, currentPage - Math.floor(windowSize/2));
   let end = Math.min(totalPages, start + windowSize - 1);
-
   if (end - start < windowSize - 1) start = Math.max(1, end - windowSize + 1);
-
   for (let p = start; p <= end; p++) {
     const btn = document.createElement("button");
     const isCurrent = p === currentPage;
-
     btn.textContent = p;
     btn.disabled = isCurrent;
     btn.style = `
@@ -867,27 +781,19 @@ function renderPaginationControls(totalPages, currentPage, totalItems) {
       margin:0 4px;
       cursor:pointer
     `;
-
     if (!isCurrent) btn.onclick = () => { CURRENT_PAGE = p; scheduleRenderAds(); };
-
     container.appendChild(btn);
   }
-
-  container.appendChild(mkBtn("Keyingi ›", currentPage === totalPages,
-    () => { CURRENT_PAGE = currentPage + 1; scheduleRenderAds(); }));
-
-  container.appendChild(mkBtn("Oxiri »", currentPage === totalPages,
-    () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
-
+  container.appendChild(mkBtn("Keyingi ›", currentPage === totalPages, () => { CURRENT_PAGE = currentPage + 1; scheduleRenderAds(); }));
+  container.appendChild(mkBtn("Oxiri »", currentPage === totalPages, () => { CURRENT_PAGE = totalPages; scheduleRenderAds(); }));
   const info = document.createElement("div");
   info.textContent = `Sahifa ${currentPage} / ${totalPages} — Jami: ${totalItems}`;
   info.style = "color:#6b7280;font-size:13px;margin-left:8px;margin-top:8px;";
   container.appendChild(info);
 }
 
-// helper escapeSelector
 function escapeSelector(s) {
   return String(s || "").replace(/([ #;?%&,.+*~':\"!^$[\]()=>|\/@])/g,'\\$1');
 }
 
-console.log("ShaharTaxi index.js loaded successfully.");
+console.log("ShaharTaxi index.js loaded and ready.");
