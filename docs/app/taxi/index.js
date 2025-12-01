@@ -2,7 +2,7 @@
 // Designed to work with your exported lib.js (ES module that exports db, ref, get, onValue, onAuthStateChanged, signOut, etc.)
 // Make sure the import path below points to your actual lib.js location.
 
-const IMPORT_PATH = '../../lib.js'; // <-- If your lib.js is located elsewhere, change this path (relative to this file)
+const IMPORT_PATH = '../../libs/lib.js'; // <-- If your lib.js is located elsewhere, change this path (relative to this file)
 
 import {
   auth,
