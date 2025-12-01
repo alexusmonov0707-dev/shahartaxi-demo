@@ -5,130 +5,112 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ShaharTaxi — E'lonlar</title>
 
-  <!-- Sizning CSS fayllaringizga moslang -->
-  <link rel="stylesheet" href="../../style.css">
-
+  <!-- Existing project CSS (yoʻlni sizga moslab qoldirdim) -->
+  <link rel="stylesheet" href="../../style.css" />
 
   <style>
-    /* Minimal, neat styling so page is readable out-of-the-box */
-    :root { --bg:#f6f8fb; --card:#fff; --muted:#6b7280; --accent:#0ea5e9; }
-    body { margin:0; font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:#111827; }
-    .container { max-width:1100px; margin:22px auto; padding:16px; }
-    header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
-    h1 { margin:0; font-size:20px; }
-    .card { background:var(--card); border-radius:10px; padding:14px; box-shadow:0 6px 20px rgba(16,24,40,0.04); margin-bottom:14px; }
-    .controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .controls input[type="text"], .controls select, .controls input[type="number"], .controls input[type="date"] {
-      padding:8px 10px; border-radius:8px; border:1px solid #e6edf3; min-width:160px;
-    }
-    .controls .grow { flex:1 1 240px; min-width:160px; }
-    button { cursor:pointer; border-radius:8px; padding:8px 12px; border: none; }
-    .btn-primary { background:var(--accent); color:#fff; }
-    .btn-ghost { background:#eef2f7; color:#111; }
-    .grid { display:grid; grid-template-columns: 1fr 320px; gap:12px; align-items:start; }
-    #adsContainer { min-height:120px; }
-    .ad-card { background:#fff; border-radius:10px; padding:12px; margin-bottom:12px; box-shadow:0 2px 8px rgba(10,20,40,0.03); }
-    .helper { color:var(--muted); font-size:13px; }
-    .pagination { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:12px; }
-    .hidden { display:none !important; }
+    /* Kichik qo'shimcha styling (agar kerak bo'lsa) */
+    .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+    .filters-row { display:flex; gap:12px; align-items:center; }
+    .ads-list { min-height: 220px; background:#fff; border-radius:8px; padding:18px; box-shadow:0 1px 2px rgba(0,0,0,0.05);}
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 10px; text-align: left; border-bottom: 1px solid #eee; }
+    .controls { display:flex; gap:8px; align-items:center; }
+    .btn { padding:8px 14px; border-radius:6px; cursor:pointer; border:0; }
+    .btn-primary { background:#0ea5e9; color:#fff; }
+    .btn-danger { background:#ef4444; color:#fff; }
+    .muted { color:#6b7280; }
+    .empty { padding:40px; text-align:center; color:#9ca3af; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <main style="max-width:1100px;margin:28px auto;padding:0 16px;">
+    <h1>ShaharTaxi — E'lonlar</h1>
 
-    <header>
-      <h1>ShaharTaxi — E'lonlar</h1>
-      <div style="margin-left:auto" class="helper">Foydalanuvchi paneli</div>
-    </header>
-
-    <!-- FILTERS -->
-    <section class="card">
-      <div class="controls">
-        <input id="searchInput" class="grow" type="text" placeholder="Izlash: region, comment, user..." />
-
-        <select id="regionFrom" title="From region">
-          <option value="">From (Barchasi)</option>
-        </select>
-
-        <select id="districtFrom" title="From district">
-          <option value="">From district</option>
-        </select>
-
-        <select id="regionTo" title="To region">
-          <option value="">To (Barchasi)</option>
-        </select>
-
-        <select id="districtTo" title="To district">
-          <option value="">To district</option>
-        </select>
-
-        <input id="minPrice" type="number" placeholder="Min narx" />
-        <input id="maxPrice" type="number" placeholder="Max narx" />
-
-        <select id="sortSelect" title="Tartib">
-          <option value="time_desc">Yangi → Eski</option>
-          <option value="time_asc">Eski → Yangi</option>
-          <option value="price_asc">Narx ↑</option>
-          <option value="price_desc">Narx ↓</option>
-        </select>
-
-        <select id="pageSizeSelect" title="Sahifa hajmi">
-          <option value="10">10</option>
-          <option value="20" selected>20</option>
-          <option value="50">50</option>
-        </select>
-
-        <button id="applyFiltersBtn" class="btn-primary">Filtrlash</button>
-        <button id="resetFiltersBtn" class="btn-ghost">Tozalash</button>
-      </div>
-    </section>
-
-    <!-- MAIN CONTENT -->
-    <section class="grid">
+    <!-- Filters -->
+    <section class="filters" style="margin-top:18px;">
       <div>
-        <div id="loadingBox" class="card helper">Yuklanmoqda...</div>
-        <div id="adsContainer" class="card" aria-live="polite"></div>
-        <div id="emptyBox" class="card helper hidden">Hech narsa topilmadi</div>
-
-        <!-- pagination controls -->
-        <div class="pagination">
-          <button id="prevPageBtn" class="btn-ghost">← Oldingi</button>
-          <div id="paginationInfo" class="helper">0 / 0</div>
-          <button id="nextPageBtn" class="btn-ghost">Keyingi →</button>
+        <div class="filters-row">
+          <input id="searchInput" placeholder="Izlash: region, comment, user..." style="flex:1;padding:10px;border-radius:6px;border:1px solid #e5e7eb;" />
+          <select id="fromRegion" style="padding:10px;border-radius:6px;border:1px solid #e5e7eb;">
+            <option value="">Barchasi</option>
+          </select>
+          <select id="fromDistrict" style="padding:10px;border-radius:6px;border:1px solid #e5e7eb;">
+            <option value="">From district</option>
+          </select>
+          <select id="toRegion" style="padding:10px;border-radius:6px;border:1px solid #e5e7eb;">
+            <option value="">Barchasi</option>
+          </select>
+          <select id="toDistrict" style="padding:10px;border-radius:6px;border:1px solid #e5e7eb;">
+            <option value="">To district</option>
+          </select>
         </div>
-      </div>
 
-      <!-- SIDE PANEL: quick filters / help -->
-      <aside>
-        <div class="card">
-          <h4>Tez filtrlash</h4>
-          <div class="controls" style="flex-direction:column; align-items:stretch;">
-            <label class="helper" style="margin-bottom:6px;"><input type="checkbox" id="onlyFreeSeats" /> Faqat bo'sh joylar</label>
-            <label class="helper" style="margin-bottom:6px;"><input type="checkbox" id="withPhone" /> Kontakt bilan</label>
+        <div class="filters-row" style="margin-top:10px;">
+          <input id="minPrice" placeholder="Min narx" style="padding:10px;border-radius:6px;border:1px solid #e5e7eb;width:120px;" />
+          <input id="maxPrice" placeholder="Max narx" style="padding:10px;border-radius:6px;border:1px solid #e5e7eb;width:120px;" />
+          <select id="sortBy" style="padding:10px;border-radius:6px;border:1px solid #e5e7eb;">
+            <option value="createdAt_desc">Yangi — Eski</option>
+            <option value="createdAt_asc">Eski — Yangi</option>
+            <option value="price_asc">Narx ↑</option>
+            <option value="price_desc">Narx ↓</option>
+          </select>
 
-            <div style="margin-top:8px;">
-              <button id="resetQuick" class="btn-ghost" style="width:100%;">Qayta tiklash</button>
-            </div>
+          <div class="controls" style="margin-left:auto">
+            <button id="filterBtn" class="btn btn-primary">Filtrlash</button>
+            <button id="resetBtn" class="btn" style="background:#f3f4f6;border-radius:6px">Tozalash</button>
           </div>
         </div>
+      </div>
 
-        <div class="card">
-          <h4>Yordam</h4>
-          <div class="helper">Haydovchi uchun — yo‘lovchilar e'lonlari</div>
-          <div class="helper">Yo‘lovchi uchun — haydovchilar e'lonlari</div>
+      <!-- Right column: quick filters/help -->
+      <div>
+        <div style="background:#fff;padding:18px;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+          <h3 style="margin:0 0 12px 0">Tez filtrlash</h3>
+          <label style="display:block;margin-bottom:8px"><input id="onlyEmpty" type="checkbox" /> Faqat bo'sh joylar</label>
+          <label style="display:block;margin-bottom:8px"><input id="withContact" type="checkbox" /> Kontakt bilan</label>
+          <div style="margin-top:12px">
+            <button id="quickApply" class="btn btn-primary">Qayta tiklash</button>
+          </div>
         </div>
-      </aside>
+      </div>
     </section>
 
-    <footer style="margin-top:18px;text-align:center" class="helper">© ShaharTaxi</footer>
-  </div>
+    <!-- Results -->
+    <section>
+      <div class="ads-list">
+        <div id="loading" class="muted">Yuklanmoqda...</div>
+        <div id="adsTableWrap" style="display:none;">
+          <table id="adsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Seats</th>
+                <th>Price</th>
+                <th>Category</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adsBody"></tbody>
+          </table>
+        </div>
+        <div id="empty" class="empty" style="display:none;">Hech nima topilmadi</div>
+      </div>
 
-  <!-- index.js (module) - main logic (will import functions from docs/libs/lib.js) -->
-  <script type="module">
-    // main bootstrap: import startApp from index.js (which uses ../libs/lib.js internally)
-    import { startApp } from "./index.js";
-    startApp();
-  </script>
+      <!-- Pagination -->
+      <div style="display:flex;align-items:center;justify-content:center;margin-top:14px;">
+        <button id="prevPage" class="btn" style="background:#f3f4f6">← Oldingi</button>
+        <div style="padding:0 12px" id="paginationInfo">0 / 0</div>
+        <button id="nextPage" class="btn" style="background:#f3f4f6">Keyingi →</button>
+      </div>
+    </section>
+  </main>
 
+  <!-- libs and index script (module) -->
+  <script type="module" src="../../libs/lib.js"></script>
+  <script type="module" src="./index.js"></script>
 </body>
 </html>
