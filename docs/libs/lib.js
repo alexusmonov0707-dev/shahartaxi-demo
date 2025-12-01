@@ -120,3 +120,38 @@ export {
     signInWithEmailAndPassword,
     signOut
 };
+// ==============================
+// FETCH ALL ADS (new safe method)
+// ==============================
+export async function fetchAllAds() {
+    try {
+        const db = firebase.database();
+        const root = db.ref("ads");
+
+        const snap = await root.get();
+        if (!snap.exists()) return [];
+
+        const data = snap.val();
+        const results = [];
+
+        for (const userId in data) {
+            const userAds = data[userId];
+            for (const adId in userAds) {
+                const ad = userAds[adId];
+                results.push({
+                    id: adId,
+                    userId,
+                    ...ad
+                });
+            }
+        }
+
+        // Yangi → eski bo‘yicha saralash
+        results.sort((a, b) => b.createdAt - a.createdAt);
+
+        return results;
+    } catch (err) {
+        console.error("fetchAllAds error:", err);
+        return [];
+    }
+}
