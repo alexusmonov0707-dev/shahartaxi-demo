@@ -1,125 +1,122 @@
-// docs/libs/lib.js
-// Universal helper library for ShaharTaxi frontend
-// IMPORTANT: This file is ESM module (type="module" script must be used)
+// ==============================
+// FIREBASE CONFIG
+// ==============================
+import {
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
-//
-// NOTE:
-// - This file expects that `firebase` global is already initialized in the page
-//   (via your existing firebase.js which initializes app and database).
-// - It exports helper functions used by pages like app/taxi/index.js.
-//
+import {
+    getDatabase,
+    ref,
+    child,
+    get,
+    set,
+    update,
+    push,
+    remove,
+    query,
+    orderByChild,
+    orderByKey,
+    orderByValue,
+    limitToFirst,
+    limitToLast,
+    startAt,
+    endAt,
+    equalTo,
+    onValue
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// -----------------------
-// Small helpers
-// -----------------------
-export function escapeHtml(str) {
-  if (str === undefined || str === null) return '';
-  return String(str)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+import {
+    getAuth,
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+    onAuthStateChanged,
+    setPersistence,
+    browserLocalPersistence,
+
+    // 💚 EMAIL AUTH qo'shildi
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut
+
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+
+// ==============================
+// INITIALIZE
+// ==============================
+const firebaseConfig = {
+    apiKey: "AIzaSyApWUG40YuC9aCsE9MOLXwLcYgRihREWvc",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.appspot.com",
+    messagingSenderId: "874241795701",
+    appId: "1:874241795701:web:89e9b20a3aed2ad8ceba3c"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+
+
+// ==============================
+// OPTIONAL: LOCAL PERSISTENCE
+// ==============================
+setPersistence(auth, browserLocalPersistence);
+
+
+// ==============================
+// RECAPTCHA HELPER
+// ==============================
+function createRecaptcha(containerId) {
+    window.recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        containerId,
+        {
+            size: "invisible",
+            callback: () => { }
+        }
+    );
+    return window.recaptchaVerifier;
 }
 
-export function fmtDate(ts) {
-  if (!ts) return '—';
-  const n = Number(ts);
-  if (isNaN(n) || n <= 0) return '—';
-  const d = new Date(n);
-  // local date/time
-  return d.toLocaleString();
-}
 
-export function safeNum(v, def = 0) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : def;
-}
+// ==============================
+// EXPORT QILINADIGAN OBYEKT VA FUNKSIYALAR
+// ==============================
+export {
+    // main services
+    auth,
+    db,
 
-// -----------------------
-// Read all ads from /ads/{userId}/{adId}
-// Returns: array of { id, userId, data... }
-// -----------------------
-export async function fetchAllAds() {
-  try {
-    // Expect firebase global (compat) or modular wrapper
-    if (window.firebase && typeof window.firebase.database === 'function') {
-      const db = window.firebase.database();
-      const rootRef = db.ref('ads');
-      const snap = await rootRef.once('value');
-      const val = snap.val();
-      if (!val) return [];
+    // database
+    ref,
+    child,
+    get,
+    set,
+    update,
+    push,
+    remove,
+    query,
+    orderByChild,
+    orderByKey,
+    orderByValue,
+    limitToFirst,
+    limitToLast,
+    startAt,
+    endAt,
+    equalTo,
+    onValue,
 
-      const res = [];
-      // val is { userId: { adId: { ... } } }
-      Object.entries(val).forEach(([userId, userAds]) => {
-        if (!userAds || typeof userAds !== 'object') return;
-        Object.entries(userAds).forEach(([adId, adObj]) => {
-          // Some nested nodes could be metadata; check createdAt or price or fromRegion
-          res.push({
-            id: adId,
-            userId,
-            data: adObj
-          });
-        });
-      });
+    // auth
+    onAuthStateChanged,
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+    createRecaptcha,
 
-      // default sort by createdAt desc
-      res.sort((a, b) => {
-        const A = safeNum(a.data.createdAt, 0);
-        const B = safeNum(b.data.createdAt, 0);
-        return B - A;
-      });
-
-      return res;
-    }
-
-    // Fallback: modular exports attached to window as db (if you wrapped)
-    if (window.db && typeof window.db.ref === 'function') {
-      const rootRef = window.db.ref('ads');
-      const snap = await rootRef.once('value');
-      const val = snap.val();
-      if (!val) return [];
-      const res = [];
-      Object.entries(val).forEach(([userId, userAds]) => {
-        Object.entries(userAds).forEach(([adId, adObj]) => {
-          res.push({ id: adId, userId, data: adObj });
-        });
-      });
-      return res;
-    }
-
-    console.warn('fetchAllAds: firebase not found on window');
-    return [];
-  } catch (err) {
-    console.error('fetchAllAds error:', err);
-    return [];
-  }
-}
-
-// -----------------------
-// Utility: extract unique regions/districts to populate selects
-// -----------------------
-export function collectRegionsAndDistricts(adItems) {
-  const fromRegions = new Set();
-  const toRegions = new Set();
-  const fromDistricts = new Set();
-  const toDistricts = new Set();
-
-  adItems.forEach(item => {
-    const d = item.data || {};
-    if (d.fromRegion) fromRegions.add(d.fromRegion);
-    if (d.toRegion) toRegions.add(d.toRegion);
-    if (d.fromDistrict) fromDistricts.add(d.fromDistrict);
-    if (d.toDistrict) toDistricts.add(d.toDistrict);
-  });
-
-  return {
-    fromRegions: Array.from(fromRegions).sort(),
-    toRegions: Array.from(toRegions).sort(),
-    fromDistricts: Array.from(fromDistricts).sort(),
-    toDistricts: Array.from(toDistricts).sort()
-  };
-}
-
-// default export nothing (named exports used)
+    // 💚 EMAIL AUTH EXPORTLARI
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut
+};
