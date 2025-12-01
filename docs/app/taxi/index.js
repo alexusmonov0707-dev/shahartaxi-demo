@@ -8,7 +8,7 @@ import {
   get,
   onAuthStateChanged,
   signOut
-} from "../../../libs/lib.js";
+} from "../../libs/lib.js";
 
 // ===============================
 // GLOBALS
