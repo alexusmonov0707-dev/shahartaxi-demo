@@ -1,72 +1,94 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ShaharTaxi — E’lonlar</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShaharTaxi — E'lonlar</title>
 
-  <link rel="stylesheet" href="../../style.css">
+    <!-- STYLE -->
+    <link rel="stylesheet" href="../../style.css">
+
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; }
+        .container { width: 98%; max-width: 1400px; margin: auto; padding-top: 20px; }
+        .ads-list { min-height: 250px; background: white; padding: 20px; border-radius: 8px; }
+        .loading { text-align:center; padding:40px; color:#777; font-size:18px; }
+        .pagination { display:flex; justify-content:center; margin-top:20px; gap:30px; font-size:16px; }
+        .ad-card { padding:15px; border-bottom:1px solid #eee; }
+    </style>
 </head>
 
 <body>
-
-<div class="topbar">
-  <div>ShaharTaxi — E’lonlar</div>
-  <button class="logout" onclick="logout()">Chiqish</button>
-</div>
-
 <div class="container">
-  <div class="card">
 
-    <h2 style="text-align:center;margin-bottom:12px;color:var(--primary)">Barcha e’lonlar</h2>
+    <h2>ShaharTaxi — E'lonlar</h2>
 
-    <div class="filters">
-      <input id="search" placeholder="Qidiruv...">
-      <select id="sortBy">
-        <option value="newest">Yangi</option>
-        <option value="oldest">Eski</option>
-      </select>
-      <select id="filterDate">
-        <option value="">Vaqt</option>
-        <option value="today">Bugun</option>
-        <option value="tomorrow">Ertaga</option>
-        <option value="3days">3 kun</option>
-      </select>
-      <input id="priceMin" type="number" placeholder="Min narx">
-      <input id="priceMax" type="number" placeholder="Max narx">
+    <!-- FILTERS -->
+    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+        <input id="searchInput" class="input" placeholder="Izlash: region, comment, user..." style="flex:1">
 
-      <button id="resetFiltersBtn" style="background:#ff4444;color:white;padding:10px 16px;border-radius:6px;border:none">
-        Reset
-      </button>
+        <select id="fromRegion" class="input">
+            <option value="">Barchasi</option>
+        </select>
+
+        <select id="fromDistrict" class="input">
+            <option value="">From district</option>
+        </select>
+
+        <select id="toRegion" class="input">
+            <option value="">Barchasi</option>
+        </select>
+
+        <select id="toDistrict" class="input">
+            <option value="">To district</option>
+        </select>
+
+        <input id="minPrice" type="number" class="input" placeholder="Min narx">
+        <input id="maxPrice" type="number" class="input" placeholder="Max narx">
+
+        <select id="sortType" class="input">
+            <option value="new">Yangi → Eski</option>
+            <option value="old">Eski → Yangi</option>
+        </select>
+
+        <button id="filterBtn" class="btn btn-blue">Filtrlash</button>
+        <button id="clearBtn" class="btn btn-gray">Tozalash</button>
     </div>
 
-    <div class="filter-block">
-      <b>Qayerdan:</b><br>
-      <select id="fromRegion"><option value="">Viloyat</option></select>
-      <div id="fromDistrictBox" class="district-box"></div>
+    <!-- ADS LIST -->
+    <div id="adsList" class="ads-list">
+        <div class="loading">Yuklanmoqda...</div>
     </div>
 
-    <div class="filter-block">
-      <b>Qayerga:</b><br>
-      <select id="toRegion"><option value="">Viloyat</option></select>
-      <div id="toDistrictBox" class="district-box"></div>
+    <!-- PAGINATION -->
+    <div class="pagination">
+        <button id="prevPage">← Oldingi</button>
+        <span id="pageInfo">1 / 1</span>
+        <button id="nextPage">Keyingi →</button>
     </div>
 
-    <div id="adsList">Yuklanmoqda...</div>
-
-    <div id="pagination" style="text-align:center;margin-top:20px"></div>
-
-  </div>
 </div>
 
-<div id="adFullModal"></div>
+<!-- FIREBASE COMPAT -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-<!-- REGIONS -->
-<script src="../../assets/regions-taxi.js"></script>
-<script src="../../assets/regions-helper.js"></script>
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyDCC81Xxjk0v1DT9TDlvyuV37PoAdHEcqg",
+    authDomain: "shahartaxi-demo.firebaseapp.com",
+    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
+    projectId: "shahartaxi-demo",
+    storageBucket: "shahartaxi-demo.appspot.com",
+    messagingSenderId: "889673996580",
+    appId: "1:889673996580:web:ab1e761e1c5ed7bcde29a8"
+};
+firebase.initializeApp(firebaseConfig);
+</script>
 
-<!-- MAIN JS -->
-<script type="module" src="index.js?v=1"></script>
+<!-- LIB + MAIN -->
+<script src="../../libs/lib.js"></script>
+<script src="./index.js"></script>
 
 </body>
 </html>
