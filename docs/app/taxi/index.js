@@ -5,7 +5,7 @@ import {
   get,
   signOut,
   onAuthStateChanged
-} from "../../../libs/lib.js";
+} from "../../libs/lib.js";
 
 let CURRENT_USER = null;
 let ADS = [];
