@@ -1,94 +1,245 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ShaharTaxi — E'lonlar</title>
+    <meta charset="UTF-8">
+    <title>ShaharTaxi — E’lonlar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- style.css joylashuvi: docs/style.css -->
-  <link rel="stylesheet" href="../../style.css" />
-  <style>
-    /* Minimal kerakli uslublar (agar docs/style.css bo'lmasa) */
-    body { font-family: Inter, Arial, sans-serif; background:#f3f4f6; margin:0; }
-    .topbar { background:#0b63d6; color:white; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; }
-    .topbar button { background:#ef4444; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
-    .container { max-width:980px; margin:28px auto; padding:0 16px; }
-    .card { background:white; border-radius:12px; padding:22px; box-shadow:0 6px 20px rgba(15,23,42,0.06); }
-    .filters { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
-    .filters input, .filters select { padding:10px 12px; border:1px solid #e6e6e6; border-radius:8px; min-width:160px; }
-    .filter-block { margin:18px 0; background:#fbfbfb; padding:16px; border-radius:10px; }
-    .district-box label { display:inline-block; margin-right:8px; font-size:13px; }
-    #adsList { margin-top:14px; }
-    .ad-card { display:flex; gap:12px; align-items:center; padding:12px; border-radius:10px; background:#fff; border:1px solid #f0f0f0; margin-bottom:10px; cursor:pointer; }
-    .ad-avatar { width:56px; height:56px; border-radius:8px; object-fit:cover; background:#e6eefc; }
-    .ad-main { flex:1; }
-    .ad-route { font-weight:600; margin-bottom:6px; color:#0b63d6; }
-    .ad-meta { color:#6b7280; font-size:13px; }
-    .ad-price { font-weight:700; background:#eef2ff; padding:6px 10px; border-radius:8px; color:#0b63d6; }
-    #adFullModal { display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.45); z-index:9999; }
-    .ad-modal-box, .modal-box { background:white; padding:22px; border-radius:12px; max-width:760px; width:calc(100% - 40px); box-shadow:0 10px 40px rgba(2,6,23,0.2); }
-    .btn-primary { background:#0b63d6; color:white; padding:8px 12px; border-radius:8px; text-decoration:none; display:inline-block; }
-    .btn-ghost { background:transparent; border:1px solid #e5e7eb; padding:8px 12px; border-radius:8px; }
-    .reset-btn { background:#ef4444; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
-    @media (max-width:720px){ .filters { flex-direction:column; align-items:stretch } }
-  </style>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+        }
+
+        header {
+            background: #0D74F5;
+            color: white;
+            padding: 14px 22px;
+            font-size: 22px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .wrapper {
+            width: 80%;
+            margin: 30px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #0D74F5;
+            margin-top: 0;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        input, select {
+            padding: 10px;
+            font-size: 15px;
+            width: 100%;
+            border-radius: 7px;
+            border: 1px solid #d8d8d8;
+        }
+
+        button {
+            padding: 10px 16px;
+            border: none;
+            background: #ff5252;
+            color: white;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        .label {
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        .filter-block {
+            margin-bottom: 25px;
+        }
+
+        .region-select {
+            position: relative;
+            width: 260px;
+        }
+
+        .district-popup {
+            position: absolute;
+            top: 110%;
+            left: 0;
+            width: 320px;
+            max-height: 260px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+            z-index: 50;
+        }
+
+        .district-popup label {
+            display: block;
+            margin-bottom: 4px;
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* ADS */
+        .ad-card {
+            display: flex;
+            align-items: center;
+            background: #f8faff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .ad-card:hover {
+            background: #eef3ff;
+        }
+
+        .ad-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+
+        .ad-main {
+            flex-grow: 1;
+        }
+
+        .ad-route {
+            font-size: 17px;
+            font-weight: bold;
+            color: #0D74F5;
+        }
+
+        .ad-meta {
+            font-size: 14px;
+            color: #444;
+        }
+
+        .ad-price {
+            font-size: 17px;
+            font-weight: bold;
+            background: #e6f0ff;
+            padding: 5px 12px;
+            border-radius: 8px;
+            color: #0D74F5;
+        }
+
+        /* MODAL */
+        #adFullModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .modal-box {
+            background: white;
+            padding: 25px;
+            width: 380px;
+            border-radius: 12px;
+        }
+
+        .modal-box button {
+            background: #444;
+            margin-top: 12px;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background: #0D74F5;
+            padding: 10px;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+    </style>
 </head>
+
 <body>
 
-  <div class="topbar">
-    <div style="font-weight:600">ShaharTaxi — E'lonlar</div>
+<header>
+    <div>ShaharTaxi — E’lonlar</div>
     <button onclick="logout()">Chiqish</button>
-  </div>
+</header>
 
-  <div class="container">
-    <div class="card">
-      <h2 style="text-align:center; color:#0b63d6; margin:0 0 18px 0;">Barcha e’lonlar</h2>
+<div class="wrapper">
 
-      <div class="filters">
-        <input id="search" placeholder="Qidiruv (manzil, izoh, narx)...">
-        <select id="sortBy">
-          <option value="newest">Yangi</option>
-          <option value="oldest">Eski</option>
+    <h1>Barcha e’lonlar</h1>
+
+    <div class="filter-row">
+        <input id="search" placeholder="Qidiruv (manzil, izoh, narx)">
+        <select id="sortOrder">
+            <option value="new">Yangi</option>
+            <option value="old">Eski</option>
         </select>
-
-        <select id="filterDate">
-          <option value="">Vaqt</option>
-          <option value="today">Bugun</option>
-          <option value="tomorrow">Ertaga</option>
-          <option value="3days">3 kun ichida</option>
+        <select id="timeFilter">
+            <option value="">Vaqt</option>
+            <option value="1d">1 kun</option>
+            <option value="3d">3 kun</option>
+            <option value="7d">7 kun</option>
         </select>
-
         <input id="priceMin" type="number" placeholder="Min narx">
         <input id="priceMax" type="number" placeholder="Max narx">
 
-        <button id="resetFiltersBtn" class="reset-btn">Reset</button>
-      </div>
-
-      <div class="filter-block">
-        <div style="margin-bottom:8px; font-weight:700">Qayerdan:</div>
-        <select id="fromRegion"><option value="">Viloyat</option></select>
-        <div id="fromDistrictBox" class="district-box" style="margin-top:8px"></div>
-      </div>
-
-      <div class="filter-block">
-        <div style="margin-bottom:8px; font-weight:700">Qayerga:</div>
-        <select id="toRegion"><option value="">Viloyat</option></select>
-        <div id="toDistrictBox" class="district-box" style="margin-top:8px"></div>
-      </div>
-
-      <div id="adsList">Yuklanmoqda...</div>
-
-      <div id="pagination" style="text-align:center; margin-top:18px;"></div>
+        <button id="resetFiltersBtn">Reset</button>
     </div>
-  </div>
 
-  <div id="adFullModal"></div>
+    <!-- FROM REGION -->
+    <div class="filter-block">
+        <div class="label">Qayerdan:</div>
 
-  <!-- REGIONS: docs/assets -->
-  <script src="../../assets/regions-taxi.js"></script>
-  <script src="../../assets/regions-helper.js"></script>
+        <div class="region-select">
+            <select id="fromRegion"></select>
+            <div id="fromDistrictPopup" class="district-popup hidden"></div>
+        </div>
+    </div>
 
-  <!-- MAIN INDEX (shu papkada bo'lgan index.js) -->
-  <script type="module" src="index.js?v=1"></script>
+    <!-- TO REGION -->
+    <div class="filter-block">
+        <div class="label">Qayerga:</div>
+
+        <div class="region-select">
+            <select id="toRegion"></select>
+            <div id="toDistrictPopup" class="district-popup hidden"></div>
+        </div>
+    </div>
+
+    <hr>
+
+    <div id="adsList">Yuklanmoqda...</div>
+
+</div>
+
+<div id="adFullModal"></div>
+
+<script src="../../../libs/lib.js" type="module"></script>
+<script src="./index.js" type="module"></script>
+
 </body>
 </html>
