@@ -1,126 +1,222 @@
-// === GLOBAL ===
-let allAds = [];
-let filteredAds = [];
-let currentPage = 1;
-const adsPerPage = 6;
+import {
+  auth,
+  db,
+  ref,
+  get,
+  onAuthStateChanged,
+  signOut
+} from "../../../libs/lib.js";
 
-const adsList = document.getElementById("adsList");
-const prevBtn = document.getElementById("prevPage");
-const nextBtn = document.getElementById("nextPage");
-const pageInfo = document.getElementById("pageInfo");
+let CURRENT_USER = null;
+let ADS = [];
+let REGIONS = window.regionsData || window.regions || {};
 
-// === START: load ads using lib.js ===
-async function init() {
-    adsList.innerHTML = `<div class="loading">Yuklanmoqda...</div>`;
 
-    try {
-        // lib.js dan keladi
-        allAds = await fetchAllAds();
+// ==========================
+// GET USER INFO
+// ==========================
+async function getUserInfo(uid) {
+  if (!uid) return defaultUser();
 
-        // agar hech narsa bo‘lmasa
-        if (!Array.isArray(allAds)) allAds = [];
+  try {
+    const snap = await get(ref(db, "users/" + uid));
+    if (!snap.exists()) return defaultUser();
 
-        filteredAds = [...allAds];
+    const u = snap.val();
 
-        applyFilters();
-    } catch (err) {
-        adsList.innerHTML = `<div class="loading">Xatolik: ${err.message}</div>`;
-    }
+    return {
+      uid,
+      fullName: u.fullName || "Foydalanuvchi",
+      phone: u.phone || "-",
+      role: u.role || "",
+      avatar: u.avatar || "/mnt/data/avatar-default.png"
+    };
+
+  } catch (err) {
+    return defaultUser();
+  }
 }
 
-// === FILTERS ===
-function applyFilters() {
-    const q = document.getElementById("searchInput").value.toLowerCase();
-    const minPrice = Number(document.getElementById("minPrice").value) || 0;
-    const maxPrice = Number(document.getElementById("maxPrice").value) || 999999999;
+function defaultUser() {
+  return {
+    uid: null,
+    fullName: "Foydalanuvchi",
+    phone: "-",
+    role: "",
+    avatar: "https://i.ibb.co/sVtqkCJ/default-avatar.png"
+  };
+}
 
-    const fromRegion = document.getElementById("fromRegion").value;
-    const fromDistrict = document.getElementById("fromDistrict").value;
-    const toRegion = document.getElementById("toRegion").value;
-    const toDistrict = document.getElementById("toDistrict").value;
 
-    const sortType = document.getElementById("sortType").value;
+// ==========================
+// AUTH
+// ==========================
+onAuthStateChanged(auth, async user => {
+  if (!user) {
+    window.location.href = "../login/index.html";
+    return;
+  }
 
-    filteredAds = allAds.filter(ad => {
-        if (ad.price < minPrice || ad.price > maxPrice) return false;
-        if (fromRegion && ad.fromRegion !== fromRegion) return false;
-        if (fromDistrict && ad.fromDistrict !== fromDistrict) return false;
-        if (toRegion && ad.toRegion !== toRegion) return false;
-        if (toDistrict && ad.toDistrict !== toDistrict) return false;
+  CURRENT_USER = await getUserInfo(user.uid);
 
-        if (q) {
-            const text = `
-                ${ad.comment || ""}
-                ${ad.fromRegion}
-                ${ad.toRegion}
-                ${ad.user || ""}
-            `.toLowerCase();
-            if (!text.includes(q)) return false;
-        }
+  loadRegionFilters();
+  await loadAds();
 
-        return true;
+  console.log("User:", CURRENT_USER);
+});
+
+
+// ==========================
+// LOAD ADS WITH CORRECT PATH
+// ==========================
+async function loadAds() {
+  const snap = await get(ref(db, "ads"));
+  ADS = [];
+
+  snap.forEach(ownerNode => {
+    const ownerUid = ownerNode.key; // <-- e’lon egasi UID
+
+    ownerNode.forEach(adNode => {
+      const ad = adNode.val();
+      ad.id = adNode.key;
+      ad.userId = ownerUid;
+      ADS.push(ad);
     });
+  });
 
-    // SORT
-    if (sortType === "new") filteredAds.sort((a,b) => b.createdAt - a.createdAt);
-    else filteredAds.sort((a,b) => a.createdAt - b.createdAt);
-
-    currentPage = 1;
-    renderAds();
+  renderAds();
 }
 
-// === RENDER ADS ===
-function renderAds() {
-    adsList.innerHTML = "";
 
-    if (filteredAds.length === 0) {
-        adsList.innerHTML = `<div class="loading">Hech nima topilmadi</div>`;
-        renderPagination();
-        return;
-    }
+// ==========================
+// REGION / DISTRICT FILTERS
+// ==========================
+function loadRegionFilters() {
+  const from = document.getElementById("fromRegion");
+  const to = document.getElementById("toRegion");
 
-    const start = (currentPage - 1) * adsPerPage;
-    const pageAds = filteredAds.slice(start, start + adsPerPage);
+  from.innerHTML = `<option value="">Viloyat</option>`;
+  to.innerHTML = `<option value="">Viloyat</option>`;
 
-    pageAds.forEach(ad => {
-        adsList.innerHTML += `
-        <div class="ad-card">
-            <b>${ad.fromRegion} → ${ad.toRegion}</b><br>
-            Narx: <b>${ad.price}</b> so'm<br>
-            Joylar: ${ad.seats}<br>
-            Vaqt: ${new Date(ad.createdAt).toLocaleString()}<br>
-            Izoh: ${ad.comment || "-"}
-        </div>`;
-    });
+  for (let region in REGIONS) {
+    from.innerHTML += `<option value="${region}">${region}</option>`;
+    to.innerHTML += `<option value="${region}">${region}</option>`;
+  }
 
-    renderPagination();
+  from.onchange = fillFromDistricts;
+  to.onchange = fillToDistricts;
+
+  fillFromDistricts();
+  fillToDistricts();
 }
 
-// === PAGINATION ===
-function renderPagination() {
-    const total = Math.max(1, Math.ceil(filteredAds.length / adsPerPage));
-
-    pageInfo.textContent = `${currentPage} / ${total}`;
-
-    prevBtn.disabled = currentPage === 1;
-    nextBtn.disabled = currentPage === total;
+function fillFromDistricts() {
+  fillDistricts("fromRegion", "fromDistrictBox", "fromDistrict");
 }
 
-prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderAds(); } };
-nextBtn.onclick = () => {
-    const total = Math.ceil(filteredAds.length / adsPerPage);
-    if (currentPage < total) { currentPage++; renderAds(); }
-};
+function fillToDistricts() {
+  fillDistricts("toRegion", "toDistrictBox", "toDistrict");
+}
 
-document.getElementById("filterBtn").onclick = applyFilters;
+function fillDistricts(regionSelect, boxId, className) {
+  const region = document.getElementById(regionSelect).value;
+  const box = document.getElementById(boxId);
 
-document.getElementById("clearBtn").onclick = () => {
-    document.querySelectorAll("input").forEach(i => i.value = "");
-    document.querySelectorAll("select").forEach(s => s.selectedIndex = 0);
-    filteredAds = [...allAds];
-    currentPage = 1;
-    renderAds();
-};
+  box.innerHTML = "";
+  if (!REGIONS[region]) return;
 
-// === RUN ===
-init();
+  REGIONS[region].forEach(dist => {
+    box.innerHTML += `
+      <label>
+        <input type="checkbox" class="${className}" value="${dist}"> ${dist}
+      </label>
+    `;
+  });
+}
+
+
+// ==========================
+// FILTER LOGIC
+// ==========================
+function filterAds() {
+  const role = CURRENT_USER.role; // passenger | driver
+
+  return ADS.filter(ad => {
+    const adType = ad.seats ? "driver" : "passenger";
+
+    // Driver → Passenger e’lonlari
+    if (role === "driver" && adType !== "passenger") return false;
+
+    // Passenger → Driver e’lonlari
+    if (role === "passenger" && adType !== "driver") return false;
+
+    return true;
+  });
+}
+
+
+// ==========================
+// RENDER ADS
+// ==========================
+async function renderAds() {
+  const container = document.getElementById("adsList");
+  container.innerHTML = "";
+
+  const list = filterAds();
+
+  if (!list.length) {
+    container.innerHTML = "<p>E’lonlar topilmadi</p>";
+    return;
+  }
+
+  for (let ad of list) {
+    const user = await getUserInfo(ad.userId);
+
+    const card = document.createElement("div");
+    card.className = "ad-card";
+
+    card.innerHTML = `
+      <img class="ad-avatar" src="${user.avatar}">
+      <div class="ad-main">
+        <b>${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}</b>
+        <div>👤 ${user.fullName}</div>
+        <div>⏰ ${ad.departureTime}</div>
+      </div>
+      <div class="ad-price">${ad.price} so‘m</div>
+    `;
+
+    card.onclick = () => openModal(ad, user);
+    container.appendChild(card);
+  }
+}
+
+
+// ==========================
+// MODAL
+// ==========================
+function openModal(ad, u) {
+  const m = document.getElementById("adFullModal");
+  m.style.display = "flex";
+
+  m.innerHTML = `
+    <div class="modal-box">
+      <h2>${u.fullName}</h2>
+      <p><b>Telefon:</b> ${u.phone}</p>
+      <p><b>Yo‘nalish:</b> ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}</p>
+      <p><b>Narx:</b> ${ad.price} so‘m</p>
+      <p><b>Izoh:</b> ${ad.comment || "-"}</p>
+
+      <button onclick="closeModal()">Yopish</button>
+      <a href="tel:${u.phone}" class="btn">Qo‘ng‘iroq</a>
+    </div>
+  `;
+}
+
+window.closeModal = () =>
+  document.getElementById("adFullModal").style.display = "none";
+
+
+// ==========================
+// LOGOUT
+// ==========================
+window.logout = () => signOut(auth);
