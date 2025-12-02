@@ -1,94 +1,94 @@
 <!DOCTYPE html>
 <html lang="uz">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ShaharTaxi — E'lonlar</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ShaharTaxi — E'lonlar</title>
 
-    <!-- STYLE -->
-    <link rel="stylesheet" href="../../style.css">
-
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; }
-        .container { width: 98%; max-width: 1400px; margin: auto; padding-top: 20px; }
-        .ads-list { min-height: 250px; background: white; padding: 20px; border-radius: 8px; }
-        .loading { text-align:center; padding:40px; color:#777; font-size:18px; }
-        .pagination { display:flex; justify-content:center; margin-top:20px; gap:30px; font-size:16px; }
-        .ad-card { padding:15px; border-bottom:1px solid #eee; }
-    </style>
+  <!-- style.css joylashuvi: docs/style.css -->
+  <link rel="stylesheet" href="../../style.css" />
+  <style>
+    /* Minimal kerakli uslublar (agar docs/style.css bo'lmasa) */
+    body { font-family: Inter, Arial, sans-serif; background:#f3f4f6; margin:0; }
+    .topbar { background:#0b63d6; color:white; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; }
+    .topbar button { background:#ef4444; color:white; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
+    .container { max-width:980px; margin:28px auto; padding:0 16px; }
+    .card { background:white; border-radius:12px; padding:22px; box-shadow:0 6px 20px rgba(15,23,42,0.06); }
+    .filters { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:18px; }
+    .filters input, .filters select { padding:10px 12px; border:1px solid #e6e6e6; border-radius:8px; min-width:160px; }
+    .filter-block { margin:18px 0; background:#fbfbfb; padding:16px; border-radius:10px; }
+    .district-box label { display:inline-block; margin-right:8px; font-size:13px; }
+    #adsList { margin-top:14px; }
+    .ad-card { display:flex; gap:12px; align-items:center; padding:12px; border-radius:10px; background:#fff; border:1px solid #f0f0f0; margin-bottom:10px; cursor:pointer; }
+    .ad-avatar { width:56px; height:56px; border-radius:8px; object-fit:cover; background:#e6eefc; }
+    .ad-main { flex:1; }
+    .ad-route { font-weight:600; margin-bottom:6px; color:#0b63d6; }
+    .ad-meta { color:#6b7280; font-size:13px; }
+    .ad-price { font-weight:700; background:#eef2ff; padding:6px 10px; border-radius:8px; color:#0b63d6; }
+    #adFullModal { display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.45); z-index:9999; }
+    .ad-modal-box, .modal-box { background:white; padding:22px; border-radius:12px; max-width:760px; width:calc(100% - 40px); box-shadow:0 10px 40px rgba(2,6,23,0.2); }
+    .btn-primary { background:#0b63d6; color:white; padding:8px 12px; border-radius:8px; text-decoration:none; display:inline-block; }
+    .btn-ghost { background:transparent; border:1px solid #e5e7eb; padding:8px 12px; border-radius:8px; }
+    .reset-btn { background:#ef4444; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; }
+    @media (max-width:720px){ .filters { flex-direction:column; align-items:stretch } }
+  </style>
 </head>
-
 <body>
-<div class="container">
 
-    <h2>ShaharTaxi — E'lonlar</h2>
+  <div class="topbar">
+    <div style="font-weight:600">ShaharTaxi — E'lonlar</div>
+    <button onclick="logout()">Chiqish</button>
+  </div>
 
-    <!-- FILTERS -->
-    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
-        <input id="searchInput" class="input" placeholder="Izlash: region, comment, user..." style="flex:1">
+  <div class="container">
+    <div class="card">
+      <h2 style="text-align:center; color:#0b63d6; margin:0 0 18px 0;">Barcha e’lonlar</h2>
 
-        <select id="fromRegion" class="input">
-            <option value="">Barchasi</option>
+      <div class="filters">
+        <input id="search" placeholder="Qidiruv (manzil, izoh, narx)...">
+        <select id="sortBy">
+          <option value="newest">Yangi</option>
+          <option value="oldest">Eski</option>
         </select>
 
-        <select id="fromDistrict" class="input">
-            <option value="">From district</option>
+        <select id="filterDate">
+          <option value="">Vaqt</option>
+          <option value="today">Bugun</option>
+          <option value="tomorrow">Ertaga</option>
+          <option value="3days">3 kun ichida</option>
         </select>
 
-        <select id="toRegion" class="input">
-            <option value="">Barchasi</option>
-        </select>
+        <input id="priceMin" type="number" placeholder="Min narx">
+        <input id="priceMax" type="number" placeholder="Max narx">
 
-        <select id="toDistrict" class="input">
-            <option value="">To district</option>
-        </select>
+        <button id="resetFiltersBtn" class="reset-btn">Reset</button>
+      </div>
 
-        <input id="minPrice" type="number" class="input" placeholder="Min narx">
-        <input id="maxPrice" type="number" class="input" placeholder="Max narx">
+      <div class="filter-block">
+        <div style="margin-bottom:8px; font-weight:700">Qayerdan:</div>
+        <select id="fromRegion"><option value="">Viloyat</option></select>
+        <div id="fromDistrictBox" class="district-box" style="margin-top:8px"></div>
+      </div>
 
-        <select id="sortType" class="input">
-            <option value="new">Yangi → Eski</option>
-            <option value="old">Eski → Yangi</option>
-        </select>
+      <div class="filter-block">
+        <div style="margin-bottom:8px; font-weight:700">Qayerga:</div>
+        <select id="toRegion"><option value="">Viloyat</option></select>
+        <div id="toDistrictBox" class="district-box" style="margin-top:8px"></div>
+      </div>
 
-        <button id="filterBtn" class="btn btn-blue">Filtrlash</button>
-        <button id="clearBtn" class="btn btn-gray">Tozalash</button>
+      <div id="adsList">Yuklanmoqda...</div>
+
+      <div id="pagination" style="text-align:center; margin-top:18px;"></div>
     </div>
+  </div>
 
-    <!-- ADS LIST -->
-    <div id="adsList" class="ads-list">
-        <div class="loading">Yuklanmoqda...</div>
-    </div>
+  <div id="adFullModal"></div>
 
-    <!-- PAGINATION -->
-    <div class="pagination">
-        <button id="prevPage">← Oldingi</button>
-        <span id="pageInfo">1 / 1</span>
-        <button id="nextPage">Keyingi →</button>
-    </div>
+  <!-- REGIONS: docs/assets -->
+  <script src="../../assets/regions-taxi.js"></script>
+  <script src="../../assets/regions-helper.js"></script>
 
-</div>
-
-<!-- FIREBASE COMPAT -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
-<script>
-const firebaseConfig = {
-    apiKey: "AIzaSyDCC81Xxjk0v1DT9TDlvyuV37PoAdHEcqg",
-    authDomain: "shahartaxi-demo.firebaseapp.com",
-    databaseURL: "https://shahartaxi-demo-default-rtdb.firebaseio.com",
-    projectId: "shahartaxi-demo",
-    storageBucket: "shahartaxi-demo.appspot.com",
-    messagingSenderId: "889673996580",
-    appId: "1:889673996580:web:ab1e761e1c5ed7bcde29a8"
-};
-firebase.initializeApp(firebaseConfig);
-</script>
-
-<!-- LIB + MAIN -->
-<script src="../../libs/lib.js"></script>
-<script src="./index.js"></script>
-
+  <!-- MAIN INDEX (shu papkada bo'lgan index.js) -->
+  <script type="module" src="index.js?v=1"></script>
 </body>
 </html>
