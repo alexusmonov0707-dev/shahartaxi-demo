@@ -268,15 +268,25 @@ async function renderAds() {
       ? new Date(ad.createdAt).toLocaleString()
       : "";
 
-    card.innerHTML = `
-      <img class="ad-avatar" src="${owner.avatar}" alt="avatar">
-      <div class="ad-main">
-        <div class="ad-route">${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}</div>
-        <div class="ad-meta">👤 ${owner.fullName} (${owner.role || "foydalanuvchi"})</div>
-        <div class="ad-meta">⏰ ${dateStr}</div>
-      </div>
-      <div class="ad-price">${ad.price ? ad.price + " so‘m" : ""}</div>
-    `;
+   card.innerHTML = `
+  <img class="ad-avatar" src="${owner.avatar}" alt="avatar">
+  <div class="ad-main">
+    <div class="ad-route">
+      ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}
+    </div>
+
+    <div class="ad-meta">
+      🚗 ${ad.carModel || "Mashina ko‘rsatilmagan"}
+    </div>
+
+    <div class="ad-meta">
+      ⏰ ${dateStr}
+    </div>
+  </div>
+
+  <div class="ad-price">${ad.price ? ad.price + " so‘m" : ""}</div>
+`;
+
 
     card.addEventListener("click", () => openModal(ad, owner));
     container.appendChild(card);
