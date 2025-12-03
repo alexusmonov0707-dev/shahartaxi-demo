@@ -291,11 +291,10 @@ async function renderAds() {
     const card = document.createElement("div");
     card.className = "ad-card";
 
-    const dateStr = ad.departureTime
-      ? new Date(ad.departureTime).toLocaleString()
-      : ad.createdAt
-      ? new Date(ad.createdAt).toLocaleString()
-      : "";
+    const createdTimeStr = ad.createdAt
+  ? new Date(ad.createdAt).toLocaleString()
+  : "";
+
 
     const driver = owner.driverInfo || {};
     const carModel = driver.carModel || "-";
