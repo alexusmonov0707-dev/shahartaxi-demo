@@ -308,21 +308,36 @@ function openModal(ad, owner) {
 
   modal.innerHTML = `
     <div class="modal-box">
-      <h2>${owner.fullName}</h2>
-      <p><b>Telefon:</b> ${owner.phone}</p>
-      <p><b>Yo‘nalish:</b> ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}</p>
+
+      <h2>${owner.fullName || "Haydovchi"}</h2>
+
+      <img src="${owner.avatar}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
+
+      <p><b>Telefon:</b> ${owner.phone || "-"}</p>
+
+      <p><b>Yo‘nalish:</b>
+        ${ad.fromRegion}, ${ad.fromDistrict}
+        →
+        ${ad.toRegion}, ${ad.toDistrict}
+      </p>
+
+      <p><b>Mashina rusumi:</b> ${ad.carModel || "-"}</p>
+      <p><b>Mashina rangi:</b> ${ad.carColor || "-"}</p>
+      <p><b>Mashina raqami:</b> ${ad.carNumber || "-"}</p>
+
       <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
       <p><b>Vaqt:</b> ${dateStr}</p>
+
       <p><b>Izoh:</b> ${ad.comment || "-"}</p>
-      <button onclick="closeModal()">Yopish</button>
+
       <a class="btn-primary" href="tel:${owner.phone}">Qo‘ng‘iroq</a>
+      <br><br>
+      <button onclick="closeModal()">Yopish</button>
+
     </div>
   `;
 }
 
-window.closeModal = () => {
-  document.getElementById("adFullModal").style.display = "none";
-};
 
 // ===============================
 // RESET & EVENTS
