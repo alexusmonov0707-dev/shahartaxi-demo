@@ -326,11 +326,10 @@ function openModal(ad, owner) {
   const modal = document.getElementById("adFullModal");
   modal.style.display = "flex";
 
-  const dateStr = ad.departureTime
-    ? new Date(ad.departureTime).toLocaleString()
-    : ad.createdAt
-    ? new Date(ad.createdAt).toLocaleString()
-    : "";
+ const createdTimeStr = ad.createdAt
+  ? new Date(ad.createdAt).toLocaleString()
+  : "";
+
 
   const driver = owner.driverInfo || {};
 
