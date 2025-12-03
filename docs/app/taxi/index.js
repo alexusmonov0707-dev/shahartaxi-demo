@@ -1,4 +1,4 @@
-import { db, auth } from "../../../libs/lib.js";
+import { db, auth } from "../../libs/lib.js";
 import {
   ref,
   get,
