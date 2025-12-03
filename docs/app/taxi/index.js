@@ -55,7 +55,6 @@ async function getUserInfo(uid) {
       phone: u.phone || "-",
       role: u.role || "",
       avatar,
-      // 🔥 mashina ma'lumotlari uchun driverInfo ni ham qo'shdik
       driverInfo: u.driverInfo || {}
     };
 
@@ -159,14 +158,12 @@ function fillDistricts(regionSelectId, containerId, className) {
     const id = `${className}-${district}`.replace(/\s+/g, "-");
     box.innerHTML += `
       <label for="${id}" style="margin-right:10px; font-size:14px;">
-        <!-- 🔥 endi checked YO'Q, user o'zi tanlaydi -->
         <input type="checkbox" id="${id}" class="${className}" value="${district}">
         ${district}
       </label>
     `;
   });
 
-  // birinchi marta change event ulangandan keyin yana qo'shilib ketmasin deb once:true
   box.addEventListener(
     "change",
     () => {
@@ -221,30 +218,25 @@ async function filterAds() {
   for (const ad of ADS) {
     const owner = await getUserInfo(ad.userId);
 
-    // ROLE LOGIKA: driver ↔ passenger
+    // ROLE LOGIKA
     if (CURRENT_USER?.role === "driver" && owner.role !== "passenger") continue;
     if (CURRENT_USER?.role === "passenger" && owner.role !== "driver") continue;
 
-    // REGION FILTR
     if (fromRegion && ad.fromRegion !== fromRegion) continue;
     if (toRegion && ad.toRegion !== toRegion) continue;
 
-    // TUMAN FILTR
     if (fromDistricts.length && !fromDistricts.includes(ad.fromDistrict))
       continue;
     if (toDistricts.length && !toDistricts.includes(ad.toDistrict)) continue;
 
-    // NARX FILTR
     const price = Number(ad.price || 0);
     if (price < minPrice || price > maxPrice) continue;
 
-    // VAQT FILTR (createdAt bo‘yicha)
     const created = Number(ad.createdAt || 0);
     if (timeFilter === "1d" && now - created > 24 * 3600000) continue;
     if (timeFilter === "3d" && now - created > 72 * 3600000) continue;
     if (timeFilter === "7d" && now - created > 168 * 3600000) continue;
 
-    // QIDIRUV
     if (search) {
       const haystack = (
         (ad.fromRegion || "") +
@@ -261,7 +253,6 @@ async function filterAds() {
     result.push({ ad, owner });
   }
 
-  // SORT
   result.sort((a, b) => {
     const ca = Number(a.ad.createdAt || 0);
     const cb = Number(b.ad.createdAt || 0);
@@ -272,7 +263,7 @@ async function filterAds() {
 }
 
 // ===============================
-// RENDER ADS
+// RENDER ADS — ✅ TUZATILGAN
 // ===============================
 async function renderAds() {
   const container = document.getElementById("adsList");
@@ -291,19 +282,17 @@ async function renderAds() {
     const card = document.createElement("div");
     card.className = "ad-card";
 
-    // ✅ E’LON JOYLANGAN VAQT
     const createdTimeStr = ad.createdAt
       ? new Date(ad.createdAt).toLocaleString()
-      : "";
+      : "-";
 
-    // ✅ HAYDOVCHI MASHINA MA’LUMOTI
-const driver = owner.driverInfo && typeof owner.driverInfo === "object"
-  ? owner.driverInfo
-  : {};
+    const driver =
+      owner.driverInfo && typeof owner.driverInfo === "object"
+        ? owner.driverInfo
+        : {};
 
-const carModel = driver.carModel ? driver.carModel : "-";
-const carNumber = driver.carNumber ? driver.carNumber : "-";
-
+    const carModel = driver.carModel || "-";
+    const carNumber = driver.carNumber || "-";
 
     card.innerHTML = `
       <img class="ad-avatar" src="${owner.avatar}" alt="avatar">
@@ -314,11 +303,8 @@ const carNumber = driver.carNumber ? driver.carNumber : "-";
           ${ad.toRegion || ""}, ${ad.toDistrict || ""}
         </div>
 
-        <!-- ✅ ISM O‘RNIGA MOSHINA RUSUMI -->
-       <div class="ad-meta">🚗 ${carModel} (${carNumber})</div>
+        <div class="ad-meta">🚗 ${carModel} (${carNumber})</div>
 
-
-        <!-- ✅ JO‘NASH VAQTI -->
         <div class="ad-meta">
           📍 Jo‘nash: ${
             ad.departureTime
@@ -330,7 +316,6 @@ const carNumber = driver.carNumber ? driver.carNumber : "-";
 
       <div class="ad-price">
         ${ad.price ? ad.price + " so‘m" : ""}
-        <!-- ✅ E’LON JOYLANGAN VAQT -->
         <div style="font-size:12px;color:#555;margin-top:4px;">
           ⏰ ${createdTimeStr}
         </div>
@@ -343,7 +328,7 @@ const carNumber = driver.carNumber ? driver.carNumber : "-";
 }
 
 // ===============================
-// MODAL
+// MODAL — ✅ TUZATILGAN
 // ===============================
 function openModal(ad, owner) {
   const modal = document.getElementById("adFullModal");
@@ -351,9 +336,12 @@ function openModal(ad, owner) {
 
   const createdTimeStr = ad.createdAt
     ? new Date(ad.createdAt).toLocaleString()
-    : "";
+    : "-";
 
-  const driver = owner.driverInfo || {};
+  const driver =
+    owner.driverInfo && typeof owner.driverInfo === "object"
+      ? owner.driverInfo
+      : {};
 
   modal.innerHTML = `
     <div class="modal-box">
@@ -380,7 +368,6 @@ function openModal(ad, owner) {
 
       <hr>
 
-      <!-- ✅ MOSHINA MA’LUMOTLARI USERDAN -->
       <p><b>Mashina rusumi:</b> ${driver.carModel || "-"}</p>
       <p><b>Mashina rangi:</b> ${driver.carColor || "-"}</p>
       <p><b>Mashina raqami:</b> ${driver.carNumber || "-"}</p>
@@ -409,6 +396,10 @@ function openModal(ad, owner) {
     </div>
   `;
 }
+
+window.closeModal = () => {
+  document.getElementById("adFullModal").style.display = "none";
+};
 
 // ===============================
 // RESET & EVENTS
