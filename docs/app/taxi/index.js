@@ -380,17 +380,7 @@ function openModal(ad, owner) {
       <p><b>Mashina rangi:</b> ${driver.carColor || "-"}</p>
       <p><b>Mashina raqami:</b> ${driver.carNumber || "-"}</p>
 
-      ${
-        driver.techPassportUrl
-          ? `
-            <p><b>Mashina / tex-pasport rasmi:</b></p>
-            <img
-              src="${driver.techPassportUrl}"
-              style="width:100%;max-width:320px;border-radius:8px;margin-top:6px;"
-            >
-          `
-          : ""
-      }
+     
 
       <hr>
 
