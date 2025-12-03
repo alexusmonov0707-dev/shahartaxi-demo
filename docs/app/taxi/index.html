@@ -2,127 +2,148 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ShaharTaxi — E’lonlar</title>
-
-    <link rel="stylesheet" href="../../assets/css/admin.css" />
-    <link rel="stylesheet" href="../../assets/css/icons.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
         body {
             margin: 0;
-            background: #f5f7fa;
             font-family: Arial, sans-serif;
+            background: #f5f7fa;
         }
 
         header {
-            background: #1976d2;
+            background: #0D74F5;
             color: white;
-            padding: 14px 25px;
+            padding: 14px 22px;
+            font-size: 22px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
         }
 
-        .logout {
-            background: #e53935;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
+        .wrapper {
+            width: 90%;
+            margin: 30px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
         }
 
-        .page-title {
-            margin-top: 35px;
+        h1 {
             text-align: center;
-            font-size: 28px;
-            color: #0d47a1;
+            color: #0D74F5;
+            margin-top: 0;
         }
 
-        .filters-box {
-            width: 92%;
-            background: white;
-            padding: 18px;
-            border-radius: 12px;
-            margin: 15px auto;
+        .filter-row {
             display: flex;
-            gap: 12px;
             flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
         }
 
-        .filters-box input,
-        .filters-box select {
-            padding: 8px 10px;
-            border: 1px solid #bbb;
-            border-radius: 6px;
+        input, select {
+            padding: 10px;
             font-size: 15px;
+            width: 180px;
+            border-radius: 7px;
+            border: 1px solid #d8d8d8;
         }
 
-        .reset-button {
-            background: #ef5350;
+        button {
+            padding: 10px 16px;
             border: none;
-            padding: 10px 20px;
+            background: #ff5252;
             color: white;
-            border-radius: 6px;
+            cursor: pointer;
+            border-radius: 8px;
         }
 
-        .regions-box {
-            background: white;
-            padding: 20px;
-            width: 92%;
-            margin: 10px auto;
-            border-radius: 12px;
+        .filter-block {
+            margin-bottom: 25px;
         }
 
+        /* ADS */
         .ad-card {
             display: flex;
-            background: white;
-            padding: 20px;
-            width: 92%;
-            margin: 10px auto;
-            border-radius: 14px;
             align-items: center;
-            border: 1px solid #eee;
-            transition: 0.2s;
+            background: #f8faff;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             cursor: pointer;
         }
 
         .ad-card:hover {
-            background: #f0f4ff;
+            background: #eef3ff;
         }
 
         .ad-avatar {
-            width: 65px;
-            height: 65px;
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
+            margin-right: 15px;
             object-fit: cover;
-            margin-right: 18px;
         }
 
+        .ad-main {
+            flex-grow: 1;
+        }
+
+        .ad-route {
+            font-size: 17px;
+            font-weight: bold;
+            color: #0D74F5;
+        }
+
+        .ad-meta {
+            font-size: 14px;
+            color: #444;
+        }
+
+        .ad-price {
+            font-size: 17px;
+            font-weight: bold;
+            background: #e6f0ff;
+            padding: 5px 12px;
+            border-radius: 8px;
+            color: #0D74F5;
+        }
+
+        /* MODAL */
         #adFullModal {
             position: fixed;
-            inset: 0;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
             display: none;
-            background: rgba(0,0,0,0.45);
             justify-content: center;
             align-items: center;
+            z-index: 200;
         }
 
-        .modal-content {
-            width: 450px;
+        .modal-box {
             background: white;
             padding: 25px;
+            width: 380px;
             border-radius: 12px;
         }
 
-        .modal-close {
-            padding: 10px 15px;
-            margin-top: 15px;
-            background: #1976d2;
-            border: none;
+        .modal-box button {
+            background: #444;
+            margin-top: 12px;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background: #0D74F5;
+            padding: 10px;
             color: white;
-            border-radius: 6px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-top: 8px;
         }
     </style>
 </head>
@@ -130,58 +151,53 @@
 <body>
 
 <header>
-    <div class="title">ShaharTaxi — E’lonlar</div>
-    <button id="logoutBtn" class="logout">Chiqish</button>
+    <div>ShaharTaxi — E’lonlar</div>
+    <button onclick="logout()">Chiqish</button>
 </header>
 
-<h1 class="page-title">Barcha e’lonlar</h1>
+<div class="wrapper">
 
-<div class="filters-box">
+    <h1>Barcha e’lonlar</h1>
 
-    <input id="search" placeholder="Qidiruv (manzil, izoh, narx)…">
+    <div class="filter-row">
+        <input id="search" placeholder="Qidiruv...">
+        <select id="sortOrder">
+            <option value="new">Yangi</option>
+            <option value="old">Eski</option>
+        </select>
+        <select id="timeFilter">
+            <option value="">Vaqt</option>
+            <option value="1d">1 kun</option>
+            <option value="3d">3 kun</option>
+            <option value="7d">7 kun</option>
+        </select>
+        <input id="priceMin" type="number" placeholder="Min narx">
+        <input id="priceMax" type="number" placeholder="Max narx">
+        <button id="resetFiltersBtn">Reset</button>
+    </div>
 
-    <select id="sortType">
-        <option value="new">Yangi</option>
-        <option value="old">Eski</option>
-    </select>
+    <div class="filter-block">
+        <b>Qayerdan:</b>
+        <select id="fromRegionSelect"></select>
+        <div id="fromDistricts"></div>
+    </div>
 
-    <select id="timeFilter">
-        <option value="any">Vaqt</option>
-        <option value="today">Bugun</option>
-        <option value="tomorrow">Ertaga</option>
-        <option value="3days">3 kun ichida</option>
-    </select>
+    <div class="filter-block">
+        <b>Qayerga:</b>
+        <select id="toRegionSelect"></select>
+        <div id="toDistricts"></div>
+    </div>
 
-    <input id="minPrice" placeholder="Min narx" type="number">
-    <input id="maxPrice" placeholder="Max narx" type="number">
-
-    <button id="resetBtn" class="reset-button">Reset</button>
-</div>
-
-<div class="regions-box">
-    <h3>Qayerdan:</h3>
-    <select id="fromRegionSelect"></select>
-    <div id="fromDistricts"></div>
-
-    <h3 style="margin-top:20px;">Qayerga:</h3>
-    <select id="toRegionSelect"></select>
-    <div id="toDistricts"></div>
-</div>
-
-<div id="adsList" style="padding:15px; text-align:center;">
-    Yuklanmoqda...
+    <div id="adsList">Yuklanmoqda...</div>
 </div>
 
 <div id="adFullModal"></div>
 
-<!-- REGION FAYLLARI (TO‘G‘RI YO‘L, TO‘G‘RI NOMLAR) -->
+<!-- REGIONS -->
 <script src="../../assets/regions-helper.js"></script>
 <script src="../../assets/regions-taxi.js"></script>
 
-<!-- LIBS -->
-<script src="../../libs/lib.js" type="module"></script>
-
-<!-- MAIN SCRIPR -->
+<!-- MAIN JS -->
 <script src="./index.js" type="module"></script>
 
 </body>
