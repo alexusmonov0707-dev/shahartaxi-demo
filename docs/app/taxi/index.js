@@ -343,10 +343,9 @@ function openModal(ad, owner) {
   const modal = document.getElementById("adFullModal");
   modal.style.display = "flex";
 
- const createdTimeStr = ad.createdAt
-  ? new Date(ad.createdAt).toLocaleString()
-  : "";
-
+  const createdTimeStr = ad.createdAt
+    ? new Date(ad.createdAt).toLocaleString()
+    : "";
 
   const driver = owner.driverInfo || {};
 
@@ -354,7 +353,10 @@ function openModal(ad, owner) {
     <div class="modal-box">
       <h2>${owner.fullName || "Foydalanuvchi"}</h2>
 
-      <img src="${owner.avatar}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
+      <img
+        src="${owner.avatar}"
+        style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:10px;"
+      >
 
       <p><b>Telefon:</b> ${owner.phone || "-"}</p>
 
@@ -362,18 +364,37 @@ function openModal(ad, owner) {
         ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}
       </p>
 
+      <p><b>Jo‘nash vaqti:</b>
+        ${
+          ad.departureTime
+            ? new Date(ad.departureTime).toLocaleString()
+            : "-"
+        }
+      </p>
+
+      <hr>
+
+      <!-- ✅ MOSHINA MA’LUMOTLARI USERDAN -->
       <p><b>Mashina rusumi:</b> ${driver.carModel || "-"}</p>
       <p><b>Mashina rangi:</b> ${driver.carColor || "-"}</p>
       <p><b>Mashina raqami:</b> ${driver.carNumber || "-"}</p>
 
       ${
         driver.techPassportUrl
-          ? `<p><b>Mashina/tex-pasport rasmi:</b><br><img src="${driver.techPassportUrl}" style="width:100%;max-width:320px;border-radius:8px;margin-top:6px;"></p>`
+          ? `
+            <p><b>Mashina / tex-pasport rasmi:</b></p>
+            <img
+              src="${driver.techPassportUrl}"
+              style="width:100%;max-width:320px;border-radius:8px;margin-top:6px;"
+            >
+          `
           : ""
       }
 
+      <hr>
+
       <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
-      <p><b>Vaqt:</b> ${dateStr}</p>
+      <p><b>E’lon joylangan vaqt:</b> ${createdTimeStr}</p>
       <p><b>Izoh:</b> ${ad.comment || "-"}</p>
 
       <a class="btn-primary" href="tel:${owner.phone}">Qo‘ng‘iroq</a>
@@ -382,10 +403,6 @@ function openModal(ad, owner) {
     </div>
   `;
 }
-
-window.closeModal = () => {
-  document.getElementById("adFullModal").style.display = "none";
-};
 
 // ===============================
 // RESET & EVENTS
