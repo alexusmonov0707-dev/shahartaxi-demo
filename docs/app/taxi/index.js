@@ -297,8 +297,13 @@ async function renderAds() {
       : "";
 
     // ✅ HAYDOVCHI MASHINA MA’LUMOTI
-    const driver = owner.driverInfo || {};
-    const carModel = driver.carModel || "-";
+const driver = owner.driverInfo && typeof owner.driverInfo === "object"
+  ? owner.driverInfo
+  : {};
+
+const carModel = driver.carModel ? driver.carModel : "-";
+const carNumber = driver.carNumber ? driver.carNumber : "-";
+
 
     card.innerHTML = `
       <img class="ad-avatar" src="${owner.avatar}" alt="avatar">
