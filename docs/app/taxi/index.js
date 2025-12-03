@@ -307,6 +307,7 @@ async function renderAds() {
           ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}
         </div>
         <div class="ad-meta">🚗 ${carModel}</div>
+        <div class="ad-meta">📍 Jo‘nash: ${new Date(ad.departureTime).toLocaleString()}</div>
       </div>
       <div class="ad-price">
         ${ad.price ? ad.price + " so‘m" : ""}
