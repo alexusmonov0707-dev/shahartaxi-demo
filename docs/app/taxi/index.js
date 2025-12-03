@@ -315,7 +315,8 @@ const carNumber = driver.carNumber ? driver.carNumber : "-";
         </div>
 
         <!-- ✅ ISM O‘RNIGA MOSHINA RUSUMI -->
-        <div class="ad-meta">🚗 ${carModel}</div>
+       <div class="ad-meta">🚗 ${carModel} (${carNumber})</div>
+
 
         <!-- ✅ JO‘NASH VAQTI -->
         <div class="ad-meta">
