@@ -155,22 +155,16 @@ function fillDistricts(regionSelectId, containerId, className) {
   REGIONS[region].forEach((district) => {
     const id = `${className}-${district}`.replace(/\s+/g, "-");
     box.innerHTML += `
-      <label for="${id}" style="margin-right:10px; font-size:14px;">
-        <input type="checkbox" id="${id}" class="${className}" value="${district}" checked>
+      <label style="margin-right:10px; font-size:14px;">
+        <input type="checkbox" class="${className}" value="${district}">
         ${district}
       </label>
     `;
   });
 
-  // birinchi marta change event ulangandan keyin yana qo'shilib ketmasin deb once:true
-  box.addEventListener(
-    "change",
-    () => {
-      renderAds();
-    },
-    { once: true }
-  );
+  box.addEventListener("change", renderAds);
 }
+
 
 // ===============================
 // FILTER LOGIC
