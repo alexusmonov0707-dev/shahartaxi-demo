@@ -291,27 +291,43 @@ async function renderAds() {
     const card = document.createElement("div");
     card.className = "ad-card";
 
+    // ✅ E’LON JOYLANGAN VAQT
     const createdTimeStr = ad.createdAt
-  ? new Date(ad.createdAt).toLocaleString()
-  : "";
+      ? new Date(ad.createdAt).toLocaleString()
+      : "";
 
-
+    // ✅ HAYDOVCHI MASHINA MA’LUMOTI
     const driver = owner.driverInfo || {};
     const carModel = driver.carModel || "-";
 
-    // 🔥 Card: ism yo'q, o'rniga mashina rusumi, vaqt narx tagida
     card.innerHTML = `
       <img class="ad-avatar" src="${owner.avatar}" alt="avatar">
+
       <div class="ad-main">
         <div class="ad-route">
-          ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}
+          ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → 
+          ${ad.toRegion || ""}, ${ad.toDistrict || ""}
         </div>
+
+        <!-- ✅ ISM O‘RNIGA MOSHINA RUSUMI -->
         <div class="ad-meta">🚗 ${carModel}</div>
-        <div class="ad-meta">📍 Jo‘nash: ${new Date(ad.departureTime).toLocaleString()}</div>
+
+        <!-- ✅ JO‘NASH VAQTI -->
+        <div class="ad-meta">
+          📍 Jo‘nash: ${
+            ad.departureTime
+              ? new Date(ad.departureTime).toLocaleString()
+              : "-"
+          }
+        </div>
       </div>
+
       <div class="ad-price">
         ${ad.price ? ad.price + " so‘m" : ""}
-        <div style="font-size:12px;color:#555;margin-top:4px;">⏰ ${dateStr}</div>
+        <!-- ✅ E’LON JOYLANGAN VAQT -->
+        <div style="font-size:12px;color:#555;margin-top:4px;">
+          ⏰ ${createdTimeStr}
+        </div>
       </div>
     `;
 
