@@ -54,7 +54,9 @@ async function getUserInfo(uid) {
       fullName: u.fullName || "Foydalanuvchi",
       phone: u.phone || "-",
       role: u.role || "",
-      avatar
+      avatar,
+      // 🔥 mashina ma'lumotlari uchun driverInfo ni ham qo'shdik
+      driverInfo: u.driverInfo || {}
     };
 
     userCache.set(uid, info);
@@ -73,7 +75,8 @@ function defaultUser() {
     fullName: "Foydalanuvchi",
     phone: "-",
     role: "",
-    avatar: "https://i.ibb.co/PGT8x4G/user.png"
+    avatar: "https://i.ibb.co/PGT8x4G/user.png",
+    driverInfo: {}
   };
 }
 
@@ -156,7 +159,8 @@ function fillDistricts(regionSelectId, containerId, className) {
     const id = `${className}-${district}`.replace(/\s+/g, "-");
     box.innerHTML += `
       <label for="${id}" style="margin-right:10px; font-size:14px;">
-        <input type="checkbox" id="${id}" class="${className}" value="${district}" checked>
+        <!-- 🔥 endi checked YO'Q, user o'zi tanlaydi -->
+        <input type="checkbox" id="${id}" class="${className}" value="${district}">
         ${district}
       </label>
     `;
@@ -171,6 +175,25 @@ function fillDistricts(regionSelectId, containerId, className) {
     { once: true }
   );
 }
+
+// 🔥 boshqa joy bosilganda shaharlar yo'qolishi
+document.addEventListener("click", (e) => {
+  const target = e.target;
+  const fromArea =
+    target.closest("#fromRegionSelect") || target.closest("#fromDistricts");
+  const toArea =
+    target.closest("#toRegionSelect") || target.closest("#toDistricts");
+
+  if (!fromArea) {
+    const fromBox = document.getElementById("fromDistricts");
+    if (fromBox) fromBox.innerHTML = "";
+  }
+
+  if (!toArea) {
+    const toBox = document.getElementById("toDistricts");
+    if (toBox) toBox.innerHTML = "";
+  }
+});
 
 // ===============================
 // FILTER LOGIC
@@ -274,14 +297,22 @@ async function renderAds() {
       ? new Date(ad.createdAt).toLocaleString()
       : "";
 
+    const driver = owner.driverInfo || {};
+    const carModel = driver.carModel || "-";
+
+    // 🔥 Card: ism yo'q, o'rniga mashina rusumi, vaqt narx tagida
     card.innerHTML = `
       <img class="ad-avatar" src="${owner.avatar}" alt="avatar">
       <div class="ad-main">
-        <div class="ad-route">${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}</div>
-        <div class="ad-meta">👤 ${owner.fullName} (${owner.role || "foydalanuvchi"})</div>
-        <div class="ad-meta">⏰ ${dateStr}</div>
+        <div class="ad-route">
+          ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}
+        </div>
+        <div class="ad-meta">🚗 ${carModel}</div>
       </div>
-      <div class="ad-price">${ad.price ? ad.price + " so‘m" : ""}</div>
+      <div class="ad-price">
+        ${ad.price ? ad.price + " so‘m" : ""}
+        <div style="font-size:12px;color:#555;margin-top:4px;">⏰ ${dateStr}</div>
+      </div>
     `;
 
     card.addEventListener("click", () => openModal(ad, owner));
@@ -302,16 +333,37 @@ function openModal(ad, owner) {
     ? new Date(ad.createdAt).toLocaleString()
     : "";
 
+  const driver = owner.driverInfo || {};
+
   modal.innerHTML = `
     <div class="modal-box">
-      <h2>${owner.fullName}</h2>
-      <p><b>Telefon:</b> ${owner.phone}</p>
-      <p><b>Yo‘nalish:</b> ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}</p>
+      <h2>${owner.fullName || "Foydalanuvchi"}</h2>
+
+      <img src="${owner.avatar}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
+
+      <p><b>Telefon:</b> ${owner.phone || "-"}</p>
+
+      <p><b>Yo‘nalish:</b>
+        ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}
+      </p>
+
+      <p><b>Mashina rusumi:</b> ${driver.carModel || "-"}</p>
+      <p><b>Mashina rangi:</b> ${driver.carColor || "-"}</p>
+      <p><b>Mashina raqami:</b> ${driver.carNumber || "-"}</p>
+
+      ${
+        driver.techPassportUrl
+          ? `<p><b>Mashina/tex-pasport rasmi:</b><br><img src="${driver.techPassportUrl}" style="width:100%;max-width:320px;border-radius:8px;margin-top:6px;"></p>`
+          : ""
+      }
+
       <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
       <p><b>Vaqt:</b> ${dateStr}</p>
       <p><b>Izoh:</b> ${ad.comment || "-"}</p>
-      <button onclick="closeModal()">Yopish</button>
+
       <a class="btn-primary" href="tel:${owner.phone}">Qo‘ng‘iroq</a>
+      <br><br>
+      <button onclick="closeModal()">Yopish</button>
     </div>
   `;
 }
