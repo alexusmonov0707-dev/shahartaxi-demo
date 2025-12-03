@@ -1,96 +1,150 @@
-import { db, auth } from "../../libs/lib.js";
 import {
+  auth,
+  db,
   ref,
   get,
-  child,
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import {
   onAuthStateChanged,
-  signOut,
-} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+  signOut
+} from "../../libs/lib.js";
 
-/* ===========================
-   GLOBAL O'ZGARUVCHILAR
-=========================== */
-let currentUser = null;
-let allAds = [];
-let allUsers = {};
+let CURRENT_USER = null;
+let ADS = [];
+const userCache = new Map();
 
-const adsList = document.getElementById("adsList");
+// ===============================
+// REGIONS — regions-helper.js + regions-taxi.js
+// ===============================
+let REGIONS = {};
+if (window.regionsData) {
+  REGIONS = window.regionsData;
+} else if (window.regions) {
+  REGIONS = window.regions;
+} else {
+  console.warn(
+    "REGIONS topilmadi. assets/regions-helper.js va assets/regions-taxi.js fayllarini tekshir."
+  );
+  REGIONS = {};
+}
 
-/* ===========================
-   AUTH
-=========================== */
+// ===============================
+// USER HELPERS
+// ===============================
+async function getUserInfo(uid) {
+  if (!uid) return defaultUser();
+
+  if (userCache.has(uid)) return userCache.get(uid);
+
+  try {
+    const snap = await get(ref(db, "users/" + uid));
+    if (!snap.exists()) {
+      const info = defaultUser();
+      userCache.set(uid, info);
+      return info;
+    }
+
+    const u = snap.val();
+
+    const avatar =
+      !u.avatar || u.avatar.startsWith("/")
+        ? "https://i.ibb.co/PGT8x4G/user.png"
+        : u.avatar;
+
+    const info = {
+      uid,
+      fullName: u.fullName || "Foydalanuvchi",
+      phone: u.phone || "-",
+      role: u.role || "",
+      avatar
+    };
+
+    userCache.set(uid, info);
+    return info;
+  } catch (e) {
+    console.error("getUserInfo error:", e);
+    const info = defaultUser();
+    userCache.set(uid, info);
+    return info;
+  }
+}
+
+function defaultUser() {
+  return {
+    uid: null,
+    fullName: "Foydalanuvchi",
+    phone: "-",
+    role: "",
+    avatar: "https://i.ibb.co/PGT8x4G/user.png"
+  };
+}
+
+// ===============================
+// AUTH
+// ===============================
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    location.href = "../../auth/login.html";
+    window.location.href = "../login/index.html";
     return;
   }
 
-  const snap = await get(ref(db, "users/" + user.uid));
-  currentUser = snap.val();
-  console.log("User:", currentUser);
+  CURRENT_USER = await getUserInfo(user.uid);
+  console.log("User:", CURRENT_USER);
 
-  await loadUsers();
-  await loadAds();
   initRegionFilters();
+  await loadAds();
 });
 
-/* ===========================
-   USERLARNI YUKLASH
-=========================== */
-async function loadUsers() {
-  const snap = await get(ref(db, "users"));
-  allUsers = snap.exists() ? snap.val() : {};
-}
-
-/* ===========================
-   E'LONLARNI YUKLASH
-=========================== */
+// ===============================
+// ADS LOAD
+// ===============================
 async function loadAds() {
-  const snap = await get(ref(db, "ads"));
-  allAds = [];
+  try {
+    const snap = await get(ref(db, "ads"));
+    ADS = [];
 
-  if (snap.exists()) {
-    snap.forEach((userAds) => {
-      userAds.forEach((adSnap) => {
-        const ad = adSnap.val();
-        ad.uid = userAds.key;
-        ad.adId = adSnap.key;
-        allAds.push(ad);
+    snap.forEach((ownerNode) => {
+      const ownerUid = ownerNode.key;
+      ownerNode.forEach((adNode) => {
+        const ad = adNode.val();
+        ad.id = adNode.key;
+        ad.userId = ownerUid;
+        ADS.push(ad);
       });
     });
-  }
 
-  renderAds();
+    renderAds();
+  } catch (e) {
+    console.error("loadAds error:", e);
+    document.getElementById("adsList").innerText =
+      "E’lonlarni yuklashda xatolik.";
+  }
 }
 
-/* ===========================
-   REGIONS FILTER
-=========================== */
+// ===============================
+// REGION FILTERS
+// ===============================
 function initRegionFilters() {
-  const fromSelect = document.getElementById("fromRegionSelect");
-  const toSelect = document.getElementById("toRegionSelect");
+  const fromRegion = document.getElementById("fromRegionSelect");
+  const toRegion = document.getElementById("toRegionSelect");
 
-  fromSelect.innerHTML = `<option value="">Viloyat</option>`;
-  toSelect.innerHTML = `<option value="">Viloyat</option>`;
+  fromRegion.innerHTML = `<option value="">Viloyat</option>`;
+  toRegion.innerHTML = `<option value="">Viloyat</option>`;
 
-  Object.keys(REGIONS).forEach((region) => {
-    fromSelect.innerHTML += `<option value="${region}">${region}</option>`;
-    toSelect.innerHTML += `<option value="${region}">${region}</option>`;
+  Object.keys(REGIONS).forEach((name) => {
+    fromRegion.innerHTML += `<option value="${name}">${name}</option>`;
+    toRegion.innerHTML += `<option value="${name}">${name}</option>`;
   });
 
-  fromSelect.addEventListener("change", () =>
-    fillDistricts("fromRegionSelect", "fromDistricts", "fromDistrict")
-  );
-  toSelect.addEventListener("change", () =>
-    fillDistricts("toRegionSelect", "toDistricts", "toDistrict")
-  );
+  fromRegion.addEventListener("change", () => {
+    fillDistricts("fromRegionSelect", "fromDistricts", "fromDistrict");
+    renderAds();
+  });
+
+  toRegion.addEventListener("change", () => {
+    fillDistricts("toRegionSelect", "toDistricts", "toDistrict");
+    renderAds();
+  });
 }
 
-/* ===========================
-   SHAHARLARNI CHIQARISH
-=========================== */
 function fillDistricts(regionSelectId, containerId, className) {
   const region = document.getElementById(regionSelectId).value;
   const box = document.getElementById(containerId);
@@ -99,69 +153,120 @@ function fillDistricts(regionSelectId, containerId, className) {
   if (!region || !REGIONS[region]) return;
 
   REGIONS[region].forEach((district) => {
+    const id = `${className}-${district}`.replace(/\s+/g, "-");
     box.innerHTML += `
-      <label style="margin-right:10px;">
-        <input type="checkbox" class="${className}" value="${district}">
+      <label for="${id}" style="margin-right:10px; font-size:14px;">
+        <input type="checkbox" id="${id}" class="${className}" value="${district}" checked>
         ${district}
       </label>
     `;
   });
 
-  box.addEventListener("change", renderAds);
-}
-
-/* BOSHQA JOY BOSILGANDA SHAHARLAR YO'QOLSIN */
-document.addEventListener("click", (e) => {
-  if (!e.target.closest(".filter-block")) {
-    document.getElementById("fromDistricts").innerHTML = "";
-    document.getElementById("toDistricts").innerHTML = "";
-  }
-});
-
-/* ===========================
-   FILTERLARNI O'QISH
-=========================== */
-function getSelected(className) {
-  return Array.from(document.querySelectorAll(`.${className}:checked`)).map(
-    (i) => i.value
+  // birinchi marta change event ulangandan keyin yana qo'shilib ketmasin deb once:true
+  box.addEventListener(
+    "change",
+    () => {
+      renderAds();
+    },
+    { once: true }
   );
 }
 
-/* ===========================
-   RENDER ADS
-=========================== */
-function renderAds() {
-  adsList.innerHTML = "";
+// ===============================
+// FILTER LOGIC
+// ===============================
+async function filterAds() {
+  const search = (document.getElementById("search").value || "").toLowerCase();
+  const sortOrder = document.getElementById("sortOrder").value;
+  const timeFilter = document.getElementById("timeFilter").value;
+  const minPrice = Number(document.getElementById("priceMin").value || 0);
+  const maxPrice = Number(document.getElementById("priceMax").value || Infinity);
 
-  const fromSelected = getSelected("fromDistrict");
-  const toSelected = getSelected("toDistrict");
+  const fromRegion = document.getElementById("fromRegionSelect").value;
+  const toRegion = document.getElementById("toRegionSelect").value;
 
-  let filtered = allAds.filter((ad) => {
-    if (!currentUser || !allUsers[ad.uid]) return false;
+  const fromDistricts = [
+    ...document.querySelectorAll(".fromDistrict:checked")
+  ].map((i) => i.value);
+  const toDistricts = [...document.querySelectorAll(".toDistrict:checked")].map(
+    (i) => i.value
+  );
 
-    const owner = allUsers[ad.uid];
+  const now = Date.now();
+  const result = [];
 
-    /* ROLE BO'YICHA */
-    if (currentUser.role === owner.role) return false;
+  for (const ad of ADS) {
+    const owner = await getUserInfo(ad.userId);
 
-    /* FROM FILTER */
-    if (fromSelected.length && !fromSelected.includes(ad.fromDistrict))
-      return false;
+    // ROLE LOGIKA: driver ↔ passenger
+    if (CURRENT_USER?.role === "driver" && owner.role !== "passenger") continue;
+    if (CURRENT_USER?.role === "passenger" && owner.role !== "driver") continue;
 
-    /* TO FILTER */
-    if (toSelected.length && !toSelected.includes(ad.toDistrict)) return false;
+    // REGION FILTR
+    if (fromRegion && ad.fromRegion !== fromRegion) continue;
+    if (toRegion && ad.toRegion !== toRegion) continue;
 
-    return true;
+    // TUMAN FILTR
+    if (fromDistricts.length && !fromDistricts.includes(ad.fromDistrict))
+      continue;
+    if (toDistricts.length && !toDistricts.includes(ad.toDistrict)) continue;
+
+    // NARX FILTR
+    const price = Number(ad.price || 0);
+    if (price < minPrice || price > maxPrice) continue;
+
+    // VAQT FILTR (createdAt bo‘yicha)
+    const created = Number(ad.createdAt || 0);
+    if (timeFilter === "1d" && now - created > 24 * 3600000) continue;
+    if (timeFilter === "3d" && now - created > 72 * 3600000) continue;
+    if (timeFilter === "7d" && now - created > 168 * 3600000) continue;
+
+    // QIDIRUV
+    if (search) {
+      const haystack = (
+        (ad.fromRegion || "") +
+        (ad.fromDistrict || "") +
+        (ad.toRegion || "") +
+        (ad.toDistrict || "") +
+        (ad.comment || "") +
+        (String(ad.price) || "")
+      ).toLowerCase();
+
+      if (!haystack.includes(search)) continue;
+    }
+
+    result.push({ ad, owner });
+  }
+
+  // SORT
+  result.sort((a, b) => {
+    const ca = Number(a.ad.createdAt || 0);
+    const cb = Number(b.ad.createdAt || 0);
+    return sortOrder === "old" ? ca - cb : cb - ca;
   });
 
-  if (!filtered.length) {
-    adsList.innerHTML = "E’lon topilmadi";
+  return result;
+}
+
+// ===============================
+// RENDER ADS
+// ===============================
+async function renderAds() {
+  const container = document.getElementById("adsList");
+  container.innerHTML = "Yuklanmoqda...";
+
+  const items = await filterAds();
+
+  if (!items.length) {
+    container.innerHTML = "<p>E’lonlar topilmadi</p>";
     return;
   }
 
-  filtered.forEach((ad) => {
-    const owner = allUsers[ad.uid];
-    const driver = owner.driverInfo || {};
+  container.innerHTML = "";
+
+  for (const { ad, owner } of items) {
+    const card = document.createElement("div");
+    card.className = "ad-card";
 
     const dateStr = ad.departureTime
       ? new Date(ad.departureTime).toLocaleString()
@@ -169,36 +274,27 @@ function renderAds() {
       ? new Date(ad.createdAt).toLocaleString()
       : "";
 
-    const card = document.createElement("div");
-    card.className = "ad-card";
-
     card.innerHTML = `
-      <img class="ad-avatar" src="${owner.avatar}" />
+      <img class="ad-avatar" src="${owner.avatar}" alt="avatar">
       <div class="ad-main">
-        <div class="ad-route">
-          ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}
-        </div>
-
-        <div class="ad-meta">🚗 ${driver.carModel || "-"}</div>
+        <div class="ad-route">${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}</div>
+        <div class="ad-meta">👤 ${owner.fullName} (${owner.role || "foydalanuvchi"})</div>
         <div class="ad-meta">⏰ ${dateStr}</div>
       </div>
-
-      <div class="ad-price">${ad.price} so‘m</div>
+      <div class="ad-price">${ad.price ? ad.price + " so‘m" : ""}</div>
     `;
 
-    card.onclick = () => openModal(ad, owner);
-    adsList.appendChild(card);
-  });
+    card.addEventListener("click", () => openModal(ad, owner));
+    container.appendChild(card);
+  }
 }
 
-/* ===========================
-   MODAL
-=========================== */
-window.openModal = function (ad, owner) {
+// ===============================
+// MODAL
+// ===============================
+function openModal(ad, owner) {
   const modal = document.getElementById("adFullModal");
   modal.style.display = "flex";
-
-  const driver = owner.driverInfo || {};
 
   const dateStr = ad.departureTime
     ? new Date(ad.departureTime).toLocaleString()
@@ -208,40 +304,49 @@ window.openModal = function (ad, owner) {
 
   modal.innerHTML = `
     <div class="modal-box">
-
       <h2>${owner.fullName}</h2>
-
-      <img src="${owner.avatar}" style="width:120px;height:120px;border-radius:50%;">
-
       <p><b>Telefon:</b> ${owner.phone}</p>
-
-      <p><b>Yo‘nalish:</b>
-        ${ad.fromRegion}, ${ad.fromDistrict}
-        →
-        ${ad.toRegion}, ${ad.toDistrict}
-      </p>
-
-      <p><b>Mashina rusumi:</b> ${driver.carModel || "-"}</p>
-      <p><b>Mashina rangi:</b> ${driver.carColor || "-"}</p>
-      <p><b>Mashina raqami:</b> ${driver.carNumber || "-"}</p>
-
-      <p><b>Narx:</b> ${ad.price} so‘m</p>
+      <p><b>Yo‘nalish:</b> ${ad.fromRegion}, ${ad.fromDistrict} → ${ad.toRegion}, ${ad.toDistrict}</p>
+      <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
       <p><b>Vaqt:</b> ${dateStr}</p>
       <p><b>Izoh:</b> ${ad.comment || "-"}</p>
-
-      <a class="btn-primary" href="tel:${owner.phone}">Qo‘ng‘iroq</a>
-      <br><br>
       <button onclick="closeModal()">Yopish</button>
-
+      <a class="btn-primary" href="tel:${owner.phone}">Qo‘ng‘iroq</a>
     </div>
   `;
-};
+}
 
-window.closeModal = function () {
+window.closeModal = () => {
   document.getElementById("adFullModal").style.display = "none";
 };
 
-window.logout = async function () {
-  await signOut(auth);
-  location.href = "../../auth/login.html";
+// ===============================
+// RESET & EVENTS
+// ===============================
+document.getElementById("resetFiltersBtn").addEventListener("click", () => {
+  document.getElementById("search").value = "";
+  document.getElementById("sortOrder").value = "new";
+  document.getElementById("timeFilter").value = "";
+  document.getElementById("priceMin").value = "";
+  document.getElementById("priceMax").value = "";
+  document.getElementById("fromRegionSelect").value = "";
+  document.getElementById("toRegionSelect").value = "";
+  document.getElementById("fromDistricts").innerHTML = "";
+  document.getElementById("toDistricts").innerHTML = "";
+  renderAds();
+});
+
+["search", "sortOrder", "timeFilter", "priceMin", "priceMax"].forEach((id) => {
+  const el = document.getElementById(id);
+  el.addEventListener("input", () => renderAds());
+  el.addEventListener("change", () => renderAds());
+});
+
+// ===============================
+// LOGOUT
+// ===============================
+window.logout = () => {
+  signOut(auth).catch((e) => console.error("logout error", e));
 };
+
+console.log("Taxi index.js fully loaded");
