@@ -2,7 +2,7 @@
 // Keeps all original features. Uses regions-helper.js functions (window.fillRegions, window.updateDistricts)
 
 import {
-  auth, db, ref, get, update, remove, onAuthStateChanged, 
+  auth, db, ref, get, update, remove, onAuthStateChanged,
 } from "../../libs/lib.js";
 
 function _$(id){ return document.getElementById(id); }
@@ -41,45 +41,44 @@ function fmt(ms){
   return d.toLocaleString("uz-UZ");
 }
 
-// --- load role (kept for compatibility) ---
+// --- load role ---
 async function loadUserRole(uid){
   const s = await get(ref(db,"users/"+uid));
   if(s.exists()) window.userRole = s.val().role || "passenger";
 }
 
-// --- fill region selects (from helper) ---
+// --- fill region selects ---
 function fillEditRegions(){
   window.fillRegions("editFromRegion");
   window.fillRegions("editToRegion");
 }
 
-// determine role label for display using ad.type primarily
+// --- role label ---
 function getRoleLabel(ad){
   if(!ad) return "";
   const tRaw = (ad.type || "").toString().trim().toLowerCase();
   if(tRaw === "haydovchi" || tRaw === "driver") return "Haydovchi";
   if(tRaw === "yo'lovchi" || tRaw === "yolovchi" || tRaw === "passenger") return "Yo‘lovchi";
-  // fallback heuristics
- 
   return "";
 }
 
-// helper: create card DOM (returns element)
+// --- create card ---
 function createAdElement(ad, id, owner){
   const roleLabel = getRoleLabel(ad);
- const s =
-  ad.driverSeats !== undefined && ad.driverSeats !== null && ad.driverSeats !== ""
-    ? ad.driverSeats
-    : ad.passengerCount !== undefined && ad.passengerCount !== null && ad.passengerCount !== ""
-    ? ad.passengerCount
-    : "";
+
+  // ✅ JOY / YO‘LOVCHI SONI HAR DOIM TO‘G‘RI
+  const s =
+    ad.driverSeats !== undefined && ad.driverSeats !== null && ad.driverSeats !== ""
+      ? ad.driverSeats
+      : ad.passengerCount !== undefined && ad.passengerCount !== null && ad.passengerCount !== ""
+      ? ad.passengerCount
+      : "";
 
   const box = document.createElement("div");
   box.className = "ad-box";
   box.dataset.id = id;
   box.dataset.owner = owner;
 
-  // compute departure display
   const departureDisplay = (()=>{
     if(!ad) return "-";
     if(ad.departureTime && typeof ad.departureTime === "number") return fmt(ad.departureTime);
@@ -90,45 +89,42 @@ function createAdElement(ad, id, owner){
     return "-";
   })();
 
-// createdAt for card
-let createdAtDisp = "-";
-if(ad && ad.createdAt){
-  let ms = null;
-  if(typeof ad.createdAt === "number") ms = ad.createdAt;
-  else if(typeof ad.createdAt === "string"){
-    const parsed = Date.parse(ad.createdAt);
-    ms = isNaN(parsed) ? null : parsed;
+  let createdAtDisp = "-";
+  if(ad && ad.createdAt){
+    let ms = null;
+    if(typeof ad.createdAt === "number") ms = ad.createdAt;
+    else if(typeof ad.createdAt === "string"){
+      const parsed = Date.parse(ad.createdAt);
+      ms = isNaN(parsed) ? null : parsed;
+    }
+    createdAtDisp = ms ? fmt(ms) : String(ad.createdAt || "-");
   }
-  createdAtDisp = ms ? fmt(ms) : String(ad.createdAt || "-");
-}
 
-box.innerHTML = `
-  <div style="font-weight:700;color:#0069d9">${escapeHtml(roleLabel)}</div>
-  <div class="ad-route" style="margin-top:6px;font-weight:600">
-    ${escapeHtml(ad.fromRegion||"")} ${escapeHtml(ad.fromDistrict||"")}
-    →
-    ${escapeHtml(ad.toRegion||"")} ${escapeHtml(ad.toDistrict||"")}
-  </div>
+  box.innerHTML = `
+    <div style="font-weight:700;color:#0069d9">${escapeHtml(roleLabel)}</div>
+    <div class="ad-route" style="margin-top:6px;font-weight:600">
+      ${escapeHtml(ad.fromRegion||"")} ${escapeHtml(ad.fromDistrict||"")} →
+      ${escapeHtml(ad.toRegion||"")} ${escapeHtml(ad.toDistrict||"")}
+    </div>
 
-  <div class="ad-meta" style="margin-top:8px">Narx: <b>${escapeHtml(String(ad.price||""))}</b></div>
-  <div class="ad-meta">Vaqt: ${departureDisplay}</div>
-  <div class="ad-meta">Joy: ${escapeHtml(String(s||""))}</div>
+    <div class="ad-meta" style="margin-top:8px">Narx: <b>${escapeHtml(String(ad.price||""))}</b></div>
+    <div class="ad-meta">Vaqt: ${departureDisplay}</div>
+    <div class="ad-meta">Joy: ${escapeHtml(String(s||""))}</div>
 
-  <!-- Sana + vaqt (oddiy, minimal) -->
-  <div class="ad-meta" style="text-align:right; color:#6b7280; margin-top:18px;">
-    ${escapeHtml(createdAtDisp)}
-  </div>
+    <div class="ad-meta" style="text-align:right;color:#6b7280;margin-top:18px;">
+      ${escapeHtml(createdAtDisp)}
+    </div>
 
-  <div class="ad-actions" style="margin-top:10px">
-    <button class="btn btn-primary edit" data-id="${id}" data-owner="${owner}">Tahrirlash</button>
-    <button class="btn btn-danger delete" data-id="${id}" data-owner="${owner}">O‘chirish</button>
-  </div>
-`;
+    <div class="ad-actions" style="margin-top:10px">
+      <button class="btn btn-primary edit" data-id="${id}" data-owner="${owner}">Tahrirlash</button>
+      <button class="btn btn-danger delete" data-id="${id}" data-owner="${owner}">O‘chirish</button>
+    </div>
+  `;
 
   return box;
 }
 
-// escape helper to avoid injection in innerHTML insertion
+// --- escape ---
 function escapeHtml(str) {
   if (str === null || str === undefined) return "";
   return String(str)
@@ -139,7 +135,7 @@ function escapeHtml(str) {
     .replaceAll("'", "&#39;");
 }
 
-// --- load ads once and cache ---
+// --- ✅ LOAD MY ADS: FAQAT O‘ZIMNIKI ---
 async function loadMyAds(){
   const user = auth.currentUser;
   if(!user) return;
@@ -156,43 +152,41 @@ async function loadMyAds(){
   }
 
   const arr = [];
-  // build flattened array and cache
   const newCache = {};
+  const currentUid = user.uid;
 
   snap.forEach(node=>{
-    const val = node.val();
-
     let nested = false;
+
     node.forEach(ch=>{
       const cv = ch.val();
       if(cv && (cv.fromRegion || cv.createdAt)) nested = true;
     });
 
     if(nested){
-      // node is owner
+      // ✅ FAQAT O‘Z EGASI
+      if(node.key !== currentUid) return;
+
       node.forEach(ad=>{
         const adVal = ad.val();
         const id = ad.key;
         const owner = node.key;
+
         arr.push({ad: adVal, id, owner});
         newCache[id] = { ad: adVal, owner };
       });
-    } else {
-      // flat ad
-      if(val && val.userId){
+    } 
+    else {
+      const val = node.val();
+
+      if(val && val.userId === currentUid){
         const id = node.key;
-        arr.push({ad: val, id, owner: val.userId});
-        newCache[id] = { ad: val, owner: val.userId };
-      } else if(val && val.createdAt){
-        // fallback: single node
-        const id = node.key;
-        arr.push({ad: val, id, owner: node.key});
-        newCache[id] = { ad: val, owner: node.key };
+        arr.push({ad: val, id, owner: currentUid});
+        newCache[id] = { ad: val, owner: currentUid };
       }
     }
   });
 
-  // set global cache
   window.adsCache = newCache;
 
   if(arr.length===0){
@@ -200,20 +194,18 @@ async function loadMyAds(){
     return;
   }
 
-  // render all (initial load)
   arr.forEach(x => {
     const el = createAdElement(x.ad, x.id, x.owner);
     elList.appendChild(el);
   });
 }
 
-// --- render single updated card with fade animation ---
+// --- single card update ---
 function updateCardInDOM(ad, id, owner){
   const old = elList.querySelector(`.ad-box[data-id="${id}"]`);
   const newEl = createAdElement(ad, id, owner);
-  // if no old, append
+
   if(!old){
-    // append at top
     elList.insertBefore(newEl, elList.firstChild);
     newEl.style.opacity = "0";
     requestAnimationFrame(()=> {
@@ -223,11 +215,9 @@ function updateCardInDOM(ad, id, owner){
     return;
   }
 
-  // fade out old -> replace -> fade in
   old.style.transition = "opacity .16s";
   old.style.opacity = "0";
   setTimeout(()=>{
-    // replace node
     old.replaceWith(newEl);
     newEl.style.opacity = "0";
     newEl.style.transition = "opacity .16s";
@@ -235,7 +225,7 @@ function updateCardInDOM(ad, id, owner){
   }, 160);
 }
 
-// --- handlers (delegated) ---
+// --- delegated handlers ---
 elList.addEventListener("click", e=>{
   const editBtn = e.target.closest(".edit");
   const delBtn = e.target.closest(".delete");
@@ -249,12 +239,11 @@ elList.addEventListener("click", e=>{
 
 closeBtn.onclick = () => modal.style.display = "none";
 
-// --- open edit modal ---
+// --- edit open ---
 async function openEdit(id, owner){
   editingId = id;
   editingOwner = owner;
 
-  // try nested path first then flat
   let snap = await get(ref(db,`ads/${owner}/${id}`));
   if(!snap.exists()) snap = await get(ref(db,`ads/${id}`));
 
@@ -266,19 +255,16 @@ async function openEdit(id, owner){
   const ad = snap.val();
 
   fillEditRegions();
-
-  // ensure districts updated then populate selected districts and other fields
   setTimeout(()=>populate(ad),100);
 
   modal.style.display = "flex";
 }
 
-// --- populate modal (preserves districts matching) ---
+// --- populate ---
 function populate(ad){
   frReg.value = ad.fromRegion || "";
   toReg.value = ad.toRegion || "";
 
-  // ensure districts list built then set values via callback
   window.updateDistricts("from", () => {
     frDis.value = ad.fromDistrict || "";
   });
@@ -292,7 +278,6 @@ function populate(ad){
   seats.value = ad.driverSeats || ad.passengerCount || "";
 
   if(ad.departureTime){
-    // departureTime may be stored as ms or ISO string
     let ms = null;
     if(typeof ad.departureTime === "number") ms = ad.departureTime;
     else if(typeof ad.departureTime === "string") {
@@ -310,9 +295,7 @@ function populate(ad){
     time.value = "";
   }
 
-  // createdAt display (read-only span)
   if(ad.createdAt){
-    // createdAt may be ms or string
     let ms = null;
     if(typeof ad.createdAt === "number") ms = ad.createdAt;
     else if(typeof ad.createdAt === "string"){
@@ -327,7 +310,6 @@ function populate(ad){
 
 // --- save edit ---
 saveBtn.onclick = async ()=>{
-
   if(!editingId) return alert("Tahrir qilinayotgan e'lon aniqlanmadi.");
 
   const data = {
@@ -343,8 +325,8 @@ saveBtn.onclick = async ()=>{
   if(window.userRole==="driver") data.driverSeats = seats.value;
   else data.passengerCount = seats.value;
 
-  // Decide where to update (flat or nested)
   const flatSnap = await get(ref(db,`ads/${editingId}`));
+
   try {
     if(flatSnap.exists()){
       await update(ref(db,`ads/${editingId}`), data);
@@ -357,22 +339,10 @@ saveBtn.onclick = async ()=>{
     return;
   }
 
-  // Update local cache
   if(window.adsCache && window.adsCache[editingId]){
-    // merge fields locally to keep createdAt, type, userId etc.
     window.adsCache[editingId].ad = Object.assign({}, window.adsCache[editingId].ad, data);
-    // ensure departureTime stored as ms (we set it above)
     updateCardInDOM(window.adsCache[editingId].ad, editingId, window.adsCache[editingId].owner);
-  } else {
-    // If not in cache, fetch single snapshot and update DOM
-    const after = await get(ref(db,`ads/${editingOwner}/${editingId}`));
-    const val = after.exists() ? after.val() : (await get(ref(db,`ads/${editingId}`))).val();
-    if(val){
-      window.adsCache = window.adsCache || {};
-      window.adsCache[editingId] = { ad: val, owner: editingOwner };
-      updateCardInDOM(val, editingId, editingOwner);
-    }
-  }
+  } 
 
   alert("Yangilandi!");
   modal.style.display="none";
@@ -392,31 +362,32 @@ async function deleteAd(id, owner){
     return;
   }
 
-  // remove from cache and DOM
   if(window.adsCache && window.adsCache[id]) delete window.adsCache[id];
   const el = elList.querySelector(`.ad-box[data-id="${id}"]`);
   if(el){
-    // fade out then remove
     el.style.transition = "opacity .16s";
     el.style.opacity = "0";
     setTimeout(()=> el.remove(), 160);
   }
 }
 
-// --- init ---
+// --- ✅ SOFT AUTH INIT (LOGIN’GA SAKRAB KETMASDI) ---
 onAuthStateChanged(auth, async user=>{
   if(!user){
-    location.href="/shahartaxi-demo/docs/app/auth/login.html";
+    setTimeout(()=>{
+      if(!auth.currentUser){
+        location.href="/shahartaxi-demo/docs/app/auth/login.html";
+      }
+    },800);
     return;
   }
 
   await loadUserRole(user.uid);
   fillEditRegions();
-  // initial load cached
   loadMyAds();
 });
 
-// --- expose for debugging if needed ---
+// --- debug ---
 window.__shahartaxi_myads = {
   reload: loadMyAds,
   getCache: ()=> window.adsCache
