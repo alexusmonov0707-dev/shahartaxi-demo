@@ -67,20 +67,22 @@ function createAdElement(ad, id, owner){
   const roleLabel = getRoleLabel(ad);
 
   // ✅ JOY / YO‘LOVCHI SONI HAR DOIM TO‘G‘RI
-  const s =
-  ad.driverSeats !== undefined && ad.driverSeats !== null && ad.driverSeats !== ""
-    ? ad.driverSeats
-    : ad.passengerCount !== undefined && ad.passengerCount !== null && ad.passengerCount !== ""
-    ? ad.passengerCount
-    : ad.seats !== undefined && ad.seats !== null && ad.seats !== ""
-    ? ad.seats
-    : ad.passengers !== undefined && ad.passengers !== null && ad.passengers !== ""
-    ? ad.passengers
-    : ad.seatCount !== undefined && ad.seatCount !== null && ad.seatCount !== ""
-    ? ad.seatCount
-    : ad.count !== undefined && ad.count !== null && ad.count !== ""
-    ? ad.count
-    : "";
+ const s =
+  ad.driverSeats ??
+  ad.passengerCount ??
+  ad.seats ??
+  ad.passengers ??
+  ad.seatCount ??
+  ad.count ??
+  ad?.data?.driverSeats ??
+  ad?.data?.passengerCount ??
+  ad?.data?.seats ??
+  ad?.data?.passengers ??
+  ad?.info?.driverSeats ??
+  ad?.info?.passengerCount ??
+  ad?.info?.seats ??
+  ad?.info?.passengers ??
+  "";
 
 
   const box = document.createElement("div");
