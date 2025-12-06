@@ -27,7 +27,7 @@ if (window.regionsData) {
 }
 
 // ===============================
-// USER HELPERS
+// USER HELPERS (SAQLANDI, LEKIN ENDI KAM ISHLATILADI)
 // ===============================
 async function getUserInfo(uid) {
   if (!uid) return defaultUser();
@@ -55,7 +55,6 @@ async function getUserInfo(uid) {
       phone: u.phone || "-",
       role: u.role || "",
       avatar,
-      // 🔥 mashina ma'lumotlari uchun driverInfo ni ham qo'shdik
       driverInfo: u.driverInfo || {}
     };
 
@@ -97,20 +96,41 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // ===============================
-// ADS LOAD
+// ✅ OPTIMALLASHTIRILGAN ADS LOAD (USERS 1 MARTA YUKLANADI)
 // ===============================
 async function loadAds() {
   try {
-    const snap = await get(ref(db, "ads"));
+    const [adsSnap, usersSnap] = await Promise.all([
+      get(ref(db, "ads")),
+      get(ref(db, "users"))
+    ]);
+
+    const USERS = usersSnap.val() || {};
     ADS = [];
 
-    snap.forEach((ownerNode) => {
+    adsSnap.forEach((ownerNode) => {
       const ownerUid = ownerNode.key;
+      const ownerRaw = USERS[ownerUid] || defaultUser();
+
+      const owner = {
+        uid: ownerUid,
+        fullName: ownerRaw.fullName || "Foydalanuvchi",
+        phone: ownerRaw.phone || "-",
+        role: ownerRaw.role || "",
+        avatar:
+          !ownerRaw.avatar || ownerRaw.avatar.startsWith("/")
+            ? "https://i.ibb.co/PGT8x4G/user.png"
+            : ownerRaw.avatar,
+        driverInfo: ownerRaw.driverInfo || {}
+      };
+
       ownerNode.forEach((adNode) => {
         const ad = adNode.val();
         ad.id = adNode.key;
         ad.userId = ownerUid;
-        ADS.push(ad);
+
+        // 🔥 endi har bir ad ichida owner ham bor
+        ADS.push({ ad, owner });
       });
     });
 
@@ -123,7 +143,7 @@ async function loadAds() {
 }
 
 // ===============================
-// REGION FILTERS
+// REGION FILTERS (O‘ZGARISH YO‘Q)
 // ===============================
 function initRegionFilters() {
   const fromRegion = document.getElementById("fromRegionSelect");
@@ -159,24 +179,18 @@ function fillDistricts(regionSelectId, containerId, className) {
     const id = `${className}-${district}`.replace(/\s+/g, "-");
     box.innerHTML += `
       <label for="${id}" style="margin-right:10px; font-size:14px;">
-        <!-- 🔥 endi checked YO'Q, user o'zi tanlaydi -->
         <input type="checkbox" id="${id}" class="${className}" value="${district}">
         ${district}
       </label>
     `;
   });
 
-  // birinchi marta change event ulangandan keyin yana qo'shilib ketmasin deb once:true
-  box.addEventListener(
-    "change",
-    () => {
-      renderAds();
-    },
-    { once: true }
-  );
+  box.addEventListener("change", () => {
+    renderAds();
+  });
 }
 
-// 🔥 boshqa joy bosilganda shaharlar yo'qolishi
+// 🔥 boshqa joy bosilganda shaharlar yo'qolishi (SAQLANDI)
 document.addEventListener("click", (e) => {
   const target = e.target;
   const fromArea =
@@ -196,7 +210,7 @@ document.addEventListener("click", (e) => {
 });
 
 // ===============================
-// FILTER LOGIC
+// ✅ OPTIMALLASHTIRILGAN FILTER (ENDI FIREBASE YO‘Q)
 // ===============================
 async function filterAds() {
   const search = (document.getElementById("search").value || "").toLowerCase();
@@ -218,33 +232,29 @@ async function filterAds() {
   const now = Date.now();
   const result = [];
 
-  for (const ad of ADS) {
-    const owner = await getUserInfo(ad.userId);
+  for (const item of ADS) {
+    const ad = item.ad;
+    const owner = item.owner;
 
     // ROLE LOGIKA: driver ↔ passenger
     if (CURRENT_USER?.role === "driver" && owner.role !== "passenger") continue;
     if (CURRENT_USER?.role === "passenger" && owner.role !== "driver") continue;
 
-    // REGION FILTR
     if (fromRegion && ad.fromRegion !== fromRegion) continue;
     if (toRegion && ad.toRegion !== toRegion) continue;
 
-    // TUMAN FILTR
     if (fromDistricts.length && !fromDistricts.includes(ad.fromDistrict))
       continue;
     if (toDistricts.length && !toDistricts.includes(ad.toDistrict)) continue;
 
-    // NARX FILTR
     const price = Number(ad.price || 0);
     if (price < minPrice || price > maxPrice) continue;
 
-    // VAQT FILTR (createdAt bo‘yicha)
     const created = Number(ad.createdAt || 0);
     if (timeFilter === "1d" && now - created > 24 * 3600000) continue;
     if (timeFilter === "3d" && now - created > 72 * 3600000) continue;
     if (timeFilter === "7d" && now - created > 168 * 3600000) continue;
 
-    // QIDIRUV
     if (search) {
       const haystack = (
         (ad.fromRegion || "") +
@@ -258,10 +268,9 @@ async function filterAds() {
       if (!haystack.includes(search)) continue;
     }
 
-    result.push({ ad, owner });
+    result.push(item);
   }
 
-  // SORT
   result.sort((a, b) => {
     const ca = Number(a.ad.createdAt || 0);
     const cb = Number(b.ad.createdAt || 0);
@@ -272,10 +281,7 @@ async function filterAds() {
 }
 
 // ===============================
-// RENDER ADS
-// ===============================
-// ===============================
-// RENDER ADS
+// RENDER ADS (O‘ZGARISH YO‘Q)
 // ===============================
 async function renderAds() {
   const container = document.getElementById("adsList");
@@ -298,7 +304,6 @@ async function renderAds() {
       ? new Date(ad.createdAt).toLocaleString()
       : "";
 
-    // ✅ FAQAT HAYDOVCHIDA mashina o‘qiiladi
     let carHtml = "";
     let peopleHtml = "";
 
@@ -309,9 +314,7 @@ async function renderAds() {
 
       carHtml = `<div class="ad-meta">🚗 ${carModel} (${carNumber})</div>`;
       peopleHtml = `<div class="ad-meta">💺 ${ad.seats || 0} o‘rin</div>`;
-    } 
-    else if (owner.role === "passenger") {
-      // ❗ YO‘LOVCHIDA MASHINA YO‘Q
+    } else if (owner.role === "passenger") {
       carHtml = "";
       peopleHtml = `<div class="ad-meta">👥 ${ad.passengerCount || 0} yo‘lovchi</div>`;
     }
@@ -349,9 +352,8 @@ async function renderAds() {
   }
 }
 
-
 // ===============================
-// MODAL
+// MODAL (O‘ZGARISH YO‘Q)
 // ===============================
 function openModal(ad, owner) {
   const modal = document.getElementById("adFullModal");
@@ -364,7 +366,6 @@ function openModal(ad, owner) {
   let carBlock = "";
   let peopleBlock = "";
 
-  // ✅ AGAR E’LON HAYDOVCHIKI BO‘LSA → MASHINA MA’LUMOTI OWNER’dan olinadi
   if (owner.role === "driver") {
     const driver = owner.driverInfo || {};
 
@@ -380,7 +381,6 @@ function openModal(ad, owner) {
     `;
   }
 
-  // ✅ AGAR E’LON YO‘LOVCHINIKI BO‘LSA → MASHINA UMUMAN CHIQMAYDI
   if (owner.role === "passenger") {
     carBlock = "";
 
@@ -432,9 +432,8 @@ window.closeModal = () => {
   document.getElementById("adFullModal").style.display = "none";
 };
 
-
 // ===============================
-// RESET & EVENTS
+// RESET & EVENTS (O‘ZGARISH YO‘Q)
 // ===============================
 document.getElementById("resetFiltersBtn").addEventListener("click", () => {
   document.getElementById("search").value = "";
@@ -462,4 +461,4 @@ window.logout = () => {
   signOut(auth).catch((e) => console.error("logout error", e));
 };
 
-console.log("Taxi index.js fully loaded");
+console.log("Taxi index.js fully loaded ✅ OPTIMIZED");
