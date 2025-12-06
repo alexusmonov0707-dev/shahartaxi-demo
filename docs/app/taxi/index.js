@@ -274,6 +274,9 @@ async function filterAds() {
 // ===============================
 // RENDER ADS
 // ===============================
+// ===============================
+// RENDER ADS
+// ===============================
 async function renderAds() {
   const container = document.getElementById("adsList");
   container.innerHTML = "Yuklanmoqda...";
@@ -291,19 +294,25 @@ async function renderAds() {
     const card = document.createElement("div");
     card.className = "ad-card";
 
-    // ✅ E’LON JOYLANGAN VAQT
     const createdTimeStr = ad.createdAt
       ? new Date(ad.createdAt).toLocaleString()
       : "";
 
-    // ✅ HAYDOVCHI MASHINA MA’LUMOTI
-const driver = CURRENT_USER && CURRENT_USER.driverInfo && typeof CURRENT_USER.driverInfo === "object"
-  ? CURRENT_USER.driverInfo
-  : {};
+    // ✅ TO‘G‘RI: mashina ma’lumoti E’LON EGASIDAN olinadi
+    const driver = owner && owner.driverInfo && typeof owner.driverInfo === "object"
+      ? owner.driverInfo
+      : {};
 
-const carModel = driver.carModel ? driver.carModel : "-";
-const carNumber = driver.carNumber ? driver.carNumber : "-";
+    const carModel = driver.carModel || "-";
+    const carNumber = driver.carNumber || "-";
 
+    // ✅ ROLE bo‘yicha faqat bittasi chiqadi
+    let peopleInfo = "";
+    if (owner.role === "driver") {
+      peopleInfo = `💺 ${ad.seats || 0} o‘rin`;
+    } else {
+      peopleInfo = `👥 ${ad.passengerCount || 0} yo‘lovchi`;
+    }
 
     card.innerHTML = `
       <img class="ad-avatar" src="${owner.avatar}" alt="avatar">
@@ -312,26 +321,21 @@ const carNumber = driver.carNumber ? driver.carNumber : "-";
         <div class="ad-route">
           ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}
         </div>
-        <!-- 🔥 Card: ism o‘rniga mashina rusumi, vaqt narx tagida -->
-       <div class="ad-meta">🚗 ${carModel} (${carNumber})</div>
 
-<div class="ad-meta">
-  👥 ${ad.passengerCount || 0} yo‘lovchi • 💺 ${ad.seats || 0} o‘rin
-</div>
+        <div class="ad-meta">🚗 ${carModel} (${carNumber})</div>
+        <div class="ad-meta">${peopleInfo}</div>
 
-<div class="ad-meta">
-  📍 Jo‘nash: ${
-    ad.departureTime
-      ? new Date(ad.departureTime).toLocaleString()
-      : "-"
-  }
-</div>
-
+        <div class="ad-meta">
+          📍 Jo‘nash: ${
+            ad.departureTime
+              ? new Date(ad.departureTime).toLocaleString()
+              : "-"
+          }
+        </div>
       </div>
 
       <div class="ad-price">
         ${ad.price ? ad.price + " so‘m" : ""}
-        <!-- ✅ E’LON JOYLANGAN VAQT -->
         <div style="font-size:12px;color:#555;margin-top:4px;">
           ⏰ ${createdTimeStr}
         </div>
@@ -342,6 +346,7 @@ const carNumber = driver.carNumber ? driver.carNumber : "-";
     container.appendChild(card);
   }
 }
+
 
 // ===============================
 // MODAL
