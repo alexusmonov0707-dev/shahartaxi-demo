@@ -68,11 +68,20 @@ function createAdElement(ad, id, owner){
 
   // ✅ JOY / YO‘LOVCHI SONI HAR DOIM TO‘G‘RI
   const s =
-    ad.driverSeats !== undefined && ad.driverSeats !== null && ad.driverSeats !== ""
-      ? ad.driverSeats
-      : ad.passengerCount !== undefined && ad.passengerCount !== null && ad.passengerCount !== ""
-      ? ad.passengerCount
-      : "";
+  ad.driverSeats !== undefined && ad.driverSeats !== null && ad.driverSeats !== ""
+    ? ad.driverSeats
+    : ad.passengerCount !== undefined && ad.passengerCount !== null && ad.passengerCount !== ""
+    ? ad.passengerCount
+    : ad.seats !== undefined && ad.seats !== null && ad.seats !== ""
+    ? ad.seats
+    : ad.passengers !== undefined && ad.passengers !== null && ad.passengers !== ""
+    ? ad.passengers
+    : ad.seatCount !== undefined && ad.seatCount !== null && ad.seatCount !== ""
+    ? ad.seatCount
+    : ad.count !== undefined && ad.count !== null && ad.count !== ""
+    ? ad.count
+    : "";
+
 
   const box = document.createElement("div");
   box.className = "ad-box";
