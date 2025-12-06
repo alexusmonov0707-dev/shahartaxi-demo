@@ -298,20 +298,22 @@ async function renderAds() {
       ? new Date(ad.createdAt).toLocaleString()
       : "";
 
-    // ✅ TO‘G‘RI: mashina ma’lumoti E’LON EGASIDAN olinadi
-    const driver = owner && owner.driverInfo && typeof owner.driverInfo === "object"
-      ? owner.driverInfo
-      : {};
+    // ✅ FAQAT HAYDOVCHIDA mashina o‘qiiladi
+    let carHtml = "";
+    let peopleHtml = "";
 
-    const carModel = driver.carModel || "-";
-    const carNumber = driver.carNumber || "-";
-
-    // ✅ ROLE bo‘yicha faqat bittasi chiqadi
-    let peopleInfo = "";
     if (owner.role === "driver") {
-      peopleInfo = `💺 ${ad.seats || 0} o‘rin`;
-    } else {
-      peopleInfo = `👥 ${ad.passengerCount || 0} yo‘lovchi`;
+      const driver = owner.driverInfo || {};
+      const carModel = driver.carModel || "-";
+      const carNumber = driver.carNumber || "-";
+
+      carHtml = `<div class="ad-meta">🚗 ${carModel} (${carNumber})</div>`;
+      peopleHtml = `<div class="ad-meta">💺 ${ad.seats || 0} o‘rin</div>`;
+    } 
+    else if (owner.role === "passenger") {
+      // ❗ YO‘LOVCHIDA MASHINA YO‘Q
+      carHtml = "";
+      peopleHtml = `<div class="ad-meta">👥 ${ad.passengerCount || 0} yo‘lovchi</div>`;
     }
 
     card.innerHTML = `
@@ -322,8 +324,8 @@ async function renderAds() {
           ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}
         </div>
 
-        <div class="ad-meta">🚗 ${carModel} (${carNumber})</div>
-        <div class="ad-meta">${peopleInfo}</div>
+        ${carHtml}
+        ${peopleHtml}
 
         <div class="ad-meta">
           📍 Jo‘nash: ${
