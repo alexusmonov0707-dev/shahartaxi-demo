@@ -67,7 +67,13 @@ function getRoleLabel(ad){
 // helper: create card DOM (returns element)
 function createAdElement(ad, id, owner){
   const roleLabel = getRoleLabel(ad);
-  const s = ad.driverSeats || ad.passengerCount || "";
+ const s =
+  ad.driverSeats !== undefined && ad.driverSeats !== null && ad.driverSeats !== ""
+    ? ad.driverSeats
+    : ad.passengerCount !== undefined && ad.passengerCount !== null && ad.passengerCount !== ""
+    ? ad.passengerCount
+    : "";
+
   const box = document.createElement("div");
   box.className = "ad-box";
   box.dataset.id = id;
