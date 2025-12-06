@@ -99,49 +99,59 @@ onAuthStateChanged(auth, async (user) => {
 // ===============================
 // ✅ OPTIMALLASHTIRILGAN ADS LOAD (USERS 1 MARTA YUKLANADI)
 // ===============================
-async function loadAds() {
+function loadAds() {
   try {
-    const [adsSnap, usersSnap] = await Promise.all([
-      get(ref(db, "ads")),
-      get(ref(db, "users"))
-    ]);
+    const adsRef = ref(db, "ads");
+    const usersRef = ref(db, "users");
 
-    const USERS = usersSnap.val() || {};
-    ADS = [];
+    // ✅ USERS ni bitta marta olib keshga saqlaymiz
+    let USERS_CACHE = {};
 
-    adsSnap.forEach((ownerNode) => {
-      const ownerUid = ownerNode.key;
-      const ownerRaw = USERS[ownerUid] || defaultUser();
-
-      const owner = {
-        uid: ownerUid,
-        fullName: ownerRaw.fullName || "Foydalanuvchi",
-        phone: ownerRaw.phone || "-",
-        role: ownerRaw.role || "",
-        avatar:
-          !ownerRaw.avatar || ownerRaw.avatar.startsWith("/")
-            ? "https://i.ibb.co/PGT8x4G/user.png"
-            : ownerRaw.avatar,
-        driverInfo: ownerRaw.driverInfo || {}
-      };
-
-      ownerNode.forEach((adNode) => {
-        const ad = adNode.val();
-        ad.id = adNode.key;
-        ad.userId = ownerUid;
-
-        // 🔥 endi har bir ad ichida owner ham bor
-        ADS.push({ ad, owner });
-      });
+    onValue(usersRef, (usersSnap) => {
+      USERS_CACHE = usersSnap.val() || {};
     });
 
-    renderAds();
+    // ✅ ADS ni real-time eshitamiz
+    onValue(adsRef, (adsSnap) => {
+      ADS = [];
+
+      adsSnap.forEach((ownerNode) => {
+        const ownerUid = ownerNode.key;
+        const ownerRaw = USERS_CACHE[ownerUid] || defaultUser();
+
+        const owner = {
+          uid: ownerUid,
+          fullName: ownerRaw.fullName || "Foydalanuvchi",
+          phone: ownerRaw.phone || "-",
+          role: ownerRaw.role || "",
+          avatar:
+            !ownerRaw.avatar || ownerRaw.avatar.startsWith("/")
+              ? "https://i.ibb.co/PGT8x4G/user.png"
+              : ownerRaw.avatar,
+          driverInfo: ownerRaw.driverInfo || {}
+        };
+
+        ownerNode.forEach((adNode) => {
+          const ad = adNode.val();
+          ad.id = adNode.key;
+          ad.userId = ownerUid;
+
+          // ✅ SENDING ESKI FORMAT SAQLANDI
+          ADS.push({ ad, owner });
+        });
+      });
+
+      // ✅ FILTER + SORT + RENDER AVTO YANGILANADI
+      renderAds();
+    });
+
   } catch (e) {
-    console.error("loadAds error:", e);
+    console.error("loadAds realtime error:", e);
     document.getElementById("adsList").innerText =
       "E’lonlarni yuklashda xatolik.";
   }
 }
+
 
 // ===============================
 // REGION FILTERS (O‘ZGARISH YO‘Q)
