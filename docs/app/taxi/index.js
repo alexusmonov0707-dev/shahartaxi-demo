@@ -389,6 +389,8 @@ function openModal(ad, owner) {
      
 
       <hr>
+<p><b>Yo‘lovchilar soni:</b> ${ad.passengerCount || 0}</p>
+<p><b>Bo‘sh o‘rinlar:</b> ${ad.seats || 0}</p>
 
       <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
       <p><b>E’lon joylangan vaqt:</b> ${createdTimeStr}</p>
