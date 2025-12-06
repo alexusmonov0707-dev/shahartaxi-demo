@@ -359,9 +359,34 @@ function openModal(ad, owner) {
 
   const createdTimeStr = ad.createdAt
     ? new Date(ad.createdAt).toLocaleString()
-    : "";
+    : "-";
 
-  const driver = CURRENT_USER && CURRENT_USER.driverInfo ? CURRENT_USER.driverInfo : {};
+  // ✅ ROLE BO‘YICHA ALOHIDA BLOKLAR
+  let carBlock = "";
+  let peopleBlock = "";
+
+  if (owner.role === "driver") {
+    const driver = owner.driverInfo || {};
+
+    carBlock = `
+      <p><b>Mashina rusumi:</b> ${driver.carModel || "-"}</p>
+      <p><b>Mashina rangi:</b> ${driver.carColor || "-"}</p>
+      <p><b>Mashina raqami:</b> ${driver.carNumber || "-"}</p>
+      <hr>
+    `;
+
+    peopleBlock = `
+      <p><b>Bo‘sh o‘rinlar:</b> ${ad.seats || 0}</p>
+    `;
+  } 
+  else if (owner.role === "passenger") {
+    // ❗ YO‘LOVCHIDA MASHINA UMUMAN YO‘Q
+    carBlock = "";
+
+    peopleBlock = `
+      <p><b>Yo‘lovchilar soni:</b> ${ad.passengerCount || 0}</p>
+    `;
+  }
 
   modal.innerHTML = `
     <div class="modal-box">
@@ -388,16 +413,8 @@ function openModal(ad, owner) {
 
       <hr>
 
-      <!-- ✅ MOSHINA MA’LUMOTLARI USERDAN -->
-      <p><b>Mashina rusumi:</b> ${driver.carModel || "-"}</p>
-      <p><b>Mashina rangi:</b> ${driver.carColor || "-"}</p>
-      <p><b>Mashina raqami:</b> ${driver.carNumber || "-"}</p>
-
-     
-
-      <hr>
-<p><b>Yo‘lovchilar soni:</b> ${ad.passengerCount || 0}</p>
-<p><b>Bo‘sh o‘rinlar:</b> ${ad.seats || 0}</p>
+      ${carBlock}
+      ${peopleBlock}
 
       <p><b>Narx:</b> ${ad.price || "-"} so‘m</p>
       <p><b>E’lon joylangan vaqt:</b> ${createdTimeStr}</p>
@@ -409,6 +426,7 @@ function openModal(ad, owner) {
     </div>
   `;
 }
+
 
 window.closeModal = () => {
   document.getElementById("adFullModal").style.display = "none";
