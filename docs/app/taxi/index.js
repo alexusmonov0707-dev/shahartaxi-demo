@@ -313,14 +313,20 @@ const carNumber = driver.carNumber ? driver.carNumber : "-";
           ${ad.fromRegion || ""}, ${ad.fromDistrict || ""} → ${ad.toRegion || ""}, ${ad.toDistrict || ""}
         </div>
         <!-- 🔥 Card: ism o‘rniga mashina rusumi, vaqt narx tagida -->
-        <div class="ad-meta">🚗 ${carModel} (${carNumber})</div>
-        <div class="ad-meta">
-          📍 Jo‘nash: ${
-            ad.departureTime
-              ? new Date(ad.departureTime).toLocaleString()
-              : "-"
-          }
-        </div>
+       <div class="ad-meta">🚗 ${carModel} (${carNumber})</div>
+
+<div class="ad-meta">
+  👥 ${ad.passengerCount || 0} yo‘lovchi • 💺 ${ad.seats || 0} o‘rin
+</div>
+
+<div class="ad-meta">
+  📍 Jo‘nash: ${
+    ad.departureTime
+      ? new Date(ad.departureTime).toLocaleString()
+      : "-"
+  }
+</div>
+
       </div>
 
       <div class="ad-price">
