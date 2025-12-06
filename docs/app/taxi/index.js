@@ -250,10 +250,15 @@ async function filterAds() {
     const price = Number(ad.price || 0);
     if (price < minPrice || price > maxPrice) continue;
 
-    const created = Number(ad.createdAt || 0);
-    if (timeFilter === "1d" && now - created > 24 * 3600000) continue;
-    if (timeFilter === "3d" && now - created > 72 * 3600000) continue;
-    if (timeFilter === "7d" && now - created > 168 * 3600000) continue;
+   // ✅ VAQT FILTR — FAQAT JO‘NASH VAQTI (departureTime) BO‘YICHA
+const departure = Number(ad.departureTime || 0);
+
+if (!departure) continue; // jo‘nash vaqti yo‘q bo‘lsa umuman tushmaydi
+
+if (timeFilter === "1d" && departure - now > 24 * 3600000) continue;
+if (timeFilter === "3d" && departure - now > 72 * 3600000) continue;
+if (timeFilter === "7d" && departure - now > 168 * 3600000) continue;
+
 
     if (search) {
       const haystack = (
