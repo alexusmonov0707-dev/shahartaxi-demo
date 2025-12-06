@@ -284,7 +284,14 @@ function populate(ad){
 
   price.value = ad.price || "";
   comment.value = ad.comment || "";
-  seats.value = ad.driverSeats || ad.passengerCount || "";
+seats.value =
+  ad.driverSeats ??
+  ad.passengerCount ??
+  ad.seats ??
+  ad.passengers ??
+  ad.seatCount ??
+  ad.count ??
+  "";
 
   if(ad.departureTime){
     let ms = null;
