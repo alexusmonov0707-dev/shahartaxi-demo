@@ -361,10 +361,10 @@ function openModal(ad, owner) {
     ? new Date(ad.createdAt).toLocaleString()
     : "-";
 
-  // ✅ ROLE BO‘YICHA ALOHIDA BLOKLAR
   let carBlock = "";
   let peopleBlock = "";
 
+  // ✅ AGAR E’LON HAYDOVCHIKI BO‘LSA → MASHINA MA’LUMOTI OWNER’dan olinadi
   if (owner.role === "driver") {
     const driver = owner.driverInfo || {};
 
@@ -378,9 +378,10 @@ function openModal(ad, owner) {
     peopleBlock = `
       <p><b>Bo‘sh o‘rinlar:</b> ${ad.seats || 0}</p>
     `;
-  } 
-  else if (owner.role === "passenger") {
-    // ❗ YO‘LOVCHIDA MASHINA UMUMAN YO‘Q
+  }
+
+  // ✅ AGAR E’LON YO‘LOVCHINIKI BO‘LSA → MASHINA UMUMAN CHIQMAYDI
+  if (owner.role === "passenger") {
     carBlock = "";
 
     peopleBlock = `
@@ -427,10 +428,10 @@ function openModal(ad, owner) {
   `;
 }
 
-
 window.closeModal = () => {
   document.getElementById("adFullModal").style.display = "none";
 };
+
 
 // ===============================
 // RESET & EVENTS
