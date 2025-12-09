@@ -1,5 +1,5 @@
 // ===============================
-//     SHAHARTAXI — CREATE AD
+//     SHAHARTAXI — CREATE AD (FIXED)
 // ===============================
 
 // === DOM ELEMENTS ===
@@ -14,107 +14,118 @@ const clearBtn = document.getElementById("clearFormBtn");
 //    REGION INIT (CORRECT VERSION)
 // ===============================
 function initRegions() {
-    // Viloyatlarni to‘ldirish
-    window.fillRegions("fromRegion");
-    window.fillRegions("toRegion");
+  window.fillRegions("fromRegion");
+  window.fillRegions("toRegion");
 
-    // Tumanlarni avtomatik yangilash
-    fromRegion.addEventListener("change", () => {
-        window.updateDistricts("from");
-    });
+  fromRegion.addEventListener("change", () => {
+    window.updateDistricts("from");
+  });
 
-    toRegion.addEventListener("change", () => {
-        window.updateDistricts("to");
-    });
+  toRegion.addEventListener("change", () => {
+    window.updateDistricts("to");
+  });
 }
 
 // ===============================
 //         CLEAR FORM
 // ===============================
 clearBtn.addEventListener("click", (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    fromRegion.selectedIndex = 0;
-    toRegion.selectedIndex = 0;
+  fromRegion.selectedIndex = 0;
+  toRegion.selectedIndex = 0;
 
-    fromDistrict.innerHTML = `<option value="">Tuman</option>`;
-    toDistrict.innerHTML = `<option value="">Tuman</option>`;
+  fromDistrict.innerHTML = `<option value="">Tuman</option>`;
+  toDistrict.innerHTML = `<option value="">Tuman</option>`;
 
-    document.getElementById("price").value = "";
-    document.getElementById("departureTime").value = "";
-    document.getElementById("seats").value = "";
-    document.getElementById("adComment").value = "";
+  document.getElementById("price").value = "";
+  document.getElementById("departureTime").value = "";
+  document.getElementById("seats").value = "";
+  document.getElementById("adComment").value = "";
 });
-// at top: import onAuthStateChanged, get, ref...
+
+// ===============================
+// AUTH CHECK
+// ===============================
 import { auth, db, ref, get, onAuthStateChanged } from "/shahartaxi-demo/docs/libs/lib.js";
+
+let CURRENT_ROLE = "passenger";
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    // not logged in — redirect
     location.href = "/shahartaxi-demo/app/auth/login.html";
     return;
   }
+
   const snap = await get(ref(db, `users/${user.uid}`));
   const u = snap.exists() ? snap.val() : null;
+
   if (!u) {
-    alert("Profil ma'lumotlari topilmadi. Admin bilan bog'laning.");
+    alert("Profil ma'lumotlari topilmadi.");
     await auth.signOut();
     location.href = "/shahartaxi-demo/app/auth/login.html";
     return;
   }
-  // block driver if not verified
+
+  CURRENT_ROLE = u.role || "passenger";
+
   if (u.role === "driver" && u.verified !== true) {
-    // disable form submit button
-    const submitBtn = document.getElementById("postAdBtn");
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.title = "Profilingiz admin tomonidan tasdiqlanishini kuting";
-    }
-    // optionally show banner
+    submitBtn.disabled = true;
+    submitBtn.title = "Profilingiz tasdiqlanmagan";
+
     const note = document.getElementById("verificationNotice");
-    if (note) note.textContent = "Profilingiz hali tasdiqlanmagan. E'lon joylay olmaysiz.";
+    if (note) note.textContent = "Profil tasdiqlanmaguncha e'lon joylay olmaysiz.";
   }
 });
 
-
 // ===============================
-//       SUBMIT — FIREBASE
+//       SUBMIT — FIREBASE (FIXED)
 // ===============================
 submitBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const payload = {
-        fromRegion: fromRegion.value,
-        fromDistrict: fromDistrict.value,
-        toRegion: toRegion.value,
-        toDistrict: toDistrict.value,
-        price: document.getElementById("price").value,
-        departureTime: document.getElementById("departureTime").value,
-        seats: document.getElementById("seats").value,
-        comment: document.getElementById("adComment").value,
-        createdAt: Date.now()
-    };
+  if (!auth.currentUser) {
+    alert("Kirish talab qilinadi!");
+    return;
+  }
 
-    try {
-        const lib = await import("/shahartaxi-demo/docs/libs/lib.js");
-        const { db, ref, push, set, auth } = lib;
+  const rawTime = document.getElementById("departureTime").value;
+  const departureMs = rawTime ? new Date(rawTime).getTime() : null;
 
-        if (!auth.currentUser) {
-            alert("Kirish talab qilinadi!");
-            return;
-        }
+  const basePayload = {
+    fromRegion: fromRegion.value,
+    fromDistrict: fromDistrict.value,
+    toRegion: toRegion.value,
+    toDistrict: toDistrict.value,
+    price: document.getElementById("price").value,
+    departureTime: departureMs, // ✅ endi millisekund
+    comment: document.getElementById("adComment").value,
+    createdAt: Date.now(),
+    type: CURRENT_ROLE,
+    userId: auth.currentUser.uid
+  };
 
-        const adsRef = ref(db, "ads/" + auth.currentUser.uid);
-        const newRef = push(adsRef);
-        await set(newRef, payload);
+  // ✅ ROLE bo‘yicha to‘g‘ri saqlash
+  if (CURRENT_ROLE === "driver") {
+    basePayload.seats = document.getElementById("seats").value;
+  } else {
+    basePayload.passengerCount = document.getElementById("seats").value;
+  }
 
-        alert("E'lon muvaffaqiyatli joylandi!");
-        window.location.href = "/shahartaxi-demo/docs/app/profile/profile.html";
+  try {
+    const adsRef = ref(db, "ads/" + auth.currentUser.uid);
+    const { push, set } = await import("/shahartaxi-demo/docs/libs/lib.js");
 
-    } catch (err) {
-        console.error(err);
-        alert("E'lon joylashda xatolik yuz berdi!");
-    }
+    const newRef = push(adsRef);
+    await set(newRef, basePayload);
+
+    alert("E'lon muvaffaqiyatli joylandi!");
+    window.location.href = "/shahartaxi-demo/docs/app/profile/profile.html";
+
+  } catch (err) {
+    console.error("CREATE AD ERROR:", err);
+    alert("E'lon joylashda xatolik!");
+  }
 });
 
 // ===============================
