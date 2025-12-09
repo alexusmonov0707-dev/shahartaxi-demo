@@ -1,5 +1,5 @@
 // ===============================
-//     SHAHARTAXI — CREATE AD (FIXED)
+//     SHAHARTAXI — CREATE AD (FINAL FIXED)
 // ===============================
 
 // === DOM ELEMENTS ===
@@ -79,7 +79,7 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // ===============================
-//       SUBMIT — FIREBASE (FIXED)
+//       SUBMIT — FIREBASE (FINAL FIX)
 // ===============================
 submitBtn.addEventListener("click", async (e) => {
   e.preventDefault();
@@ -93,27 +93,30 @@ submitBtn.addEventListener("click", async (e) => {
   const departureMs = rawTime ? new Date(rawTime).getTime() : null;
 
   const basePayload = {
-    fromRegion: fromRegion.value,
-    fromDistrict: fromDistrict.value,
-    toRegion: toRegion.value,
-    toDistrict: toDistrict.value,
-    price: document.getElementById("price").value,
-    departureTime: departureMs, // ✅ endi millisekund
-    comment: document.getElementById("adComment").value,
+    fromRegion: fromRegion.value || "",
+    fromDistrict: fromDistrict.value || "",
+    toRegion: toRegion.value || "",
+    toDistrict: toDistrict.value || "",
+    price: document.getElementById("price").value || "",
+    departureTime: departureMs,
+    comment: document.getElementById("adComment").value || "",
     createdAt: Date.now(),
     type: CURRENT_ROLE,
     userId: auth.currentUser.uid
   };
 
-  // ✅ ROLE bo‘yicha to‘g‘ri saqlash
+  const seatsValue = document.getElementById("seats").value;
+
+  // ✅ ENG ASOSIY JOY — INDEX & MYADS BILAN 100% MOS
   if (CURRENT_ROLE === "driver") {
-    basePayload.seats = document.getElementById("seats").value;
+    basePayload.driverSeats = seatsValue;      // ✅ haydovchi uchun
   } else {
-    basePayload.passengerCount = document.getElementById("seats").value;
+    basePayload.passengerCount = seatsValue;  // ✅ yo‘lovchi uchun
   }
 
   try {
     const adsRef = ref(db, "ads/" + auth.currentUser.uid);
+
     const { push, set } = await import("/shahartaxi-demo/docs/libs/lib.js");
 
     const newRef = push(adsRef);
